@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STANCE | Creative LocalFlow</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --text-color: #ffffff;
+            --accent-color: #3498db;
+            --gray: #888;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        #bg-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            z-index: -1;
+        }
+
+        section {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 0 10%;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 1s ease-out;
+        }
+
+        section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        header {
+            position: fixed;
+            top: 0; width: 100%;
+            padding: 2rem 10%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .logo {
+            font-weight: 900;
+            font-size: 1.5rem;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+        }
+
+        .hero h1 {
+            font-size: clamp(3rem, 10vw, 6rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 2rem;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            max-width: 600px;
+            color: var(--gray);
+        }
+
+        .project-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2.5rem;
+            border-left: 2px solid var(--gray);
+            transition: 0.3s;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-left: 2px solid var(--accent-color);
+            transform: translateX(10px);
+        }
+
+        .card h3 { margin-bottom: 1rem; font-size: 1.5rem; }
+        .card p { color: var(--gray); font-size: 0.9rem; }
+
+        .contact h2 { font-size: 3rem; margin-bottom: 1.5rem; }
+        .email-link {
+            font-size: 1.5rem;
+            color: var(--accent-color);
+            text-decoration: none;
+            border-bottom: 1px solid var(--accent-color);
+        }
+
+        footer {
+            padding: 5rem 10% 2rem;
+            font-size: 0.8rem;
+            color: #444;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            section { padding: 0 5%; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">STANCE</div>
+    </header>
+
+    <canvas id="bg-canvas"></canvas>
+
+    <section class="hero">
+        <h1>CREATIVE<br>LOCALFLOW.</h1>
+        <p>단위지역기반의 독립적인 디지털 생태계를 구축합니다. 
+           불필요한 프레임워크 없이 순수한 비즈니스 로직(LocalFlow)을 구현합니다.</p>
+    </section>
+
+    <section class="projects">
+        <h2>ARCHIVE & WORKS</h2>
+        <div class="project-grid">
+            <a href="https://llsshh.com" class="card">
+                <h3>STANCE ARchive</h3>
+                <p>기술적 시도와 비즈니스 인사이트가 담긴 기록의 집합체입니다.</p>
+            </a>
+            <a href="#" class="card">
+                <h3>Aquaponics</h3>
+                <p>물고기 양식과 수경재배를 결합한 친환경 순환 농법에 필요한 모든것.</p>
+            </a>
+            <a href="#" class="card">
+                <h3>LocalFlow System</h3>
+                <p>비즈니스 효율을 극대화하는 독자적인 운영 로직 및 인터페이스입니다.</p>
+            </a>
+            <a href="#" class="card">
+                <h3>STANCE Library</h3>
+                <p>전용 라이브러리 저장 공간입니다.</p>
+            </a>
+        </div>
+    </section>
+
+    <section class="contact">
+        <h2>GET IN TOUCH</h2>
+        <p>비즈니스 문의 및 협업 제안은 언제나 환영합니다.</p><br>
+        <a href="mailto:llsshh1431@naver.com" class="email-link">contact@stance.com</a>
+    </section>
+
+    <footer>
+        &copy; 2026 STANCE. All Rights Reserved.
+    </footer>
+
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('bg-canvas'), antialias: true, alpha: true });
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        const geometry = new THREE.BufferGeometry();
+        const vertices = [];
+        for (let i = 0; i < 5000; i++) {
+            vertices.push(THREE.MathUtils.randFloatSpread(2000), THREE.MathUtils.randFloatSpread(2000), THREE.MathUtils.randFloatSpread(2000));
+        }
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        const material = new THREE.PointsMaterial({ color: 0x444444, size: 2 });
+        const points = new THREE.Points(geometry, material);
+        scene.add(points);
+
+        camera.position.z = 1000;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            points.rotation.x += 0.0005;
+            points.rotation.y += 0.0005;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        const observerOptions = { threshold: 0.2 };
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('section').forEach(section => {
+            observer.observe(section);
+        });
+    </script>
+</body>
+</html>
