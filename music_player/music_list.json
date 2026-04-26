@@ -1,0 +1,10 @@
+[
+  {
+    "id": 1,
+    "title": "새로운 시작",
+    "artist": "아티스트 A",
+    "file_path": "./music/The_Slow_Unfolding.mp3",
+    "cover_image": "./images/The_Slow_Unfolding.png",
+    "duration": "02:50"
+  }
+]
