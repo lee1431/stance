@@ -6,6 +6,7 @@
     <title>STANCE | Creative LocalFlow</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;700;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
     <style>
         :root {
             --bg-color: #0a0a0a;
@@ -14,7 +15,12 @@
             --gray: #888;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
@@ -25,7 +31,8 @@
 
         #bg-canvas {
             position: fixed;
-            top: 0; left: 0;
+            top: 0;
+            left: 0;
             z-index: -1;
         }
 
@@ -47,7 +54,8 @@
 
         header {
             position: fixed;
-            top: 0; width: 100%;
+            top: 0;
+            width: 100%;
             padding: 2rem 10%;
             display: flex;
             justify-content: space-between;
@@ -98,15 +106,67 @@
             transform: translateX(10px);
         }
 
-        .card h3 { margin-bottom: 1rem; font-size: 1.5rem; }
-        .card p { color: var(--gray); font-size: 0.9rem; }
+        .card h3 {
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
 
-        .contact h2 { font-size: 3rem; margin-bottom: 1.5rem; }
+        .card p {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        .contact h2 {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .contact p {
+            color: var(--gray);
+        }
+
+        .contact-info {
+            margin-top: 2rem;
+        }
+
         .email-link {
+            display: inline-block;
             font-size: 1.5rem;
             color: var(--accent-color);
             text-decoration: none;
             border-bottom: 1px solid var(--accent-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .contact-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            margin-top: 1rem;
+        }
+
+        .contact-btn {
+            background: transparent;
+            color: var(--text-color);
+            border: 1px solid var(--accent-color);
+            padding: 0.75rem 1rem;
+            font-family: inherit;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .contact-btn:hover {
+            background: var(--accent-color);
+            color: #fff;
+        }
+
+        .copy-message {
+            margin-top: 1rem;
+            color: var(--gray);
+            font-size: 0.9rem;
+            min-height: 1.2rem;
         }
 
         footer {
@@ -117,10 +177,32 @@
         }
 
         @media (max-width: 768px) {
-            section { padding: 0 5%; }
+            section {
+                padding: 0 5%;
+            }
+
+            header {
+                padding: 1.5rem 5%;
+            }
+
+            .email-link {
+                font-size: 1.1rem;
+                word-break: break-all;
+            }
+
+            .contact-actions {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .contact-btn {
+                width: 100%;
+                max-width: 260px;
+            }
         }
     </style>
 </head>
+
 <body>
 
     <header>
@@ -131,29 +213,36 @@
 
     <section class="hero">
         <h1>CREATIVE<br>LOCALFLOW.</h1>
-        <p>단위지역기반의 독립적인 디지털 생태계를 구축합니다. 
-           불필요한 프레임워크 없이 순수한 비즈니스 로직(LocalFlow)을 구현합니다.</p>
+        <p>
+            단위지역기반의 독립적인 디지털 생태계를 구축합니다.
+            불필요한 프레임워크 없이 순수한 비즈니스 로직(LocalFlow)을 구현합니다.
+        </p>
     </section>
 
     <section class="projects">
         <h2>ARCHIVE & WORKS</h2>
+
         <div class="project-grid">
             <a href="https://archive.localflow.info" class="card" target="_blank" rel="noopener noreferrer">
-                <h3>STANCE ARchive</h3>
-                <p>고객 요청사항에 대한 결과물 저장소 입니다.</p>
+                <h3>STANCE Archive</h3>
+                <p>고객 요청사항에 대한 결과물 저장소입니다.</p>
             </a>
+
             <a href="https://archive.localflow.info/p/board.html" class="card" target="_blank" rel="noopener noreferrer">
                 <h3>LocalFlow System</h3>
                 <p>소상공인이 필요로 하는 기능을 구현합니다.</p>
             </a>
+
             <a href="https://archive.localflow.info/p/aquaponics.html" class="card" target="_blank" rel="noopener noreferrer">
                 <h3>Aquaponics</h3>
-                <p>물고기 양식과 수경재배를 결합한 친환경 순환 농법에 필요한 모든것.</p>
-            </a>            
+                <p>물고기 양식과 수경재배를 결합한 친환경 순환 농법에 필요한 모든 것.</p>
+            </a>
+
             <a href="https://archive.localflow.info/p/lib.html" class="card" target="_blank" rel="noopener noreferrer">
                 <h3>Resources Library</h3>
                 <p>전용 라이브러리 저장 공간입니다.</p>
             </a>
+
             <a href="https://archive.localflow.info/p/cs.html" class="card" target="_blank" rel="noopener noreferrer">
                 <h3>Support Board</h3>
                 <p>문의글을 남기고 답변을 확인하세요.</p>
@@ -163,8 +252,25 @@
 
     <section class="contact">
         <h2>GET IN TOUCH</h2>
-        <p>비즈니스 문의 및 협업 제안은 언제나 환영합니다.</p><br>
-        <a href="mailto:llsshh1431@naver.com" class="email-link" target="_blank" rel="noopener noreferrer">contact@stance.com</a>
+        <p>비즈니스 문의 및 협업 제안은 언제나 환영합니다.</p>
+
+        <div class="contact-info">
+            <a href="mailto:llsshh1431@naver.com" class="email-link">
+                llsshh1431@naver.com
+            </a>
+
+            <div class="contact-actions">
+                <button type="button" class="contact-btn" onclick="copyEmail()">
+                    이메일 주소 복사
+                </button>
+
+                <button type="button" class="contact-btn" onclick="openNaverMail()">
+                    네이버 메일 열기
+                </button>
+            </div>
+
+            <p id="copy-message" class="copy-message"></p>
+        </div>
     </section>
 
     <footer>
@@ -173,19 +279,44 @@
 
     <script>
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('bg-canvas'), antialias: true, alpha: true });
-        
+
+        const camera = new THREE.PerspectiveCamera(
+            75,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+
+        const renderer = new THREE.WebGLRenderer({
+            canvas: document.getElementById('bg-canvas'),
+            antialias: true,
+            alpha: true
+        });
+
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
 
         const geometry = new THREE.BufferGeometry();
         const vertices = [];
+
         for (let i = 0; i < 5000; i++) {
-            vertices.push(THREE.MathUtils.randFloatSpread(2000), THREE.MathUtils.randFloatSpread(2000), THREE.MathUtils.randFloatSpread(2000));
+            vertices.push(
+                THREE.MathUtils.randFloatSpread(2000),
+                THREE.MathUtils.randFloatSpread(2000),
+                THREE.MathUtils.randFloatSpread(2000)
+            );
         }
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-        const material = new THREE.PointsMaterial({ color: 0x444444, size: 2 });
+
+        geometry.setAttribute(
+            'position',
+            new THREE.Float32BufferAttribute(vertices, 3)
+        );
+
+        const material = new THREE.PointsMaterial({
+            color: 0x444444,
+            size: 2
+        });
+
         const points = new THREE.Points(geometry, material);
         scene.add(points);
 
@@ -193,19 +324,26 @@
 
         function animate() {
             requestAnimationFrame(animate);
+
             points.rotation.x += 0.0005;
             points.rotation.y += 0.0005;
+
             renderer.render(scene, camera);
         }
+
         animate();
 
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
+
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        const observerOptions = { threshold: 0.2 };
+        const observerOptions = {
+            threshold: 0.2
+        };
+
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -217,6 +355,29 @@
         document.querySelectorAll('section').forEach(section => {
             observer.observe(section);
         });
+
+        const contactEmail = 'llsshh1431@naver.com';
+
+        function copyEmail() {
+            navigator.clipboard.writeText(contactEmail)
+                .then(() => {
+                    document.getElementById('copy-message').textContent =
+                        '이메일 주소가 복사되었습니다.';
+                })
+                .catch(() => {
+                    document.getElementById('copy-message').textContent =
+                        '복사에 실패했습니다. 이메일 주소를 직접 복사해주세요: ' + contactEmail;
+                });
+        }
+
+        function openNaverMail() {
+            window.open(
+                'https://mail.naver.com',
+                '_blank',
+                'noopener,noreferrer'
+            );
+        }
     </script>
+
 </body>
 </html>
