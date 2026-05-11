@@ -139,19 +139,31 @@
       }
 
       addPath(x, y, w, h) {
-        const path = this.add.graphics();
-        path.fillStyle(0xe5c58d, 1);
-        path.beginPath();
-        path.moveTo(x, y + 60);
-        path.quadraticCurveTo(x + 300, y + 10, x + 510, y + 90);
-        path.quadraticCurveTo(x + 740, y + 180, x + w, y + h - 20);
-        path.lineTo(x + w, y + h + 80);
-        path.quadraticCurveTo(x + 700, y + 220, x + 460, y + 150);
-        path.quadraticCurveTo(x + 230, y + 80, x, y + 140);
-        path.closePath();
-        path.fillPath();
-        path.lineStyle(4, 0xcaa36a, 0.35);
-        path.strokePath();
+        // Phaser Graphics에는 Canvas API의 quadraticCurveTo가 없어서
+        // 부드러운 길은 겹친 타원/원으로 구성합니다.
+        const path = this.add.container(0, 0);
+
+        const segments = [
+          { x: x + 90, y: y + 85, w: 220, h: 80, a: -8 },
+          { x: x + 260, y: y + 105, w: 250, h: 90, a: 8 },
+          { x: x + 470, y: y + 155, w: 280, h: 96, a: 16 },
+          { x: x + 700, y: y + 220, w: 320, h: 106, a: 20 },
+          { x: x + 910, y: y + 300, w: 300, h: 98, a: 22 }
+        ];
+
+        for (const s of segments) {
+          const base = this.add.ellipse(s.x, s.y, s.w, s.h, 0xe5c58d).setAngle(s.a);
+          const edge = this.add.ellipse(s.x, s.y, s.w + 8, s.h + 8, 0xcaa36a, 0.20).setAngle(s.a);
+          path.add(edge);
+          path.add(base);
+        }
+
+        for (let i = 0; i < 36; i++) {
+          const px = x + 70 + i * 28;
+          const py = y + 92 + i * 6 + Math.sin(i * 0.8) * 28;
+          const stone = this.add.ellipse(px, py, 12, 6, 0xd1aa73, 0.35).setAngle(i * 17);
+          path.add(stone);
+        }
       }
 
       createCottage(x, y) {
