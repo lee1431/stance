@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <link rel="icon" href="https://mrdindoin.ddns.net/ingo/images/favicon.ico?r=wof01">
+  <title>QR 코드 생성기 — STANCE</title>
+  <meta name="theme-color" content="#0ea5e9" />
+  <!-- QRCode.js (순수 JS, 가벼움) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+  <style>
+    :root{--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--accent:#0ea5e9}
+    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;color:var(--ink);background:#fafafa}
+    .wrap{max-width:760px;margin:0 auto;padding:18px}
+    .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 6px 24px #00000010;overflow:hidden}
+    header{padding:16px;border-bottom:1px solid var(--line);background:#f8fafc}
+    header h1{margin:0;font-size:18px}
+    .body{padding:16px;display:grid;gap:14px}
+    label{font-size:13px;color:var(--muted)}
+    input,select{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;font-size:15px}
+    button{padding:12px 16px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-weight:700;font-size:15px;cursor:pointer}
+    .row{display:grid;gap:10px;grid-template-columns:1fr}
+    @media(min-width:700px){.row{grid-template-columns:2fr 1fr 1fr}}
+    .preview{display:grid;gap:12px;grid-template-columns:1fr}
+    @media(min-width:700px){.preview{grid-template-columns:1fr 1fr}}
+    .qrbox{display:flex;align-items:center;justify-content:center;min-height:260px;border:1px dashed var(--line);border-radius:14px;background:#fff}
+    .muted{color:var(--muted);font-size:13px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn-ghost{background:#eef6ff;color:#0b6ea9}
+    .center{text-align:center}
+  </style>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9382191250873184"
+     crossorigin="anonymous"></script>
+  
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <header><h1>QR 코드 생성기</h1></header>
+      <div class="body">
+        <div class="row">
+          <div>
+            <label for="url">URL</label>
+            <input id="url" type="url" placeholder="https://example.com/path?x=1" />
+          </div>
+          <div>
+            <label for="size">크기(px)</label>
+            <select id="size">
+              <option>256</option><option>320</option><option selected>384</option><option>448</option><option>512</option>
+            </select>
+          </div>
+          <div>
+            <label for="ec">오류정정(ECC)</label>
+            <select id="ec">
+              <option value="L">L (최저)</option>
+              <option value="M" selected>M</option>
+              <option value="Q">Q</option>
+              <option value="H">H (최고)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="fg">전경색</label>
+            <input id="fg" type="color" value="#0f172a" />
+          </div>
+          <div>
+            <label for="bg">배경색</label>
+            <input id="bg" type="color" value="#ffffff" />
+          </div>
+          <div class="center" style="align-self:end">
+            <button id="make">QR 생성</button>
+          </div>
+        </div>
+
+        <div class="preview">
+          <div>
+            <div class="qrbox"><div id="qrcode"></div></div>
+          </div>
+          <div>
+            <p class="muted">QR이 생성되면 아래 버튼으로 파일 저장/인쇄하세요.</p>
+            <div class="actions">
+              <button class="btn-ghost" id="download">PNG로 저장</button>
+              <button class="btn-ghost" id="print">인쇄하기</button>
+              <button class="btn-ghost" id="copy">URL 복사</button>
+            </div>
+            <p class="muted" id="status"></p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // QRCode.js 로딩 대기
+    document.addEventListener('DOMContentLoaded', () => {
+      const elUrl = document.getElementById('url');
+      const elSize = document.getElementById('size');
+      const elEC = document.getElementById('ec');
+      const elFG = document.getElementById('fg');
+      const elBG = document.getElementById('bg');
+      const elBox = document.getElementById('qrcode');
+      const elStatus = document.getElementById('status');
+
+      // URL 파라미터로 초기값 세팅 지원 (?url=...)
+      const params = new URLSearchParams(location.search);
+      if (params.get('url')) elUrl.value = params.get('url');
+
+      let qr; // 인스턴스 홀더
+
+      function clearQR(){
+        elBox.innerHTML = '';
+        qr = null;
+      }
+
+      function normalizeUrl(value){
+        try {
+          // 스킴 없을 때 자동 보정
+          if (!/^[a-z]+:\/\//i.test(value)) value = 'https://' + value;
+          new URL(value);
+          return value;
+        } catch {
+          return null;
+        }
+      }
+
+      function makeQR(){
+        const raw = elUrl.value.trim();
+        const value = normalizeUrl(raw);
+        if (!value){
+          elStatus.textContent = '유효한 URL을 입력해주세요.';
+          clearQR();
+          return;
+        }
+        elStatus.textContent = '';
+
+        clearQR();
+        qr = new QRCode(elBox, {
+          text: value,
+          width: parseInt(elSize.value, 10),
+          height: parseInt(elSize.value, 10),
+          colorDark: elFG.value,
+          colorLight: elBG.value,
+          correctLevel: QRCode.CorrectLevel[elEC.value] || QRCode.CorrectLevel.M
+        });
+      }
+
+      // 버튼 바인딩
+      document.getElementById('make').addEventListener('click', makeQR);
+
+      document.getElementById('download').addEventListener('click', () => {
+        if (!elBox.firstChild) return;
+        // canvas 또는 img 지원
+        let dataUrl;
+        if (elBox.querySelector('canvas')) {
+          dataUrl = elBox.querySelector('canvas').toDataURL('image/png');
+        } else if (elBox.querySelector('img')) {
+          // 이미지로 렌더된 경우 캔버스로 변환
+          const img = elBox.querySelector('img');
+          const c = document.createElement('canvas');
+          c.width = img.naturalWidth || parseInt(elSize.value,10);
+          c.height = img.naturalHeight || parseInt(elSize.value,10);
+          const ctx = c.getContext('2d');
+          ctx.fillStyle = elBG.value; ctx.fillRect(0,0,c.width,c.height);
+          ctx.drawImage(img, 0, 0, c.width, c.height);
+          dataUrl = c.toDataURL('image/png');
+        }
+        if (!dataUrl) return;
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `qr_${Date.now()}.png`;
+        a.click();
+      });
+
+      document.getElementById('print').addEventListener('click', () => {
+        if (!elBox.firstChild) return;
+        const w = window.open('', '_blank');
+        const html = `
+          <html><head><title>QR 인쇄</title></head>
+          <body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:#fff">
+            ${elBox.innerHTML}
+            <script>window.onload = () => setTimeout(()=>window.print(), 200);<\/script>
+          </body></html>`;
+        w.document.write(html);
+        w.document.close();
+      });
+
+      document.getElementById('copy').addEventListener('click', async () => {
+        const raw = elUrl.value.trim();
+        const value = normalizeUrl(raw);
+        if (!value) return;
+        try {
+          await navigator.clipboard.writeText(value);
+          elStatus.textContent = 'URL을 클립보드에 복사했습니다.';
+          setTimeout(()=> elStatus.textContent='', 2000);
+        } catch {
+          elStatus.textContent = '복사 권한이 거부되었습니다.';
+        }
+      });
+
+      // Enter로 바로 생성
+      elUrl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') { e.preventDefault(); makeQR(); }});
+    });
+
+  </script>
+</body>
+</html>
