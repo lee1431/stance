@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>어류 퍼즐 게임</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f8ff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    #score-board {
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+    /* Use CSS variable for cell size so it can adjust responsively */
+    :root {
+      --cell-size: 50px;
+    }
+
+    /* Adjust cell size based on viewport width for mobile devices */
+    @media (max-width: 600px) {
+      :root {
+        /* Subtracting 40px for padding/margins around the board and 14px for grid gaps */
+        --cell-size: calc((100vw - 40px) / 8);
+      }
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(8, var(--cell-size));
+      grid-template-rows: repeat(8, var(--cell-size));
+      gap: 2px;
+      background: #a7d8de;
+      padding: 5px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      /* Prevent scrolling while dragging on touch devices */
+      touch-action: none;
+    }
+    .cell {
+      width: var(--cell-size);
+      height: var(--cell-size);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      /* font-size scales with cell size for mobile */
+      font-size: calc(var(--cell-size) * 0.6);
+      cursor: pointer;
+      background: #d1eef0;
+      border-radius: 8px;
+      user-select: none;
+      transition: transform 0.05s;
+    }
+    .cell.selected {
+      outline: 3px solid #ffbf00;
+      transform: scale(1.1);
+    }
+    .cell.removing {
+      animation: pop 0.2s forwards;
+    }
+    /* Raised effect when dragging a block */
+    .cell.dragging {
+      transform: translateY(calc(var(--cell-size) * -0.1)) scale(1.1);
+      z-index: 2;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+    @keyframes pop {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(0); opacity: 0; }
+    }
+    #instructions {
+      margin-top: 15px;
+      max-width: 500px;
+      font-size: 14px;
+      text-align: center;
+      color: #555;
+    }
+  </style>
+</head>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9382191250873184"
+       crossorigin="anonymous"></script>
+<body>
+  <!-- Representative pixel art image -->
+  <img src="pixel_fish.png" alt="Pixelated fish" id="cover-image" style="width:120px;height:120px;margin-bottom:10px;image-rendering:pixelated;" />
+  <h1>어류 퍼즐 게임</h1>
+  <div id="score-board">점수: <span id="score">0</span></div>
+  <div id="board"></div>
+  <div id="instructions">
+    블록을 눌러 상하좌우로 슬라이드하면 옆 칸과 맞바꿀 수 있습니다. 같은 종류의 어류를 3개 이상 또는 정사각형 모양으로 맞추면 터집니다. 한 번의 움직임으로 한 블록만 이동할 수 있으며, 계속해서 점수를 획득하세요!
+  </div>
+  <script>
+    // Fish types represented by emojis
+    const fishTypes = ['🐟','🐠','🐡','🦈','🦀','🐬'];
+    const rows = 8;
+    const cols = 8;
+    const board = [];
+    // state for pointer interactions
+    let startCell = null;
+    let processing = false;
+    let score = 0;
+    const scoreElement = document.getElementById('score');
+    const boardElement = document.getElementById('board');
+
+    // Initialize board with random fish
+    function initBoard() {
+      for (let r = 0; r < rows; r++) {
+        board[r] = [];
+        for (let c = 0; c < cols; c++) {
+          let type;
+          // ensure no initial matches: pick until no immediate match with left or up neighbors
+          do {
+            type = Math.floor(Math.random() * fishTypes.length);
+          } while ((c >= 2 && board[r][c-1] === type && board[r][c-2] === type) ||
+                   (r >= 2 && board[r-1][c] === type && board[r-2][c] === type));
+          board[r][c] = type;
+        }
+      }
+    }
+
+    function createBoardElements() {
+      boardElement.innerHTML = '';
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const div = document.createElement('div');
+          div.classList.add('cell');
+          div.dataset.row = r;
+          div.dataset.col = c;
+          div.textContent = fishTypes[board[r][c]];
+          // individual click events are no longer needed for swaps
+          boardElement.appendChild(div);
+        }
+      }
+    }
+
+    // Pointer interactions: allow sliding blocks by dragging from one cell to an adjacent one
+    function attachPointerHandlers() {
+      // When a pointer (mouse or touch) goes down on a cell, record it and highlight
+      boardElement.addEventListener('pointerdown', (e) => {
+        if (processing) return;
+        const targetCell = e.target.closest('.cell');
+        if (!targetCell) return;
+        const r = parseInt(targetCell.dataset.row);
+        const c = parseInt(targetCell.dataset.col);
+        // Determine initial pointer coordinates
+        let startX = e.clientX;
+        let startY = e.clientY;
+        if (startX === undefined || startY === undefined) {
+          if (e.touches && e.touches.length > 0) {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+          }
+        }
+        startCell = {r, c, el: targetCell, startX, startY};
+        targetCell.classList.add('selected');
+        targetCell.classList.add('dragging');
+        // Prevent default behaviour (like scrolling) when starting drag on touch devices
+        e.preventDefault();
+      });
+      // When the pointer is released, determine the cell under the pointer and swap if adjacent
+      boardElement.addEventListener('pointerup', (e) => {
+        if (!startCell) return;
+        const start = startCell;
+        startCell = null;
+        // Remove highlight and dragging from start
+        start.el.classList.remove('selected');
+        start.el.classList.remove('dragging');
+        if (processing) return;
+        // Get end pointer coordinates
+        let endX = e.clientX;
+        let endY = e.clientY;
+        if (endX === undefined || endY === undefined) {
+          if (e.changedTouches && e.changedTouches.length > 0) {
+            endX = e.changedTouches[0].clientX;
+            endY = e.changedTouches[0].clientY;
+          }
+        }
+        // If we have both start and end coordinates, compute drag direction
+        if (start.startX != null && start.startY != null && endX != null && endY != null) {
+          const dx = endX - start.startX;
+          const dy = endY - start.startY;
+          const threshold = 10; // minimum pixels to consider movement
+          let r1 = start.r;
+          let c1 = start.c;
+          let r2 = r1;
+          let c2 = c1;
+          // Determine direction: prioritise horizontal movement if movement exceeds threshold
+          if (dx <= -threshold) {
+            // drag to left
+            c2 = c1 - 1;
+          } else if (dx >= threshold) {
+            // drag to right
+            c2 = c1 + 1;
+          } else if (dy <= -threshold) {
+            // drag upward
+            r2 = r1 - 1;
+          } else if (dy >= threshold) {
+            // drag downward
+            r2 = r1 + 1;
+          }
+          // Check boundaries and swap if valid and different
+          if ((r2 !== r1 || c2 !== c1) && r2 >= 0 && r2 < rows && c2 >= 0 && c2 < cols) {
+            swapAndCheck(r1, c1, r2, c2);
+            return;
+          }
+        }
+        // Fallback: if no significant movement, try to swap with cell under pointer if adjacent
+        let clientX = endX;
+        let clientY = endY;
+        let targetElement = null;
+        if (clientX != null && clientY != null) {
+          targetElement = document.elementFromPoint(clientX, clientY);
+        }
+        if (!targetElement) return;
+        const endCellEl = targetElement.closest('.cell');
+        if (!endCellEl) return;
+        const r2F = parseInt(endCellEl.dataset.row);
+        const c2F = parseInt(endCellEl.dataset.col);
+        const r1F = start.r;
+        const c1F = start.c;
+        if ((Math.abs(r1F - r2F) + Math.abs(c1F - c2F)) === 1) {
+          swapAndCheck(r1F, c1F, r2F, c2F);
+        }
+      });
+    }
+
+    function swapAndCheck(r1, c1, r2, c2) {
+      processing = true;
+      // Swap in board
+      const tmp = board[r1][c1];
+      board[r1][c1] = board[r2][c2];
+      board[r2][c2] = tmp;
+      // Update DOM quickly
+      updateCell(r1, c1);
+      updateCell(r2, c2);
+      // Check matches
+      const matched = findMatches();
+      if (matched.length === 0) {
+        // no match: revert
+        const tmp2 = board[r1][c1];
+        board[r1][c1] = board[r2][c2];
+        board[r2][c2] = tmp2;
+        updateCell(r1, c1);
+        updateCell(r2, c2);
+        processing = false;
+      } else {
+        removeMatches(matched);
+      }
+    }
+
+    // Update a single cell's DOM text
+    function updateCell(r, c) {
+      const index = r * cols + c;
+      const div = boardElement.children[index];
+      div.textContent = fishTypes[board[r][c]];
+    }
+
+    // Find all matched cells in board; return list of coordinates [r,c]
+    function findMatches() {
+      const toRemove = [];
+      const matchedMap = Array.from({length: rows}, () => Array(cols).fill(false));
+      // Horizontal
+      for (let r = 0; r < rows; r++) {
+        let streak = 1;
+        for (let c = 1; c < cols; c++) {
+          if (board[r][c] === board[r][c-1]) {
+            streak++;
+          } else {
+            if (streak >= 3) {
+              for (let k = 0; k < streak; k++) matchedMap[r][c-1-k] = true;
+            }
+            streak = 1;
+          }
+        }
+        if (streak >= 3) {
+          for (let k = 0; k < streak; k++) matchedMap[r][cols-1-k] = true;
+        }
+      }
+      // Vertical
+      for (let c = 0; c < cols; c++) {
+        let streak = 1;
+        for (let r = 1; r < rows; r++) {
+          if (board[r][c] === board[r-1][c]) {
+            streak++;
+          } else {
+            if (streak >= 3) {
+              for (let k = 0; k < streak; k++) matchedMap[r-1-k][c] = true;
+            }
+            streak = 1;
+          }
+        }
+        if (streak >= 3) {
+          for (let k = 0; k < streak; k++) matchedMap[rows-1-k][c] = true;
+        }
+      }
+      // 2x2 square matches
+      for (let r = 0; r < rows - 1; r++) {
+        for (let c = 0; c < cols - 1; c++) {
+          const type = board[r][c];
+          if (type !== null &&
+              board[r][c+1] === type &&
+              board[r+1][c] === type &&
+              board[r+1][c+1] === type) {
+            matchedMap[r][c] = true;
+            matchedMap[r][c+1] = true;
+            matchedMap[r+1][c] = true;
+            matchedMap[r+1][c+1] = true;
+          }
+        }
+      }
+      // Collect positions
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (matchedMap[r][c]) toRemove.push([r, c]);
+        }
+      }
+      return toRemove;
+    }
+
+    function removeMatches(matches) {
+      // Remove matched cells: animate removal by adding class
+      matches.forEach(([r,c]) => {
+        const index = r * cols + c;
+        const div = boardElement.children[index];
+        div.classList.add('removing');
+      });
+      // Wait for animation to finish then drop
+      setTimeout(() => {
+        // Remove matched and collapse columns
+        // Mark them null
+        matches.forEach(([r,c]) => {
+          board[r][c] = null;
+        });
+        // Collapse columns
+        for (let c = 0; c < cols; c++) {
+          let empty = [];
+          for (let r = rows-1; r >= 0; r--) {
+            if (board[r][c] === null) {
+              empty.push(r);
+            } else if (empty.length > 0) {
+              const target = empty.shift();
+              board[target][c] = board[r][c];
+              board[r][c] = null;
+              empty.push(r);
+            }
+          }
+          // Fill empties with new fish
+          for (let i = 0; i < empty.length; i++) {
+            const row = empty[i];
+            board[row][c] = Math.floor(Math.random() * fishTypes.length);
+          }
+        }
+        // Update DOM and remove 'removing' class
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const index = r * cols + c;
+            const div = boardElement.children[index];
+            div.classList.remove('removing');
+            div.textContent = fishTypes[board[r][c]];
+          }
+        }
+        // Update score
+        score += matches.length;
+        scoreElement.textContent = score;
+        // Check for new matches (cascade)
+        const newMatches = findMatches();
+        if (newMatches.length > 0) {
+          removeMatches(newMatches);
+        } else {
+          processing = false;
+        }
+      }, 200);
+    }
+
+    function startGame() {
+      initBoard();
+      createBoardElements();
+      // attach pointer handlers after creating cells
+      attachPointerHandlers();
+    }
+
+    startGame();
+  </script>
+</body>
+</html>
