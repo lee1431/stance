@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Planet Chungju - Jigsaw Gallery</title>
+  <style>
+    :root { --bg: #121416; --accent: #00d2ff; --panel: rgba(0, 0, 0, 0.8); }
+    * { box-sizing: border-box; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; outline: none; }
+    
+    body { 
+      margin: 0; background: var(--bg); color: white; font-family: sans-serif; 
+      overflow-x: hidden; overflow-y: auto; 
+    }
+    body.playing { overflow: hidden; position: fixed; width: 100%; height: 100%; }
+
+    header { 
+      position: fixed; top: 0; left: 0; width: 100%; padding: 15px; 
+      display: flex; justify-content: space-between; align-items: center; 
+      z-index: 100; background: linear-gradient(to bottom, var(--panel), transparent); 
+      pointer-events: none; 
+    }
+    header > * { pointer-events: auto; }
+
+    .btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    button { 
+      padding: 10px 16px; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; 
+      background: var(--panel); color: white; font-weight: bold; cursor: pointer; 
+      backdrop-filter: blur(10px); transition: 0.2s; font-size: 13px; 
+    }
+    button.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+    #main-container { padding: 85px 16px 30px; min-height: 100vh; }
+    #gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; }
+    
+    .item { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; overflow: hidden; cursor: pointer; }
+    .item img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; background: #222; }
+    .list-meta { padding: 9px; font-size: 12px; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    #game-container { 
+      display: none; position: fixed; inset: 0; background: var(--bg); 
+      overflow: hidden; touch-action: none; z-index: 50; 
+    }
+    #msg-box { 
+      position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
+      padding: 12px 25px; background: var(--panel); border-radius: 30px; 
+      font-size: 14px; pointer-events: none; z-index: 100; white-space: nowrap;
+    }
+
+    canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+    .game-only { display: none; }
+    body.playing .game-only { display: inline-block; }
+    body.playing #main-container { display: none; }
+
+    @media (max-width: 640px) { #gallery { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; } }
+  </style>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9382191250873184" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<header>
+  <div style="font-weight:800; font-size:1.1rem;">PLANET <span style="color:var(--accent)">CHUNGJU</span></div>
+  <div class="btns">
+    <button class="game-only" onclick="backToGallery()">목록</button>
+    <button class="game-only active level-btn" onclick="changeLevel(10, this)">100P</button>
+    <button class="game-only level-btn" onclick="changeLevel(15, this)">225P</button>
+    <button class="game-only" onclick="resetGame()" style="background:#e74c3c;">다시</button>
+  </div>
+</header>
+
+<main id="main-container">
+  <div id="countText" style="margin-bottom:14px; color:#aaa; font-size:14px;">이미지 불러오는 중...</div>
+  <section id="gallery"></section>
+</main>
+
+<section id="game-container">
+  <div id="msg-box">조각을 맞춰보셔유!</div>
+  <canvas id="mainCanvas"></canvas>
+</section>
+
+<script>
+  const API_BASE = 'https://localflow.ddns.net/images';
+  let currentFolder = new URLSearchParams(window.location.search).get('folder') || 'object';
+  
+  const gallery = document.getElementById('gallery');
+  const canvas = document.getElementById('mainCanvas');
+  const ctx = canvas.getContext('2d');
+  const msgBox = document.getElementById('msg-box');
+
+  let currentPage = 1, hasNext = true, isLoading = false;
+  let img = new Image();
+  img.crossOrigin = "Anonymous";
+
+  let pieces = [], selectedPiece = null, gridSize = 10;
+  let view = { x: 0, y: 0, scale: 0.7, isPanning: false, startX: 0, startY: 0, lastDist: 0 };
+  let dragOffset = { x: 0, y: 0 };
+
+  async function loadImages(page = 1) {
+    if (isLoading || (!hasNext && page !== 1)) return;
+    isLoading = true;
+    try {
+      const res = await fetch(`${API_BASE}/api/gallery/${encodeURIComponent(currentFolder)}?page=${page}&page_size=24`);
+      const data = await res.json();
+      hasNext = data.has_next;
+      currentPage = data.page;
+      const html = data.items.map(item => `
+        <article class="item" onclick="startGame('${item.url}')">
+          <img src="${item.url}" loading="lazy" alt="img">
+          <div class="list-meta">${item.filename || 'Untitled'}</div>
+        </article>
+      `).join('');
+      if (page === 1) gallery.innerHTML = html;
+      else gallery.insertAdjacentHTML('beforeend', html);
+      document.getElementById('countText').innerHTML = `Total <strong>${data.total || 0}</strong> Images`;
+    } catch (err) { console.error(err); } finally { isLoading = false; }
+  }
+
+  function startGame(url) {
+    document.body.classList.add('playing');
+    document.getElementById('game-container').style.display = 'block';
+    img.onload = () => { resize(); resetGame(); };
+    img.src = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
+  }
+
+  function backToGallery() {
+    document.body.classList.remove('playing');
+    document.getElementById('game-container').style.display = 'none';
+    selectedPiece = null;
+  }
+
+  function resize() {
+    canvas.width = window.innerWidth * devicePixelRatio;
+    canvas.height = window.innerHeight * devicePixelRatio;
+    view.x = window.innerWidth / 2;
+    view.y = window.innerHeight / 2;
+    draw();
+  }
+
+  function getPath(ctx, p, x, y) {
+    ctx.beginPath(); ctx.moveTo(x, y);
+    const drawEdge = (x1, y1, x2, y2, type) => {
+      if (type === 0) { ctx.lineTo(x2, y2); return; }
+      const mx = (x1+x2)/2, my = (y1+y2)/2, nx = -(y2-y1), ny = (x2-x1);
+      const n = 0.12, h = 0.22, d = 0.35 * type;
+      ctx.bezierCurveTo(x1+(x2-x1)*(0.5-n), y1+(y2-y1)*(0.5-n), mx+nx*d-(x2-x1)*h, my+ny*d-(y2-y1)*h, mx+nx*d, my+ny*d);
+      ctx.bezierCurveTo(mx+nx*d+(x2-x1)*h, my+ny*d+(y2-y1)*h, x1+(x2-x1)*(0.5+n), y1+(y2-y1)*(0.5+n), x2, y2);
+    };
+    drawEdge(x, y, x + p.w, y, p.edges.t);
+    drawEdge(x + p.w, y, x + p.w, y + p.h, p.edges.r);
+    drawEdge(x + p.w, y + p.h, x, y + p.h, p.edges.b);
+    drawEdge(x, y + p.h, x, y, p.edges.l);
+    ctx.closePath();
+  }
+
+  // --- [수정됨] 조각들을 퍼즐판 주변으로 촘촘히 모으는 로직 ---
+  function resetGame() {
+    pieces = [];
+    const baseW = Math.min(window.innerWidth, window.innerHeight) * 0.7;
+    const pw = baseW / gridSize, ph = (pw * img.height) / img.width;
+    
+    let map = Array.from({length: gridSize + 1}, () => Array.from({length: gridSize + 1}, () => ({ h:0, v:0 })));
+    for(let r=0; r<=gridSize; r++) for(let c=0; c<=gridSize; c++) {
+      if(c>0 && c<gridSize) map[r][c].h = Math.random() < 0.5 ? 1 : -1;
+      if(r>0 && r<gridSize) map[r][c].v = Math.random() < 0.5 ? 1 : -1;
+    }
+
+    const boardW = pw * gridSize;
+    const boardH = ph * gridSize;
+
+    for(let r=0; r<gridSize; r++) {
+      for(let c=0; c<gridSize; c++) {
+        const side = Math.floor(Math.random() * 4);
+        let spawnX, spawnY;
+        const margin = 40; // 퍼즐판과의 최소 간격
+        const spread = 150; // 퍼져나가는 최대 범위 (이걸 줄이면 더 모임)
+
+        if (side === 0) { // 상 (Top Frame)
+          spawnX = (Math.random() - 0.5) * (boardW + spread);
+          spawnY = -boardH/2 - margin - Math.random() * spread;
+        } else if (side === 1) { // 하 (Bottom Frame)
+          spawnX = (Math.random() - 0.5) * (boardW + spread);
+          spawnY = boardH/2 + margin + Math.random() * spread;
+        } else if (side === 2) { // 좌 (Left Frame)
+          spawnX = -boardW/2 - margin - Math.random() * spread;
+          spawnY = (Math.random() - 0.5) * (boardH + spread);
+        } else { // 우 (Right Frame)
+          spawnX = boardW/2 + margin + Math.random() * spread;
+          spawnY = (Math.random() - 0.5) * (boardH + spread);
+        }
+
+        pieces.push({
+          row: r, col: c, w: pw, h: ph, tab: pw*0.2, isLocked: false,
+          edges: { t: map[r][c].v*-1, r: map[r][c+1].h, b: map[r+1][c].v, l: map[r][c].h*-1 },
+          x: spawnX,
+          y: spawnY,
+          tx: (c - gridSize/2) * pw, ty: (r - gridSize/2) * ph
+        });
+      }
+    }
+    draw();
+  }
+
+  function draw() {
+    const dpr = devicePixelRatio;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    ctx.translate(view.x, view.y);
+    ctx.scale(view.scale, view.scale);
+
+    pieces.forEach(p => {
+      ctx.save(); getPath(ctx, p, p.tx, p.ty);
+      ctx.strokeStyle = "rgba(255,255,255,0.08)"; ctx.lineWidth = 1/view.scale; ctx.stroke();
+      ctx.fillStyle = "rgba(0,0,0,0.2)"; ctx.fill(); ctx.restore();
+    });
+
+    const sorted = [...pieces].sort((a,b) => (a===selectedPiece?2:(a.isLocked?-1:0)) - (b===selectedPiece?2:(b.isLocked?-1:0)));
+    sorted.forEach(p => {
+      ctx.save();
+      if(p === selectedPiece) { ctx.shadowColor = "black"; ctx.shadowBlur = 20; ctx.shadowOffsetY = 10; }
+      getPath(ctx, p, p.x, p.y); ctx.clip();
+      const sw = img.width/gridSize, sh = img.height/gridSize, b = p.tab*(img.width/(p.w*gridSize))*2;
+      ctx.drawImage(img, (p.col/gridSize)*img.width-b, (p.row/gridSize)*img.height-b, sw+b*2, sh+b*2, p.x-p.tab*2, p.y-p.tab*2, p.w+p.tab*4, p.h+p.tab*4);
+      ctx.restore();
+      ctx.save(); getPath(ctx, p, p.x, p.y);
+      ctx.strokeStyle = p.isLocked ? "rgba(255,255,255,0.05)" : (p===selectedPiece? "#00d2ff" : "rgba(255,255,255,0.3)");
+      ctx.lineWidth = (p===selectedPiece?3:1)/view.scale; ctx.stroke(); ctx.restore();
+    });
+  }
+
+  function getPoint(e) {
+    const rect = canvas.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    const rx = t.clientX - rect.left;
+    const ry = t.clientY - rect.top;
+    return { rx, ry, x: (rx - view.x) / view.scale, y: (ry - view.y) / view.scale };
+  }
+
+  function handleStart(e) {
+    if (e.touches && e.touches.length === 2) {
+      view.lastDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      return;
+    }
+    if(document.body.classList.contains('playing') && e.cancelable) e.preventDefault();
+    const p = getPoint(e);
+    selectedPiece = null;
+    const dpr = devicePixelRatio;
+    for (let i = pieces.length - 1; i >= 0; i--) {
+      const pc = pieces[i];
+      if (pc.isLocked) continue;
+      ctx.save();
+      ctx.setTransform(view.scale * dpr, 0, 0, view.scale * dpr, view.x * dpr, view.y * dpr);
+      getPath(ctx, pc, pc.x, pc.y);
+      if (ctx.isPointInPath(p.rx * dpr, p.ry * dpr)) {
+        selectedPiece = pc;
+        dragOffset.x = p.x - pc.x;
+        dragOffset.y = p.y - pc.y;
+        pieces.splice(i, 1);
+        pieces.push(pc);
+        ctx.restore(); break;
+      }
+      ctx.restore();
+    }
+    if (!selectedPiece) {
+      view.isPanning = true;
+      view.startX = p.rx - view.x;
+      view.startY = p.ry - view.y;
+    }
+    draw();
+  }
+
+  function handleMove(e) {
+    if(!document.body.classList.contains('playing')) return;
+    if(e.cancelable) e.preventDefault();
+    if (e.touches && e.touches.length === 2) {
+      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      const ns = Math.max(0.1, Math.min(5, view.scale * (dist / view.lastDist)));
+      view.x = midX - (midX - view.x) * (ns / view.scale);
+      view.y = midY - (midY - view.y) * (ns / view.scale);
+      view.scale = ns; view.lastDist = dist;
+      draw(); return;
+    }
+    const p = getPoint(e);
+    if (selectedPiece) {
+      selectedPiece.x = p.x - dragOffset.x;
+      selectedPiece.y = p.y - dragOffset.y;
+    } else if (view.isPanning) {
+      view.x = p.rx - view.startX;
+      view.y = p.ry - view.startY;
+    }
+    draw();
+  }
+
+  function handleEnd() {
+    if (selectedPiece) {
+      const dist = Math.hypot(selectedPiece.x - selectedPiece.tx, selectedPiece.y - selectedPiece.ty);
+      if (dist < 40 / view.scale) {
+        selectedPiece.x = selectedPiece.tx; selectedPiece.y = selectedPiece.ty;
+        selectedPiece.isLocked = true;
+        const count = pieces.filter(p => p.isLocked).length;
+        msgBox.innerText = (count === pieces.length) ? '와우! 다 맞췄슈!' : `맞춘 조각: ${count} / ${pieces.length}`;
+      }
+    }
+    selectedPiece = null; view.isPanning = false;
+    draw();
+  }
+
+  function changeLevel(n, btn) {
+    gridSize = n;
+    document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    resetGame();
+  }
+
+  canvas.addEventListener('touchstart', handleStart, { passive: false });
+  window.addEventListener('touchmove', handleMove, { passive: false });
+  window.addEventListener('touchend', handleEnd, { passive: false });
+  canvas.addEventListener('mousedown', handleStart);
+  window.addEventListener('mousemove', handleMove);
+  window.addEventListener('mouseup', handleEnd);
+
+  canvas.addEventListener('wheel', e => {
+    if (!document.body.classList.contains('playing')) return;
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.1 : 0.9;
+    const ns = Math.max(0.1, Math.min(5, view.scale * factor));
+    view.x = e.clientX - (e.clientX - view.x) * (ns / view.scale);
+    view.y = e.clientY - (e.clientY - view.y) * (ns / view.scale);
+    view.scale = ns; draw();
+  }, { passive: false });
+
+  window.addEventListener('scroll', () => {
+    if (document.body.classList.contains('playing')) return;
+    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 600) {
+      if (hasNext && !isLoading) loadImages(currentPage + 1);
+    }
+  });
+
+  window.addEventListener('resize', () => { if(document.body.classList.contains('playing')) resize(); });
+  loadImages();
+</script>
+</body>
+</html>
