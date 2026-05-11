@@ -3,590 +3,673 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>포근한 마을 - Phaser Web Game Prototype</title>
+  <title>포근한 마을 - Cozy Village Deluxe</title>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
   <style>
     html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: linear-gradient(#aee2ff, #fff5d6);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; background-color: #f0f8ff;
+      font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
     }
-
-    #game {
-      width: 100vw;
-      height: 100vh;
+    #game { width: 100vw; height: 100vh; }
+    /* 조작법 힌트 스타일 세련화 */
+    .hint-box {
+      position: fixed; left: 20px; bottom: 20px;
+      color: #5d4037; background: rgba(255, 255, 255, 0.92);
+      border: 3px solid #d7ccc8; border-radius: 20px;
+      padding: 15px 20px; font-size: 14px; line-height: 1.6;
+      box-shadow: 0 10px 25px rgba(121, 85, 72, 0.2);
+      pointer-events: none; z-index: 1000;
     }
-
-    .hint {
-      position: fixed;
-      left: 16px;
-      bottom: 12px;
-      color: #5b3b21;
-      background: rgba(255, 248, 221, 0.88);
-      border: 2px solid rgba(121, 84, 45, 0.25);
-      border-radius: 16px;
-      padding: 10px 14px;
-      font-size: 13px;
-      line-height: 1.55;
-      box-shadow: 0 8px 24px rgba(95, 64, 36, 0.18);
-      user-select: none;
-      pointer-events: none;
-    }
+    .hint-title { font-weight: bold; margin-bottom: 5px; color: #795548; display: block;}
+    .key { background: #eee; border: 1px solid #ccc; border-radius: 4px; padding: 1px 5px; font-family: monospace; font-weight: bold; margin: 0 2px;}
   </style>
 </head>
 <body>
   <div id="game"></div>
-  <div class="hint">
-    이동: WASD / 방향키<br />
-    심기·수확: SPACE<br />
-    꾸미기 모드: 1 화분 · 2 의자 · 3 램프<br />
-    설치: E
+  <div class="hint-box">
+    <span class="hint-title">🏡 귀여운 조작법</span>
+    이동: <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> / <span class="key">←</span><span class="key">↑</span><span class="key">→</span><span class="key">↓</span><br />
+    행동(심기/수확): <span class="key">SPACE</span><br />
+    꾸미기 선택: <span class="key">1</span>화분 <span class="key">2</span>의자 <span class="key">3</span>램프<br />
+    가구 설치: <span class="key">E</span>
   </div>
 
   <script>
+    // --- 주요 색상 팔레트 정의 (따뜻하고 파스텔톤) ---
+    const Colors = {
+      sky: 0xcae9ff, ground: 0xaed581, groundDark: 0x9ccc65, path: 0xffecb3, pathStroke: 0xffd54f,
+      wall: 0xfff8e1, roof: 0xff8a65, wood: 0xa1887f, woodDark: 0x795548,
+      water: 0x81d4fa, waterStroke: 0x29b6f6, leaf: 0x66bb6a, crop: 0xef5350,
+      uiBag: 0xfff3e0, uiStroke: 0xd7ccc8, text: 0x5d4037, highlight: 0xfff176
+    };
+
     class MainScene extends Phaser.Scene {
       constructor() {
         super('MainScene');
-        this.player = null;
-        this.cursors = null;
-        this.keys = null;
+        // 시스템 변수
         this.facing = new Phaser.Math.Vector2(0, 1);
-        this.speed = 175;
-        this.coins = 0;
-        this.seeds = 8;
-        this.day = 1;
-        this.selectedDecor = 'pot';
-        this.plots = [];
-        this.decorItems = [];
-        this.messageText = null;
-        this.hudText = null;
-        this.actionCooldown = 0;
+        this.speed = 180; this.coins = 10; this.seeds = 5;
+        this.selectedDecor = 'pot'; this.actionCooldown = 0;
+        // 그룹/배열
+        this.plots = []; this.decorItems = []; this.objectsToSort = [];
       }
 
-      preload() {}
+      preload() { /* 외부 자산 없음 */ }
 
       create() {
-        this.createWorld();
-        this.createGarden();
+        // 1. 세계 생성 (바닥, 배경 건물 등) - 깊이 최하위
+        this.createEnvironment();
+        
+        // 2. 게임 요소 생성
+        this.createGardenPlots();
         this.createHomeDecorZone();
-        this.createPlayer();
+        
+        // 3. 동적 객체 생성 (캐릭터, 강아지)
         this.createAnimalFriend();
+        this.createPlayer();
+        
+        // 4. UI 및 입력 - 깊이 최상위
         this.createHud();
         this.createInputs();
-        this.showMessage('포근한 마을에 오신 걸 환영해요! 밭에서 SPACE로 씨앗을 심어보세요.');
+
+        // 카메라 설정
+        this.cameras.main.setBounds(0, 0, 1152, 768);
+        this.physics.world.setBounds(0, 0, 1152, 768);
+
+        this.showMessage('🌸 포근한 마을에 오신 걸 환영해요!');
       }
 
       update(time, delta) {
         this.handleMovement(delta);
-        this.actionCooldown = Math.max(0, this.actionCooldown - delta);
+        if (this.actionCooldown > 0) this.actionCooldown -= delta;
 
-        if (Phaser.Input.Keyboard.JustDown(this.keys.space)) {
-          this.handleFarmAction();
-        }
-
-        if (Phaser.Input.Keyboard.JustDown(this.keys.e)) {
-          this.placeDecor();
-        }
-
-        if (Phaser.Input.Keyboard.JustDown(this.keys.one)) {
-          this.selectedDecor = 'pot';
-          this.showMessage('선택: 꽃 화분');
-        }
-        if (Phaser.Input.Keyboard.JustDown(this.keys.two)) {
-          this.selectedDecor = 'chair';
-          this.showMessage('선택: 나무 의자');
-        }
-        if (Phaser.Input.Keyboard.JustDown(this.keys.three)) {
-          this.selectedDecor = 'lamp';
-          this.showMessage('선택: 정원 램프');
-        }
+        // 입력 처리
+        if (Phaser.Input.Keyboard.JustDown(this.keys.space)) this.handleFarmAction();
+        if (Phaser.Input.Keyboard.JustDown(this.keys.e)) this.placeDecor();
+        
+        // 키보드 1,2,3 숫자키 스타일 세련화
+        if (Phaser.Input.Keyboard.JustDown(this.keys.one)) { this.selectedDecor = 'pot'; this.showMessage('👉 선택: [꽃 화분]'); this.updateHudHighlight(1); }
+        if (Phaser.Input.Keyboard.JustDown(this.keys.two)) { this.selectedDecor = 'chair'; this.showMessage('👉 선택: [나무 의자]'); this.updateHudHighlight(2); }
+        if (Phaser.Input.Keyboard.JustDown(this.keys.three)) { this.selectedDecor = 'lamp'; this.showMessage('👉 선택: [정원 램프]'); this.updateHudHighlight(3); }
 
         this.updateCrops(delta);
         this.updateHud();
+        this.updateWaterEffects(time);
+        
+        // *** 중요: Y-Sorting (깊이 정렬) ***
+        // 캐릭터와 가구들의 y좌표를 비교하여 depth를 실시간으로 변경
+        this.objectsToSort.sort((a, b) => a.y - b.y);
+        this.objectsToSort.forEach((obj, index) => obj.setDepth(10 + index));
       }
 
-      createWorld() {
+      // ==========================================
+      // --- 환경 및 배경 생성 (디자인 핵심) ---
+      // ==========================================
+      
+      createEnvironment() {
         const { width, height } = this.scale;
+        
+        // A. 기본 땅 및 하늘
+        this.add.rectangle(width/2, height/2, width, height, Colors.ground).setDepth(0);
+        const sky = this.add.rectangle(width/2, 100, width, 200, Colors.sky).setDepth(1);
+        
+        // B. 땅 디테일 (랜덤 풀잎, 작은 돌)
+        const gr = this.add.graphics({ depth: 2 });
+        for(let i=0; i<300; i++) {
+          gr.fillStyle(Math.random() > 0.5 ? Colors.groundDark : Colors.leaf, 0.6);
+          gr.fillCircle(Phaser.Math.Between(0, width), Phaser.Math.Between(200, height), Phaser.Math.Between(1, 3));
+        }
 
-        this.add.rectangle(width / 2, height / 2, width, height, 0x9edc8b);
+        // C. 먼 배경 (구름, 언덕, 풍차)
+        this.createClouds();
+        this.add.ellipse(width*0.2, 200, 400, 100, 0x94c95b).setDepth(2); // 언덕 1
+        this.add.ellipse(width*0.8, 210, 500, 120, 0x94c95b).setDepth(2); // 언덕 2
+        this.createWindmill(width * 0.85, 160);
 
-        const sky = this.add.rectangle(width / 2, 120, width, 240, 0xaee2ff);
-        sky.setDepth(-10);
+        // D. 구불구불한 흙길 (Graphics로 부드럽게)
+        this.createPrettyPath();
 
-        this.add.ellipse(220, 120, 130, 44, 0xffffff, 0.86);
-        this.add.ellipse(285, 100, 170, 52, 0xffffff, 0.78);
-        this.add.ellipse(780, 92, 160, 48, 0xffffff, 0.72);
-        this.add.ellipse(860, 118, 120, 36, 0xffffff, 0.8);
+        // E. 메인 하우스 (디테일 업그레이드)
+        this.createDetailCottage(800, 260);
 
-        this.add.rectangle(width / 2, 380, width, 340, 0x88c776);
-        this.add.triangle(190, 320, 0, 430, 360, 430, 0x79ba6c);
-        this.add.triangle(510, 310, 270, 440, 780, 440, 0x73b965);
-        this.add.triangle(880, 315, 600, 450, 1160, 450, 0x80bf70);
+        // F. 연못 (애니메이션용 멤버 변수 저장)
+        this.pondGraphics = this.add.graphics({ x: 180, y: 700 }).setDepth(3);
+        this.createDetailPond();
 
-        this.add.rectangle(width / 2, 610, width, 390, 0x89c878);
+        // G. 울타리
+        this.createPrettyFence(50, 470, 15); // 상단 울타리
+        this.createPrettyFence(50, 730, 8);  // 하단 울타리
 
-        this.addPath(80, 610, 1040, 765);
-        this.createCottage(780, 280);
-        this.createFence(78, 485, 560, 4);
-        this.createFence(78, 710, 560, 4);
-        this.createPond(160, 790);
-        this.createVillageBackground();
-        this.createTitleBoard();
+        // H. 타이틀 보드
+        this.createStyledTitle();
       }
 
-      addPath(x, y, w, h) {
-        // Phaser Graphics에는 Canvas API의 quadraticCurveTo가 없어서
-        // 부드러운 길은 겹친 타원/원으로 구성합니다.
-        const path = this.add.container(0, 0);
+      // --- 디테일 디자인 서브 함수들 ---
 
-        const segments = [
-          { x: x + 90, y: y + 85, w: 220, h: 80, a: -8 },
-          { x: x + 260, y: y + 105, w: 250, h: 90, a: 8 },
-          { x: x + 470, y: y + 155, w: 280, h: 96, a: 16 },
-          { x: x + 700, y: y + 220, w: 320, h: 106, a: 20 },
-          { x: x + 910, y: y + 300, w: 300, h: 98, a: 22 }
+      createClouds() {
+        const createCloud = (x, y, scale) => {
+          const c = this.add.container(x, y).setDepth(2).setAlpha(0.9);
+          c.add(this.add.circle(0, 0, 30 * scale, 0xffffff));
+          c.add(this.add.circle(25*scale, -10*scale, 25 * scale, 0xffffff));
+          c.add(this.add.circle(50*scale, 5*scale, 22 * scale, 0xffffff));
+          c.add(this.add.circle(-20*scale, 10*scale, 20 * scale, 0xffffff));
+        };
+        createCloud(200, 90, 1); createCloud(270, 70, 1.3);
+        createCloud(700, 80, 1.1); createCloud(900, 110, 0.9);
+      }
+
+      createWindmill(x, y) {
+        const b = this.add.container(x, y).setDepth(3);
+        b.add(this.add.rectangle(0, 40, 60, 80, Colors.wall).setStrokeStyle(3, Colors.woodDark)); // 본체
+        b.add(this.add.triangle(0, 0, -40, 10, 40, 10, Colors.roof).setStrokeStyle(3, Colors.woodDark)); // 지붕
+        
+        // 날개 (애니메이션)
+        this.blades = this.add.container(0, 35);
+        for(let i=0; i<4; i++) {
+          const blade = this.add.rectangle(0, 30, 15, 70, Colors.wood).setStrokeStyle(2, Colors.woodDark).setOrigin(0.5, 1);
+          blade.setAngle(i * 90);
+          this.blades.add(blade);
+        }
+        this.blades.add(this.add.circle(0,0, 8, Colors.woodDark));
+        b.add(this.blades);
+        
+        this.tweens.add({ targets: this.blades, angle: 360, duration: 10000, repeat: -1 });
+      }
+
+      createPrettyPath() {
+        const gr = this.add.graphics({ depth: 3 });
+        gr.fillStyle(Colors.path, 1);
+        gr.lineStyle(6, Colors.pathStroke, 0.5);
+        
+        const points = [
+          new Phaser.Math.Vector2(0, 650),
+          new Phaser.Math.Vector2(300, 600),
+          new Phaser.Math.Vector2(500, 680),
+          new Phaser.Math.Vector2(800, 720),
+          new Phaser.Math.Vector2(1152, 700)
         ];
+        const curve = new Phaser.Curves.Spline(points);
+        
+        // 길 면적 칠하기
+        gr.beginPath();
+        curve.getPoints(50).forEach((p, i) => {
+          if (i === 0) gr.moveTo(p.x, p.y + 40);
+          else gr.lineTo(p.x, p.y + 40);
+        });
+        curve.getPoints(50).reverse().forEach(p => gr.lineTo(p.x, p.y - 40));
+        gr.closePath();
+        gr.fillPath();
+        
+        // 길 테두리 선
+        gr.beginPath();
+        curve.getPoints(50).forEach(p => gr.lineTo(p.x, p.y + 40));
+        gr.strokePath();
+        gr.beginPath();
+        curve.getPoints(50).forEach(p => gr.lineTo(p.x, p.y - 40));
+        gr.strokePath();
+      }
 
-        for (const s of segments) {
-          const base = this.add.ellipse(s.x, s.y, s.w, s.h, 0xe5c58d).setAngle(s.a);
-          const edge = this.add.ellipse(s.x, s.y, s.w + 8, s.h + 8, 0xcaa36a, 0.20).setAngle(s.a);
-          path.add(edge);
-          path.add(base);
+      createDetailCottage(x, y) {
+        const c = this.add.container(x, y).setDepth(4); // 집 베이스는 바닥에 고정
+
+        // 본체 및 지붕
+        c.add(this.add.rectangle(90, 190, 280, 220, Colors.wall).setStrokeStyle(6, Colors.woodDark).setOrigin(0.5));
+        
+        // 지붕 기와 패턴 표현
+        const roofTri = this.add.graphics();
+        roofTri.fillStyle(Colors.roof, 1);
+        roofTri.fillTriangle(90, 50, -90, 175, 270, 175);
+        roofTri.lineStyle(6, Colors.woodDark, 1);
+        roofTri.strokeTriangle(90, 50, -90, 175, 270, 175);
+        // 기와 무늬 (간단한 선)
+        roofTri.lineStyle(2, 0xbf360c, 0.5);
+        for(let i=0; i<5; i++) {
+          roofTri.lineBetween(90 - i*30, 50 + i*25, 90 + i*30, 50 + i*25);
+        }
+        c.add(roofTri);
+
+        // 굴뚝
+        c.add(this.add.rectangle(200, 110, 40, 70, 0xd7ccc8).setStrokeStyle(4, Colors.woodDark));
+        
+        // 문 (디테일)
+        const door = this.add.container(80, 240);
+        door.add(this.add.rectangle(0, 0, 70, 110, 0x8d6e63).setStrokeStyle(4, Colors.woodDark));
+        door.add(this.add.circle(25, 5, 5, Colors.highlight).setStrokeStyle(2, Colors.woodDark)); // 문고리
+        c.add(door);
+
+        // 창문 (격자 디테일)
+        const createWindow = (wx, wy) => {
+          const win = this.add.container(wx, wy);
+          win.add(this.add.rectangle(0, 0, 60, 60, 0xbbdefb).setStrokeStyle(4, Colors.woodDark));
+          win.add(this.add.rectangle(0, 0, 2, 60, Colors.woodDark)); // 십자 격자
+          win.add(this.add.rectangle(0, 0, 60, 2, Colors.woodDark));
+          return win;
+        };
+        c.add(createWindow(-10, 200));
+        c.add(createWindow(190, 200));
+
+        // 집 앞 화단
+        for(let i=0; i<8; i++) {
+          c.add(this.add.circle(-60 + i*40, 310 + Math.sin(i)*5, 12, Colors.crop).setAlpha(0.9));
+          c.add(this.add.circle(-55 + i*40, 318 + Math.cos(i)*5, 10, Colors.highlight).setAlpha(0.8));
         }
 
-        for (let i = 0; i < 36; i++) {
-          const px = x + 70 + i * 28;
-          const py = y + 92 + i * 6 + Math.sin(i * 0.8) * 28;
-          const stone = this.add.ellipse(px, py, 12, 6, 0xd1aa73, 0.35).setAngle(i * 17);
-          path.add(stone);
+        // 'HOME' 표지판
+        const sign = this.add.container(240, 260);
+        sign.add(this.add.rectangle(0, 0, 80, 60, Colors.wood).setStrokeStyle(4, Colors.woodDark));
+        sign.add(this.add.text(0, 0, 'SWEET\nHOME', { fontSize: '14px', color: '#fff', align: 'center', fontStyle:'bold' }).setOrigin(0.5));
+        sign.setAngle(-5);
+        c.add(sign);
+      }
+
+      createDetailPond() {
+        // 물 베이스
+        this.pondGraphics.clear();
+        this.pondGraphics.fillStyle(Colors.water, 0.9);
+        this.pondGraphics.fillEllipse(0, 0, 220, 100);
+        this.pondGraphics.lineStyle(6, Colors.waterStroke, 1);
+        this.pondGraphics.strokeEllipse(0, 0, 220, 100);
+        
+        // 고정 연잎
+        const leaf1 = this.add.circle(180+40, 700-10, 15, Colors.leaf).setDepth(3.1).setStrokeStyle(2, Colors.woodDark);
+        // 하트 모양 연잎 파먹기 표현 (간단히 칠하기)
+        const gr = this.add.graphics({depth: 3.2});
+        gr.fillStyle(Colors.water, 1); gr.fillTriangle(180+40+10, 700-10-15, 180+40+10, 700-10+15, 180+40-5, 700-10);
+      }
+
+      updateWaterEffects(time) {
+        // 물결 타원형 애니메이션
+        this.pondGraphics.lineStyle(2, 0xffffff, 0.3 + Math.sin(time/500)*0.2);
+        const waveW = 180 + Math.sin(time/500) * 10;
+        const waveH = 70 + Math.sin(time/500) * 5;
+        this.pondGraphics.strokeEllipse(0, 0, waveW, waveH);
+      }
+
+      createPrettyFence(startX, y, count) {
+        for(let i=0; i<count; i++) {
+          const fx = startX + i * 35;
+          const p = this.add.container(fx, y).setDepth(3);
+          // 말뚝
+          p.add(this.add.rectangle(0, 0, 12, 50, Colors.wall).setStrokeStyle(2, Colors.woodDark));
+          // 뾰족한 끝
+          p.add(this.add.triangle(0, -32, -8, -24, 8, -24, Colors.wall).setStrokeStyle(2, Colors.woodDark));
+          
+          if(i < count - 1) {
+            // 가로줄
+            this.add.rectangle(fx + 17.5, y - 10, 35, 8, Colors.wall).setDepth(2.9).setStrokeStyle(2, Colors.woodDark);
+            this.add.rectangle(fx + 17.5, y + 10, 35, 8, Colors.wall).setDepth(2.9).setStrokeStyle(2, Colors.woodDark);
+          }
         }
       }
 
-      createCottage(x, y) {
-        this.add.rectangle(x + 90, y + 190, 290, 230, 0xfff1c9).setStrokeStyle(5, 0x7b4c2a);
-        this.add.triangle(x + 90, y + 50, x - 80, y + 170, x + 260, y + 170, 0xd87436).setStrokeStyle(5, 0x7b4c2a);
-        this.add.rectangle(x + 205, y + 65, 42, 80, 0xc36b32).setStrokeStyle(4, 0x7b4c2a);
-        this.add.rectangle(x + 80, y + 245, 72, 120, 0x8a552e).setStrokeStyle(4, 0x5a321c);
-        this.add.circle(x + 102, y + 305, 5, 0xf6d98b);
-        this.add.rectangle(x - 10, y + 210, 70, 58, 0x8fd0e2).setStrokeStyle(4, 0x5a321c);
-        this.add.rectangle(x + 190, y + 210, 70, 58, 0x8fd0e2).setStrokeStyle(4, 0x5a321c);
-        this.add.rectangle(x + 90, y + 355, 330, 24, 0xb0773d);
-        this.add.text(x + 260, y + 260, 'HOME\nSWEET\nHOME', {
-          fontFamily: 'system-ui',
-          fontSize: '15px',
-          color: '#fff4cc',
-          align: 'center',
-          fontStyle: '700'
-        }).setOrigin(0.5).setAngle(-2);
-
-        this.add.rectangle(x + 260, y + 262, 88, 82, 0x9b6634, 0.92).setDepth(-1);
-
-        for (let i = 0; i < 7; i++) {
-          this.add.circle(x - 70 + i * 55, y + 385 + Math.sin(i) * 8, 14, 0xff9bb2);
-          this.add.circle(x - 60 + i * 55, y + 398 + Math.cos(i) * 6, 12, 0xffd66b);
-        }
+      createStyledTitle() {
+        const base = this.add.rectangle(260, 110, 400, 100, Colors.uiBag, 0.9).setDepth(5).setStrokeStyle(4, Colors.woodDark);
+        this.add.text(260, 90, '🌳 포근한 마을 🌳', {
+          fontSize: '36px', color: '#795548', fontStyle: 'bold', stroke: '#fff', strokeThickness: 6
+        }).setOrigin(0.5).setDepth(6);
+        this.add.text(260, 130, '소박한 농사와 나만의 정원 꾸미기', {
+          fontSize: '16px', color: '#8d6e63', fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(6);
       }
 
-      createFence(x, y, count, scale) {
-        for (let i = 0; i < count / 30; i++) {
-          const px = x + i * 30;
-          this.add.rectangle(px, y, 10, 42, 0xfff3c8).setStrokeStyle(1, 0xb98a55);
-          this.add.triangle(px, y - 28, px - 7, y - 10, px + 7, y - 10, 0xfff3c8).setStrokeStyle(1, 0xb98a55);
-        }
-        this.add.rectangle(x + count / 2 - 16, y - 5, count, 8, 0xfff3c8).setStrokeStyle(1, 0xb98a55);
-        this.add.rectangle(x + count / 2 - 16, y + 13, count, 8, 0xfff3c8).setStrokeStyle(1, 0xb98a55);
-      }
+      // ==========================================
+      // --- 게임 논리 및 객체 생성 ---
+      // ==========================================
 
-      createPond(x, y) {
-        this.add.ellipse(x, y, 190, 85, 0x74c7dd, 0.88).setStrokeStyle(5, 0x5aa2b4);
-        this.add.ellipse(x - 30, y - 10, 70, 18, 0xbdf4ff, 0.5);
-        this.add.circle(x + 60, y + 12, 7, 0xffd3e2);
-        this.add.circle(x + 74, y + 12, 7, 0xffd3e2);
-        this.add.circle(x + 67, y + 3, 7, 0xffd3e2);
-      }
+      createGardenPlots() {
+        const startX = 120, startY = 530, gapX = 90, gapY = 80;
+        for (let r = 0; r < 3; r++) {
+          for (let c = 0; c < 5; c++) {
+            const x = startX + c * gapX;
+            const y = startY + r * gapY;
+            // 밭 스타일 (흙 질감 감각)
+            const base = this.add.rectangle(x, y, 70, 55, 0x8d6e63).setDepth(4).setStrokeStyle(4, 0x5d4037);
+            // 밭 안쪽 디테일 선
+            const inner = this.add.graphics({x:x, y:y, depth: 4.1});
+            inner.lineStyle(2, 0x5d4037, 0.3); inner.strokeCircle(0,0, 20);
 
-      createVillageBackground() {
-        for (let i = 0; i < 7; i++) {
-          const x = 80 + i * 115;
-          const y = 390 + Math.sin(i) * 28;
-          this.add.rectangle(x, y, 54, 44, 0xfff1d3).setStrokeStyle(2, 0x7a5731);
-          this.add.triangle(x, y - 50, x - 36, y - 20, x + 36, y - 20, i % 2 ? 0xc66a4b : 0x789fd3).setStrokeStyle(2, 0x7a5731);
-          this.add.rectangle(x - 12, y + 2, 12, 20, 0x7aaed0);
-        }
-        this.add.rectangle(540, 325, 24, 145, 0xe9d3a2).setStrokeStyle(3, 0x8a6a40);
-        this.add.circle(552, 280, 34, 0xd6bd81).setStrokeStyle(3, 0x8a6a40);
-        this.add.line(552, 280, 552, 212, 552, 348, 0x8a6a40, 1).setLineWidth(5);
-        this.add.line(552, 280, 484, 280, 620, 280, 0x8a6a40, 1).setLineWidth(5);
-        this.add.line(552, 280, 504, 232, 600, 328, 0x8a6a40, 1).setLineWidth(4);
-        this.add.line(552, 280, 600, 232, 504, 328, 0x8a6a40, 1).setLineWidth(4);
-      }
-
-      createTitleBoard() {
-        this.add.rectangle(250, 116, 420, 114, 0xfff5d8, 0.82).setStrokeStyle(4, 0x8c5b32);
-        this.add.text(250, 82, '포근한 마을', {
-          fontFamily: 'system-ui',
-          fontSize: '42px',
-          fontStyle: '900',
-          color: '#7a3f22',
-          stroke: '#fff4d2',
-          strokeThickness: 8
-        }).setOrigin(0.5);
-        this.add.text(250, 128, '농사짓고, 꾸미고, 쉬어가는 하루', {
-          fontFamily: 'system-ui',
-          fontSize: '17px',
-          fontStyle: '700',
-          color: '#527634'
-        }).setOrigin(0.5);
-      }
-
-      createGarden() {
-        const startX = 120;
-        const startY = 525;
-        const gapX = 82;
-        const gapY = 72;
-
-        for (let row = 0; row < 3; row++) {
-          for (let col = 0; col < 5; col++) {
-            const x = startX + col * gapX;
-            const y = startY + row * gapY;
-            const plot = {
-              x,
-              y,
-              state: 'empty',
-              growth: 0,
-              base: this.add.rectangle(x, y, 62, 46, 0x8b5f34).setStrokeStyle(3, 0x65401f),
-              crop: null,
-              sparkle: null
-            };
+            const plot = { x, y, state: 'empty', growth: 0, crop: null, sparkle: null, base };
             this.plots.push(plot);
           }
         }
       }
 
       createHomeDecorZone() {
-        this.add.rectangle(835, 672, 360, 170, 0xe8c890, 0.7).setStrokeStyle(4, 0xc49d63);
-        this.add.text(835, 585, '꾸미기 마당', {
-          fontFamily: 'system-ui',
-          fontSize: '22px',
-          fontStyle: '800',
-          color: '#6a4325',
-          stroke: '#fff4d2',
-          strokeThickness: 5
-        }).setOrigin(0.5);
+        // 꾸미기 영역 바닥 처리
+        this.decorZoneBg = this.add.rectangle(850, 660, 420, 200, 0xd7ccc8, 0.5).setDepth(3).setStrokeStyle(4, Colors.wood, 0.8);
+        this.add.text(850, 580, '✨ 나만의 꾸미기 마당 ✨', {
+          fontSize: '20px', color: '#5d4037', fontStyle: 'bold', backgroundColor: '#fff8e1', padding: 5
+        }).setOrigin(0.5).setDepth(4);
       }
 
+      // ==========================================
+      // --- 캐릭터 및 동물 (Y-Sorting 적용 대상) ---
+      // ==========================================
+
       createPlayer() {
-        this.player = this.add.container(560, 620);
-        this.player.setSize(44, 58);
+        // 컨테이너로 묶어서 Y-Sorting 배열에 추가
+        this.player = this.add.container(560, 650);
+        this.player.setSize(50, 20); // 물리 바디 크기 (발 부위만)
+        
+        // 그림자
+        const shadow = this.add.ellipse(0, 35, 60, 20, 0x000000, 0.15);
+        // 몸통 (오버올 스타일)
+        const body = this.add.rectangle(0, 10, 40, 50, 0x81d4fa).setStrokeStyle(3, 0x0277bd);
+        const strapL = this.add.rectangle(-12, -10, 8, 20, 0x0277bd);
+        const strapR = this.add.rectangle(12, -10, 8, 20, 0x0277bd);
+        // 머리 및 모자
+        const head = this.add.circle(0, -35, 25, 0xffe082).setStrokeStyle(3, Colors.woodDark);
+        const hatBrim = this.add.ellipse(0, -55, 80, 25, 0xd7ccc8).setStrokeStyle(2, Colors.woodDark);
+        const hatTop = this.add.ellipse(0, -65, 45, 30, 0xe0e0e0).setStrokeStyle(2, Colors.woodDark);
+        // 얼굴
+        const eyeL = this.add.circle(-10, -35, 3, 0x3e2723);
+        const eyeR = this.add.circle(10, -35, 3, 0x3e2723);
+        const smile = this.add.arc(0, -25, 10, 0, 180, false, 0x3e2723).setStrokeStyle(2, 0x3e2723);
 
-        const shadow = this.add.ellipse(0, 34, 50, 16, 0x000000, 0.16);
-        const legs = this.add.rectangle(0, 28, 28, 38, 0x7a9e58).setStrokeStyle(2, 0x4d683a);
-        const body = this.add.rectangle(0, 0, 42, 44, 0xf6e1b8).setStrokeStyle(2, 0x7b4c2a);
-        const overalls = this.add.rectangle(0, 12, 34, 36, 0x7a9e58).setStrokeStyle(2, 0x4d683a);
-        const head = this.add.circle(0, -35, 23, 0xffd2a4).setStrokeStyle(2, 0x7b4c2a);
-        const hair = this.add.arc(0, -42, 24, 210, 330, false, 0x6d3d22).setStrokeStyle(8, 0x6d3d22);
-        const hat = this.add.ellipse(0, -60, 72, 20, 0xdba95b).setStrokeStyle(2, 0x895d2a);
-        const hatTop = this.add.ellipse(0, -68, 40, 28, 0xe8bc70).setStrokeStyle(2, 0x895d2a);
-        const eyeL = this.add.circle(-8, -36, 3, 0x3b2415);
-        const eyeR = this.add.circle(8, -36, 3, 0x3b2415);
-        const smile = this.add.arc(0, -29, 8, 15, 165, false, 0x3b2415).setStrokeStyle(2, 0x3b2415);
-        const basket = this.add.ellipse(26, 4, 32, 22, 0xb87536).setStrokeStyle(2, 0x70401f);
-
-        this.player.add([shadow, legs, body, overalls, head, hair, hat, hatTop, eyeL, eyeR, smile, basket]);
+        this.player.add([shadow, body, strapL, strapR, head, hatBrim, hatTop, eyeL, eyeR, smile]);
+        
         this.physics.add.existing(this.player);
         this.player.body.setCollideWorldBounds(true);
+        // 중요: Y-Sorting을 위해 관리 배열에 추가
+        this.objectsToSort.push(this.player); 
       }
 
       createAnimalFriend() {
-        const dog = this.add.container(635, 660);
-        const shadow = this.add.ellipse(0, 24, 56, 16, 0x000000, 0.15);
-        const body = this.add.ellipse(0, 5, 52, 34, 0xd9873d).setStrokeStyle(2, 0x7a4b22);
-        const chest = this.add.ellipse(13, 8, 24, 28, 0xfff0d4);
-        const head = this.add.circle(18, -18, 23, 0xd9873d).setStrokeStyle(2, 0x7a4b22);
-        const snout = this.add.ellipse(25, -9, 22, 14, 0xfff0d4);
-        const ear1 = this.add.triangle(3, -34, -8, -58, 12, -43, 0xd9873d).setStrokeStyle(2, 0x7a4b22);
-        const ear2 = this.add.triangle(30, -37, 45, -56, 42, -32, 0xd9873d).setStrokeStyle(2, 0x7a4b22);
-        const eye = this.add.circle(21, -21, 3, 0x2c1b11);
-        const nose = this.add.circle(35, -9, 4, 0x2c1b11);
-        const tail = this.add.arc(-31, -1, 18, 220, 40, false, 0xd9873d).setStrokeStyle(7, 0xd9873d);
-        dog.add([shadow, tail, body, chest, head, ear1, ear2, snout, eye, nose]);
+        this.dog = this.add.container(650, 680);
+        
+        const shadow = this.add.ellipse(0, 25, 50, 15, 0x000000, 0.15);
+        const body = this.add.ellipse(0, 0, 50, 35, 0xffa726).setStrokeStyle(2, Colors.woodDark);
+        const head = this.add.circle(20, -15, 20, 0xffa726).setStrokeStyle(2, Colors.woodDark);
+        const earL = this.add.ellipse(5, -25, 10, 18, 0xe65100).setAngle(-30);
+        const earR = this.add.ellipse(35, -25, 10, 18, 0xe65100).setAngle(30);
+        const eye = this.add.circle(25, -18, 3, 0x3e2723);
+        const nose = this.add.circle(35, -10, 4, 0x000000);
+        // 꼬리 (애니메이션 멤버)
+        this.dogTail = this.add.ellipse(-25, 0, 15, 8, 0xe65100).setOrigin(1, 0.5);
 
-        this.tweens.add({
-          targets: dog,
-          y: 650,
-          duration: 900,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut'
-        });
+        this.dog.add([shadow, this.dogTail, body, head, earL, earR, eye, nose]);
+        
+        // 둥실둥실 애니메이션
+        this.tweens.add({ targets: this.dog, y: 675, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        // 꼬리 흔들기 애니메이션
+        this.tweens.add({ targets: this.dogTail, angle: 20, duration: 200, yoyo: true, repeat: -1 });
+
+        this.objectsToSort.push(this.dog);
       }
+
+      // ==========================================
+      // --- UI 시스템 (고급화) ---
+      // ==========================================
 
       createHud() {
-        this.add.rectangle(152, 28, 276, 48, 0xfff5d8, 0.92).setStrokeStyle(3, 0x8c5b32);
-        this.hudText = this.add.text(22, 16, '', {
-          fontFamily: 'system-ui',
-          fontSize: '18px',
-          fontStyle: '800',
-          color: '#5d3a20'
-        });
-
-        this.messageText = this.add.text(this.scale.width / 2, this.scale.height - 38, '', {
-          fontFamily: 'system-ui',
-          fontSize: '18px',
-          fontStyle: '800',
-          color: '#5d3a20',
-          backgroundColor: 'rgba(255,245,216,0.90)',
-          padding: { x: 18, y: 10 }
-        }).setOrigin(0.5);
-      }
-
-      createInputs() {
-        this.cursors = this.input.keyboard.createCursorKeys();
-        this.keys = this.input.keyboard.addKeys({
-          w: Phaser.Input.Keyboard.KeyCodes.W,
-          a: Phaser.Input.Keyboard.KeyCodes.A,
-          s: Phaser.Input.Keyboard.KeyCodes.S,
-          d: Phaser.Input.Keyboard.KeyCodes.D,
-          space: Phaser.Input.Keyboard.KeyCodes.SPACE,
-          e: Phaser.Input.Keyboard.KeyCodes.E,
-          one: Phaser.Input.Keyboard.KeyCodes.ONE,
-          two: Phaser.Input.Keyboard.KeyCodes.TWO,
-          three: Phaser.Input.Keyboard.KeyCodes.THREE
-        });
-      }
-
-      handleMovement(delta) {
-        const body = this.player.body;
-        let vx = 0;
-        let vy = 0;
-
-        if (this.cursors.left.isDown || this.keys.a.isDown) vx -= 1;
-        if (this.cursors.right.isDown || this.keys.d.isDown) vx += 1;
-        if (this.cursors.up.isDown || this.keys.w.isDown) vy -= 1;
-        if (this.cursors.down.isDown || this.keys.s.isDown) vy += 1;
-
-        const v = new Phaser.Math.Vector2(vx, vy);
-        if (v.length() > 0) {
-          v.normalize();
-          this.facing.copy(v);
-          body.setVelocity(v.x * this.speed, v.y * this.speed);
-          this.player.rotation = Math.sin(this.time.now / 80) * 0.025;
-        } else {
-          body.setVelocity(0, 0);
-          this.player.rotation = 0;
-        }
-      }
-
-      handleFarmAction() {
-        if (this.actionCooldown > 0) return;
-        this.actionCooldown = 220;
-
-        const plot = this.getNearestPlot(70);
-        if (!plot) {
-          this.showMessage('밭 가까이에서 SPACE를 눌러보세요.');
-          return;
-        }
-
-        if (plot.state === 'empty') {
-          if (this.seeds <= 0) {
-            this.showMessage('씨앗이 부족해요. 수확해서 코인을 모으면 다음 업데이트에서 상점 추가!');
-            return;
+        // 상단 나무판자 느낌의 HUD 배경
+        this.add.rectangle(160, 40, 300, 60, Colors.uiBag, 0.95).setDepth(100).setStrokeStyle(4, Colors.woodDark).setOrigin(0.5);
+        
+        const createIconText = (x, y, iconStr, color) => {
+          const container = this.add.container(x, y).setDepth(101);
+          // 도형 아이콘 제작
+          if(iconStr === '🌱') {
+            container.add(this.add.circle(0,0, 12, Colors.leaf).setStrokeStyle(2, Colors.woodDark));
+            container.add(this.add.rectangle(0,0, 2, 15, Colors.woodDark));
+          } else if (iconStr === '🪙') {
+            container.add(this.add.circle(0,0, 12, Colors.highlight).setStrokeStyle(2, 0xb59410));
+            container.add(this.add.text(0,0, '$', {fontSize:'14px', color:'#b59410', fontStyle:'bold'}).setOrigin(0.5));
           }
-          this.seeds -= 1;
-          plot.state = 'seed';
-          plot.growth = 0;
-          this.renderCrop(plot);
-          this.showMessage('씨앗을 심었어요. 조금 기다리면 자라나요.');
-          return;
-        }
+          const text = this.add.text(20, 0, '', { fontSize: '20px', color: '#5d4037', fontStyle: 'bold' }).setOrigin(0, 0.5);
+          container.add(text);
+          return text;
+        };
 
-        if (plot.state === 'ready') {
-          this.coins += 5;
-          this.seeds += 2;
-          plot.state = 'empty';
-          plot.growth = 0;
-          if (plot.crop) plot.crop.destroy();
-          if (plot.sparkle) plot.sparkle.destroy();
-          plot.crop = null;
-          plot.sparkle = null;
-          this.showMessage('+5 코인! 수확했어요. 씨앗도 2개 얻었어요.');
-          this.popText(plot.x, plot.y - 36, '+5');
-          return;
-        }
+        this.seedText = createIconText(30, 40, '🌱');
+        this.coinText = createIconText(120, 40, '🪙');
+        
+        // 선택된 가구 표시 (우측 상단 둥근 버튼 스타일)
+        this.add.rectangle(width - 120, 40, 200, 60, Colors.uiBag, 0.95).setDepth(100).setStrokeStyle(4, Colors.woodDark).setOrigin(0.5);
+        this.decorText = this.add.text(width - 120, 40, '', { fontSize: '18px', color: '#5d4037', fontStyle: 'bold' }).setOrigin(0.5).setDepth(101);
 
-        this.showMessage('아직 자라는 중이에요. 조금만 기다려요.');
-      }
-
-      updateCrops(delta) {
-        for (const plot of this.plots) {
-          if (plot.state === 'seed' || plot.state === 'growing') {
-            plot.growth += delta;
-            if (plot.growth > 1800 && plot.state === 'seed') {
-              plot.state = 'growing';
-              this.renderCrop(plot);
-            }
-            if (plot.growth > 4300 && plot.state === 'growing') {
-              plot.state = 'ready';
-              this.renderCrop(plot);
-            }
-          }
-        }
-      }
-
-      renderCrop(plot) {
-        if (plot.crop) plot.crop.destroy();
-        if (plot.sparkle) plot.sparkle.destroy();
-
-        if (plot.state === 'seed') {
-          plot.crop = this.add.container(plot.x, plot.y - 12);
-          plot.crop.add(this.add.circle(-8, 4, 4, 0x5f8d38));
-          plot.crop.add(this.add.circle(8, 4, 4, 0x5f8d38));
-          return;
-        }
-
-        if (plot.state === 'growing') {
-          plot.crop = this.add.container(plot.x, plot.y - 16);
-          for (let i = 0; i < 4; i++) {
-            plot.crop.add(this.add.ellipse(-16 + i * 11, 2 - Math.sin(i) * 4, 18, 28, 0x66aa45).setAngle(i % 2 ? -18 : 18));
-          }
-          return;
-        }
-
-        if (plot.state === 'ready') {
-          plot.crop = this.add.container(plot.x, plot.y - 20);
-          for (let i = 0; i < 5; i++) {
-            plot.crop.add(this.add.circle(-20 + i * 10, -2 + Math.sin(i) * 5, 10, 0xe8503a).setStrokeStyle(2, 0x7f2d22));
-            plot.crop.add(this.add.ellipse(-20 + i * 10, -14 + Math.sin(i) * 5, 10, 8, 0x4c9b42));
-          }
-          plot.sparkle = this.add.text(plot.x + 25, plot.y - 48, '✦', {
-            fontFamily: 'serif',
-            fontSize: '24px',
-            color: '#fff5a6'
-          }).setOrigin(0.5);
-          this.tweens.add({ targets: plot.sparkle, alpha: 0.2, duration: 500, yoyo: true, repeat: -1 });
-        }
-      }
-
-      placeDecor() {
-        const x = this.player.x + this.facing.x * 55;
-        const y = this.player.y + this.facing.y * 55;
-
-        if (x < 660 || x > 1010 || y < 585 || y > 770) {
-          this.showMessage('꾸미기 마당 안에서 E를 눌러 설치해보세요.');
-          return;
-        }
-
-        const cost = this.selectedDecor === 'lamp' ? 8 : 4;
-        if (this.coins < cost) {
-          this.showMessage(`${this.selectedDecorLabel()} 설치에는 ${cost} 코인이 필요해요.`);
-          return;
-        }
-
-        this.coins -= cost;
-        const item = this.drawDecor(x, y, this.selectedDecor);
-        this.decorItems.push(item);
-        this.showMessage(`${this.selectedDecorLabel()} 설치 완료! 집이 더 포근해졌어요.`);
-      }
-
-      drawDecor(x, y, type) {
-        const c = this.add.container(x, y);
-        if (type === 'pot') {
-          c.add(this.add.rectangle(0, 12, 34, 28, 0xb86b42).setStrokeStyle(2, 0x70401f));
-          c.add(this.add.circle(-10, -7, 10, 0xff9eb7));
-          c.add(this.add.circle(7, -11, 9, 0xffd56b));
-          c.add(this.add.circle(14, -3, 8, 0xffffff));
-          c.add(this.add.ellipse(0, 0, 20, 13, 0x519d4b));
-        }
-        if (type === 'chair') {
-          c.add(this.add.rectangle(0, 8, 52, 14, 0xa66a3f).setStrokeStyle(2, 0x65401f));
-          c.add(this.add.rectangle(-20, 26, 8, 28, 0x7a4a2a));
-          c.add(this.add.rectangle(20, 26, 8, 28, 0x7a4a2a));
-          c.add(this.add.rectangle(0, -12, 48, 34, 0xc28852).setStrokeStyle(2, 0x65401f));
-        }
-        if (type === 'lamp') {
-          c.add(this.add.rectangle(0, 10, 8, 64, 0x6b4a2c));
-          c.add(this.add.circle(0, -28, 19, 0xffe282, 0.55));
-          c.add(this.add.rectangle(0, -28, 26, 30, 0xffe282).setStrokeStyle(2, 0x6b4a2c));
-          this.tweens.add({ targets: c.list[1], alpha: 0.2, duration: 800, yoyo: true, repeat: -1 });
-        }
-        return c;
-      }
-
-      selectedDecorLabel() {
-        if (this.selectedDecor === 'pot') return '꽃 화분';
-        if (this.selectedDecor === 'chair') return '나무 의자';
-        return '정원 램프';
-      }
-
-      getNearestPlot(maxDistance) {
-        let nearest = null;
-        let best = Number.POSITIVE_INFINITY;
-        for (const plot of this.plots) {
-          const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, plot.x, plot.y);
-          if (d < best) {
-            best = d;
-            nearest = plot;
-          }
-        }
-        return best <= maxDistance ? nearest : null;
+        // 하단 메시지 창 (귀여운 팝업 스타일)
+        this.messageBg = this.add.rectangle(width/2, height - 50, 600, 60, 0xffffff, 0.95).setDepth(100).setStrokeStyle(4, Colors.groundDark).setOrigin(0.5).setAlpha(0);
+        this.messageText = this.add.text(width/2, height - 50, '', {
+          fontSize: '18px', color: '#33691e', fontStyle: 'bold', align: 'center'
+        }).setOrigin(0.5).setDepth(101).setAlpha(0);
       }
 
       updateHud() {
-        this.hudText.setText(`🌱 씨앗 ${this.seeds}   🪙 코인 ${this.coins}   🏡 ${this.selectedDecorLabel()}`);
+        this.seedText.setText(`${this.seeds}`);
+        this.coinText.setText(`${this.coins}`);
+        this.decorText.setText(`🛋️ ${this.selectedDecorLabel()}`);
+      }
+
+      updateHudHighlight(selectedNum) {
+        // 숫자키 선택 시 시각적 피드백 효과 추가 가능 (여백상 생략)
       }
 
       showMessage(text) {
         this.messageText.setText(text);
-        this.messageText.setAlpha(1);
-        this.tweens.killTweensOf(this.messageText);
-        this.tweens.add({
-          targets: this.messageText,
-          alpha: 0,
-          delay: 2500,
-          duration: 650
+        this.tweens.killTweensOf([this.messageBg, this.messageText]);
+        this.tweens.add({ targets: [this.messageBg, this.messageText], alpha: 1, duration: 300 });
+        this.tweens.add({ targets: [this.messageBg, this.messageText], alpha: 0, delay: 3000, duration: 500 });
+      }
+
+      // ==========================================
+      // --- 게임 입력 및 조작 ---
+      // ==========================================
+
+      createInputs() {
+        this.cursors = this.input.keyboard.createCursorKeys();
+        this.keys = this.input.keyboard.addKeys('W,A,S,D,SPACE,E,ONE,TWO,THREE');
+      }
+
+      handleMovement(delta) {
+        const body = this.player.body;
+        let vx = 0, vy = 0;
+        if (this.cursors.left.isDown || this.keys.A.isDown) vx = -1;
+        else if (this.cursors.right.isDown || this.keys.D.isDown) vx = 1;
+        if (this.cursors.up.isDown || this.keys.W.isDown) vy = -1;
+        else if (this.cursors.down.isDown || this.keys.S.isDown) vy = 1;
+
+        const vec = new Phaser.Math.Vector2(vx, vy).normalize().scale(this.speed);
+        body.setVelocity(vec.x, vec.y);
+
+        // 걷기 애니메이션 (둥실둥실 회전)
+        if (vx !== 0 || vy !== 0) {
+          this.facing.set(vx, vy);
+          this.player.angle = Math.sin(this.time.now / 100) * 3;
+        } else {
+          this.player.angle = 0;
+        }
+      }
+
+      // ==========================================
+      // --- 농사 및 꾸미기 로직 (이펙트 강화) ---
+      // ==========================================
+
+      handleFarmAction() {
+        if (this.actionCooldown > 0) return;
+        this.actionCooldown = 250;
+
+        const plot = this.getNearestPlot(80);
+        if (!plot) return;
+
+        if (plot.state === 'empty') {
+          if (this.seeds > 0) {
+            this.seeds--; plot.state = 'seed'; plot.growth = 0;
+            this.renderCrop(plot);
+            this.showMessage('🌱 씨앗을 조심스레 심었어요.');
+            // 심기 이펙트 (흙 먼지 도형)
+            this.createParticleEffect(plot.x, plot.y, 0x8d6e63, 5);
+          } else {
+            this.showMessage('😥 씨앗이 모자라요. 수확을 먼저 하세요.');
+          }
+        } else if (plot.state === 'ready') {
+          this.coins += 5; this.seeds += Phaser.Math.Between(1, 2);
+          plot.state = 'empty'; plot.growth = 0;
+          if (plot.crop) plot.crop.destroy();
+          if (plot.sparkle) plot.sparkle.destroy();
+          this.showMessage('🧺 잘 자란 토마토를 수확했어요! (+5 코인)');
+          this.popText(plot.x, plot.y - 40, '+5 🪙', '#fbc02d');
+          // 수확 이펙트 (빨간 파티클)
+          this.createParticleEffect(plot.x, plot.y, Colors.crop, 8);
+        }
+      }
+
+      updateCrops(delta) {
+        this.plots.forEach(plot => {
+          if (plot.state === 'seed' || plot.state === 'growing') {
+            plot.growth += delta;
+            // 성장 속도 밸런싱
+            if (plot.growth > 3000 && plot.state === 'seed') {
+              plot.state = 'growing'; this.renderCrop(plot);
+            } else if (plot.growth > 8000 && plot.state === 'growing') {
+              plot.state = 'ready'; this.renderCrop(plot);
+            }
+          }
         });
       }
 
-      popText(x, y, text) {
-        const t = this.add.text(x, y, text, {
-          fontFamily: 'system-ui',
-          fontSize: '28px',
-          fontStyle: '900',
-          color: '#fff3a0',
-          stroke: '#734019',
-          strokeThickness: 5
-        }).setOrigin(0.5);
+      renderCrop(plot) {
+        if (plot.crop) plot.crop.destroy();
+        
+        // 밭 depth보다 조금 높게 (4.2)
+        const container = this.add.container(plot.x, plot.y).setDepth(4.2);
+        plot.crop = container;
 
-        this.tweens.add({
-          targets: t,
-          y: y - 42,
-          alpha: 0,
-          duration: 900,
-          onComplete: () => t.destroy()
+        if (plot.state === 'seed') {
+          container.add(this.add.circle(-5, 10, 4, 0x795548)); // 흙 더미
+          container.add(this.add.circle(5, 10, 3, 0x795548));
+        } else if (plot.state === 'growing') {
+          // 싹 트기
+          container.add(this.add.rectangle(0, 5, 4, 15, Colors.leaf).setOrigin(0.5, 1));
+          container.add(this.add.ellipse(-5, -5, 12, 6, Colors.leaf).setAngle(-30));
+          container.add(this.add.ellipse(5, -5, 12, 6, Colors.leaf).setAngle(30));
+        } else if (plot.state === 'ready') {
+          // 다 자란 토마토 나무
+          container.add(this.add.rectangle(0, 10, 6, 25, Colors.wood).setOrigin(0.5, 1)); // 줄기
+          for(let i=0; i<3; i++) {
+            container.add(this.add.circle(-10 + i*10, -5 + Math.sin(i)*5, 10, Colors.crop).setStrokeStyle(2, 0xb71c1c)); // 열매
+            container.add(this.add.circle(-10 + i*10, -15 + Math.sin(i)*5, 5, Colors.leaf)); // 꼭지
+          }
+          // 반짝이 이펙트
+          plot.sparkle = this.add.text(plot.x + 20, plot.y - 30, '✨', { fontSize: '20px' }).setOrigin(0.5).setDepth(5);
+          this.tweens.add({ targets: plot.sparkle, alpha: 0.5, duration: 500, yoyo: true, repeat: -1 });
+        }
+      }
+
+      // --- 꾸미기 설치 로직 ---
+
+      placeDecor() {
+        // 플레이어 앞 쪽에 설치 좌표 계산
+        const spawnX = this.player.x + this.facing.x * 60;
+        const spawnY = this.player.y + this.facing.y * 60;
+
+        // 설치 영역 제한 검사
+        if (!Phaser.Geom.Rectangle.Contains(this.decorZoneBg.getBounds(), spawnX, spawnY)) {
+          this.showMessage('🚧 가구는 [꾸미기 마당] 안에만 설치할 수 있어요.');
+          return;
+        }
+
+        const cost = this.selectedDecor === 'lamp' ? 10 : 5;
+        if (this.coins < cost) {
+          this.showMessage(`😥 코인이 부족해요. (${cost} 코인 필요)`);
+          return;
+        }
+
+        this.coins -= cost;
+        const item = this.drawDecor(spawnX, spawnY, this.selectedDecor);
+        this.decorItems.push(item);
+        // 중요: 설치된 가구도 Y-Sorting 대상에 포함
+        this.objectsToSort.push(item); 
+        
+        this.showMessage(`✅ ${this.selectedDecorLabel()} 설치 완료! 마당이 예뻐졌어요.`);
+        this.createParticleEffect(spawnX, spawnY, Colors.highlight, 5);
+      }
+
+      drawDecor(x, y, type) {
+        const c = this.add.container(x, y);
+        c.itemType = type; // 유형 저장
+
+        // 설치 시 뿅 나타나는 애니메이션
+        c.setScale(0);
+        this.tweens.add({ targets: c, scale: 1, duration: 300, ease: 'Back.out' });
+
+        if (type === 'pot') {
+          // 꽃 화분 (디테일)
+          c.add(this.add.rectangle(0, 15, 30, 25, 0xa1887f).setStrokeStyle(2, Colors.woodDark)); // 화분
+          c.add(this.add.rectangle(0, 5, 36, 6, 0x8d6e63).setStrokeStyle(2, Colors.woodDark)); // 화분 테두리
+          // 꽃들
+          c.add(this.add.circle(-8, -5, 8, Colors.highlight).setStrokeStyle(1, Colors.woodDark)); // 노란 꽃
+          c.add(this.add.circle(8, -8, 7, 0xf48fb1).setStrokeStyle(1, Colors.woodDark)); // 분홍 꽃
+          c.add(this.add.circle(0, -12, 3, Colors.woodDark)); // 꽃술
+        } else if (type === 'chair') {
+          // 나무 의자 (귀여운 벤치 스타일)
+          c.add(this.add.rectangle(0, 20, 10, 30, Colors.woodDark)); // 다리L
+          c.add(this.add.rectangle(30, 20, 10, 30, Colors.woodDark)); // 다리R
+          c.add(this.add.rectangle(15, 8, 50, 8, Colors.wood).setStrokeStyle(2, Colors.woodDark)); // 앉는곳
+          c.add(this.add.rectangle(15, -10, 45, 25, Colors.wood).setStrokeStyle(2, Colors.woodDark)); // 등받이
+          c.add(this.add.text(15, -10, '♥', {fontSize:'12px', color:'#fff'}).setOrigin(0.5)); // 등받이 무늬
+          c.setX(x-15); // 중심점 살짝 조정
+        } else if (type === 'lamp') {
+          // 정원 램프 (가로등 스타일)
+          c.add(this.add.rectangle(0, 15, 8, 60, Colors.woodDark)); // 기둥
+          c.add(this.add.circle(0, -20, 15, 0xfff9c4).setStrokeStyle(2, Colors.woodDark)); // 유리기
+          // 불빛 (애니메이션 멤버)
+          const light = this.add.circle(0, -20, 12, Colors.highlight, 0.8);
+          c.add(light);
+          c.add(this.add.rectangle(0, -35, 20, 5, Colors.woodDark)); // 갓 지붕
+          
+          this.tweens.add({ targets: light, alpha: 0.2, duration: 1000, yoyo: true, repeat: -1 });
+        }
+        return c;
+      }
+
+      // --- 유틸리티 서브 함수들 ---
+
+      selectedDecorLabel() {
+        if (this.selectedDecor === 'pot') return '꽃 화분 (5🪙)';
+        if (this.selectedDecor === 'chair') return '나무 의자 (5🪙)';
+        return '정원 램프 (10🪙)';
+      }
+
+      getNearestPlot(maxDist) {
+        let nearest = null; let minD = Number.MAX_VALUE;
+        this.plots.forEach(p => {
+          const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, p.x, p.y);
+          if (d < minD && d < maxDist) { minD = d; nearest = p; }
         });
+        return nearest;
+      }
+
+      popText(x, y, text, color) {
+        const t = this.add.text(x, y, text, {
+          fontSize: '24px', color: color, fontStyle: 'bold', stroke: '#fff', strokeThickness: 4
+        }).setOrigin(0.5).setDepth(200);
+        this.tweens.add({ targets: t, y: y - 50, alpha: 0, duration: 1000, onComplete: () => t.destroy() });
+      }
+
+      // 간단 도형 파티클 이펙트
+      createParticleEffect(x, y, color, count) {
+        for(let i=0; i<count; i++) {
+          const p = this.add.circle(x, y, Phaser.Math.Between(3, 6), color).setDepth(200);
+          this.physics.add.existing(p);
+          // 랜덤 속도 분사
+          p.body.setVelocity(Phaser.Math.Between(-100, 100), Phaser.Math.Between(-100, -200));
+          p.body.setGravityY(300); // 중력 적용
+          // 페이드 아웃 후 삭제
+          this.tweens.add({ targets: p, alpha: 0, scale: 0, duration: Phaser.Math.Between(500, 1000), onComplete: () => p.destroy() });
+        }
       }
     }
 
+    // ==========================================
+    // --- 게임 환경 설정 ---
+    // ==========================================
     const config = {
-      type: Phaser.AUTO,
-      parent: 'game',
-      width: 1152,
-      height: 768,
-      backgroundColor: '#aee2ff',
-      physics: {
-        default: 'arcade',
-        arcade: {
-          debug: false
-        }
-      },
-      scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH
-      },
+      type: Phaser.AUTO, parent: 'game',
+      width: 1152, height: 768,
+      backgroundColor: '#cae9ff', // Colors.sky
+      physics: { default: 'arcade', arcade: { debug: false } },
+      scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
       scene: [MainScene]
     };
 
