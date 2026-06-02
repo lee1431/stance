@@ -15,6 +15,13 @@
       --wood:#8f5528;
       --wood2:#c47a35;
       --line:rgba(255,255,255,.14);
+      --i0-color:#ffd86b;
+      --i1-color:#ffb86b;
+      --i2-color:#7fd4ff;
+      --i3-color:#6ad66a;
+      --i4-color:#9fa8ff;
+      --i5-color:#aaaaaa;
+      --i6-color:#666666;
     }
 
     *{box-sizing:border-box}
@@ -63,8 +70,41 @@
 
     .reward{min-height:80px;display:grid;place-items:center}
     .item-name{opacity:0;transform:translateY(30px) scale(.82);font-size:clamp(28px,7vw,54px);font-weight:1000;letter-spacing:-.04em;text-shadow:0 0 14px rgba(255,216,107,.65),0 6px 20px #000;color:var(--gold)}
-    .item-name.show{animation:itemPop 1.55s cubic-bezier(.2,1.3,.2,1) forwards}
-    @keyframes itemPop{0%{opacity:0;transform:translateY(42px) scale(.74)}22%{opacity:1;transform:translateY(-34px) scale(1.18)}55%{opacity:1;transform:translateY(-18px) scale(1)}100%{opacity:0;transform:translateY(-66px) scale(.92)}}
+    .item-name.show{animation:itemPop 5.4s cubic-bezier(.2,1.3,.2,1) forwards}
+    @keyframes itemPop{0%{opacity:0;transform:translateY(42px) scale(.74)}10%{opacity:1;transform:translateY(-34px) scale(1.18)}18%{opacity:1;transform:translateY(-18px) scale(1)}88%{opacity:1;transform:translateY(-18px) scale(1)}100%{opacity:0;transform:translateY(-66px) scale(.92)}}
+
+
+    .side-panel{position:fixed;z-index:10;text-align:left;background:rgba(7,10,18,.78);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 42px rgba(0,0,0,.48),inset 0 1px 0 rgba(255,255,255,.06);backdrop-filter:blur(10px);overflow:hidden}
+    .panel-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.09);font-size:13px;font-weight:900;letter-spacing:.06em;color:#fff}
+    .panel-count{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:0}
+
+    .inventory-panel{left:22px;top:22px;width:min(430px,calc(100vw - 44px));max-height:calc(100vh - 44px)}
+    .inventory-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px;padding:12px;max-height:calc(100vh - 102px);overflow-y:auto}
+    .empty-state{grid-column:1/-1;padding:22px 0;color:rgba(238,244,255,.45);text-align:center;font-size:12px}
+    .inv-slot{aspect-ratio:1;background:#090b10;border:2px solid #2a3143;border-radius:10px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8px;box-shadow:inset 0 0 15px rgba(0,0,0,.8),0 4px 8px rgba(0,0,0,.32);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+    .inv-slot:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.45)}
+    .inv-icon{font-size:22px;font-weight:1000;opacity:.9;margin-bottom:6px;text-shadow:0 0 10px currentColor}
+    .inv-name{font-size:11px;line-height:1.25;word-break:keep-all;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+    .inv-count{position:absolute;right:-7px;bottom:-7px;font-size:11px;font-weight:900;padding:3px 7px;border-radius:7px;background:#202636;border:1px solid rgba(255,255,255,.20);color:#fff;box-shadow:0 2px 7px rgba(0,0,0,.55)}
+    .inv-rarity{position:absolute;left:6px;top:6px;font-size:10px;font-weight:1000;letter-spacing:.02em}
+
+    .r-i0{border-color:var(--i0-color);background:radial-gradient(circle,rgba(255,216,107,.18) 0%,rgba(9,11,16,1) 70%);animation:legendPulse 1.5s infinite alternate}.r-i0 .inv-icon,.r-i0 .inv-rarity,.log-rarity-i0{color:var(--i0-color)}.r-i0 .inv-name{color:#fff4d4;font-weight:900}
+    .r-i1{border-color:var(--i1-color);background:radial-gradient(circle,rgba(255,184,107,.14) 0%,rgba(9,11,16,1) 70%);box-shadow:inset 0 0 15px rgba(0,0,0,.8),0 0 10px rgba(255,184,107,.3)}.r-i1 .inv-icon,.r-i1 .inv-rarity,.log-rarity-i1{color:var(--i1-color)}.r-i1 .inv-name{color:#ffe1c2;font-weight:900}
+    .r-i2{border-color:var(--i2-color)}.r-i2 .inv-icon,.r-i2 .inv-rarity,.log-rarity-i2{color:var(--i2-color)}
+    .r-i3{border-color:var(--i3-color)}.r-i3 .inv-icon,.r-i3 .inv-rarity,.log-rarity-i3{color:var(--i3-color)}
+    .r-i4{border-color:var(--i4-color)}.r-i4 .inv-icon,.r-i4 .inv-rarity,.log-rarity-i4{color:var(--i4-color)}
+    .r-i5{border-color:var(--i5-color)}.r-i5 .inv-icon,.r-i5 .inv-rarity,.log-rarity-i5{color:var(--i5-color)}
+    .r-i6{border-color:#444;opacity:.78}.r-i6 .inv-icon,.r-i6 .inv-rarity,.log-rarity-i6{color:var(--i6-color)}
+    @keyframes legendPulse{0%{box-shadow:inset 0 0 15px rgba(0,0,0,.8),0 0 10px rgba(255,216,107,.4)}100%{box-shadow:inset 0 0 15px rgba(0,0,0,.8),0 0 25px rgba(255,216,107,.8);border-color:#fff}}
+
+    .log-panel{right:22px;bottom:22px;width:min(360px,calc(100vw - 44px));max-height:220px}
+    .log-list{max-height:170px;overflow-y:auto;padding:8px 12px;font-size:12px;line-height:1.45}
+    .log-row{display:grid;grid-template-columns:54px 44px 1fr;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.045);align-items:center}
+    .log-row:last-child{border-bottom:0}
+    .log-time{color:rgba(238,244,255,.45)}
+    .log-rarity{font-weight:1000}
+    .log-item{color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    @media (max-width:980px){.inventory-panel{left:16px;right:16px;top:auto;bottom:210px;width:auto;max-height:240px}.inventory-grid{grid-template-columns:repeat(auto-fill,minmax(78px,1fr));max-height:182px}.log-panel{left:16px;right:16px;bottom:16px;width:auto;max-height:180px}.log-list{max-height:130px}.hint{display:none}.center{transform:translateY(-108px)}}
 
     .hint{position:fixed;left:0;right:0;bottom:20px;text-align:center;color:rgba(238,244,255,.35);font-size:12px;letter-spacing:.04em;z-index:2}
   </style>
@@ -95,6 +135,22 @@
       </div>
     </section>
   </main>
+
+  <aside class="side-panel inventory-panel" aria-label="아이템 리스트">
+    <div class="panel-head">
+      <span>아이템 리스트</span>
+      <span class="panel-count" id="invCount">0 types</span>
+    </div>
+    <div class="inventory-grid" id="inventoryGrid"></div>
+  </aside>
+
+  <aside class="side-panel log-panel" aria-label="획득 로그">
+    <div class="panel-head">
+      <span>획득 로그</span>
+      <span class="panel-count" id="logCount">0 items</span>
+    </div>
+    <div class="log-list" id="logList"></div>
+  </aside>
   <div class="hint">1분마다 게이지가 차고, 상자가 자동으로 열립니다.</div>
 
 <script>
@@ -108,17 +164,104 @@ const timeLeft = document.getElementById("timeLeft");
 const chest = document.getElementById("chest");
 const burst = document.getElementById("burst");
 const itemName = document.getElementById("itemName");
+const logList = document.getElementById("logList");
+const logCount = document.getElementById("logCount");
+const inventoryGrid = document.getElementById("inventoryGrid");
+const invCount = document.getElementById("invCount");
 
 let cycleStart = Date.now();
 let opening = false;
+let logs = [];
+const inv = new Map();
 
 try {
   const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
   if (saved.cycleStart && Date.now() - saved.cycleStart < OPEN_EVERY_MS) cycleStart = saved.cycleStart;
+  if (Array.isArray(saved.logs)) logs = saved.logs.slice(0, 80);
+  if (Array.isArray(saved.inv)) saved.inv.forEach(([k, v]) => inv.set(k, v));
 } catch(e) {}
 
 function save(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ cycleStart }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ cycleStart, logs, inv:Array.from(inv.entries()) }));
+}
+
+
+function escapeHtml(s){
+  return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+
+function rarityRank(rarity){
+  const m = /^i(\d+)/.exec(rarity || "");
+  return m ? Number(m[1]) : 999;
+}
+
+function inventoryKey(drop){
+  return `${drop.rarity}|${drop.name}`;
+}
+
+function addToInventory(drop){
+  const key = inventoryKey(drop);
+  const cur = inv.get(key);
+  const t = Date.now();
+  if (cur) {
+    cur.count += 1;
+    cur.lastTs = t;
+  } else {
+    inv.set(key, { rarity:drop.rarity, name:drop.name, count:1, firstTs:t, lastTs:t });
+  }
+  renderInventory();
+}
+
+function renderInventory(){
+  const items = Array.from(inv.values()).sort((a,b) => {
+    const rr = rarityRank(a.rarity) - rarityRank(b.rarity);
+    if (rr !== 0) return rr;
+    return b.lastTs - a.lastTs;
+  });
+
+  invCount.textContent = `${items.length} types`;
+  if (!items.length) {
+    inventoryGrid.innerHTML = `<div class="empty-state">아직 획득한 아이템이 없습니다.</div>`;
+    return;
+  }
+
+  inventoryGrid.innerHTML = items.map(it => {
+    const iconChar = (it.name || "?").charAt(0).toUpperCase();
+    return `
+      <div class="inv-slot r-${escapeHtml(it.rarity)}" title="[${escapeHtml(it.rarity)}] ${escapeHtml(it.name)} x${it.count}">
+        <div class="inv-rarity">${escapeHtml(it.rarity)}</div>
+        <div class="inv-icon">${escapeHtml(iconChar)}</div>
+        <div class="inv-name">${escapeHtml(it.name)}</div>
+        <div class="inv-count">x${it.count}</div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderLog(){
+  logCount.textContent = `${logs.length} items`;
+  if (!logs.length) {
+    logList.innerHTML = `<div style="padding:14px 0;color:rgba(238,244,255,.45);text-align:center">아직 획득한 아이템이 없습니다.</div>`;
+    return;
+  }
+  logList.innerHTML = logs.map(row => `
+    <div class="log-row" title="${escapeHtml(row.name)}">
+      <div class="log-time">${escapeHtml(row.time)}</div>
+      <div class="log-rarity log-rarity-${escapeHtml(row.rarity)}">[${escapeHtml(row.rarity)}]</div>
+      <div class="log-item">${escapeHtml(row.name)}</div>
+    </div>
+  `).join("");
+  logList.scrollTop = 0;
+}
+
+function addLog(drop){
+  addToInventory(drop);
+  const d = new Date();
+  const time = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`;
+  logs.unshift({ time, rarity: drop.rarity, name: drop.name });
+  logs = logs.slice(0, 80);
+  renderLog();
+  save();
 }
 
 function fallbackDrop(){
@@ -146,6 +289,7 @@ async function getDrop(){
 }
 
 function showReward(drop){
+  addLog(drop);
   chest.classList.remove("opening");
   burst.classList.remove("on");
   itemName.classList.remove("show");
@@ -156,6 +300,7 @@ function showReward(drop){
 
   setTimeout(() => {
     itemName.textContent = drop.name;
+    itemName.style.color = `var(--${drop.rarity}-color, var(--gold))`;
     itemName.classList.add("show");
   }, 520);
 
@@ -164,7 +309,7 @@ function showReward(drop){
     burst.classList.remove("on");
     itemName.classList.remove("show");
     opening = false;
-  }, 2200);
+  }, 6000);
 }
 
 async function openCycle(){
@@ -194,6 +339,8 @@ function tick(){
   requestAnimationFrame(tick);
 }
 
+renderInventory();
+renderLog();
 tick();
 </script>
 </body>
