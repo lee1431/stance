@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Get The Item - Center Chest</title>
+  <title>Get The Item - Polished Loot UI</title>
   <style>
     :root{
       --bg0:#070a12;
@@ -16,139 +16,88 @@
       --wood2:#c47a35;
       --line:rgba(255,255,255,.14);
       --i0-color:#ffd86b;
-      --i1-color:#ffb86b;
-      --i2-color:#7fd4ff;
-      --i3-color:#6ad66a;
-      --i4-color:#9fa8ff;
-      --i5-color:#aaaaaa;
-      --i6-color:#666666;
+      --i1-color:#ff8b31;
+      --i2-color:#62e66f;
+      --i3-color:#44c9ff;
+      --i4-color:#b56cff;
+      --i5-color:#f3c942;
+      --i6-color:#aeb4c0;
     }
 
     *{box-sizing:border-box}
     html,body{height:100%;margin:0;overflow:hidden;background:radial-gradient(circle at 50% 42%,#1d2a4d 0%,var(--bg1) 34%,var(--bg0) 100%);color:var(--fg);font-family:ui-monospace,Menlo,Consolas,monospace}
-
-    body::before{
-      content:"";position:fixed;inset:-30%;pointer-events:none;
-      background:
-        radial-gradient(circle at 20% 20%,rgba(105,231,255,.12),transparent 24%),
-        radial-gradient(circle at 80% 80%,rgba(255,216,107,.10),transparent 26%);
-      animation:bgDrift 9s ease-in-out infinite alternate;
-    }
+    body::before{content:"";position:fixed;inset:-30%;pointer-events:none;background:radial-gradient(circle at 20% 20%,rgba(105,231,255,.12),transparent 24%),radial-gradient(circle at 80% 80%,rgba(255,216,107,.10),transparent 26%);animation:bgDrift 9s ease-in-out infinite alternate}
     @keyframes bgDrift{from{transform:translate3d(-1%,0,0) scale(1)}to{transform:translate3d(1%,1%,0) scale(1.04)}}
 
     .stage{position:relative;z-index:1;width:100%;height:100%;display:grid;place-items:center;padding:28px;text-align:center}
-    .center{width:min(520px,92vw);display:flex;flex-direction:column;align-items:center;gap:26px}
-
-    .timer-label{font-size:13px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;text-shadow:0 2px 8px #000}
-    .progress-wrap{width:min(420px,84vw);height:16px;border:1px solid var(--line);border-radius:999px;background:rgba(0,0,0,.42);box-shadow:inset 0 0 18px rgba(0,0,0,.65),0 0 24px rgba(105,231,255,.08);overflow:hidden}
+    .center{width:min(620px,92vw);display:flex;flex-direction:column;align-items:center;gap:26px}
+    .timer-label{font-size:16px;letter-spacing:.20em;color:var(--muted);text-transform:uppercase;text-shadow:0 2px 8px #000;font-weight:900}
+    .progress-wrap{width:min(520px,84vw);height:18px;border:1px solid var(--line);border-radius:999px;background:rgba(0,0,0,.48);box-shadow:inset 0 0 18px rgba(0,0,0,.65),0 0 24px rgba(105,231,255,.08);overflow:hidden}
     .progress-bar{height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,#44d7ff,#9c63ff,#ffd86b);box-shadow:0 0 18px rgba(105,231,255,.75);transition:width .08s linear}
-    .time-left{font-size:22px;font-weight:900;text-shadow:0 3px 12px #000;color:#fff}
+    .time-left{font-size:28px;font-weight:1000;text-shadow:0 3px 12px #000;color:#fff}
 
-    .chest-zone{position:relative;width:330px;height:260px;display:grid;place-items:center;filter:drop-shadow(0 30px 35px rgba(0,0,0,.55))}
-    .glow{position:absolute;width:270px;height:92px;bottom:18px;border-radius:50%;background:radial-gradient(circle,rgba(255,216,107,.32),rgba(105,231,255,.10) 45%,transparent 72%);filter:blur(10px);animation:glow 1.8s ease-in-out infinite alternate}
+    .chest-zone{position:relative;width:360px;height:300px;display:grid;place-items:center;filter:drop-shadow(0 30px 35px rgba(0,0,0,.55))}
+    .glow{position:absolute;width:290px;height:96px;bottom:24px;border-radius:50%;background:radial-gradient(circle,rgba(255,216,107,.34),rgba(105,231,255,.10) 45%,transparent 72%);filter:blur(10px);animation:glow 1.8s ease-in-out infinite alternate}
     @keyframes glow{from{opacity:.5;transform:scale(.94)}to{opacity:1;transform:scale(1.04)}}
 
-    .chest{position:relative;width:240px;height:170px;transform-style:preserve-3d;animation:idle 2.3s ease-in-out infinite}
+    .chest{position:relative;width:270px;height:190px;transform-style:preserve-3d;animation:idle 2.3s ease-in-out infinite}
     @keyframes idle{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-
-    .lid{position:absolute;left:14px;top:18px;width:212px;height:78px;border-radius:24px 24px 10px 10px;background:linear-gradient(180deg,#d98a3b 0%,#9b5929 100%);border:4px solid #3f2418;transform-origin:50% 100%;z-index:3;box-shadow:inset 0 12px 18px rgba(255,255,255,.18),inset 0 -8px 10px rgba(0,0,0,.25)}
-    .lid::before{content:"";position:absolute;left:50%;top:-4px;width:42px;height:86px;transform:translateX(-50%);background:linear-gradient(180deg,#ffe28a,#b6802f);border-left:3px solid #5f411b;border-right:3px solid #5f411b}
-    .body{position:absolute;left:0;bottom:0;width:240px;height:122px;border-radius:16px;background:linear-gradient(180deg,var(--wood2),var(--wood));border:4px solid #3f2418;z-index:2;box-shadow:inset 0 12px 18px rgba(255,255,255,.12),inset 0 -16px 20px rgba(0,0,0,.32)}
-    .body::before{content:"";position:absolute;left:0;right:0;top:34px;height:18px;background:linear-gradient(90deg,#6c431f,#f2c45e,#6c431f);border-top:3px solid #3f2418;border-bottom:3px solid #3f2418}
-    .lock{position:absolute;left:50%;top:50px;width:48px;height:58px;transform:translateX(-50%);border-radius:8px;background:linear-gradient(180deg,#ffe28a,#bd7a21);border:4px solid #4c3512;z-index:4;box-shadow:0 5px 12px rgba(0,0,0,.35)}
-    .lock::after{content:"";position:absolute;left:50%;top:22px;width:10px;height:18px;transform:translateX(-50%);border-radius:999px;background:#3b2b14}
-
-    .chest.opening{animation:shake .45s ease-in-out 1}
-    .chest.opening .lid{animation:openLid 1.25s cubic-bezier(.2,.9,.15,1) forwards}
+    .lid{position:absolute;left:16px;top:20px;width:238px;height:88px;border-radius:26px 26px 10px 10px;background:linear-gradient(180deg,#d98a3b 0%,#9b5929 100%);border:4px solid #3f2418;transform-origin:50% 100%;z-index:3;box-shadow:inset 0 12px 18px rgba(255,255,255,.18),inset 0 -8px 10px rgba(0,0,0,.25)}
+    .lid::before{content:"";position:absolute;left:50%;top:-4px;width:48px;height:98px;transform:translateX(-50%);background:linear-gradient(180deg,#ffe28a,#b6802f);border-left:3px solid #5f411b;border-right:3px solid #5f411b}
+    .body{position:absolute;left:0;bottom:0;width:270px;height:138px;border-radius:18px;background:linear-gradient(180deg,var(--wood2),var(--wood));border:4px solid #3f2418;z-index:2;box-shadow:inset 0 12px 18px rgba(255,255,255,.12),inset 0 -16px 20px rgba(0,0,0,.32)}
+    .body::before{content:"";position:absolute;left:0;right:0;top:38px;height:20px;background:linear-gradient(90deg,#6c431f,#f2c45e,#6c431f);border-top:3px solid #3f2418;border-bottom:3px solid #3f2418}
+    .lock{position:absolute;left:50%;top:57px;width:52px;height:64px;transform:translateX(-50%);border-radius:9px;background:linear-gradient(180deg,#ffe28a,#bd7a21);border:4px solid #4c3512;z-index:4;box-shadow:0 5px 12px rgba(0,0,0,.35)}
+    .lock::after{content:"";position:absolute;left:50%;top:25px;width:10px;height:20px;transform:translateX(-50%);border-radius:999px;background:#3b2b14}
+    .chest.opening{animation:shake .45s ease-in-out 1}.chest.opening .lid{animation:openLid 1.25s cubic-bezier(.2,.9,.15,1) forwards}
     @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
-    @keyframes openLid{0%{transform:rotateX(0) translateY(0)}45%{transform:rotateX(-72deg) translateY(-8px)}100%{transform:rotateX(-72deg) translateY(-8px)}}
+    @keyframes openLid{0%{transform:rotateX(0) translateY(0)}45%,100%{transform:rotateX(-72deg) translateY(-8px)}}
 
-    .burst{position:absolute;inset:0;display:none;pointer-events:none;z-index:5}
-    .burst.on{display:block;animation:burstFade 1.4s ease-out forwards}
-    .burst::before{content:"";position:absolute;left:50%;top:45%;width:220px;height:220px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.92) 0%,rgba(255,216,107,.55) 22%,rgba(105,231,255,.22) 52%,transparent 72%)}
+    .burst{position:absolute;inset:0;display:none;pointer-events:none;z-index:5}.burst.on{display:block;animation:burstFade 1.4s ease-out forwards}.burst::before{content:"";position:absolute;left:50%;top:45%;width:250px;height:250px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.92) 0%,rgba(255,216,107,.55) 22%,rgba(105,231,255,.22) 52%,transparent 72%)}
     @keyframes burstFade{0%{opacity:0;transform:scale(.7)}18%{opacity:1;transform:scale(1.05)}100%{opacity:0;transform:scale(1.35)}}
 
-    .reward{min-height:80px;display:grid;place-items:center}
-    .item-name{opacity:0;transform:translateY(30px) scale(.82);font-size:clamp(28px,7vw,54px);font-weight:1000;letter-spacing:-.04em;text-shadow:0 0 14px rgba(255,216,107,.65),0 6px 20px #000;color:var(--gold)}
-    .item-name.show{animation:itemPop 5.4s cubic-bezier(.2,1.3,.2,1) forwards}
-    @keyframes itemPop{0%{opacity:0;transform:translateY(42px) scale(.74)}10%{opacity:1;transform:translateY(-34px) scale(1.18)}18%{opacity:1;transform:translateY(-18px) scale(1)}88%{opacity:1;transform:translateY(-18px) scale(1)}100%{opacity:0;transform:translateY(-66px) scale(.92)}}
+    .reward{min-height:190px;display:grid;place-items:center}.reward-card{opacity:0;transform:translateY(44px) scale(.82);display:grid;place-items:center;gap:8px;max-width:min(720px,90vw);text-shadow:0 0 18px rgba(181,108,255,.75),0 6px 20px #000}.reward-card.show{animation:itemPop 5.4s cubic-bezier(.2,1.3,.2,1) forwards}.reward-prefix{font-size:24px;font-weight:1000;color:#d78bff}.reward-name{font-size:clamp(34px,5.8vw,64px);font-weight:1000;letter-spacing:-.05em;line-height:1.05;word-break:keep-all}.reward-rarity{font-size:32px;font-weight:1000;padding:8px 20px;border:2px solid currentColor;border-radius:12px;background:rgba(0,0,0,.34);box-shadow:0 0 28px currentColor}.reward-vanish{font-size:20px;color:rgba(255,255,255,.82);margin-top:18px}
+    @keyframes itemPop{0%{opacity:0;transform:translateY(54px) scale(.74)}10%{opacity:1;transform:translateY(-16px) scale(1.08)}18%{opacity:1;transform:translateY(0) scale(1)}88%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-66px) scale(.92)}}
 
+    .side-panel{position:fixed;z-index:10;text-align:left;background:rgba(7,10,18,.80);border:1px solid var(--line);border-radius:18px;box-shadow:0 18px 42px rgba(0,0,0,.50),inset 0 1px 0 rgba(255,255,255,.06);backdrop-filter:blur(10px);overflow:hidden}.panel-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.09);font-size:24px;font-weight:1000;letter-spacing:-.03em;color:#fff}.panel-count{font-size:16px;color:#ff9daf;font-weight:900;letter-spacing:0}
 
-    .side-panel{position:fixed;z-index:10;text-align:left;background:rgba(7,10,18,.78);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 42px rgba(0,0,0,.48),inset 0 1px 0 rgba(255,255,255,.06);backdrop-filter:blur(10px);overflow:hidden}
-    .panel-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.09);font-size:13px;font-weight:900;letter-spacing:.06em;color:#fff}
-    .panel-count{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:0}
+    .inventory-panel{left:24px;top:24px;width:clamp(420px,27vw,540px);max-height:calc(100vh - 48px)}.filter-row{display:flex;gap:8px;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.07)}.filter-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);color:#fff;border-radius:7px;padding:6px 12px;font-weight:900;font-size:16px;cursor:pointer}.filter-btn.active{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.45)}.filter-i0{color:var(--i0-color)}.filter-i1{color:var(--i1-color)}.filter-i2{color:var(--i2-color)}.filter-i3{color:var(--i3-color)}.filter-i4{color:var(--i4-color)}.filter-i5{color:var(--i5-color)}.filter-i6{color:var(--i6-color)}
+    .inventory-list{display:flex;flex-direction:column;gap:9px;padding:14px;max-height:calc(100vh - 174px);overflow-y:auto}.empty-state{padding:26px 0;color:rgba(238,244,255,.45);text-align:center;font-size:15px}.inv-row{min-height:64px;background:rgba(0,0,0,.26);border:2px solid #2a3143;border-radius:9px;display:grid;grid-template-columns:58px 1fr auto;align-items:center;gap:14px;padding:8px 12px;box-shadow:inset 0 0 15px rgba(0,0,0,.55),0 4px 8px rgba(0,0,0,.24)}.inv-icon{width:46px;height:46px;border-radius:9px;display:grid;place-items:center;font-size:26px;font-weight:1000;background:rgba(255,255,255,.05);text-shadow:0 0 12px currentColor;position:relative}.inv-icon small{position:absolute;right:3px;bottom:1px;font-size:9px;color:currentColor}.inv-name{font-size:18px;font-weight:900;line-height:1.25;word-break:keep-all}.inv-count{font-size:18px;font-weight:1000;color:#fff;min-width:42px;text-align:right}.panel-foot{padding:14px 18px;color:rgba(238,244,255,.54);font-size:15px;border-top:1px solid rgba(255,255,255,.07)}
 
-    .inventory-panel{left:22px;top:22px;width:min(430px,calc(100vw - 44px));max-height:calc(100vh - 44px)}
-    .inventory-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px;padding:12px;max-height:calc(100vh - 102px);overflow-y:auto}
-    .empty-state{grid-column:1/-1;padding:22px 0;color:rgba(238,244,255,.45);text-align:center;font-size:12px}
-    .inv-slot{aspect-ratio:1;background:#090b10;border:2px solid #2a3143;border-radius:10px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8px;box-shadow:inset 0 0 15px rgba(0,0,0,.8),0 4px 8px rgba(0,0,0,.32);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
-    .inv-slot:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.45)}
-    .inv-icon{font-size:22px;font-weight:1000;opacity:.9;margin-bottom:6px;text-shadow:0 0 10px currentColor}
-    .inv-name{font-size:11px;line-height:1.25;word-break:keep-all;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-    .inv-count{position:absolute;right:-7px;bottom:-7px;font-size:11px;font-weight:900;padding:3px 7px;border-radius:7px;background:#202636;border:1px solid rgba(255,255,255,.20);color:#fff;box-shadow:0 2px 7px rgba(0,0,0,.55)}
-    .inv-rarity{position:absolute;left:6px;top:6px;font-size:10px;font-weight:1000;letter-spacing:.02em}
+    .r-i0{border-color:var(--i0-color);background:linear-gradient(90deg,rgba(255,216,107,.16),rgba(0,0,0,.22));box-shadow:inset 0 0 15px rgba(0,0,0,.55),0 0 18px rgba(255,216,107,.22)}.r-i0 .inv-icon,.r-i0 .inv-name,.log-rarity-i0,.log-name-i0,.reward-i0{color:var(--i0-color)}
+    .r-i1{border-color:var(--i1-color);background:linear-gradient(90deg,rgba(255,139,49,.15),rgba(0,0,0,.22))}.r-i1 .inv-icon,.r-i1 .inv-name,.log-rarity-i1,.log-name-i1,.reward-i1{color:var(--i1-color)}
+    .r-i2{border-color:var(--i2-color);background:linear-gradient(90deg,rgba(98,230,111,.14),rgba(0,0,0,.22))}.r-i2 .inv-icon,.r-i2 .inv-name,.log-rarity-i2,.log-name-i2,.reward-i2{color:var(--i2-color)}
+    .r-i3{border-color:var(--i3-color);background:linear-gradient(90deg,rgba(68,201,255,.14),rgba(0,0,0,.22))}.r-i3 .inv-icon,.r-i3 .inv-name,.log-rarity-i3,.log-name-i3,.reward-i3{color:var(--i3-color)}
+    .r-i4{border-color:var(--i4-color);background:linear-gradient(90deg,rgba(181,108,255,.15),rgba(0,0,0,.22))}.r-i4 .inv-icon,.r-i4 .inv-name,.log-rarity-i4,.log-name-i4,.reward-i4{color:var(--i4-color)}
+    .r-i5{border-color:var(--i5-color);background:linear-gradient(90deg,rgba(243,201,66,.14),rgba(0,0,0,.22))}.r-i5 .inv-icon,.r-i5 .inv-name,.log-rarity-i5,.log-name-i5,.reward-i5{color:var(--i5-color)}
+    .r-i6{border-color:rgba(174,180,192,.55);background:linear-gradient(90deg,rgba(174,180,192,.10),rgba(0,0,0,.22))}.r-i6 .inv-icon,.r-i6 .inv-name,.log-rarity-i6,.log-name-i6,.reward-i6{color:var(--i6-color)}
 
-    .r-i0{border-color:var(--i0-color);background:radial-gradient(circle,rgba(255,216,107,.18) 0%,rgba(9,11,16,1) 70%);animation:legendPulse 1.5s infinite alternate}.r-i0 .inv-icon,.r-i0 .inv-rarity,.log-rarity-i0{color:var(--i0-color)}.r-i0 .inv-name{color:#fff4d4;font-weight:900}
-    .r-i1{border-color:var(--i1-color);background:radial-gradient(circle,rgba(255,184,107,.14) 0%,rgba(9,11,16,1) 70%);box-shadow:inset 0 0 15px rgba(0,0,0,.8),0 0 10px rgba(255,184,107,.3)}.r-i1 .inv-icon,.r-i1 .inv-rarity,.log-rarity-i1{color:var(--i1-color)}.r-i1 .inv-name{color:#ffe1c2;font-weight:900}
-    .r-i2{border-color:var(--i2-color)}.r-i2 .inv-icon,.r-i2 .inv-rarity,.log-rarity-i2{color:var(--i2-color)}
-    .r-i3{border-color:var(--i3-color)}.r-i3 .inv-icon,.r-i3 .inv-rarity,.log-rarity-i3{color:var(--i3-color)}
-    .r-i4{border-color:var(--i4-color)}.r-i4 .inv-icon,.r-i4 .inv-rarity,.log-rarity-i4{color:var(--i4-color)}
-    .r-i5{border-color:var(--i5-color)}.r-i5 .inv-icon,.r-i5 .inv-rarity,.log-rarity-i5{color:var(--i5-color)}
-    .r-i6{border-color:#444;opacity:.78}.r-i6 .inv-icon,.r-i6 .inv-rarity,.log-rarity-i6{color:var(--i6-color)}
-    @keyframes legendPulse{0%{box-shadow:inset 0 0 15px rgba(0,0,0,.8),0 0 10px rgba(255,216,107,.4)}100%{box-shadow:inset 0 0 15px rgba(0,0,0,.8),0 0 25px rgba(255,216,107,.8);border-color:#fff}}
+    .log-panel{right:24px;top:24px;width:clamp(520px,32vw,740px);height:calc(100vh - 48px)}.log-list{height:calc(100% - 62px);overflow-y:auto;padding:12px 24px 18px;font-size:21px;line-height:1.4}.log-row{display:grid;grid-template-columns:90px 70px minmax(0,1fr) 54px;gap:14px;padding:16px 0;border-bottom:1px solid rgba(255,255,255,.075);align-items:start}.log-time{color:rgba(238,244,255,.62);font-size:20px}.log-rarity{font-weight:1000;font-size:24px}.log-item{font-weight:900;white-space:normal;overflow:visible;text-overflow:clip;word-break:keep-all;overflow-wrap:anywhere}.log-qty{font-size:22px;font-weight:1000;color:#fff;text-align:right;white-space:nowrap}.hint{position:fixed;left:0;right:0;bottom:20px;text-align:center;color:rgba(238,244,255,.38);font-size:16px;letter-spacing:.04em;z-index:2}
 
-    .log-panel{right:22px;bottom:22px;width:min(360px,calc(100vw - 44px));max-height:220px}
-    .log-list{max-height:170px;overflow-y:auto;padding:8px 12px;font-size:12px;line-height:1.45}
-    .log-row{display:grid;grid-template-columns:54px 44px 1fr;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.045);align-items:center}
-    .log-row:last-child{border-bottom:0}
-    .log-time{color:rgba(238,244,255,.45)}
-    .log-rarity{font-weight:1000}
-    .log-item{color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    @media (max-width:980px){.inventory-panel{left:16px;right:16px;top:auto;bottom:210px;width:auto;max-height:240px}.inventory-grid{grid-template-columns:repeat(auto-fill,minmax(78px,1fr));max-height:182px}.log-panel{left:16px;right:16px;bottom:16px;width:auto;max-height:180px}.log-list{max-height:130px}.hint{display:none}.center{transform:translateY(-108px)}}
-
-    .hint{position:fixed;left:0;right:0;bottom:20px;text-align:center;color:rgba(238,244,255,.35);font-size:12px;letter-spacing:.04em;z-index:2}
+    @media (max-width:1280px){.inventory-panel{width:360px}.log-panel{width:430px}.log-list{font-size:18px}.log-row{grid-template-columns:78px 58px minmax(0,1fr) 44px;gap:10px}.log-time{font-size:16px}.log-rarity{font-size:19px}.inv-name{font-size:15px}}
+    @media (max-width:980px){html,body{overflow:auto}.stage{min-height:760px;height:auto}.center{transform:none;margin:260px 0 230px}.inventory-panel{left:16px;right:16px;top:16px;width:auto;max-height:250px}.inventory-list{max-height:132px}.log-panel{left:16px;right:16px;top:auto;bottom:16px;width:auto;height:250px}.log-list{height:188px;font-size:16px;padding:8px 14px}.log-row{grid-template-columns:68px 52px minmax(0,1fr) 38px;padding:10px 0}.panel-head{font-size:19px}.hint{display:none}}
   </style>
 </head>
 <body>
   <main class="stage">
     <section class="center" aria-label="상자 대기 화면">
-      <div>
-        <div class="timer-label">Next chest opens in</div>
-        <div class="time-left" id="timeLeft">60.0s</div>
-      </div>
-
-      <div class="progress-wrap" aria-label="상자 게이지">
-        <div class="progress-bar" id="progressBar"></div>
-      </div>
-
-      <div class="chest-zone">
-        <div class="glow"></div>
-        <div class="burst" id="burst"></div>
-        <div class="chest" id="chest">
-          <div class="lid"></div>
-          <div class="body"><div class="lock"></div></div>
-        </div>
-      </div>
-
-      <div class="reward">
-        <div class="item-name" id="itemName"></div>
-      </div>
+      <div><div class="timer-label">Next chest opens in</div><div class="time-left" id="timeLeft">60.0s</div></div>
+      <div class="progress-wrap" aria-label="상자 게이지"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="chest-zone"><div class="glow"></div><div class="burst" id="burst"></div><div class="chest" id="chest"><div class="lid"></div><div class="body"><div class="lock"></div></div></div></div>
+      <div class="reward"><div class="reward-card" id="rewardCard"><div class="reward-prefix">획득!</div><div class="reward-name" id="rewardName"></div><div class="reward-rarity" id="rewardRarity"></div><div class="reward-vanish">5.4초 후 사라집니다</div></div></div>
     </section>
   </main>
 
   <aside class="side-panel inventory-panel" aria-label="아이템 리스트">
-    <div class="panel-head">
-      <span>아이템 리스트</span>
-      <span class="panel-count" id="invCount">0 types</span>
+    <div class="panel-head"><span>아이템 리스트</span><span class="panel-count" id="invCount">0 / 300</span></div>
+    <div class="filter-row" id="filterRow">
+      <button class="filter-btn active" data-filter="all">전체</button><button class="filter-btn filter-i0" data-filter="i0">i0</button><button class="filter-btn filter-i1" data-filter="i1">i1</button><button class="filter-btn filter-i2" data-filter="i2">i2</button><button class="filter-btn filter-i3" data-filter="i3">i3</button><button class="filter-btn filter-i4" data-filter="i4">i4</button><button class="filter-btn filter-i5" data-filter="i5">i5</button><button class="filter-btn filter-i6" data-filter="i6">i6</button>
     </div>
-    <div class="inventory-grid" id="inventoryGrid"></div>
+    <div class="inventory-list" id="inventoryList"></div>
+    <div class="panel-foot">ⓘ 동일한 아이템은 개수로 합산되어 표시됩니다.</div>
   </aside>
 
   <aside class="side-panel log-panel" aria-label="획득 로그">
-    <div class="panel-head">
-      <span>획득 로그</span>
-      <span class="panel-count" id="logCount">0 items</span>
-    </div>
+    <div class="panel-head"><span>획득 로그</span><span class="panel-count" id="logCount">0 items</span></div>
     <div class="log-list" id="logList"></div>
   </aside>
   <div class="hint">1분마다 게이지가 차고, 상자가 자동으로 열립니다.</div>
@@ -157,100 +106,77 @@
 const USE_SERVER = true;
 const SERVER_OPEN_URL = "https://mrdindoin.ddns.net/gti/api/open_chest";
 const OPEN_EVERY_MS = 60_000;
-const STORAGE_KEY = "gti_center_chest_v1";
+const STORAGE_KEY = "gti_polished_loot_ui_v3";
+const MAX_INV_TYPES = 300;
 
 const progressBar = document.getElementById("progressBar");
 const timeLeft = document.getElementById("timeLeft");
 const chest = document.getElementById("chest");
 const burst = document.getElementById("burst");
-const itemName = document.getElementById("itemName");
+const rewardCard = document.getElementById("rewardCard");
+const rewardName = document.getElementById("rewardName");
+const rewardRarity = document.getElementById("rewardRarity");
 const logList = document.getElementById("logList");
 const logCount = document.getElementById("logCount");
-const inventoryGrid = document.getElementById("inventoryGrid");
+const inventoryList = document.getElementById("inventoryList");
 const invCount = document.getElementById("invCount");
+const filterRow = document.getElementById("filterRow");
 
 let cycleStart = Date.now();
 let opening = false;
 let logs = [];
+let currentFilter = "all";
 const inv = new Map();
 
 try {
   const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
   if (saved.cycleStart && Date.now() - saved.cycleStart < OPEN_EVERY_MS) cycleStart = saved.cycleStart;
-  if (Array.isArray(saved.logs)) logs = saved.logs.slice(0, 80);
+  if (Array.isArray(saved.logs)) logs = saved.logs.slice(0, 120);
   if (Array.isArray(saved.inv)) saved.inv.forEach(([k, v]) => inv.set(k, v));
 } catch(e) {}
 
-function save(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ cycleStart, logs, inv:Array.from(inv.entries()) }));
-}
-
-
-function escapeHtml(s){
-  return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
-}
-
-function rarityRank(rarity){
-  const m = /^i(\d+)/.exec(rarity || "");
-  return m ? Number(m[1]) : 999;
-}
-
-function inventoryKey(drop){
-  return `${drop.rarity}|${drop.name}`;
-}
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify({ cycleStart, logs, inv:Array.from(inv.entries()) })); }
+function escapeHtml(s){ return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
+function rarityRank(rarity){ const m = /^i(\d+)/.exec(rarity || ""); return m ? Number(m[1]) : 999; }
+function inventoryKey(drop){ return `${drop.rarity}|${drop.name}`; }
+function iconForRarity(rarity){ return { i0:"✦", i1:"🔥", i2:"☘", i3:"💧", i4:"◆", i5:"★", i6:"◌" }[rarity] || "?"; }
 
 function addToInventory(drop){
   const key = inventoryKey(drop);
   const cur = inv.get(key);
   const t = Date.now();
-  if (cur) {
-    cur.count += 1;
-    cur.lastTs = t;
-  } else {
-    inv.set(key, { rarity:drop.rarity, name:drop.name, count:1, firstTs:t, lastTs:t });
-  }
+  if (cur) { cur.count += 1; cur.lastTs = t; }
+  else { inv.set(key, { rarity:drop.rarity, name:drop.name, count:1, firstTs:t, lastTs:t }); }
   renderInventory();
 }
 
 function renderInventory(){
-  const items = Array.from(inv.values()).sort((a,b) => {
+  let items = Array.from(inv.values()).sort((a,b) => {
     const rr = rarityRank(a.rarity) - rarityRank(b.rarity);
     if (rr !== 0) return rr;
     return b.lastTs - a.lastTs;
   });
-
-  invCount.textContent = `${items.length} types`;
-  if (!items.length) {
-    inventoryGrid.innerHTML = `<div class="empty-state">아직 획득한 아이템이 없습니다.</div>`;
-    return;
-  }
-
-  inventoryGrid.innerHTML = items.map(it => {
-    const iconChar = (it.name || "?").charAt(0).toUpperCase();
-    return `
-      <div class="inv-slot r-${escapeHtml(it.rarity)}" title="[${escapeHtml(it.rarity)}] ${escapeHtml(it.name)} x${it.count}">
-        <div class="inv-rarity">${escapeHtml(it.rarity)}</div>
-        <div class="inv-icon">${escapeHtml(iconChar)}</div>
-        <div class="inv-name">${escapeHtml(it.name)}</div>
-        <div class="inv-count">x${it.count}</div>
-      </div>
-    `;
-  }).join("");
+  if (currentFilter !== "all") items = items.filter(it => it.rarity === currentFilter);
+  invCount.textContent = `${Array.from(inv.values()).length} / ${MAX_INV_TYPES}`;
+  if (!items.length) { inventoryList.innerHTML = `<div class="empty-state">아직 표시할 아이템이 없습니다.</div>`; return; }
+  inventoryList.innerHTML = items.map(it => `
+    <div class="inv-row r-${escapeHtml(it.rarity)}" title="[${escapeHtml(it.rarity)}] ${escapeHtml(it.name)} x${it.count}">
+      <div class="inv-icon">${iconForRarity(it.rarity)}<small>${escapeHtml(it.rarity)}</small></div>
+      <div class="inv-name">${escapeHtml(it.name)}</div>
+      <div class="inv-count">x${it.count}</div>
+    </div>`).join("");
 }
 
 function renderLog(){
   logCount.textContent = `${logs.length} items`;
-  if (!logs.length) {
-    logList.innerHTML = `<div style="padding:14px 0;color:rgba(238,244,255,.45);text-align:center">아직 획득한 아이템이 없습니다.</div>`;
-    return;
-  }
+  if (!logs.length) { logList.innerHTML = `<div style="padding:18px 0;color:rgba(238,244,255,.45);text-align:center">아직 획득한 아이템이 없습니다.</div>`; return; }
   logList.innerHTML = logs.map(row => `
     <div class="log-row" title="${escapeHtml(row.name)}">
       <div class="log-time">${escapeHtml(row.time)}</div>
       <div class="log-rarity log-rarity-${escapeHtml(row.rarity)}">[${escapeHtml(row.rarity)}]</div>
-      <div class="log-item">${escapeHtml(row.name)}</div>
-    </div>
-  `).join("");
+      <div class="log-item log-name-${escapeHtml(row.rarity)}">${escapeHtml(row.name)}</div>
+      <div class="log-qty log-name-${escapeHtml(row.rarity)}">x1</div>
+    </div>`).join("");
   logList.scrollTop = 0;
 }
 
@@ -259,28 +185,26 @@ function addLog(drop){
   const d = new Date();
   const time = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`;
   logs.unshift({ time, rarity: drop.rarity, name: drop.name });
-  logs = logs.slice(0, 80);
+  logs = logs.slice(0, 120);
   renderLog();
   save();
 }
 
 function fallbackDrop(){
   const r = Math.random();
-  if (r < 0.02) return { rarity:"i0", name:"전설의 성배" };
-  if (r < 0.10) return { rarity:"i1", name:"영웅의 검" };
-  if (r < 0.30) return { rarity:"i2", name:"빛나는 보석" };
-  if (r < 0.60) return { rarity:"i3", name:"쓸만한 철광석" };
-  return { rarity:"i6", name:"잡동사니" };
+  if (r < 0.02) return { rarity:"i0", name:"수상하고 굴복적인 완벽한 배달앱" };
+  if (r < 0.10) return { rarity:"i1", name:"불타는 정수" };
+  if (r < 0.30) return { rarity:"i2", name:"고요한 숲의 이슬" };
+  if (r < 0.50) return { rarity:"i3", name:"시간의 조각" };
+  if (r < 0.70) return { rarity:"i4", name:"궁극의 행운 부적" };
+  if (r < 0.86) return { rarity:"i5", name:"빛나는 행운의 반지" };
+  return { rarity:"i6", name:"낡은 깃털" };
 }
 
 async function getDrop(){
   if (USE_SERVER) {
     try {
-      const res = await fetch(SERVER_OPEN_URL, {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body:JSON.stringify({ action:"open" })
-      });
+      const res = await fetch(SERVER_OPEN_URL, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action:"open" }) });
       const data = await res.json();
       if (data.ok) return { rarity:data.rarity || "i6", name:data.item_name || data.item || "unknown" };
     } catch(e) {}
@@ -290,26 +214,17 @@ async function getDrop(){
 
 function showReward(drop){
   addLog(drop);
-  chest.classList.remove("opening");
-  burst.classList.remove("on");
-  itemName.classList.remove("show");
+  chest.classList.remove("opening"); burst.classList.remove("on"); rewardCard.classList.remove("show");
+  rewardCard.className = "reward-card";
   void chest.offsetWidth;
-
-  chest.classList.add("opening");
-  burst.classList.add("on");
-
+  chest.classList.add("opening"); burst.classList.add("on");
   setTimeout(() => {
-    itemName.textContent = drop.name;
-    itemName.style.color = `var(--${drop.rarity}-color, var(--gold))`;
-    itemName.classList.add("show");
+    rewardName.textContent = drop.name;
+    rewardRarity.textContent = drop.rarity;
+    rewardCard.classList.add(`reward-${drop.rarity}`);
+    rewardCard.classList.add("show");
   }, 520);
-
-  setTimeout(() => {
-    chest.classList.remove("opening");
-    burst.classList.remove("on");
-    itemName.classList.remove("show");
-    opening = false;
-  }, 6000);
+  setTimeout(() => { chest.classList.remove("opening"); burst.classList.remove("on"); rewardCard.classList.remove("show"); opening = false; }, 6000);
 }
 
 async function openCycle(){
@@ -317,10 +232,8 @@ async function openCycle(){
   opening = true;
   progressBar.style.width = "100%";
   timeLeft.textContent = "OPEN!";
-
   const drop = await getDrop();
   showReward(drop);
-
   cycleStart = Date.now();
   save();
 }
@@ -329,19 +242,20 @@ function tick(){
   const elapsed = Date.now() - cycleStart;
   const ratio = Math.min(1, elapsed / OPEN_EVERY_MS);
   const remain = Math.max(0, OPEN_EVERY_MS - elapsed);
-
-  if (!opening) {
-    progressBar.style.width = (ratio * 100).toFixed(2) + "%";
-    timeLeft.textContent = (remain / 1000).toFixed(1) + "s";
-  }
-
+  if (!opening) { progressBar.style.width = (ratio * 100).toFixed(2) + "%"; timeLeft.textContent = (remain / 1000).toFixed(1) + "s"; }
   if (elapsed >= OPEN_EVERY_MS && !opening) openCycle();
   requestAnimationFrame(tick);
 }
 
-renderInventory();
-renderLog();
-tick();
+filterRow.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-filter]");
+  if (!btn) return;
+  currentFilter = btn.dataset.filter;
+  filterRow.querySelectorAll(".filter-btn").forEach(b => b.classList.toggle("active", b === btn));
+  renderInventory();
+});
+
+renderInventory(); renderLog(); tick();
 </script>
 </body>
 </html>
