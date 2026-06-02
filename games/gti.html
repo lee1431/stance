@@ -16,12 +16,12 @@
       --wood2:#c47a35;
       --line:rgba(255,255,255,.14);
       --i0-color:#ffd86b;
-      --i1-color:#ff8b31;
-      --i2-color:#62e66f;
-      --i3-color:#44c9ff;
-      --i4-color:#b56cff;
-      --i5-color:#f3c942;
-      --i6-color:#aeb4c0;
+      --i1-color:#ffb86b;
+      --i2-color:#7fd4ff;
+      --i3-color:#6ad66a;
+      --i4-color:#9fa8ff;
+      --i5-color:#aaaaaa;
+      --i6-color:#666666;
     }
 
     *{box-sizing:border-box}
@@ -55,26 +55,26 @@
     .burst{position:absolute;inset:0;display:none;pointer-events:none;z-index:5}.burst.on{display:block;animation:burstFade 1.4s ease-out forwards}.burst::before{content:"";position:absolute;left:50%;top:45%;width:250px;height:250px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.92) 0%,rgba(255,216,107,.55) 22%,rgba(105,231,255,.22) 52%,transparent 72%)}
     @keyframes burstFade{0%{opacity:0;transform:scale(.7)}18%{opacity:1;transform:scale(1.05)}100%{opacity:0;transform:scale(1.35)}}
 
-    .reward{min-height:190px;display:grid;place-items:center}.reward-card{opacity:0;transform:translateY(44px) scale(.82);display:grid;place-items:center;gap:8px;max-width:min(720px,90vw);text-shadow:0 0 18px rgba(181,108,255,.75),0 6px 20px #000}.reward-card.show{animation:itemPop 5.4s cubic-bezier(.2,1.3,.2,1) forwards}.reward-prefix{font-size:24px;font-weight:1000;color:#d78bff}.reward-name{font-size:clamp(34px,5.8vw,64px);font-weight:1000;letter-spacing:-.05em;line-height:1.05;word-break:keep-all}.reward-rarity{font-size:32px;font-weight:1000;padding:8px 20px;border:2px solid currentColor;border-radius:12px;background:rgba(0,0,0,.34);box-shadow:0 0 28px currentColor}.reward-vanish{font-size:20px;color:rgba(255,255,255,.82);margin-top:18px}
+    .reward{min-height:190px;display:grid;place-items:center}.reward-card{opacity:0;transform:translateY(44px) scale(.82);display:grid;place-items:center;gap:8px;max-width:min(720px,90vw);text-shadow:0 0 18px rgba(181,108,255,.75),0 6px 20px #000}.reward-card.show{animation:itemPop 5.4s cubic-bezier(.2,1.3,.2,1) forwards}.reward-prefix{font-size:24px;font-weight:1000;color:#d78bff}.reward-name{font-size:clamp(34px,5.8vw,64px);font-weight:1000;letter-spacing:-.05em;line-height:1.05;word-break:keep-all}.reward-rarity{display:none}.reward-vanish{font-size:20px;color:rgba(255,255,255,.82);margin-top:18px}
     @keyframes itemPop{0%{opacity:0;transform:translateY(54px) scale(.74)}10%{opacity:1;transform:translateY(-16px) scale(1.08)}18%{opacity:1;transform:translateY(0) scale(1)}88%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-66px) scale(.92)}}
 
     .side-panel{position:fixed;z-index:10;text-align:left;background:rgba(7,10,18,.80);border:1px solid var(--line);border-radius:18px;box-shadow:0 18px 42px rgba(0,0,0,.50),inset 0 1px 0 rgba(255,255,255,.06);backdrop-filter:blur(10px);overflow:hidden}.panel-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.09);font-size:24px;font-weight:1000;letter-spacing:-.03em;color:#fff}.panel-count{font-size:16px;color:#ff9daf;font-weight:900;letter-spacing:0}
 
     .inventory-panel{left:24px;top:24px;width:clamp(420px,27vw,540px);max-height:calc(100vh - 48px)}.filter-row{display:flex;gap:8px;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.07)}.filter-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);color:#fff;border-radius:7px;padding:6px 12px;font-weight:900;font-size:16px;cursor:pointer}.filter-btn.active{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.45)}.filter-i0{color:var(--i0-color)}.filter-i1{color:var(--i1-color)}.filter-i2{color:var(--i2-color)}.filter-i3{color:var(--i3-color)}.filter-i4{color:var(--i4-color)}.filter-i5{color:var(--i5-color)}.filter-i6{color:var(--i6-color)}
-    .inventory-list{display:flex;flex-direction:column;gap:9px;padding:14px;max-height:calc(100vh - 174px);overflow-y:auto}.empty-state{padding:26px 0;color:rgba(238,244,255,.45);text-align:center;font-size:15px}.inv-row{min-height:64px;background:rgba(0,0,0,.26);border:2px solid #2a3143;border-radius:9px;display:grid;grid-template-columns:58px 1fr auto;align-items:center;gap:14px;padding:8px 12px;box-shadow:inset 0 0 15px rgba(0,0,0,.55),0 4px 8px rgba(0,0,0,.24)}.inv-icon{width:46px;height:46px;border-radius:9px;display:grid;place-items:center;font-size:26px;font-weight:1000;background:rgba(255,255,255,.05);text-shadow:0 0 12px currentColor;position:relative}.inv-icon small{position:absolute;right:3px;bottom:1px;font-size:9px;color:currentColor}.inv-name{font-size:18px;font-weight:900;line-height:1.25;word-break:keep-all}.inv-count{font-size:18px;font-weight:1000;color:#fff;min-width:42px;text-align:right}.panel-foot{padding:14px 18px;color:rgba(238,244,255,.54);font-size:15px;border-top:1px solid rgba(255,255,255,.07)}
+    .inventory-list{display:flex;flex-direction:column;gap:9px;padding:14px;max-height:calc(100vh - 174px);overflow-y:auto}.empty-state{padding:26px 0;color:rgba(238,244,255,.45);text-align:center;font-size:15px}.inv-row{min-height:64px;background:rgba(0,0,0,.26);border:2px solid #2a3143;border-radius:9px;display:grid;grid-template-columns:58px 1fr auto;align-items:center;gap:14px;padding:8px 12px;box-shadow:inset 0 0 15px rgba(0,0,0,.55),0 4px 8px rgba(0,0,0,.24)}.inv-icon{width:46px;height:46px;border-radius:9px;display:grid;place-items:center;font-size:26px;font-weight:1000;background:rgba(255,255,255,.05);text-shadow:0 0 12px currentColor;position:relative}.inv-icon small{display:none}.inv-name{font-size:18px;font-weight:900;line-height:1.25;word-break:keep-all}.inv-count{font-size:18px;font-weight:1000;color:#fff;min-width:42px;text-align:right}.panel-foot{padding:14px 18px;color:rgba(238,244,255,.54);font-size:15px;border-top:1px solid rgba(255,255,255,.07)}
 
     .r-i0{border-color:var(--i0-color);background:linear-gradient(90deg,rgba(255,216,107,.16),rgba(0,0,0,.22));box-shadow:inset 0 0 15px rgba(0,0,0,.55),0 0 18px rgba(255,216,107,.22)}.r-i0 .inv-icon,.r-i0 .inv-name,.log-rarity-i0,.log-name-i0,.reward-i0{color:var(--i0-color)}
     .r-i1{border-color:var(--i1-color);background:linear-gradient(90deg,rgba(255,139,49,.15),rgba(0,0,0,.22))}.r-i1 .inv-icon,.r-i1 .inv-name,.log-rarity-i1,.log-name-i1,.reward-i1{color:var(--i1-color)}
-    .r-i2{border-color:var(--i2-color);background:linear-gradient(90deg,rgba(98,230,111,.14),rgba(0,0,0,.22))}.r-i2 .inv-icon,.r-i2 .inv-name,.log-rarity-i2,.log-name-i2,.reward-i2{color:var(--i2-color)}
-    .r-i3{border-color:var(--i3-color);background:linear-gradient(90deg,rgba(68,201,255,.14),rgba(0,0,0,.22))}.r-i3 .inv-icon,.r-i3 .inv-name,.log-rarity-i3,.log-name-i3,.reward-i3{color:var(--i3-color)}
+    .r-i2{border-color:var(--i2-color);background:linear-gradient(90deg,rgba(127,212,255,.14),rgba(0,0,0,.22))}.r-i2 .inv-icon,.r-i2 .inv-name,.log-rarity-i2,.log-name-i2,.reward-i2{color:var(--i2-color)}
+    .r-i3{border-color:var(--i3-color);background:linear-gradient(90deg,rgba(106,214,106,.14),rgba(0,0,0,.22))}.r-i3 .inv-icon,.r-i3 .inv-name,.log-rarity-i3,.log-name-i3,.reward-i3{color:var(--i3-color)}
     .r-i4{border-color:var(--i4-color);background:linear-gradient(90deg,rgba(181,108,255,.15),rgba(0,0,0,.22))}.r-i4 .inv-icon,.r-i4 .inv-name,.log-rarity-i4,.log-name-i4,.reward-i4{color:var(--i4-color)}
-    .r-i5{border-color:var(--i5-color);background:linear-gradient(90deg,rgba(243,201,66,.14),rgba(0,0,0,.22))}.r-i5 .inv-icon,.r-i5 .inv-name,.log-rarity-i5,.log-name-i5,.reward-i5{color:var(--i5-color)}
-    .r-i6{border-color:rgba(174,180,192,.55);background:linear-gradient(90deg,rgba(174,180,192,.10),rgba(0,0,0,.22))}.r-i6 .inv-icon,.r-i6 .inv-name,.log-rarity-i6,.log-name-i6,.reward-i6{color:var(--i6-color)}
+    .r-i5{border-color:var(--i5-color);background:linear-gradient(90deg,rgba(170,170,170,.12),rgba(0,0,0,.22))}.r-i5 .inv-icon,.r-i5 .inv-name,.log-rarity-i5,.log-name-i5,.reward-i5{color:var(--i5-color)}
+    .r-i6{border-color:rgba(68,68,68,.85);background:linear-gradient(90deg,rgba(102,102,102,.10),rgba(0,0,0,.22))}.r-i6 .inv-icon,.r-i6 .inv-name,.log-rarity-i6,.log-name-i6,.reward-i6{color:var(--i6-color)}
 
-    .log-panel{right:24px;top:24px;width:clamp(520px,32vw,740px);height:calc(100vh - 48px)}.log-list{height:calc(100% - 62px);overflow-y:auto;padding:12px 24px 18px;font-size:21px;line-height:1.4}.log-row{display:grid;grid-template-columns:90px 70px minmax(0,1fr) 54px;gap:14px;padding:16px 0;border-bottom:1px solid rgba(255,255,255,.075);align-items:start}.log-time{color:rgba(238,244,255,.62);font-size:20px}.log-rarity{font-weight:1000;font-size:24px}.log-item{font-weight:900;white-space:normal;overflow:visible;text-overflow:clip;word-break:keep-all;overflow-wrap:anywhere}.log-qty{font-size:22px;font-weight:1000;color:#fff;text-align:right;white-space:nowrap}.hint{position:fixed;left:0;right:0;bottom:20px;text-align:center;color:rgba(238,244,255,.38);font-size:16px;letter-spacing:.04em;z-index:2}
+    .log-panel{right:24px;top:24px;width:clamp(520px,32vw,740px);height:calc(100vh - 48px)}.log-list{height:calc(100% - 62px);overflow-y:auto;padding:12px 24px 18px;font-size:21px;line-height:1.4}.log-row{display:grid;grid-template-columns:90px minmax(0,1fr) 54px;gap:14px;padding:16px 0;border-bottom:1px solid rgba(255,255,255,.075);align-items:start}.log-time{color:rgba(238,244,255,.62);font-size:20px}.log-rarity{font-weight:1000;font-size:24px}.log-item{font-weight:900;white-space:normal;overflow:visible;text-overflow:clip;word-break:keep-all;overflow-wrap:anywhere}.log-qty{font-size:22px;font-weight:1000;color:#fff;text-align:right;white-space:nowrap}.hint{position:fixed;left:0;right:0;bottom:20px;text-align:center;color:rgba(238,244,255,.38);font-size:16px;letter-spacing:.04em;z-index:2}
 
-    @media (max-width:1280px){.inventory-panel{width:360px}.log-panel{width:430px}.log-list{font-size:18px}.log-row{grid-template-columns:78px 58px minmax(0,1fr) 44px;gap:10px}.log-time{font-size:16px}.log-rarity{font-size:19px}.inv-name{font-size:15px}}
-    @media (max-width:980px){html,body{overflow:auto}.stage{min-height:760px;height:auto}.center{transform:none;margin:260px 0 230px}.inventory-panel{left:16px;right:16px;top:16px;width:auto;max-height:250px}.inventory-list{max-height:132px}.log-panel{left:16px;right:16px;top:auto;bottom:16px;width:auto;height:250px}.log-list{height:188px;font-size:16px;padding:8px 14px}.log-row{grid-template-columns:68px 52px minmax(0,1fr) 38px;padding:10px 0}.panel-head{font-size:19px}.hint{display:none}}
+    @media (max-width:1280px){.inventory-panel{width:360px}.log-panel{width:430px}.log-list{font-size:18px}.log-row{grid-template-columns:78px minmax(0,1fr) 44px;gap:10px}.log-time{font-size:16px}.log-rarity{font-size:19px}.inv-name{font-size:15px}}
+    @media (max-width:980px){html,body{overflow:auto}.stage{min-height:760px;height:auto}.center{transform:none;margin:260px 0 230px}.inventory-panel{left:16px;right:16px;top:16px;width:auto;max-height:250px}.inventory-list{max-height:132px}.log-panel{left:16px;right:16px;top:auto;bottom:16px;width:auto;height:250px}.log-list{height:188px;font-size:16px;padding:8px 14px}.log-row{grid-template-columns:68px minmax(0,1fr) 38px;padding:10px 0}.panel-head{font-size:19px}.hint{display:none}}
   </style>
 </head>
 <body>
@@ -90,7 +90,7 @@
   <aside class="side-panel inventory-panel" aria-label="아이템 리스트">
     <div class="panel-head"><span>아이템 리스트</span><span class="panel-count" id="invCount">0 / 300</span></div>
     <div class="filter-row" id="filterRow">
-      <button class="filter-btn active" data-filter="all">전체</button><button class="filter-btn filter-i0" data-filter="i0">i0</button><button class="filter-btn filter-i1" data-filter="i1">i1</button><button class="filter-btn filter-i2" data-filter="i2">i2</button><button class="filter-btn filter-i3" data-filter="i3">i3</button><button class="filter-btn filter-i4" data-filter="i4">i4</button><button class="filter-btn filter-i5" data-filter="i5">i5</button><button class="filter-btn filter-i6" data-filter="i6">i6</button>
+      <button class="filter-btn active" data-filter="all">전체</button><button class="filter-btn filter-i0" data-filter="i0">전설</button><button class="filter-btn filter-i1" data-filter="i1">영웅</button><button class="filter-btn filter-i2" data-filter="i2">희귀</button><button class="filter-btn filter-i3" data-filter="i3">고급</button><button class="filter-btn filter-i4" data-filter="i4">마법</button><button class="filter-btn filter-i5" data-filter="i5">일반</button><button class="filter-btn filter-i6" data-filter="i6">낡음</button>
     </div>
     <div class="inventory-list" id="inventoryList"></div>
     <div class="panel-foot">ⓘ 동일한 아이템은 개수로 합산되어 표시됩니다.</div>
@@ -106,7 +106,7 @@
 const USE_SERVER = true;
 const SERVER_OPEN_URL = "https://mrdindoin.ddns.net/gti/api/open_chest";
 const OPEN_EVERY_MS = 60_000;
-const STORAGE_KEY = "gti_polished_loot_ui_v3";
+const STORAGE_KEY = "gti_polished_loot_ui_v4";
 const MAX_INV_TYPES = 300;
 
 const progressBar = document.getElementById("progressBar");
@@ -161,7 +161,7 @@ function renderInventory(){
   if (!items.length) { inventoryList.innerHTML = `<div class="empty-state">아직 표시할 아이템이 없습니다.</div>`; return; }
   inventoryList.innerHTML = items.map(it => `
     <div class="inv-row r-${escapeHtml(it.rarity)}" title="[${escapeHtml(it.rarity)}] ${escapeHtml(it.name)} x${it.count}">
-      <div class="inv-icon">${iconForRarity(it.rarity)}<small>${escapeHtml(it.rarity)}</small></div>
+      <div class="inv-icon">${iconForRarity(it.rarity)}</div>
       <div class="inv-name">${escapeHtml(it.name)}</div>
       <div class="inv-count">x${it.count}</div>
     </div>`).join("");
@@ -173,7 +173,6 @@ function renderLog(){
   logList.innerHTML = logs.map(row => `
     <div class="log-row" title="${escapeHtml(row.name)}">
       <div class="log-time">${escapeHtml(row.time)}</div>
-      <div class="log-rarity log-rarity-${escapeHtml(row.rarity)}">[${escapeHtml(row.rarity)}]</div>
       <div class="log-item log-name-${escapeHtml(row.rarity)}">${escapeHtml(row.name)}</div>
       <div class="log-qty log-name-${escapeHtml(row.rarity)}">x1</div>
     </div>`).join("");
@@ -220,7 +219,8 @@ function showReward(drop){
   chest.classList.add("opening"); burst.classList.add("on");
   setTimeout(() => {
     rewardName.textContent = drop.name;
-    rewardRarity.textContent = drop.rarity;
+    rewardName.className = `reward-name reward-${drop.rarity}`;
+    rewardRarity.textContent = "";
     rewardCard.classList.add(`reward-${drop.rarity}`);
     rewardCard.classList.add("show");
   }, 520);
