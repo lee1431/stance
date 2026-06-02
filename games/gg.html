@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Get The Item - Center Chest</title>
+  <title>Get The Item - Center Chest (Large Font)</title>
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
@@ -15,14 +15,13 @@
       --line: rgba(255,255,255,.08);
       
       /* Rarity Colors Matching the Screenshot */
-      --i0-color: #ffd86b; /* Yellow */
-      --i1-color: #ff6a00; /* Orange */
-      --i2-color: #4cd964; /* Green */
-      --i3-color: #32a852; /* Blue fallback */
-      --i3-color: #44d7ff; /* Blue */
-      --i4-color: #b366ff; /* Purple */
-      --i5-color: #ffc800; /* Gold */
-      --i6-color: #a0a0a0; /* Grey */
+      --i0-color: #ffd86b;
+      --i1-color: #ff6a00;
+      --i2-color: #4cd964;
+      --i3-color: #44d7ff;
+      --i4-color: #b366ff;
+      --i5-color: #ffc800;
+      --i6-color: #a0a0a0;
     }
 
     * { box-sizing: border-box; font-family: 'Pretendard', sans-serif; }
@@ -42,85 +41,85 @@
 
     /* ================= CENTER STAGE ================= */
     .stage { position: relative; z-index: 1; width: 100%; height: 100%; display: grid; place-items: center; }
-    .center-wrap { display: flex; flex-direction: column; align-items: center; gap: 20px; transform: translateY(-40px); }
+    .center-wrap { display: flex; flex-direction: column; align-items: center; gap: 24px; transform: translateY(-40px); }
 
     .timer-wrap { text-align: center; }
-    .timer-label { font-size: 12px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
-    .time-left { font-size: 28px; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.8); letter-spacing: 0.05em; }
+    .timer-label { font-size: 18px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; margin-bottom: 12px; }
+    .time-left { font-size: 52px; font-weight: 800; text-shadow: 0 4px 15px rgba(0,0,0,0.8); letter-spacing: 0.05em; }
 
-    .progress-wrap { width: 340px; height: 12px; border-radius: 999px; background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,0.1); overflow: hidden; box-shadow: inset 0 2px 6px rgba(0,0,0,0.8); }
-    .progress-bar { height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, #44d7ff, #b366ff, #ffd86b); transition: width 0.1s linear; box-shadow: 0 0 10px rgba(179,102,255,0.5); }
+    .progress-wrap { width: 440px; height: 18px; border-radius: 999px; background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,0.1); overflow: hidden; box-shadow: inset 0 2px 8px rgba(0,0,0,0.8); }
+    .progress-bar { height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, #44d7ff, #b366ff, #ffd86b); transition: width 0.1s linear; box-shadow: 0 0 14px rgba(179,102,255,0.5); }
 
-    .chest-zone { position: relative; width: 300px; height: 220px; display: grid; place-items: center; margin-top: 20px; }
-    .glow { position: absolute; width: 240px; height: 60px; bottom: 20px; border-radius: 50%; background: radial-gradient(circle, rgba(255,216,107,.4), transparent 70%); filter: blur(15px); animation: pulseGlow 2s infinite alternate; }
+    .chest-zone { position: relative; width: 340px; height: 260px; display: grid; place-items: center; margin-top: 20px; }
+    .glow { position: absolute; width: 280px; height: 70px; bottom: 30px; border-radius: 50%; background: radial-gradient(circle, rgba(255,216,107,.4), transparent 70%); filter: blur(18px); animation: pulseGlow 2s infinite alternate; }
     @keyframes pulseGlow { from { opacity: 0.6; transform: scale(0.9); } to { opacity: 1; transform: scale(1.1); } }
 
-    .chest { position: relative; width: 200px; height: 140px; transform-style: preserve-3d; animation: idle 2.5s ease-in-out infinite; }
-    @keyframes idle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+    .chest { position: relative; width: 220px; height: 154px; transform-style: preserve-3d; animation: idle 2.5s ease-in-out infinite; }
+    @keyframes idle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 
     /* Chest CSS Drawing */
-    .lid { position: absolute; left: 10px; top: 16px; width: 180px; height: 65px; border-radius: 20px 20px 8px 8px; background: linear-gradient(180deg, #d98a3b, #9b5929); border: 3px solid #3f2418; transform-origin: center bottom; z-index: 3; }
-    .body { position: absolute; left: 0; bottom: 0; width: 200px; height: 100px; border-radius: 12px; background: linear-gradient(180deg, #c47a35, #8f5528); border: 3px solid #3f2418; z-index: 2; }
-    .lock { position: absolute; left: 50%; top: 40px; width: 36px; height: 46px; transform: translateX(-50%); border-radius: 6px; background: linear-gradient(180deg, #ffe28a, #bd7a21); border: 3px solid #4c3512; z-index: 4; }
+    .lid { position: absolute; left: 11px; top: 18px; width: 198px; height: 72px; border-radius: 22px 22px 9px 9px; background: linear-gradient(180deg, #d98a3b, #9b5929); border: 4px solid #3f2418; transform-origin: center bottom; z-index: 3; }
+    .body { position: absolute; left: 0; bottom: 0; width: 220px; height: 110px; border-radius: 14px; background: linear-gradient(180deg, #c47a35, #8f5528); border: 4px solid #3f2418; z-index: 2; }
+    .lock { position: absolute; left: 50%; top: 44px; width: 40px; height: 50px; transform: translateX(-50%); border-radius: 7px; background: linear-gradient(180deg, #ffe28a, #bd7a21); border: 4px solid #4c3512; z-index: 4; }
     .chest.opening { animation: shake .4s ease-in-out; }
     .chest.opening .lid { animation: openLid 1s cubic-bezier(.2,.9,.15,1) forwards; }
-    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
-    @keyframes openLid { 0%{transform:rotateX(0)} 100%{transform:rotateX(-70deg) translateY(-10px)} }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+    @keyframes openLid { 0%{transform:rotateX(0)} 100%{transform:rotateX(-70deg) translateY(-12px)} }
 
-    /* Reward UI matching the screenshot */
-    .reward-area { position: absolute; top: 120px; display: flex; flex-direction: column; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 10; }
+    /* Reward UI */
+    .reward-area { position: absolute; top: 110px; display: flex; flex-direction: column; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 10; width: 600px; }
     .reward-area.show { opacity: 1; animation: floatUp 0.6s cubic-bezier(0.2, 1, 0.2, 1) forwards; }
-    @keyframes floatUp { from { transform: translateY(30px) scale(0.8); } to { transform: translateY(0) scale(1); } }
+    @keyframes floatUp { from { transform: translateY(40px) scale(0.8); } to { transform: translateY(0) scale(1); } }
 
-    .reward-content { display: flex; align-items: center; gap: 24px; }
-    .reward-graphic { font-size: 80px; filter: drop-shadow(0 0 25px var(--r-color, #fff)); animation: itemHover 2s infinite alternate; }
-    @keyframes itemHover { from { transform: translateY(-5px); } to { transform: translateY(5px); } }
+    .reward-content { display: flex; align-items: center; gap: 30px; }
+    .reward-graphic { font-size: 110px; filter: drop-shadow(0 0 35px var(--r-color, #fff)); animation: itemHover 2s infinite alternate; }
+    @keyframes itemHover { from { transform: translateY(-6px); } to { transform: translateY(6px); } }
 
     .reward-text-block { display: flex; flex-direction: column; align-items: center; }
-    .reward-subtitle { font-size: 18px; font-weight: 800; color: var(--r-color, #fff); margin-bottom: 8px; text-shadow: 0 0 10px rgba(var(--r-rgb), 0.5); }
-    .reward-name { font-size: 36px; font-weight: 900; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.8), 0 0 20px var(--r-color, #fff); white-space: nowrap; }
-    .reward-badge { margin-top: 12px; background: rgba(0,0,0,0.6); border: 1px solid var(--r-color, #fff); color: var(--r-color, #fff); font-size: 16px; font-weight: 800; padding: 4px 16px; border-radius: 6px; box-shadow: 0 0 15px rgba(var(--r-rgb), 0.3); }
-    .reward-timer { margin-top: 24px; font-size: 13px; color: var(--muted); }
+    .reward-subtitle { font-size: 26px; font-weight: 800; color: var(--r-color, #fff); margin-bottom: 12px; text-shadow: 0 0 15px rgba(var(--r-rgb), 0.6); }
+    .reward-name { font-size: 52px; font-weight: 900; color: #fff; text-shadow: 0 4px 15px rgba(0,0,0,0.8), 0 0 25px var(--r-color, #fff); white-space: nowrap; }
+    .reward-badge { margin-top: 16px; background: rgba(0,0,0,0.7); border: 2px solid var(--r-color, #fff); color: var(--r-color, #fff); font-size: 24px; font-weight: 800; padding: 6px 24px; border-radius: 8px; box-shadow: 0 0 20px rgba(var(--r-rgb), 0.4); }
+    .reward-timer { margin-top: 36px; font-size: 18px; color: var(--muted); font-weight: 600; }
 
     /* ================= PANELS ================= */
-    .side-panel { position: fixed; background: rgba(11, 15, 25, 0.85); border: 1px solid var(--line); border-radius: 12px; backdrop-filter: blur(12px); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
-    .panel-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--line); }
-    .panel-title { font-size: 14px; font-weight: 800; color: #fff; }
-    .panel-count { font-size: 12px; color: var(--i4-color); font-weight: 600; }
-    .panel-footer { padding: 12px 20px; font-size: 11px; color: #666; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 6px; }
+    .side-panel { position: fixed; background: rgba(11, 15, 25, 0.85); border: 1px solid var(--line); border-radius: 16px; backdrop-filter: blur(14px); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 15px 50px rgba(0,0,0,0.6); }
+    .panel-head { display: flex; justify-content: space-between; align-items: center; padding: 22px 28px; border-bottom: 1px solid var(--line); }
+    .panel-title { font-size: 22px; font-weight: 800; color: #fff; }
+    .panel-count { font-size: 18px; color: var(--i4-color); font-weight: 700; }
+    .panel-footer { padding: 18px 28px; font-size: 15px; color: #888; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 8px; font-weight: 500; }
 
     /* Left Panel: Inventory */
-    .inventory-panel { left: 24px; top: 24px; width: 340px; height: calc(100vh - 48px); }
-    .inv-tabs { display: flex; gap: 4px; padding: 12px 20px; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+    .inventory-panel { left: 30px; top: 30px; width: 480px; height: calc(100vh - 60px); }
+    .inv-tabs { display: flex; gap: 10px; padding: 16px 28px; background: rgba(0,0,0,0.25); border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
     .inv-tabs::-webkit-scrollbar { display: none; }
-    .tab { background: transparent; border: 1px solid transparent; color: #888; font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
-    .tab.active { background: rgba(255,255,255,0.05); color: #fff; border-color: rgba(255,255,255,0.1); }
+    .tab { background: transparent; border: 1px solid transparent; color: #888; font-size: 18px; font-weight: 700; padding: 10px 18px; border-radius: 8px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .tab.active { background: rgba(255,255,255,0.08); color: #fff; border-color: rgba(255,255,255,0.15); }
     
-    .inv-list { flex: 1; overflow-y: auto; padding: 12px 20px; display: flex; flex-direction: column; gap: 8px; }
-    .inv-list::-webkit-scrollbar { width: 6px; }
-    .inv-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+    .inv-list { flex: 1; overflow-y: auto; padding: 20px 28px; display: flex; flex-direction: column; gap: 12px; }
+    .inv-list::-webkit-scrollbar { width: 8px; }
+    .inv-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 6px; }
     
-    .inv-row { display: flex; align-items: center; padding: 10px 14px; border-radius: 8px; background: rgba(0,0,0,0.4); border: 1px solid var(--r-color, #555); transition: transform 0.1s; }
-    .inv-row:hover { transform: translateX(3px); background: rgba(255,255,255,0.03); }
-    .inv-icon-box { position: relative; width: 28px; height: 28px; display: grid; place-items: center; font-size: 18px; margin-right: 14px; }
-    .inv-row-badge { position: absolute; bottom: -6px; right: -8px; font-size: 9px; font-weight: 800; background: #000; color: var(--r-color, #fff); padding: 1px 4px; border-radius: 4px; }
-    .inv-row-name { flex: 1; font-size: 13px; font-weight: 500; color: var(--r-color, #fff); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .inv-row-count { font-size: 13px; font-weight: 700; color: #fff; margin-left: 10px; }
+    .inv-row { display: flex; align-items: center; padding: 18px 22px; border-radius: 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--r-color, #555); transition: transform 0.1s; }
+    .inv-row:hover { transform: translateX(4px); background: rgba(255,255,255,0.05); }
+    .inv-icon-box { position: relative; width: 42px; height: 42px; display: grid; place-items: center; font-size: 28px; margin-right: 20px; }
+    .inv-row-badge { position: absolute; bottom: -8px; right: -8px; font-size: 13px; font-weight: 900; background: #000; color: var(--r-color, #fff); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--line); }
+    .inv-row-name { flex: 1; font-size: 20px; font-weight: 600; color: var(--r-color, #fff); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .inv-row-count { font-size: 22px; font-weight: 800; color: #fff; margin-left: 14px; }
 
     /* Right Panel: Log */
-    .log-panel { right: 24px; top: 24px; width: 340px; height: calc(100vh - 48px); }
-    .log-list { flex: 1; overflow-y: auto; padding: 12px 20px; display: flex; flex-direction: column; gap: 4px; }
-    .log-list::-webkit-scrollbar { width: 6px; }
-    .log-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+    .log-panel { right: 30px; top: 30px; width: 480px; height: calc(100vh - 60px); }
+    .log-list { flex: 1; overflow-y: auto; padding: 20px 28px; display: flex; flex-direction: column; gap: 8px; }
+    .log-list::-webkit-scrollbar { width: 8px; }
+    .log-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 6px; }
     
-    .log-row { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 13px; }
+    .log-row { display: flex; align-items: center; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 18px; }
     .log-row:last-child { border-bottom: none; }
-    .log-time { width: 64px; color: #666; font-family: monospace; }
-    .log-badge { width: 34px; color: var(--r-color, #fff); font-weight: 700; }
-    .log-name { flex: 1; color: var(--r-color, #fff); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
-    .log-count { color: #fff; font-weight: 700; margin-left: 8px; }
+    .log-time { width: 90px; color: #777; font-family: monospace; font-size: 17px; }
+    .log-badge { width: 50px; color: var(--r-color, #fff); font-weight: 800; }
+    .log-name { flex: 1; color: var(--r-color, #fff); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+    .log-count { color: #fff; font-weight: 800; margin-left: 12px; font-size: 19px; }
 
-    .bottom-hint { position: fixed; bottom: 24px; left: 0; right: 0; text-align: center; color: #555; font-size: 12px; z-index: 1; }
+    .bottom-hint { position: fixed; bottom: 30px; left: 0; right: 0; text-align: center; color: rgba(238,244,255,.35); font-size: 18px; font-weight: 500; letter-spacing: 0.05em; z-index: 1; }
 
     /* Utilities */
     .r-i0 { --r-color: var(--i0-color); --r-rgb: 255,216,107; }
@@ -131,7 +130,7 @@
     .r-i5 { --r-color: var(--i5-color); --r-rgb: 255,200,0; }
     .r-i6 { --r-color: var(--i6-color); --r-rgb: 160,160,160; }
 
-    .empty-msg { text-align: center; color: #555; font-size: 12px; padding: 30px 0; }
+    .empty-msg { text-align: center; color: #666; font-size: 18px; font-weight: 500; padding: 40px 0; }
   </style>
 </head>
 <body>
@@ -185,7 +184,7 @@
     </div>
     <div class="inv-list" id="invList"></div>
     <div class="panel-footer">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
       동일한 아이템은 개수로 합산되어 표시됩니다.
     </div>
   </aside>
@@ -197,7 +196,7 @@
     </div>
     <div class="log-list" id="logList"></div>
     <div class="panel-footer">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
       최신 기록이 위에 표시됩니다.
     </div>
   </aside>
@@ -209,7 +208,7 @@ const USE_SERVER = true;
 const SERVER_OPEN_URL = "https://mrdindoin.ddns.net/gti/api/open_chest";
 const OPEN_EVERY_MS = 60_000;
 const REWARD_SHOW_MS = 6000;
-const STORAGE_KEY = "gti_center_chest_v2";
+const STORAGE_KEY = "gti_center_chest_v2_large";
 
 const progressBar = document.getElementById("progressBar");
 const timeLeft = document.getElementById("timeLeft");
@@ -247,6 +246,7 @@ function getIconForName(name) {
   if (name.includes("결정")) return "💠";
   if (name.includes("동전")) return "🪙";
   if (name.includes("앱")) return "✨";
+  if (name.includes("소주병") || name.includes("건전지") || name.includes("기계식키보드") || name.includes("우사인볼트") || name.includes("파라시") || name.includes("찌나리액젓")) return "📦";
   return "📦";
 }
 
