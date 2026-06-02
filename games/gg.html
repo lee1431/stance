@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Get The Item - Center Chest (Large Font)</title>
+  <title>Get The Item - Center Chest (Large Font & Rarity Names)</title>
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
@@ -14,14 +14,14 @@
       --muted: rgba(238,244,255,.45);
       --line: rgba(255,255,255,.08);
       
-      /* Rarity Colors Matching the Screenshot */
-      --i0-color: #ffd86b;
-      --i1-color: #ff6a00;
-      --i2-color: #4cd964;
-      --i3-color: #44d7ff;
-      --i4-color: #b366ff;
-      --i5-color: #ffc800;
-      --i6-color: #a0a0a0;
+      /* Rarity Colors */
+      --i0-color: #ff6a00; /* 신화 */
+      --i1-color: #ffd86b; /* 전설 */      
+      --i2-color: #b366ff; /* 영웅 */      
+      --i3-color: #44d7ff; /* 희귀 */
+      --i4-color: #4cd964; /* 고급 */      
+      --i5-color: #ffc800; /* 유물 */
+      --i6-color: #a0a0a0; /* 일반 */
     }
 
     * { box-sizing: border-box; font-family: 'Pretendard', sans-serif; }
@@ -77,7 +77,7 @@
 
     .reward-text-block { display: flex; flex-direction: column; align-items: center; }
     .reward-subtitle { font-size: 26px; font-weight: 800; color: var(--r-color, #fff); margin-bottom: 12px; text-shadow: 0 0 15px rgba(var(--r-rgb), 0.6); }
-    .reward-name { font-size: 52px; font-weight: 900; color: #fff; text-shadow: 0 4px 15px rgba(0,0,0,0.8), 0 0 25px var(--r-color, #fff); white-space: nowrap; }
+    .reward-name { font-size: 48px; font-weight: 900; color: #fff; text-shadow: 0 4px 15px rgba(0,0,0,0.8), 0 0 25px var(--r-color, #fff); word-break: keep-all; text-align: center; line-height: 1.2; }
     .reward-badge { margin-top: 16px; background: rgba(0,0,0,0.7); border: 2px solid var(--r-color, #fff); color: var(--r-color, #fff); font-size: 24px; font-weight: 800; padding: 6px 24px; border-radius: 8px; box-shadow: 0 0 20px rgba(var(--r-rgb), 0.4); }
     .reward-timer { margin-top: 36px; font-size: 18px; color: var(--muted); font-weight: 600; }
 
@@ -92,7 +92,7 @@
     .inventory-panel { left: 30px; top: 30px; width: 480px; height: calc(100vh - 60px); }
     .inv-tabs { display: flex; gap: 10px; padding: 16px 28px; background: rgba(0,0,0,0.25); border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
     .inv-tabs::-webkit-scrollbar { display: none; }
-    .tab { background: transparent; border: 1px solid transparent; color: #888; font-size: 18px; font-weight: 700; padding: 10px 18px; border-radius: 8px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .tab { background: transparent; border: 1px solid transparent; color: #888; font-size: 17px; font-weight: 700; padding: 10px 14px; border-radius: 8px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
     .tab.active { background: rgba(255,255,255,0.08); color: #fff; border-color: rgba(255,255,255,0.15); }
     
     .inv-list { flex: 1; overflow-y: auto; padding: 20px 28px; display: flex; flex-direction: column; gap: 12px; }
@@ -101,10 +101,11 @@
     
     .inv-row { display: flex; align-items: center; padding: 18px 22px; border-radius: 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--r-color, #555); transition: transform 0.1s; }
     .inv-row:hover { transform: translateX(4px); background: rgba(255,255,255,0.05); }
-    .inv-icon-box { position: relative; width: 42px; height: 42px; display: grid; place-items: center; font-size: 28px; margin-right: 20px; }
-    .inv-row-badge { position: absolute; bottom: -8px; right: -8px; font-size: 13px; font-weight: 900; background: #000; color: var(--r-color, #fff); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--line); }
-    .inv-row-name { flex: 1; font-size: 20px; font-weight: 600; color: var(--r-color, #fff); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .inv-row-count { font-size: 22px; font-weight: 800; color: #fff; margin-left: 14px; }
+    .inv-icon-box { position: relative; width: 42px; height: 42px; display: grid; place-items: center; font-size: 28px; margin-right: 20px; flex-shrink: 0; }
+    .inv-row-badge { position: absolute; bottom: -8px; right: -12px; font-size: 13px; font-weight: 900; background: #000; color: var(--r-color, #fff); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--line); white-space: nowrap; }
+    
+    .inv-row-name { flex: 1; font-size: 20px; font-weight: 600; color: var(--r-color, #fff); word-break: keep-all; line-height: 1.35; }
+    .inv-row-count { font-size: 22px; font-weight: 800; color: #fff; margin-left: 14px; flex-shrink: 0; }
 
     /* Right Panel: Log */
     .log-panel { right: 30px; top: 30px; width: 480px; height: calc(100vh - 60px); }
@@ -114,10 +115,12 @@
     
     .log-row { display: flex; align-items: center; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 18px; }
     .log-row:last-child { border-bottom: none; }
-    .log-time { width: 90px; color: #777; font-family: monospace; font-size: 17px; }
-    .log-badge { width: 50px; color: var(--r-color, #fff); font-weight: 800; }
-    .log-name { flex: 1; color: var(--r-color, #fff); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
-    .log-count { color: #fff; font-weight: 800; margin-left: 12px; font-size: 19px; }
+    .log-time { width: 90px; color: #777; font-family: monospace; font-size: 17px; flex-shrink: 0; }
+    /* 한글 이름에 맞게 뱃지 너비 증가 */
+    .log-badge { width: 65px; color: var(--r-color, #fff); font-weight: 800; flex-shrink: 0; } 
+    
+    .log-name { flex: 1; color: var(--r-color, #fff); font-weight: 600; word-break: keep-all; line-height: 1.35; }
+    .log-count { color: #fff; font-weight: 800; margin-left: 12px; font-size: 19px; flex-shrink: 0; }
 
     .bottom-hint { position: fixed; bottom: 30px; left: 0; right: 0; text-align: center; color: rgba(238,244,255,.35); font-size: 18px; font-weight: 500; letter-spacing: 0.05em; z-index: 1; }
 
@@ -135,6 +138,7 @@
 </head>
 <body>
 
+  <!-- CENTER UI -->
   <main class="stage">
     <div class="center-wrap">
       <div class="timer-wrap">
@@ -158,7 +162,7 @@
             <div class="reward-text-block">
               <div class="reward-subtitle">획득!</div>
               <div class="reward-name" id="rewardName">궁극의 행운 부적</div>
-              <div class="reward-badge" id="rewardBadge">i4</div>
+              <div class="reward-badge" id="rewardBadge">전설</div>
             </div>
           </div>
           <div class="reward-timer" id="rewardTimer">5.4초 후 사라집니다</div>
@@ -167,6 +171,7 @@
     </div>
   </main>
 
+  <!-- LEFT PANEL: INVENTORY -->
   <aside class="side-panel inventory-panel">
     <div class="panel-head">
       <span class="panel-title">아이템 리스트</span>
@@ -174,13 +179,13 @@
     </div>
     <div class="inv-tabs" id="invTabs">
       <div class="tab active" data-filter="all">전체</div>
-      <div class="tab" data-filter="i0">i0</div>
-      <div class="tab" data-filter="i1">i1</div>
-      <div class="tab" data-filter="i2">i2</div>
-      <div class="tab" data-filter="i3">i3</div>
-      <div class="tab" data-filter="i4">i4</div>
-      <div class="tab" data-filter="i5">i5</div>
-      <div class="tab" data-filter="i6">i6</div>
+      <div class="tab" data-filter="i0">신화</div>
+      <div class="tab" data-filter="i1">전설</div>      
+      <div class="tab" data-filter="i2">영웅</div>
+      <div class="tab" data-filter="i3">희귀</div>
+      <div class="tab" data-filter="i4">고급</div>
+      <div class="tab" data-filter="i5">유물</div>
+      <div class="tab" data-filter="i6">일반</div>
     </div>
     <div class="inv-list" id="invList"></div>
     <div class="panel-footer">
@@ -189,6 +194,7 @@
     </div>
   </aside>
 
+  <!-- RIGHT PANEL: LOG -->
   <aside class="side-panel log-panel">
     <div class="panel-head">
       <span class="panel-title">획득 로그</span>
@@ -208,7 +214,7 @@ const USE_SERVER = true;
 const SERVER_OPEN_URL = "https://mrdindoin.ddns.net/gti/api/open_chest";
 const OPEN_EVERY_MS = 60_000;
 const REWARD_SHOW_MS = 6000;
-const STORAGE_KEY = "gti_center_chest_v2_large";
+const STORAGE_KEY = "gti_center_chest_v3_korean_rarity";
 
 const progressBar = document.getElementById("progressBar");
 const timeLeft = document.getElementById("timeLeft");
@@ -232,6 +238,20 @@ let currentFilter = 'all';
 
 let logs = [];
 const inv = new Map();
+
+// Rarity Name Mapper
+function getRarityName(code) {
+  const rarityMap = {
+    'i0': '신화',
+    'i1': '전설',
+    'i2': '영웅',
+    'i3': '희귀',
+    'i4': '고급',
+    'i5': '유물',
+    'i6': '일반'
+  };
+  return rarityMap[code] || code;
+}
 
 // Helper Icon Mapper
 function getIconForName(name) {
@@ -298,7 +318,14 @@ function renderInventory() {
     filtered = allItems.filter(it => it.rarity === currentFilter);
   }
 
-  filtered.sort((a,b) => b.lastTs - a.lastTs);
+  // 1순위: 등급순 정렬 (i0이 최상단, 숫자가 작을수록 우선순위 높음)
+  // 2순위: 획득시간순 정렬 (동일 등급일 경우 최신 아이템이 위로)
+  filtered.sort((a,b) => {
+    const rankA = parseInt((a.rarity || "").replace("i", "")) || 99;
+    const rankB = parseInt((b.rarity || "").replace("i", "")) || 99;
+    if (rankA !== rankB) return rankA - rankB;
+    return b.lastTs - a.lastTs;
+  });
 
   if (!filtered.length) {
     invList.innerHTML = `<div class="empty-msg">해당 조건의 아이템이 없습니다.</div>`;
@@ -309,7 +336,7 @@ function renderInventory() {
     <div class="inv-row r-${escapeHtml(it.rarity)}">
       <div class="inv-icon-box">
         ${getIconForName(it.name)}
-        <span class="inv-row-badge">${escapeHtml(it.rarity)}</span>
+        <span class="inv-row-badge">${escapeHtml(getRarityName(it.rarity))}</span>
       </div>
       <div class="inv-row-name">${escapeHtml(it.name)}</div>
       <div class="inv-row-count">x${it.count}</div>
@@ -324,10 +351,12 @@ function renderLog() {
     logList.innerHTML = `<div class="empty-msg">아직 획득한 아이템이 없습니다.</div>`;
     return;
   }
+  
+  // 획득 로그는 배열의 최상단(최신)부터 그대로 렌더링되도록 유지
   logList.innerHTML = logs.map(row => `
     <div class="log-row r-${escapeHtml(row.rarity)}">
       <div class="log-time">${escapeHtml(row.time)}</div>
-      <div class="log-badge">[${escapeHtml(row.rarity)}]</div>
+      <div class="log-badge">[${escapeHtml(getRarityName(row.rarity))}]</div>
       <div class="log-name">${escapeHtml(row.name)}</div>
       <div class="log-count">x${row.count}</div>
     </div>
@@ -338,8 +367,11 @@ function addLog(drop) {
   addToInventory(drop);
   const d = new Date();
   const time = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`;
+  
+  // 새 로그를 배열 맨 앞에 추가 (최신순)
   logs.unshift({ time, rarity: drop.rarity, name: drop.name, count: drop.count || 1 });
-  logs = logs.slice(0, 50);
+  logs = logs.slice(0, 50); // 최대 50개 유지
+  
   renderLog();
   save();
 }
@@ -381,7 +413,7 @@ function showReward(drop) {
     rewardArea.className = `reward-area r-${drop.rarity} show`;
     rewardGraphic.textContent = getIconForName(drop.name);
     rewardName.textContent = drop.name;
-    rewardBadge.textContent = drop.rarity;
+    rewardBadge.textContent = getRarityName(drop.rarity);
     rewardShowStart = Date.now();
   }, 500);
 
