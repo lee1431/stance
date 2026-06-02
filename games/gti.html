@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Get The Item - Live Stream Edition</title>
+  <style>
+    :root {
+      --bg: #0b0e14; 
+      --fg: #e8eefc;
+      --card: #151922;
+      --line: rgba(255,255,255,.10);
+      --btn: linear-gradient(180deg, #2b3245 0%, #1a1f2e 100%);
+      --btn-hover: linear-gradient(180deg, #384259 0%, #22283a 100%);
+      --i0-color: #ffd86b;
+      --i1-color: #ffb86b;
+    }
+    
+    html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); font-family: ui-monospace, Menlo, Consolas, monospace; overflow-x: hidden; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+    
+    /* 레이아웃 분리 */
+    .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 768px) { .dashboard { grid-template-columns: 1fr; } }
+    
+    .card {
+      background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+      padding: 20px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,.5);
+    }
+    
+    .big { font-size: 24px; font-weight: 800; letter-spacing: .5px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+    .muted { opacity: .6; font-size: 12px; margin-top: 4px; }
+    
+    /* 버튼 스타일 */
+    .btn {
+      background: var(--btn); color: var(--fg); border: 1px solid rgba(255,255,255,.2);
+      border-radius: 8px; padding: 10px 16px; font-weight: bold; cursor: pointer;
+      transition: all 0.2s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.3); text-shadow: 0 1px 2px #000;
+    }
+    .btn:hover:not(:disabled) { background: var(--btn-hover); transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.4); }
+    .btn:active:not(:disabled) { transform: translateY(1px); }
+    .btn:disabled { opacity: .3; cursor: not-allowed; transform: none; box-shadow: none; }
+    
+    /* 상자 전용 대형 버튼 */
+    .chest-btn-wrap { margin: 20px 0; display: flex; flex-direction: column; gap: 10px; }
+    .btn-open-chest {
+      width: 100%; padding: 24px; font-size: 22px; font-weight: 900; letter-spacing: 2px;
+      background: linear-gradient(135deg, #ff9a00, #ff5200); border: 2px solid #ffcc00;
+      color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,0.8); border-radius: 12px;
+      cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 0 20px rgba(255, 154, 0, 0.4), inset 0 0 15px rgba(255,255,255,0.3);
+    }
+    .btn-open-chest:hover:not(:disabled) { transform: scale(1.03); box-shadow: 0 0 30px rgba(255, 154, 0, 0.7); }
+    .btn-open-chest:disabled { filter: grayscale(100%); opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+    
+    /* 타이머 프로그레스 바 */
+    .progress-bg { width: 100%; height: 14px; background: rgba(0,0,0,0.6); border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; position: relative; }
+    .progress-bar { height: 100%; background: linear-gradient(90deg, #31d2ff, #a55eff); width: 0%; transition: width 0.1s linear; box-shadow: 0 0 10px rgba(49,210,255,0.5); }
+    
+    /* 상태 표시줄 */
+    .stat-row { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+    .pill { padding: 4px 10px; border: 1px solid rgba(255,255,255,.15); border-radius: 6px; background: rgba(0,0,0,.4); font-size: 13px; font-weight: bold; }
+    .pill span { color: #88ffb3; }
+
+    /* 로그 박스 */
+    .logbox { margin-top: 15px; border: 1px solid rgba(0,0,0,0.8); background: rgba(0,0,0,.4); border-radius: 8px; padding: 12px; height: 180px; overflow-y: auto; font-size: 13px; line-height: 1.5; box-shadow: inset 0 4px 10px rgba(0,0,0,0.5); }
+    .logbox div { margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px; }
+    .log-green{color:#88ffb3;} .log-cyan{color:#7fe7ff;} .log-warn{color:#ffd27f;}
+    
+    /* 인벤토리 */
+    .inv-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+    .inv-controls { display: flex; gap: 8px; }
+    .inv-controls input, .inv-controls select { background: rgba(0,0,0,0.5); color: var(--fg); border: 1px solid rgba(255,255,255,.2); border-radius: 6px; padding: 8px 12px; outline: none; }
+    
+    .inv-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: 12px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    /* 개별 아이템 슬롯 */
+    .inv-slot {
+      aspect-ratio: 1;
+      background: #090b10;
+      border: 2px solid #2a3143;
+      border-radius: 8px;
+      position: relative;
+      cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 8px;
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.8), 0 4px 6px rgba(0,0,0,0.3);
+      transition: all 0.2s;
+    }
+    .inv-slot:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.4); box-shadow: inset 0 0 15px rgba(0,0,0,0.8), 0 8px 15px rgba(0,0,0,0.5); }
+    
+    .inv-icon { font-size: 20px; font-weight: 900; opacity: 0.8; margin-bottom: 5px; text-shadow: 0 0 10px currentColor; }
+    
+    /* 🚀 수정: 닉네임이 길어도 잘리지 않고 보이도록 줄바꿈 설정 강화 */
+    .inv-name { 
+      font-size: 11px; 
+      line-height: 1.2; 
+      word-break: break-all; /* 긴 닉네임도 강제 줄바꿈 */
+      overflow: hidden; 
+      text-overflow: ellipsis; 
+      display: -webkit-box; 
+      -webkit-line-clamp: 3; /* 최대 3줄까지 허용 */
+      -webkit-box-orient: vertical; 
+    }
+    
+    .inv-count { position: absolute; right: -6px; bottom: -6px; font-size: 11px; font-weight: bold; padding: 3px 6px; border-radius: 6px; background: #222; border: 1px solid #444; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+    
+    /* 등급별 화려한 효과 */
+    .r-i0 { border-color: var(--i0-color); background: radial-gradient(circle, rgba(255,216,107,0.15) 0%, rgba(9,11,16,1) 70%); animation: legendPulse 1.5s infinite alternate; }
+    .r-i0 .inv-icon { color: var(--i0-color); } .r-i0 .inv-name { color: #fff4d4; font-weight: bold; }
+    .r-i1 { border-color: var(--i1-color); background: radial-gradient(circle, rgba(255,184,107,0.1) 0%, rgba(9,11,16,1) 70%); box-shadow: inset 0 0 15px rgba(0,0,0,0.8), 0 0 10px rgba(255,184,107,0.3); }
+    .r-i1 .inv-icon { color: var(--i1-color); } .r-i1 .inv-name { color: #ffe1c2; font-weight: bold; }
+    .r-i2 { border-color: #7fd4ff; } .r-i2 .inv-icon { color: #7fd4ff; }
+    .r-i3 { border-color: #6ad66a; } .r-i3 .inv-icon { color: #6ad66a; }
+    .r-i4 { border-color: #9fa8ff; } .r-i4 .inv-icon { color: #9fa8ff; }
+    .r-i5 { border-color: #888; } .r-i5 .inv-icon { color: #aaa; }
+    .r-i6 { border-color: #444; opacity: 0.7; } .r-i6 .inv-icon { color: #555; }
+    
+    @keyframes legendPulse {
+      0%   { box-shadow: inset 0 0 15px rgba(0,0,0,0.8), 0 0 10px rgba(255,216,107,0.4); }
+      100% { box-shadow: inset 0 0 15px rgba(0,0,0,0.8), 0 0 25px rgba(255,216,107,0.8); border-color: #fff; }
+    }
+
+    .screen-flash { position: fixed; inset: 0; pointer-events: none; z-index: 9999; animation: flashAnim 1s ease-out forwards; }
+    .flash-i0 { background: radial-gradient(circle, rgba(255,216,107,0.8) 0%, transparent 80%); }
+    .flash-i1 { background: radial-gradient(circle, rgba(255,184,107,0.6) 0%, transparent 80%); }
+    @keyframes flashAnim { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+    /* 모달 */
+    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(4px); }
+    .modal { width: min(400px, 90vw); background: var(--card); border: 1px solid rgba(255,255,255,.2); border-radius: 12px; padding: 20px; box-shadow: 0 20px 50px rgba(0,0,0,.8); text-align: center; }
+    .modal .big { font-size: 22px; margin-bottom: 10px; }
+    .modal .meta { font-size: 14px; color: #aaa; margin-bottom: 20px; line-height: 1.6; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: center; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="dashboard">
+      <div class="card">
+        <div class="big" style="color: gold;">GOLD: <span id="gold">0</span></div>
+        <div class="muted">골드는 상점을 통해 판매해야 획득 가능합니다.</div>
+        
+        <div class="stat-row">
+          <button class="btn" id="btnUpRespawn">리스폰 단축 (비용 <span id="costRespawn">50</span>G)</button>
+          <button class="btn" id="btnSellAllTrash" style="border-color: #888;">i5~i6 전부 판매</button>
+        </div>
+        
+        <div class="stat-row">
+          <div class="pill">리스폰 Lv. <span id="respawnLv">1</span></div>
+          <div class="pill">현재 리스폰: <span id="respawnNow">60.0s</span></div>
+        </div>
+      </div>
+
+      <div class="card" style="text-align: center;">
+        <div class="big">CHEST: <span id="chest" style="color: #31d2ff;">0</span></div>
+        
+        <div class="chest-btn-wrap">
+          <button class="btn-open-chest" id="btnOpen" disabled>상자 열기</button>
+          <div class="progress-bg" title="다음 상자 획득까지 남은 시간">
+            <div class="progress-bar" id="chestProgress"></div>
+          </div>
+        </div>
+        
+        <div class="stat-row" style="justify-content: center;">
+          <button class="btn" id="btnReset" style="font-size: 11px; padding: 5px 10px; opacity: 0.7;">세이브 초기화</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="big">시스템 로그 <span id="liveStatus" style="font-size: 12px; color: #6ad66a; display:none; margin-left:10px;">(🟢 라이브 채팅 연동 중)</span></div>
+      <div id="log" class="logbox"></div>
+    </div>
+
+    <div class="card">
+      <div class="inv-head">
+        <div class="big">가방 (Inventory)</div>
+        <div class="inv-controls">
+          <input id="invSearch" placeholder="아이템 검색..." />
+          <select id="invSort">
+            <option value="recent">최근 획득순</option>
+            <option value="rarity">등급순</option>
+            <option value="count">개수순</option>
+          </select>
+        </div>
+      </div>
+      <div id="invGrid" class="inv-grid"></div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="modalBg">
+    <div class="modal">
+      <div class="big" id="mTitle">아이템 이름</div>
+      <div class="meta" id="mMeta"></div>
+      <div class="modal-actions">
+        <button class="btn" id="mSell1" style="background: #1a4f32; border-color: #2e8b57;">1개 판매</button>
+        <button class="btn" id="mSellAll" style="background: #6b2626; border-color: #b22222;">전부 판매</button>
+        <button class="btn" id="mClose">닫기</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const USE_SERVER = true;
+const SERVER_OPEN_URL = "https://mrdindoin.ddns.net/gti/api/open_chest";
+
+const state = { gold: 0, chest: 0, chestTimer: 0, respawnLv: 1 };
+const inv = new Map();
+
+function $(id){ return document.getElementById(id); }
+function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
+function now(){ return Date.now(); }
+function escapeHtml(s){ return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
+function rarityRank(r){ const m = /^i(\d+)/.exec(r); return m ? parseInt(m[1],10) : 999; }
+function invKey(rarity,name){ return `${rarity}|${name}`; }
+
+function appendLog(html){
+  const log = $("log");
+  const atBottom = (log.scrollTop + log.clientHeight + 30) >= log.scrollHeight;
+  log.insertAdjacentHTML("beforeend", `<div>${html}</div>`);
+  if(atBottom) log.scrollTop = log.scrollHeight;
+}
+
+function triggerFlash(rarity) {
+  if (rarity !== "i0" && rarity !== "i1") return;
+  const flash = document.createElement("div");
+  flash.className = `screen-flash flash-${rarity}`;
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 1000);
+}
+
+function logOpen(rarity, name){
+  appendLog(`<span class="log-green"><b>[오픈]</b></span> → <span class="r-${escapeHtml(rarity)}" style="color:var(--${escapeHtml(rarity)}-color, #fff)"><b>[${escapeHtml(rarity)}]</b></span> ${escapeHtml(name)}`);
+  triggerFlash(rarity); 
+}
+
+function logSell(rarity, name, qty, gain){
+  appendLog(`<span class="log-cyan"><b>[판매]</b></span> → [${escapeHtml(rarity)}] ${escapeHtml(name)} x${qty} <span class="log-green">(+${gain}G)</span>`);
+}
+
+function chestEvery(){
+  const base = 1_000; 
+  const speed = Math.pow(0.92, state.respawnLv - 1);
+  return clamp(base * speed, 10_000, base);
+}
+function costRespawn(){ return Math.floor(50 + (state.respawnLv - 1) * 40 + Math.pow(state.respawnLv, 1.35) * 12); }
+
+function upRespawn(){
+  const c = costRespawn();
+  if(state.gold < c){ appendLog(`<span class="log-warn">골드가 부족합니다.</span>`); return; }
+  state.gold -= c;
+  state.respawnLv += 1;
+  appendLog(`<span class="log-cyan"><b>업그레이드 완료!</b></span> (리스폰 Lv.${state.respawnLv})`);
+  saveAll(); updateUI();
+}
+
+function sellPrice(rarity){
+  const table = { i0:500, i1:150, i2:50, i3:20, i4:10, i5:5, i6:1 }; 
+  return table[rarity] ?? 1;
+}
+
+function addToInventory({ rarity, name, count=1 }){
+  const key = invKey(rarity,name);
+  const t = now();
+  const cur = inv.get(key);
+  if(cur){ cur.count += count; cur.lastTs = t; }
+  else { inv.set(key, { rarity, name, count, firstTs:t, lastTs:t }); }
+  if(inv.get(key).count <= 0) inv.delete(key);
+  saveAll(); renderInventory();
+}
+
+function sellItem(key, n){
+  const it = inv.get(key);
+  if(!it) return;
+  const qty = Math.min(n, it.count);
+  if(qty <= 0) return;
+  const gain = sellPrice(it.rarity) * qty;
+  
+  addToInventory({ rarity: it.rarity, name: it.name, count: -qty });
+  state.gold += gain;
+  logSell(it.rarity, it.name, qty, gain);
+  saveAll(); updateUI();
+}
+
+function renderInventory(){
+  const grid = $("invGrid");
+  const q = ($("invSearch").value || "").trim().toLowerCase();
+  const sort = $("invSort").value || "recent";
+
+  let items = Array.from(inv.entries()).map(([key,v]) => ({ key, ...v }));
+  if(q) items = items.filter(it => it.name.toLowerCase().includes(q) || it.rarity.toLowerCase().includes(q));
+
+  if(sort === "recent") items.sort((a,b)=> b.lastTs - a.lastTs);
+  else if(sort === "rarity") items.sort((a,b)=> (rarityRank(a.rarity)-rarityRank(b.rarity)) || (b.lastTs-a.lastTs));
+  else if(sort === "count") items.sort((a,b)=> (b.count-a.count) || (b.lastTs-a.lastTs));
+
+  if(items.length === 0){ grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; opacity:.5; padding: 20px;">가방이 비어있습니다.</div>`; return; }
+
+  grid.innerHTML = items.map(it => {
+    // [닉네임] 영웅의 검 형태일 경우, 아이콘 글자를 닉네임이 아닌 아이템 이름의 첫 글자로 추출
+    let iconStr = it.name;
+    if(iconStr.startsWith("[")) {
+      const closingIdx = iconStr.indexOf("]");
+      if(closingIdx > -1 && iconStr.length > closingIdx + 1) {
+         iconStr = iconStr.substring(closingIdx + 1).trim();
+      }
+    }
+    const iconChar = iconStr.charAt(0).toUpperCase();
+
+    return `
+    <div class="inv-slot r-${escapeHtml(it.rarity)}" data-key="${escapeHtml(it.key)}" title="${escapeHtml(it.name)}">
+      <div class="inv-icon">${iconChar}</div>
+      <div class="inv-name">${escapeHtml(it.name)}</div>
+      <div class="inv-count">x${it.count}</div>
+    </div>
+  `}).join("");
+
+  grid.querySelectorAll(".inv-slot").forEach(el=> el.addEventListener("click", ()=> openModal(el.dataset.key)));
+}
+
+let modalKey = null;
+function openModal(key){
+  const it = inv.get(key);
+  if(!it) return;
+  modalKey = key;
+  $("mTitle").innerHTML = `<span style="color:var(--${it.rarity}-color, #fff)">[${it.rarity}]</span> ${escapeHtml(it.name)}`;
+  $("mMeta").innerHTML = `보유 수량: <b style="color:#fff">${it.count}개</b><br/>판매 단가: <b style="color:gold">${sellPrice(it.rarity)}G</b>`;
+  $("modalBg").style.display = "flex";
+}
+function closeModal(){ $("modalBg").style.display = "none"; modalKey = null; }
+
+const KEY_SAVE = "gti_epic_live_v1";
+function saveAll(){ localStorage.setItem(KEY_SAVE, JSON.stringify({ state, inv: Array.from(inv.entries()) })); }
+function loadAll(){
+  try{
+    const raw = localStorage.getItem(KEY_SAVE);
+    if(!raw) return;
+    const p = JSON.parse(raw);
+    if(p.state) Object.assign(state, p.state);
+    if(p.inv) p.inv.forEach(([k,v])=> inv.set(k,v));
+  }catch(e){}
+}
+
+let openCdUntil = 0;
+
+// 🚀 핵심 수정 구역: userName을 파라미터로 받습니다.
+async function openChest(userName = null){
+  // 마우스 클릭 이벤트 방어 (스트리머가 수동으로 누를 때)
+  if(userName instanceof Event || (userName && userName.type)) userName = null;
+
+  const t = now();
+  if(t < openCdUntil) return;
+  openCdUntil = t + 250; 
+  if(state.chest <= 0) return;
+
+  state.chest -= 1; updateUI(); saveAll();
+
+  if(USE_SERVER){
+    try{
+      // 🚀 API에 userName(닉네임)을 함께 보냅니다.
+      const payload = { action: "open" };
+      if(userName) payload.user = userName; 
+
+      const res = await fetch(SERVER_OPEN_URL, { 
+        method:"POST", 
+        headers:{ "Content-Type":"application/json" }, 
+        body: JSON.stringify(payload) 
+      });
+      
+      const data = await res.json();
+      if(data.ok){
+        const rarity = data.rarity ?? "i6";
+        // 서버에서 이미 접두사를 붙여 보내주므로 그대로 사용
+        const name = data.item_name ?? data.item ?? "unknown";
+        
+        logOpen(rarity, name); addToInventory({ rarity, name, count: 1 }); updateUI(); saveAll(); return;
+      }
+    }catch(e){
+      console.warn("API 연결 실패, 로컬 모드로 전환");
+    }
+  }
+  
+  // 로컬 더미 드랍 (API 통신 실패 시 대체 로직)
+  const r = Math.random();
+  let rarity = "i6", name = "잡동사니";
+  if(r < 0.02) { rarity = "i0"; name = "전설의 성배"; }
+  else if(r < 0.1) { rarity = "i1"; name = "영웅의 검"; }
+  else if(r < 0.4) { rarity = "i3"; name = "쓸만한 철광석"; }
+
+  // 로컬 로직일 땐 자체적으로 닉네임을 앞에 붙여줌
+  if(userName) name = `[${userName}] ${name}`;
+
+  logOpen(rarity, name); addToInventory({ rarity, name, count: 1 }); updateUI(); saveAll();
+}
+
+function sellAllTrash(){
+  let sold = 0, total = 0;
+  for(const [key, it] of Array.from(inv.entries())){
+    if(it.rarity === "i5" || it.rarity === "i6"){
+      const gain = sellPrice(it.rarity) * it.count;
+      sold += it.count; total += gain;
+      inv.delete(key);
+      appendLog(`<span class="log-cyan">[일괄판매]</span> ${escapeHtml(it.name)} x${it.count} <span class="log-green">(+${gain}G)</span>`);
+    }
+  }
+  if(sold > 0){ state.gold += total; saveAll(); renderInventory(); updateUI(); }
+}
+
+function updateUI(){
+  $("gold").textContent = Math.floor(state.gold);
+  $("chest").textContent = state.chest;
+  $("respawnLv").textContent = state.respawnLv;
+  $("costRespawn").textContent = costRespawn();
+  $("respawnNow").textContent = (chestEvery()/1000).toFixed(1) + "s";
+  
+  const btn = $("btnOpen");
+  if(state.chest > 0) {
+    btn.disabled = false;
+    btn.textContent = `상자 열기 (남은 상자: ${state.chest})`;
+  } else {
+    btn.disabled = true;
+    btn.textContent = `상자 대기 중...`;
+  }
+}
+
+let lastT = now();
+function tick(){
+  const t = now();
+  const dt = t - lastT;
+  lastT = t;
+  
+  const every = chestEvery();
+  state.chestTimer -= dt;
+
+  while(state.chestTimer <= 0){
+    state.chest += 1;
+    state.chestTimer += every;
+    // appendLog(`<span style="color:#31d2ff"><b>[알림]</b> 상자가 도착했습니다!</span>`); // 로그가 너무 길어지는 걸 방지하려면 주석 처리 유지
+  }
+  
+  const percent = Math.max(0, Math.min(100, ((every - state.chestTimer) / every) * 100));
+  $("chestProgress").style.width = percent + "%";
+
+  updateUI();
+  requestAnimationFrame(tick);
+}
+
+// 🚀 Tampermonkey에서 보낸 닉네임 포함 오픈 신호 수신
+window.addEventListener("CHAT_OPEN_CHEST", (e) => {
+  const userName = e.detail.userName;
+  $("liveStatus").style.display = "inline"; // 라이브 연동 중 UI 표시
+  openChest(userName);
+});
+
+$("btnOpen").addEventListener("click", openChest);
+$("btnUpRespawn").addEventListener("click", upRespawn);
+$("btnSellAllTrash").addEventListener("click", sellAllTrash);
+$("invSearch").addEventListener("input", renderInventory);
+$("invSort").addEventListener("change", renderInventory);
+$("btnReset").addEventListener("click", ()=>{ if(confirm("초기화 하시겠습니까?")) { localStorage.removeItem(KEY_SAVE); location.reload(); } });
+$("mClose").addEventListener("click", closeModal);
+$("modalBg").addEventListener("click", (e)=>{ if(e.target.id==="modalBg") closeModal(); });
+
+$("mSell1").addEventListener("click", ()=>{ if(!modalKey) return; sellItem(modalKey, 1); if(inv.get(modalKey)) openModal(modalKey); else closeModal(); });
+$("mSellAll").addEventListener("click", ()=>{ if(!modalKey) return; sellItem(modalKey, inv.get(modalKey).count); closeModal(); });
+
+loadAll();
+if(!state.chestTimer || state.chestTimer > 1_000_000) state.chestTimer = chestEvery();
+renderInventory(); updateUI(); requestAnimationFrame(tick);
+</script>
+</body>
+</html>
