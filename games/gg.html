@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Get The Item - Center Chest</title>
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+    :root {
+      --bg0: #070a12;
+      --bg1: #0f1422;
+      --fg: #eef4ff;
+      --muted: rgba(238,244,255,.45);
+      --line: rgba(255,255,255,.08);
+      
+      /* Rarity Colors Matching the Screenshot */
+      --i0-color: #ffd86b; /* Yellow */
+      --i1-color: #ff6a00; /* Orange */
+      --i2-color: #4cd964; /* Green */
+      --i3-color: #32a852; /* Blue fallback */
+      --i3-color: #44d7ff; /* Blue */
+      --i4-color: #b366ff; /* Purple */
+      --i5-color: #ffc800; /* Gold */
+      --i6-color: #a0a0a0; /* Grey */
+    }
+
+    * { box-sizing: border-box; font-family: 'Pretendard', sans-serif; }
+    html, body { 
+      height: 100%; margin: 0; overflow: hidden; 
+      background: radial-gradient(circle at 50% 50%, var(--bg1) 0%, var(--bg0) 100%);
+      color: var(--fg);
+    }
+
+    body::before {
+      content: ""; position: fixed; inset: -50%; pointer-events: none;
+      background: radial-gradient(circle at 30% 30%, rgba(105,231,255,.03), transparent 30%),
+                  radial-gradient(circle at 70% 70%, rgba(179,102,255,.03), transparent 30%);
+      animation: bgDrift 15s linear infinite alternate;
+    }
+    @keyframes bgDrift { from { transform: rotate(0deg) scale(1); } to { transform: rotate(5deg) scale(1.05); } }
+
+    /* ================= CENTER STAGE ================= */
+    .stage { position: relative; z-index: 1; width: 100%; height: 100%; display: grid; place-items: center; }
+    .center-wrap { display: flex; flex-direction: column; align-items: center; gap: 20px; transform: translateY(-40px); }
+
+    .timer-wrap { text-align: center; }
+    .timer-label { font-size: 12px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
+    .time-left { font-size: 28px; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.8); letter-spacing: 0.05em; }
+
+    .progress-wrap { width: 340px; height: 12px; border-radius: 999px; background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,0.1); overflow: hidden; box-shadow: inset 0 2px 6px rgba(0,0,0,0.8); }
+    .progress-bar { height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, #44d7ff, #b366ff, #ffd86b); transition: width 0.1s linear; box-shadow: 0 0 10px rgba(179,102,255,0.5); }
+
+    .chest-zone { position: relative; width: 300px; height: 220px; display: grid; place-items: center; margin-top: 20px; }
+    .glow { position: absolute; width: 240px; height: 60px; bottom: 20px; border-radius: 50%; background: radial-gradient(circle, rgba(255,216,107,.4), transparent 70%); filter: blur(15px); animation: pulseGlow 2s infinite alternate; }
+    @keyframes pulseGlow { from { opacity: 0.6; transform: scale(0.9); } to { opacity: 1; transform: scale(1.1); } }
+
+    .chest { position: relative; width: 200px; height: 140px; transform-style: preserve-3d; animation: idle 2.5s ease-in-out infinite; }
+    @keyframes idle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
+    /* Chest CSS Drawing */
+    .lid { position: absolute; left: 10px; top: 16px; width: 180px; height: 65px; border-radius: 20px 20px 8px 8px; background: linear-gradient(180deg, #d98a3b, #9b5929); border: 3px solid #3f2418; transform-origin: center bottom; z-index: 3; }
+    .body { position: absolute; left: 0; bottom: 0; width: 200px; height: 100px; border-radius: 12px; background: linear-gradient(180deg, #c47a35, #8f5528); border: 3px solid #3f2418; z-index: 2; }
+    .lock { position: absolute; left: 50%; top: 40px; width: 36px; height: 46px; transform: translateX(-50%); border-radius: 6px; background: linear-gradient(180deg, #ffe28a, #bd7a21); border: 3px solid #4c3512; z-index: 4; }
+    .chest.opening { animation: shake .4s ease-in-out; }
+    .chest.opening .lid { animation: openLid 1s cubic-bezier(.2,.9,.15,1) forwards; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+    @keyframes openLid { 0%{transform:rotateX(0)} 100%{transform:rotateX(-70deg) translateY(-10px)} }
+
+    /* Reward UI matching the screenshot */
+    .reward-area { position: absolute; top: 120px; display: flex; flex-direction: column; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 10; }
+    .reward-area.show { opacity: 1; animation: floatUp 0.6s cubic-bezier(0.2, 1, 0.2, 1) forwards; }
+    @keyframes floatUp { from { transform: translateY(30px) scale(0.8); } to { transform: translateY(0) scale(1); } }
+
+    .reward-content { display: flex; align-items: center; gap: 24px; }
+    .reward-graphic { font-size: 80px; filter: drop-shadow(0 0 25px var(--r-color, #fff)); animation: itemHover 2s infinite alternate; }
+    @keyframes itemHover { from { transform: translateY(-5px); } to { transform: translateY(5px); } }
+
+    .reward-text-block { display: flex; flex-direction: column; align-items: center; }
+    .reward-subtitle { font-size: 18px; font-weight: 800; color: var(--r-color, #fff); margin-bottom: 8px; text-shadow: 0 0 10px rgba(var(--r-rgb), 0.5); }
+    .reward-name { font-size: 36px; font-weight: 900; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.8), 0 0 20px var(--r-color, #fff); white-space: nowrap; }
+    .reward-badge { margin-top: 12px; background: rgba(0,0,0,0.6); border: 1px solid var(--r-color, #fff); color: var(--r-color, #fff); font-size: 16px; font-weight: 800; padding: 4px 16px; border-radius: 6px; box-shadow: 0 0 15px rgba(var(--r-rgb), 0.3); }
+    .reward-timer { margin-top: 24px; font-size: 13px; color: var(--muted); }
+
+    /* ================= PANELS ================= */
+    .side-panel { position: fixed; background: rgba(11, 15, 25, 0.85); border: 1px solid var(--line); border-radius: 12px; backdrop-filter: blur(12px); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+    .panel-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+    .panel-title { font-size: 14px; font-weight: 800; color: #fff; }
+    .panel-count { font-size: 12px; color: var(--i4-color); font-weight: 600; }
+    .panel-footer { padding: 12px 20px; font-size: 11px; color: #666; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 6px; }
+
+    /* Left Panel: Inventory */
+    .inventory-panel { left: 24px; top: 24px; width: 340px; height: calc(100vh - 48px); }
+    .inv-tabs { display: flex; gap: 4px; padding: 12px 20px; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+    .inv-tabs::-webkit-scrollbar { display: none; }
+    .tab { background: transparent; border: 1px solid transparent; color: #888; font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .tab.active { background: rgba(255,255,255,0.05); color: #fff; border-color: rgba(255,255,255,0.1); }
+    
+    .inv-list { flex: 1; overflow-y: auto; padding: 12px 20px; display: flex; flex-direction: column; gap: 8px; }
+    .inv-list::-webkit-scrollbar { width: 6px; }
+    .inv-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+    
+    .inv-row { display: flex; align-items: center; padding: 10px 14px; border-radius: 8px; background: rgba(0,0,0,0.4); border: 1px solid var(--r-color, #555); transition: transform 0.1s; }
+    .inv-row:hover { transform: translateX(3px); background: rgba(255,255,255,0.03); }
+    .inv-icon-box { position: relative; width: 28px; height: 28px; display: grid; place-items: center; font-size: 18px; margin-right: 14px; }
+    .inv-row-badge { position: absolute; bottom: -6px; right: -8px; font-size: 9px; font-weight: 800; background: #000; color: var(--r-color, #fff); padding: 1px 4px; border-radius: 4px; }
+    .inv-row-name { flex: 1; font-size: 13px; font-weight: 500; color: var(--r-color, #fff); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .inv-row-count { font-size: 13px; font-weight: 700; color: #fff; margin-left: 10px; }
+
+    /* Right Panel: Log */
+    .log-panel { right: 24px; top: 24px; width: 340px; height: calc(100vh - 48px); }
+    .log-list { flex: 1; overflow-y: auto; padding: 12px 20px; display: flex; flex-direction: column; gap: 4px; }
+    .log-list::-webkit-scrollbar { width: 6px; }
+    .log-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+    
+    .log-row { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 13px; }
+    .log-row:last-child { border-bottom: none; }
+    .log-time { width: 64px; color: #666; font-family: monospace; }
+    .log-badge { width: 34px; color: var(--r-color, #fff); font-weight: 700; }
+    .log-name { flex: 1; color: var(--r-color, #fff); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+    .log-count { color: #fff; font-weight: 700; margin-left: 8px; }
+
+    .bottom-hint { position: fixed; bottom: 24px; left: 0; right: 0; text-align: center; color: #555; font-size: 12px; z-index: 1; }
+
+    /* Utilities */
+    .r-i0 { --r-color: var(--i0-color); --r-rgb: 255,216,107; }
+    .r-i1 { --r-color: var(--i1-color); --r-rgb: 255,106,0; }
+    .r-i2 { --r-color: var(--i2-color); --r-rgb: 76,217,100; }
+    .r-i3 { --r-color: var(--i3-color); --r-rgb: 68,215,255; }
+    .r-i4 { --r-color: var(--i4-color); --r-rgb: 179,102,255; }
+    .r-i5 { --r-color: var(--i5-color); --r-rgb: 255,200,0; }
+    .r-i6 { --r-color: var(--i6-color); --r-rgb: 160,160,160; }
+
+    .empty-msg { text-align: center; color: #555; font-size: 12px; padding: 30px 0; }
+  </style>
+</head>
+<body>
+
+  <main class="stage">
+    <div class="center-wrap">
+      <div class="timer-wrap">
+        <div class="timer-label">Next chest opens in</div>
+        <div class="time-left" id="timeLeft">0.0s</div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      
+      <div class="chest-zone">
+        <div class="glow"></div>
+        <div class="chest" id="chest">
+          <div class="lid"></div>
+          <div class="body"><div class="lock"></div></div>
+        </div>
+
+        <div class="reward-area" id="rewardArea">
+          <div class="reward-content">
+            <div class="reward-graphic" id="rewardGraphic">🔮</div>
+            <div class="reward-text-block">
+              <div class="reward-subtitle">획득!</div>
+              <div class="reward-name" id="rewardName">궁극의 행운 부적</div>
+              <div class="reward-badge" id="rewardBadge">i4</div>
+            </div>
+          </div>
+          <div class="reward-timer" id="rewardTimer">5.4초 후 사라집니다</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="side-panel inventory-panel">
+    <div class="panel-head">
+      <span class="panel-title">아이템 리스트</span>
+      <span class="panel-count" id="invTotalCount">0 / 300</span>
+    </div>
+    <div class="inv-tabs" id="invTabs">
+      <div class="tab active" data-filter="all">전체</div>
+      <div class="tab" data-filter="i0">i0</div>
+      <div class="tab" data-filter="i1">i1</div>
+      <div class="tab" data-filter="i2">i2</div>
+      <div class="tab" data-filter="i3">i3</div>
+      <div class="tab" data-filter="i4">i4</div>
+      <div class="tab" data-filter="i5">i5</div>
+      <div class="tab" data-filter="i6">i6</div>
+    </div>
+    <div class="inv-list" id="invList"></div>
+    <div class="panel-footer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+      동일한 아이템은 개수로 합산되어 표시됩니다.
+    </div>
+  </aside>
+
+  <aside class="side-panel log-panel">
+    <div class="panel-head">
+      <span class="panel-title">획득 로그</span>
+      <span class="panel-count" id="logTotalCount">0 items</span>
+    </div>
+    <div class="log-list" id="logList"></div>
+    <div class="panel-footer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+      최신 기록이 위에 표시됩니다.
+    </div>
+  </aside>
+
+  <div class="bottom-hint">1분마다 게이지가 차고, 상자가 자동으로 열립니다.</div>
+
+<script>
+const USE_SERVER = true;
+const SERVER_OPEN_URL = "https://mrdindoin.ddns.net/gti/api/open_chest";
+const OPEN_EVERY_MS = 60_000;
+const REWARD_SHOW_MS = 6000;
+const STORAGE_KEY = "gti_center_chest_v2";
+
+const progressBar = document.getElementById("progressBar");
+const timeLeft = document.getElementById("timeLeft");
+const chest = document.getElementById("chest");
+const rewardArea = document.getElementById("rewardArea");
+const rewardGraphic = document.getElementById("rewardGraphic");
+const rewardName = document.getElementById("rewardName");
+const rewardBadge = document.getElementById("rewardBadge");
+const rewardTimerEl = document.getElementById("rewardTimer");
+
+const invList = document.getElementById("invList");
+const invTotalCount = document.getElementById("invTotalCount");
+const invTabs = document.getElementById("invTabs");
+const logList = document.getElementById("logList");
+const logTotalCount = document.getElementById("logTotalCount");
+
+let cycleStart = Date.now();
+let opening = false;
+let rewardShowStart = 0;
+let currentFilter = 'all';
+
+let logs = [];
+const inv = new Map();
+
+// Helper Icon Mapper
+function getIconForName(name) {
+  if (name.includes("부적")) return "🔮";
+  if (name.includes("조각")) return "💧";
+  if (name.includes("이슬")) return "🍃";
+  if (name.includes("정수")) return "🔥";
+  if (name.includes("반지")) return "💍";
+  if (name.includes("깃털")) return "🪶";
+  if (name.includes("클로버")) return "🍀";
+  if (name.includes("핵")) return "🟣";
+  if (name.includes("결정")) return "💠";
+  if (name.includes("동전")) return "🪙";
+  if (name.includes("앱")) return "✨";
+  return "📦";
+}
+
+try {
+  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+  if (saved.cycleStart && Date.now() - saved.cycleStart < OPEN_EVERY_MS) cycleStart = saved.cycleStart;
+  if (Array.isArray(saved.logs)) logs = saved.logs.slice(0, 50);
+  if (Array.isArray(saved.inv)) saved.inv.forEach(([k, v]) => inv.set(k, v));
+} catch(e) {}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ cycleStart, logs, inv: Array.from(inv.entries()) }));
+}
+
+function escapeHtml(s) {
+  return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+}
+
+// Left Panel: Tabs & Inventory
+invTabs.addEventListener("click", (e) => {
+  if(e.target.classList.contains("tab")) {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    e.target.classList.add("active");
+    currentFilter = e.target.dataset.filter;
+    renderInventory();
+  }
+});
+
+function addToInventory(drop) {
+  const key = `${drop.rarity}|${drop.name}`;
+  const cur = inv.get(key);
+  const countAdd = drop.count || 1;
+  if (cur) {
+    cur.count += countAdd;
+    cur.lastTs = Date.now();
+  } else {
+    inv.set(key, { rarity: drop.rarity, name: drop.name, count: countAdd, lastTs: Date.now() });
+  }
+  renderInventory();
+}
+
+function renderInventory() {
+  const allItems = Array.from(inv.values());
+  const typesCount = allItems.length;
+  invTotalCount.textContent = `${typesCount} / 300`;
+
+  let filtered = allItems;
+  if (currentFilter !== 'all') {
+    filtered = allItems.filter(it => it.rarity === currentFilter);
+  }
+
+  filtered.sort((a,b) => b.lastTs - a.lastTs);
+
+  if (!filtered.length) {
+    invList.innerHTML = `<div class="empty-msg">해당 조건의 아이템이 없습니다.</div>`;
+    return;
+  }
+
+  invList.innerHTML = filtered.map(it => `
+    <div class="inv-row r-${escapeHtml(it.rarity)}">
+      <div class="inv-icon-box">
+        ${getIconForName(it.name)}
+        <span class="inv-row-badge">${escapeHtml(it.rarity)}</span>
+      </div>
+      <div class="inv-row-name">${escapeHtml(it.name)}</div>
+      <div class="inv-row-count">x${it.count}</div>
+    </div>
+  `).join("");
+}
+
+// Right Panel: Logs
+function renderLog() {
+  logTotalCount.textContent = `${logs.length} items`;
+  if (!logs.length) {
+    logList.innerHTML = `<div class="empty-msg">아직 획득한 아이템이 없습니다.</div>`;
+    return;
+  }
+  logList.innerHTML = logs.map(row => `
+    <div class="log-row r-${escapeHtml(row.rarity)}">
+      <div class="log-time">${escapeHtml(row.time)}</div>
+      <div class="log-badge">[${escapeHtml(row.rarity)}]</div>
+      <div class="log-name">${escapeHtml(row.name)}</div>
+      <div class="log-count">x${row.count}</div>
+    </div>
+  `).join("");
+}
+
+function addLog(drop) {
+  addToInventory(drop);
+  const d = new Date();
+  const time = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`;
+  logs.unshift({ time, rarity: drop.rarity, name: drop.name, count: drop.count || 1 });
+  logs = logs.slice(0, 50);
+  renderLog();
+  save();
+}
+
+// Drops
+function fallbackDrop() {
+  const r = Math.random();
+  let count = Math.random() < 0.3 ? Math.floor(Math.random()*3)+2 : 1;
+  if (r < 0.05) return { rarity:"i4", name:"궁극의 행운 부적", count:1 };
+  if (r < 0.15) return { rarity:"i0", name:"수상하고 굴복적인 완벽한 배달앱", count:1 };
+  if (r < 0.30) return { rarity:"i3", name:"시간의 조각", count };
+  if (r < 0.50) return { rarity:"i2", name:"고요한 숲의 이슬", count };
+  if (r < 0.70) return { rarity:"i1", name:"불타는 정수", count:1 };
+  if (r < 0.85) return { rarity:"i5", name:"빛나는 행운의 반지", count:1 };
+  return { rarity:"i6", name:"낡은 깃털", count };
+}
+
+async function getDrop() {
+  if (USE_SERVER) {
+    try {
+      const res = await fetch(SERVER_OPEN_URL, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({ action:"open" })
+      });
+      const data = await res.json();
+      if (data.ok) return { rarity: data.rarity || "i6", name: data.item_name || data.item || "Unknown", count: data.count || 1 };
+    } catch(e) {}
+  }
+  return fallbackDrop();
+}
+
+function showReward(drop) {
+  addLog(drop);
+  
+  chest.classList.add("opening");
+  
+  setTimeout(() => {
+    rewardArea.className = `reward-area r-${drop.rarity} show`;
+    rewardGraphic.textContent = getIconForName(drop.name);
+    rewardName.textContent = drop.name;
+    rewardBadge.textContent = drop.rarity;
+    rewardShowStart = Date.now();
+  }, 500);
+
+  setTimeout(() => {
+    chest.classList.remove("opening");
+    rewardArea.classList.remove("show");
+    opening = false;
+  }, REWARD_SHOW_MS);
+}
+
+async function openCycle() {
+  if (opening) return;
+  opening = true;
+  progressBar.style.width = "100%";
+  timeLeft.textContent = "OPEN!";
+
+  const drop = await getDrop();
+  showReward(drop);
+
+  cycleStart = Date.now();
+  save();
+}
+
+function tick() {
+  const now = Date.now();
+  const elapsed = now - cycleStart;
+  const ratio = Math.min(1, elapsed / OPEN_EVERY_MS);
+  const remain = Math.max(0, OPEN_EVERY_MS - elapsed);
+
+  if (!opening) {
+    progressBar.style.width = (ratio * 100).toFixed(2) + "%";
+    timeLeft.textContent = (remain / 1000).toFixed(1) + "s";
+  } else if (rewardArea.classList.contains("show")) {
+    // Update Reward disappear timer
+    let left = Math.max(0, REWARD_SHOW_MS - (now - rewardShowStart) + 500);
+    rewardTimerEl.textContent = (left / 1000).toFixed(1) + "초 후 사라집니다";
+  }
+
+  if (elapsed >= OPEN_EVERY_MS && !opening) openCycle();
+  requestAnimationFrame(tick);
+}
+
+// Init
+renderInventory();
+renderLog();
+tick();
+</script>
+</body>
+</html>
