@@ -1,0 +1,1202 @@
+
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>폐교형 자급생활 캠퍼스</title>
+  <meta name="description" content="농촌 폐교를 농업·식량·에너지·생활기술·물 순환·건강·공동체를 함께 배우는 자급형 미래 학교로 전환하는 프로젝트입니다." />
+  <style>
+    :root {
+      --green-900: #123d2a;
+      --green-800: #1d573b;
+      --green-700: #2f7a4d;
+      --green-100: #eaf5ed;
+      --green-050: #f6fbf7;
+      --soil: #8a633f;
+      --cream: #fffaf0;
+      --ink: #1f2a25;
+      --muted: #66736d;
+      --line: #dbe8df;
+      --white: #ffffff;
+      --shadow: 0 18px 50px rgba(20, 49, 34, 0.12);
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --max: 1120px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", "Apple SD Gothic Neo", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(47, 122, 77, 0.13), transparent 34rem),
+        linear-gradient(180deg, #f8fcf9 0%, #ffffff 42%, #f6fbf7 100%);
+      line-height: 1.68;
+      word-break: keep-all;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    img {
+      max-width: 100%;
+      display: block;
+    }
+
+    .container {
+      width: min(var(--max), calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(16px);
+      background: rgba(255, 255, 255, 0.78);
+      border-bottom: 1px solid rgba(219, 232, 223, 0.9);
+    }
+
+    .nav-inner {
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--green-900);
+    }
+
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: var(--green-100);
+      border: 1px solid var(--line);
+      font-size: 18px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 20px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .nav-links a:hover {
+      color: var(--green-800);
+    }
+
+    .hero {
+      padding: 82px 0 56px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 0.92fr 1.08fr;
+      gap: 42px;
+      align-items: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--green-800);
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+      letter-spacing: -0.055em;
+      line-height: 1.18;
+    }
+
+    h1 {
+      margin-top: 22px;
+      font-size: clamp(42px, 6vw, 74px);
+      color: var(--green-900);
+    }
+
+    .hero strong {
+      color: var(--green-700);
+    }
+
+    .lead {
+      margin: 24px 0 0;
+      font-size: clamp(18px, 2.2vw, 22px);
+      color: #405047;
+      line-height: 1.72;
+    }
+
+    .hero-actions {
+      margin-top: 32px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 0 20px;
+      border-radius: 999px;
+      font-weight: 850;
+      border: 1px solid transparent;
+      transition: 0.2s ease;
+    }
+
+    .button.primary {
+      color: var(--white);
+      background: var(--green-800);
+      box-shadow: 0 12px 26px rgba(29, 87, 59, 0.18);
+    }
+
+    .button.primary:hover {
+      background: var(--green-900);
+      transform: translateY(-1px);
+    }
+
+    .button.secondary {
+      color: var(--green-900);
+      background: var(--white);
+      border-color: var(--line);
+    }
+
+    .button.secondary:hover {
+      border-color: var(--green-700);
+      transform: translateY(-1px);
+    }
+
+    .hero-card {
+      overflow: hidden;
+      border-radius: var(--radius-xl);
+      background: var(--white);
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(219, 232, 223, 0.9);
+    }
+
+    .hero-image {
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      width: 100%;
+    }
+
+    .hero-caption {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--line);
+    }
+
+    .caption-item {
+      background: var(--white);
+      padding: 18px 18px 16px;
+    }
+
+    .caption-item b {
+      display: block;
+      color: var(--green-900);
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+
+    .caption-item span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    section {
+      padding: 72px 0;
+    }
+
+    .section-head {
+      max-width: 760px;
+      margin-bottom: 30px;
+    }
+
+    .section-kicker {
+      color: var(--green-700);
+      font-weight: 900;
+      font-size: 14px;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-size: clamp(32px, 4vw, 48px);
+      color: var(--green-900);
+    }
+
+    .section-desc {
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .problem {
+      background: var(--cream);
+      border-top: 1px solid #efe4ce;
+      border-bottom: 1px solid #efe4ce;
+    }
+
+    .quote-grid {
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: 28px;
+      align-items: stretch;
+    }
+
+    .old-voice {
+      padding: 30px;
+      border-radius: var(--radius-lg);
+      background: #fff;
+      border: 1px solid #f0dfc3;
+    }
+
+    .old-voice p {
+      margin: 0 0 14px;
+      padding: 16px 18px;
+      border-radius: 16px;
+      background: #fff7e8;
+      color: #80592d;
+      font-weight: 800;
+    }
+
+    .new-frame {
+      padding: 34px;
+      border-radius: var(--radius-lg);
+      background: var(--green-900);
+      color: var(--white);
+      box-shadow: var(--shadow);
+    }
+
+    .new-frame h3 {
+      font-size: 30px;
+      margin-bottom: 16px;
+    }
+
+    .new-frame p {
+      color: rgba(255, 255, 255, 0.82);
+      margin: 0;
+      font-size: 17px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .card {
+      padding: 26px;
+      border-radius: var(--radius-lg);
+      background: var(--white);
+      border: 1px solid var(--line);
+      box-shadow: 0 12px 32px rgba(28, 61, 42, 0.06);
+    }
+
+    .card .icon {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: var(--green-100);
+      color: var(--green-800);
+      font-size: 22px;
+      margin-bottom: 18px;
+    }
+
+    .card h3 {
+      font-size: 22px;
+      color: var(--green-900);
+      margin-bottom: 10px;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .map {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+    }
+
+    .space-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .space-item {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 18px;
+      padding: 18px;
+      border-radius: 16px;
+      background: var(--white);
+      border: 1px solid var(--line);
+    }
+
+    .space-item b {
+      color: var(--green-900);
+    }
+
+    .space-item span {
+      color: var(--muted);
+    }
+
+    .feature-panel {
+      padding: 28px;
+      border-radius: var(--radius-xl);
+      background:
+        linear-gradient(135deg, rgba(47,122,77,0.95), rgba(18,61,42,0.98)),
+        var(--green-900);
+      color: var(--white);
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .feature-panel h3 {
+      font-size: 30px;
+    }
+
+    .feature-panel p {
+      color: rgba(255, 255, 255, 0.82);
+      margin: 14px 0 0;
+    }
+
+    .pill-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .pill {
+      padding: 8px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.26);
+      border-radius: 999px;
+      color: rgba(255, 255, 255, 0.92);
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .programs {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .program {
+      padding: 22px;
+      border-radius: var(--radius-md);
+      background: var(--green-050);
+      border: 1px solid var(--line);
+    }
+
+    .program b {
+      color: var(--green-900);
+      display: block;
+      margin-bottom: 6px;
+      font-size: 18px;
+    }
+
+    .program span {
+      color: var(--muted);
+    }
+
+    .food-security {
+      background:
+        linear-gradient(rgba(18, 61, 42, 0.88), rgba(18, 61, 42, 0.88)),
+        url("assets/smartfarm-campus.png") center / cover;
+      color: var(--white);
+      border-radius: var(--radius-xl);
+      padding: 52px;
+      overflow: hidden;
+    }
+
+    .food-security h2 {
+      color: var(--white);
+      max-width: 720px;
+    }
+
+    .food-security p {
+      max-width: 760px;
+      color: rgba(255, 255, 255, 0.86);
+      font-size: 18px;
+      margin: 20px 0 0;
+    }
+
+    .principles {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 28px;
+    }
+
+    .principle {
+      padding: 18px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .principle b {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .principle span {
+      color: rgba(255, 255, 255, 0.76);
+      font-size: 14px;
+    }
+
+
+
+    .big-vision {
+      background: var(--green-050);
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .vision-grid {
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .vision-card {
+      overflow: hidden;
+      border-radius: var(--radius-xl);
+      background: var(--white);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .vision-card img {
+      width: 100%;
+      height: 100%;
+      min-height: 440px;
+      object-fit: cover;
+    }
+
+    .vision-copy {
+      padding: 32px;
+      border-radius: var(--radius-xl);
+      background:
+        linear-gradient(135deg, rgba(47,122,77,0.95), rgba(18,61,42,0.98)),
+        var(--green-900);
+      color: var(--white);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .vision-copy h2 {
+      color: var(--white);
+    }
+
+    .vision-copy p {
+      margin: 18px 0 0;
+      color: rgba(255,255,255,0.84);
+      font-size: 18px;
+    }
+
+    .vision-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .vision-list span {
+      display: block;
+      padding: 11px 14px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.16);
+      color: rgba(255,255,255,0.92);
+      font-weight: 800;
+    }
+
+    .life-domains {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .domain-card {
+      padding: 24px;
+      border-radius: var(--radius-lg);
+      background: var(--white);
+      border: 1px solid var(--line);
+      box-shadow: 0 12px 32px rgba(28, 61, 42, 0.05);
+    }
+
+    .domain-card b {
+      display: block;
+      color: var(--green-900);
+      font-size: 21px;
+      margin-bottom: 9px;
+      letter-spacing: -0.04em;
+    }
+
+    .domain-card span {
+      color: var(--muted);
+    }
+
+    .system-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 28px;
+    }
+
+    .system-item {
+      padding: 20px;
+      border-radius: 18px;
+      background: var(--cream);
+      border: 1px solid #efe4ce;
+    }
+
+    .system-item b {
+      display: block;
+      color: var(--green-900);
+      margin-bottom: 8px;
+    }
+
+    .system-item span {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .expanded-programs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 22px;
+    }
+
+    .expanded-program {
+      padding: 22px;
+      border-radius: var(--radius-md);
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+
+    .expanded-program b {
+      display: block;
+      color: var(--green-900);
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .expanded-program span {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .gallery {
+      background: #ffffff;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .gallery-card {
+      overflow: hidden;
+      border-radius: var(--radius-xl);
+      background: var(--white);
+      border: 1px solid var(--line);
+      box-shadow: 0 12px 34px rgba(28, 61, 42, 0.08);
+    }
+
+    .gallery-card img {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+    }
+
+    .gallery-card.large img {
+      aspect-ratio: 16 / 10;
+    }
+
+    .gallery-copy {
+      padding: 24px;
+    }
+
+    .gallery-copy b {
+      display: block;
+      color: var(--green-900);
+      font-size: 20px;
+      letter-spacing: -0.04em;
+      margin-bottom: 8px;
+    }
+
+    .gallery-copy span {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .gallery-stack {
+      display: grid;
+      gap: 20px;
+    }
+
+    .mini-gallery-note {
+      margin-top: 22px;
+      padding: 18px 20px;
+      border-radius: 18px;
+      background: var(--green-050);
+      border: 1px solid var(--line);
+      color: var(--green-900);
+      font-weight: 800;
+    }
+
+    .cta {
+      padding: 84px 0;
+      text-align: center;
+    }
+
+    .cta-box {
+      padding: 52px 30px;
+      border-radius: var(--radius-xl);
+      background: var(--white);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .cta-box p {
+      max-width: 760px;
+      margin: 18px auto 0;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    footer {
+      padding: 30px 0;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @media (max-width: 920px) {
+      .hero-grid,
+      .quote-grid,
+      .map,
+      .vision-grid,
+      .gallery-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .cards,
+      .life-domains,
+      .expanded-programs,
+      .system-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .principles {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        width: min(100% - 28px, var(--max));
+      }
+
+      .nav-links {
+        display: none;
+      }
+
+      .hero {
+        padding-top: 52px;
+      }
+
+      .hero-caption {
+        grid-template-columns: 1fr;
+      }
+
+      .programs {
+        grid-template-columns: 1fr;
+      }
+
+      .space-item {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+
+      .food-security {
+        padding: 32px 22px;
+      }
+
+      .principles {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="#" class="brand" aria-label="폐교형 스마트팜 교육 캠퍼스 홈">
+        <span class="brand-mark">🌱</span>
+        <span>폐교형 자급생활 캠퍼스</span>
+      </a>
+      <div class="nav-links" aria-label="주요 메뉴">
+        <a href="#why">문제의식</a>
+        <a href="#concept">사업구상</a>
+        <a href="#space">공간전환</a>
+        <a href="#program">교육프로그램</a>
+        <a href="#self">자급생활</a>
+        <a href="#life">생활기술</a>
+        <a href="#food">식량교육</a>
+        <a href="#gallery">갤러리</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="container hero-grid">
+      <div>
+        <span class="eyebrow">농업 인식 개선을 넘어, 생활 전체를 배우는 학교</span>
+        <h1>폐교를 <strong>자급형 미래 생활학교</strong>로 바꾸다</h1>
+        <p class="lead">
+          농촌의 폐교를 단순히 방치하거나 매각하지 않고,
+          농업·식량·에너지·물·생활기술·건강·공동체를 함께 배우는 자급생활 캠퍼스로 전환합니다.
+          농업은 시작점이고, 목표는 아이들이 살아가는 힘을 몸으로 배우는 것입니다.
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="#self">자급생활 캠퍼스 보기</a>
+          <a class="button secondary" href="#space">공간 전환안 보기</a>
+        </div>
+      </div>
+
+      <figure class="hero-card" aria-label="폐교형 스마트팜 교육 캠퍼스 이미지">
+        <img class="hero-image" src="assets/smartfarm-campus.png" alt="폐교를 스마트팜 교육 캠퍼스로 전환한 미래 모습" />
+        <figcaption class="hero-caption">
+          <div class="caption-item">
+            <b>과실수 울타리</b>
+            <span>학교 경계는 생산성과 생태성을 가진 과실수 길로 전환</span>
+          </div>
+          <div class="caption-item">
+            <b>운동장 노지농업</b>
+            <span>비어 있던 운동장은 아이들이 직접 배우는 야외 재배지로 전환</span>
+          </div>
+          <div class="caption-item">
+            <b>체육관 온실화</b>
+            <span>유휴 체육관은 스마트 온실과 농업 실습 공간으로 전환</span>
+          </div>
+        </figcaption>
+      </figure>
+    </div>
+  </header>
+
+  <main>
+    <section id="why" class="problem">
+      <div class="container quote-grid">
+        <div class="old-voice">
+          <p>“농사는 힘들다.”</p>
+          <p>“농촌을 벗어나야 한다.”</p>
+          <p>“회사를 다니는 게 낫다.”</p>
+        </div>
+        <div class="new-frame">
+          <h3>하지만 농업은 이미 달라지고 있습니다.</h3>
+          <p>
+            스마트팜, 자동화, 데이터, 축산 시스템, 유통 플랫폼, 지역 브랜드가 결합하면서
+            농업은 더 이상 단순 노동만으로 설명되는 산업이 아닙니다.
+            소를 키우고 작물을 기르는 삶 역시 회사 생활과 다른 방식의 여유와 자율성,
+            그리고 충분한 경제성을 가질 수 있습니다.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="concept">
+      <div class="container">
+        <div class="section-head">
+          <div class="section-kicker">PROJECT CONCEPT</div>
+          <h2>학교의 기능을 버리는 것이 아니라, 시대에 맞게 다시 정의합니다.</h2>
+          <p class="section-desc">
+            지식 전달은 온라인에서도 가능해졌습니다. 하지만 또래와 만나고, 자연과 생산을 경험하고,
+            지역사회 속에서 책임감을 배우는 일은 여전히 물리적 공간이 필요합니다.
+          </p>
+        </div>
+
+        <div class="cards">
+          <article class="card">
+            <div class="icon">🌾</div>
+            <h3>농업 인식 개선</h3>
+            <p>
+              아이들이 농업을 힘든 일로만 보지 않고,
+              기술과 데이터가 결합된 미래 산업으로 이해하게 합니다.
+            </p>
+          </article>
+          <article class="card">
+            <div class="icon">🏫</div>
+            <h3>폐교의 재활용</h3>
+            <p>
+              학생 수 감소로 비어버린 학교를 지역의 교육·체험·생산 거점으로 되살립니다.
+            </p>
+          </article>
+          <article class="card">
+            <div class="icon">🤝</div>
+            <h3>지역 농가와 연결</h3>
+            <p>
+              스마트팜이 지역 농가와 경쟁하지 않고, 교육·육묘·실증·유통으로 보완합니다.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+
+    <section id="self" class="big-vision">
+      <div class="container">
+        <div class="section-head">
+          <div class="section-kicker">SELF-SUFFICIENT CAMPUS</div>
+          <h2>스마트팜은 시작점이고, 진짜 목표는 자급생활을 배우는 작은 미래 마을입니다.</h2>
+          <p class="section-desc">
+            이 프로젝트는 폐교를 농장으로만 바꾸는 제안이 아닙니다. 아이들이 식량을 만들고,
+            물을 모으고, 에너지를 이해하고, 생활도구를 고치고, 수확물을 나누는 과정을 통해
+            삶의 기반 구조를 직접 배우는 캠퍼스입니다.
+          </p>
+        </div>
+
+        <div class="vision-grid">
+          <figure class="vision-card">
+            <img src="assets/self-sufficient-campus.png" alt="폐교형 자급생활 캠퍼스 전체 비전 이미지" />
+          </figure>
+
+          <div class="vision-copy">
+            <div class="section-kicker" style="color:rgba(255,255,255,0.72);">BIG PICTURE</div>
+            <h2>폐교를 지역 생존 기술을 배우는 작은 미래 도시로 전환합니다.</h2>
+            <p>
+              농업은 아이들이 가장 먼저 만나는 생산 경험입니다. 여기에 에너지, 물 순환,
+              의식주, 응급처치, 수리와 제작, 지역 공유 마켓을 붙이면 학교는 단순한 교육시설이 아니라
+              다음 세대의 생활 역량을 키우는 자급형 배움터가 됩니다.
+            </p>
+            <div class="vision-list">
+              <span>식량: 스마트팜·노지·과실수·수확·조리</span>
+              <span>에너지: 태양광·풍력·HVAC·에너지 모니터링</span>
+              <span>물: 빗물 저장·정수·재이용·농업용수 순환</span>
+              <span>생활기술: 목공·수리·업사이클링·응급처치</span>
+              <span>공동체: 지역 공유 마켓·세대 통합·나눔</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section id="space">
+      <div class="container">
+        <div class="section-head">
+          <div class="section-kicker">SPACE TRANSFORMATION</div>
+          <h2>학교 전체가 하나의 농업 배움터가 됩니다.</h2>
+          <p class="section-desc">
+            교실, 운동장, 체육관, 울타리, 급식실까지. 기존 학교의 구조를 최대한 살리면서
+            생산과 교육이 함께 돌아가는 캠퍼스로 전환합니다.
+          </p>
+        </div>
+
+        <div class="map">
+          <div class="space-list">
+            <div class="space-item">
+              <b>학교 울타리</b>
+              <span>사과·배·감·귤 등 과실수 경계로 조성해 아이들이 계절과 수확을 경험합니다.</span>
+            </div>
+            <div class="space-item">
+              <b>운동장</b>
+              <span>야외 노지 농업 구역으로 전환해 작물 재배, 토양, 물 관리, 협업을 배웁니다.</span>
+            </div>
+            <div class="space-item">
+              <b>체육관</b>
+              <span>스마트 온실로 바꾸어 수경재배, 환경제어, 센서 데이터 교육을 진행합니다.</span>
+            </div>
+            <div class="space-item">
+              <b>교실</b>
+              <span>스마트팜 교육실, 실내 재배실, 농업 데이터 학습실로 활용합니다.</span>
+            </div>
+            <div class="space-item">
+              <b>급식실</b>
+              <span>수확물 세척, 포장, 간단 가공, 로컬푸드 연계 공간으로 재구성합니다.</span>
+            </div>
+          </div>
+
+          <aside class="feature-panel">
+            <div>
+              <h3>핵심은 “농장으로 바꾼 학교”가 아닙니다.</h3>
+              <p>
+                폐교형 스마트팜은 아이들을 농업에 묶어두는 시설이 아니라,
+                농업이라는 선택지를 제대로 보여주는 교육·생산 플랫폼입니다.
+              </p>
+            </div>
+            <div class="pill-list">
+              <span class="pill">교육</span>
+              <span class="pill">생산</span>
+              <span class="pill">체험</span>
+              <span class="pill">식량</span>
+              <span class="pill">지역상생</span>
+              <span class="pill">미래농업</span>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+
+    <section id="life">
+      <div class="container">
+        <div class="section-head">
+          <div class="section-kicker">LIFE SKILLS EDUCATION</div>
+          <h2>아이들은 농사만 배우는 것이 아니라, 살아가는 구조를 배웁니다.</h2>
+          <p class="section-desc">
+            농업은 출발점입니다. 이 캠퍼스에서 아이들은 의식주, 에너지, 물, 건강, 공동체까지
+            서로 연결된 삶의 기본 구조를 몸으로 익힙니다.
+          </p>
+        </div>
+
+        <div class="life-domains">
+          <article class="domain-card">
+            <b>식 食</b>
+            <span>스마트팜, 노지 농업, 과실수, 수확, 조리, 로컬푸드 순환을 통해 식량의 출발점을 배웁니다.</span>
+          </article>
+          <article class="domain-card">
+            <b>의 衣</b>
+            <span>업사이클링, 천 활용, 생활 수선, 작업복과 소품 제작을 통해 자원 순환을 익힙니다.</span>
+          </article>
+          <article class="domain-card">
+            <b>주 住</b>
+            <span>DIY 가구, 목공, 생활수리, 간단한 공간 개선을 통해 스스로 고치고 만드는 힘을 배웁니다.</span>
+          </article>
+          <article class="domain-card">
+            <b>에너지</b>
+            <span>태양광, 풍력, 냉난방, 환기, 에너지 저장과 소비를 관찰하며 자립의 원리를 이해합니다.</span>
+          </article>
+          <article class="domain-card">
+            <b>물·환경</b>
+            <span>빗물 저장, 정수, 재이용, 퇴비, 자원 순환을 통해 자연과 연결된 생활 방식을 배웁니다.</span>
+          </article>
+          <article class="domain-card">
+            <b>건강·안전</b>
+            <span>응급처치, 생활 안전, 건강한 먹거리, 야외활동을 통해 자기 자신과 공동체를 돌보는 법을 배웁니다.</span>
+          </article>
+        </div>
+
+        <div class="system-strip">
+          <div class="system-item">
+            <b>식량 자급</b>
+            <span>스마트팜과 노지 재배, 과실수로 최소 식량 감각을 형성합니다.</span>
+          </div>
+          <div class="system-item">
+            <b>에너지 자립</b>
+            <span>재생에너지와 에너지 관리 교육으로 생산·소비·저장의 흐름을 배웁니다.</span>
+          </div>
+          <div class="system-item">
+            <b>순환 자원</b>
+            <span>빗물, 퇴비, 재사용, 업사이클링을 통해 버려지는 자원을 줄입니다.</span>
+          </div>
+          <div class="system-item">
+            <b>세대 통합</b>
+            <span>학생, 농가, 주민, 전문가가 함께 배우고 운영하는 공동체 모델을 만듭니다.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section id="program">
+      <div class="container">
+        <div class="section-head">
+          <div class="section-kicker">EDUCATION PROGRAM</div>
+          <h2>아이들은 농업을 책이 아니라 삶의 장면으로 배웁니다.</h2>
+          <p class="section-desc">
+            농업을 직업으로 선택하지 않더라도, 먹거리가 어디서 오고 지역 산업이 어떻게 돌아가는지는
+            누구나 이해할 수 있어야 합니다.
+          </p>
+        </div>
+
+        <div class="programs">
+          <div class="program">
+            <b>어린이 농업 체험</b>
+            <span>심기, 물 주기, 관찰, 수확, 나눔까지 생산의 기본 과정을 경험합니다.</span>
+          </div>
+          <div class="program">
+            <b>청소년 스마트팜 교육</b>
+            <span>센서, 온도, 습도, 조도, 수경재배, 자동화의 원리를 배웁니다.</span>
+          </div>
+          <div class="program">
+            <b>농가 자녀 진로 프로그램</b>
+            <span>부모 세대의 농업을 낡은 노동이 아니라 현대적 산업으로 다시 바라봅니다.</span>
+          </div>
+          <div class="program">
+            <b>지역 농가 연계 실습</b>
+            <span>주변 농가와 함께 육묘, 재배, 포장, 유통의 실제 흐름을 익힙니다.</span>
+          </div>
+          <div class="program">
+            <b>청년 농업 창업 과정</b>
+            <span>농업 운영, 판로, 회계, 브랜딩, 온라인 판매까지 연결합니다.</span>
+          </div>
+          <div class="program">
+            <b>로컬푸드 공유 프로그램</b>
+            <span>수확물을 지역 식당, 마켓, 급식, 정기배송과 연결해 지역 순환을 만듭니다.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="food">
+      <div class="container">
+        <div class="food-security">
+          <div class="section-kicker">FOOD LITERACY</div>
+          <h2>아이들에게 최소한의 식량 문제와 생활 기반을 이해하는 힘을 줍니다.</h2>
+          <p>
+            먹거리는 마트 진열대에서 시작되는 것이 아닙니다.
+            땅과 물, 빛, 기술, 사람의 손이 함께 만들어내는 결과입니다.
+            폐교형 자급생활 캠퍼스는 아이들이 작물이 자라고 수확되고 식탁에 오르는 과정뿐 아니라,
+            물과 에너지, 생활기술이 어떻게 연결되는지 몸으로 이해하게 하는 생활형 식량 안보 교육 인프라가 될 수 있습니다.
+          </p>
+
+          <div class="principles">
+            <div class="principle">
+              <b>생산 원리</b>
+              <span>작물이 자라는 조건을 직접 관찰합니다.</span>
+            </div>
+            <div class="principle">
+              <b>물과 기후</b>
+              <span>농업이 환경과 얼마나 연결되어 있는지 배웁니다.</span>
+            </div>
+            <div class="principle">
+              <b>기술 활용</b>
+              <span>자동화와 데이터가 농업을 어떻게 바꾸는지 이해합니다.</span>
+            </div>
+            <div class="principle">
+              <b>지역 순환</b>
+              <span>수확물이 지역 안에서 소비되고 나뉘는 구조를 경험합니다.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section id="gallery" class="gallery">
+      <div class="container">
+        <div class="section-head">
+          <div class="section-kicker">GALLERY</div>
+          <h2>상상하기 쉬운 장면으로 보여주는 자급생활 캠퍼스의 모습</h2>
+          <p class="section-desc">
+            폐교가 방치된 공간에서 끝나는 것이 아니라, 아이들이 식량·에너지·물·생활기술을 함께 배우는
+            자급형 미래 학교로 바뀌는 장면을 시각화했습니다.
+          </p>
+        </div>
+
+        <div class="gallery-grid">
+          <article class="gallery-card large">
+            <img src="assets/self-sufficient-campus.png" alt="폐교형 자급생활 캠퍼스 전체 비전 이미지" />
+            <div class="gallery-copy">
+              <b>폐교형 자급생활 캠퍼스</b>
+              <span>
+                농업·식량·에너지·물·생활기술·건강·공동체가 함께 연결되는 확장형 캠퍼스 비전입니다.
+              </span>
+            </div>
+          </article>
+
+          <div class="gallery-stack">
+
+            <article class="gallery-card">
+              <img src="assets/smartfarm-campus.png" alt="폐교형 스마트팜 교육 캠퍼스 이미지" />
+              <div class="gallery-copy">
+                <b>스마트팜 교육 캠퍼스</b>
+                <span>
+                  과실수 울타리, 운동장 노지 농업, 체육관 온실을 중심으로 한 기본 공간 전환 구상입니다.
+                </span>
+              </div>
+            </article>
+
+            <article class="gallery-card">
+              <img src="assets/asis-tobe-smartfarm.png" alt="폐교에서 스마트팜으로 전환되는 AS-IS TO-BE 비교 이미지" />
+              <div class="gallery-copy">
+                <b>AS-IS → TO-BE</b>
+                <span>
+                  낡고 비어 있던 폐교가 교육·체험·생산이 결합된 지역 농업 플랫폼으로 바뀌는 전환 이미지입니다.
+                </span>
+              </div>
+            </article>
+
+            <div class="mini-gallery-note">
+              핵심은 건물을 예쁘게 고치는 것이 아니라, 아이들이 농업과 생활의 기반 기술을 자연스럽게 보고 자라도록 만드는 환경입니다.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="cta">
+      <div class="container">
+        <div class="cta-box">
+          <div class="section-kicker">FINAL MESSAGE</div>
+          <h2>폐교는 끝난 학교가 아니라, 다음 세대가 살아가는 힘을 배우는 학교가 될 수 있습니다.</h2>
+          <p>
+            아이들이 어릴 때부터 농업을 보고, 물과 에너지를 이해하고, 생활도구를 고치고,
+            수확물을 나누며 자라면 농촌은 더 이상 떠나야 할 곳만이 아닙니다.
+            폐교형 자급생활 캠퍼스는 다음 세대에게 식량과 생활의 기본을 다시 보여주는 새로운 학교 모델입니다.
+          </p>
+          <div class="hero-actions" style="justify-content:center;">
+            <a class="button primary" href="#why">처음부터 다시 보기</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      © 폐교형 자급생활 캠퍼스. 농업 인식 개선과 생활기술 교육을 결합한 정책·웹페이지 콘셉트.
+    </div>
+  </footer>
+</body>
+</html>
