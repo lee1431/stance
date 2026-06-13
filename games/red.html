@@ -607,6 +607,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
 
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+
   <script>
     const gameState = {
       fieldName: 'Verdant Plains',
@@ -630,11 +632,31 @@
         targetName: 'Green Slimes',
         current: 0,
         required: 5
-      },
-      enemies: []
+      }
     };
 
     const ui = {};
+
+    // --- [API 설정] ---
+    const USE_SERVER = true;
+    const SERVER_OPEN_URL = "https://mrdindoin.ddns.net/gti/api/open_chest";
+
+    async function getDrop() {
+      if (USE_SERVER) {
+        try {
+          const res = await fetch(SERVER_OPEN_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "open" })
+          });
+          const data = await res.json();
+          if (data.ok) return { rarity: data.rarity || "i6", name: data.item_name || data.item || "Unknown", count: data.count || 1 };
+        } catch(e) {
+          console.warn("API 호출 실패, 기본 드랍으로 대체합니다.");
+        }
+      }
+      return { rarity: "Normal", name: "Slime Jelly", count: 1 };
+    }
 
     function cacheUiElements() {
       ui.fieldName = document.getElementById('field-name');
@@ -689,20 +711,16 @@
 
     function updatePlayerHud() {
       const player = gameState.player;
-
       const hpPercent = percent(player.hp, player.maxHp);
       const mpPercent = percent(player.mp, player.maxMp);
       const expPercent = percent(player.exp, player.nextExp);
 
       ui.hpFill.style.width = `${hpPercent}%`;
       ui.hpText.textContent = `${player.hp} / ${player.maxHp}`;
-
       ui.mpFill.style.width = `${mpPercent}%`;
       ui.mpText.textContent = `${player.mp} / ${player.maxMp}`;
-
       ui.expFill.style.width = `${expPercent}%`;
       ui.expText.textContent = `${player.exp} / ${player.nextExp} (${Math.floor(expPercent)}%)`;
-
       ui.playerNameLine.textContent = `Lv. ${player.level} ${player.name}`;
     }
 
@@ -725,11 +743,7 @@
 
     function addChatMessage(message, className = '') {
       const line = document.createElement('div');
-
-      if (className) {
-        line.className = className;
-      }
-
+      if (className) line.className = className;
       line.textContent = message;
       ui.chatBody.appendChild(line);
       ui.chatBody.scrollTop = ui.chatBody.scrollHeight;
@@ -737,10 +751,7 @@
 
     function sendChatMessage() {
       const message = ui.chatInput.value.trim();
-
-      if (!message) {
-        return;
-      }
+      if (!message) return;
 
       if (message === '/help') {
         addChatMessage('System: Commands - /help, /where, /damage, /heal, /quest', 'yellow');
@@ -754,63 +765,31 @@
         gameState.player.hp = gameState.player.maxHp;
         updatePlayerHud();
         addChatMessage('System: HP fully restored.', 'green');
-      } else if (message === '/quest') {
-        advanceQuest();
       } else {
         addChatMessage(`You: ${message}`);
       }
-
       ui.chatInput.value = '';
-    }
-
-    function advanceQuest() {
-      const quest = gameState.quest;
-
-      if (quest.current >= quest.required) {
-        addChatMessage('System: Quest already completed.', 'yellow');
-        return;
-      }
-
-      quest.current += 1;
-      gameState.player.exp = clamp(gameState.player.exp + 10, 0, gameState.player.nextExp);
-
-      if (gameState.player.exp >= gameState.player.nextExp) {
-        gameState.player.level += 1;
-        gameState.player.exp = 0;
-        gameState.player.nextExp += 50;
-        addChatMessage(`System: Level up! You are now Lv. ${gameState.player.level}.`, 'green');
-      }
-
-      updateQuestUi();
-      updatePlayerHud();
-      addChatMessage(`System: Defeated ${quest.targetName} (${quest.current}/${quest.required}).`, 'yellow');
-
-      if (quest.current >= quest.required) {
-        addChatMessage('System: Quest completed! Return to town for your reward.', 'green');
-      }
     }
 
     function bindUiEvents() {
       ui.chatSendButton.addEventListener('click', sendChatMessage);
-
       ui.chatInput.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-          sendChatMessage();
-        }
+        if (event.key === 'Enter') sendChatMessage();
       });
 
       ui.skillButtons.forEach((button) => {
         button.addEventListener('click', () => {
           const skillKey = button.dataset.skillKey;
-          addChatMessage(`System: Skill ${skillKey} used.`, 'yellow');
-
+          
+          // 1번 스킬(기본 공격)을 누르면 Phaser 씬으로 이벤트 전달
           if (skillKey === '1') {
-            advanceQuest();
-          }
-
-          if (skillKey === '2') {
+            window.dispatchEvent(new CustomEvent('player-attack'));
+          } else if (skillKey === '2') {
             gameState.player.mp = clamp(gameState.player.mp - 10, 0, gameState.player.maxMp);
             updatePlayerHud();
+            addChatMessage(`System: Skill ${skillKey} used.`, 'yellow');
+          } else {
+            addChatMessage(`System: Skill ${skillKey} used.`, 'yellow');
           }
         });
       });
@@ -821,52 +800,27 @@
             tab.classList.remove('active');
             tab.setAttribute('aria-pressed', 'false');
           });
-
           button.classList.add('active');
           button.setAttribute('aria-pressed', 'true');
           addChatMessage(`System: Chat tab changed to ${button.textContent}.`, 'yellow');
         });
       });
 
-      document.getElementById('inventory-button').addEventListener('click', () => {
-        addChatMessage('System: Inventory is not implemented yet.', 'yellow');
-      });
-
-      document.getElementById('skills-button').addEventListener('click', () => {
-        addChatMessage('System: Skills window is not implemented yet.', 'yellow');
-      });
-
-      document.getElementById('quests-button').addEventListener('click', () => {
-        addChatMessage(`System: Active quest - ${gameState.quest.targetName} (${gameState.quest.current}/${gameState.quest.required}).`, 'yellow');
-      });
-
-      document.getElementById('character-button').addEventListener('click', () => {
-        addChatMessage(`System: ${gameState.player.name}, Lv. ${gameState.player.level}.`, 'yellow');
-      });
-
-      document.getElementById('options-button').addEventListener('click', () => {
-        addChatMessage('System: Options are not implemented yet.', 'yellow');
-      });
-
-      document.getElementById('minimap-zoom-in').addEventListener('click', () => {
-        addChatMessage('System: Minimap zoom in.', 'yellow');
-      });
-
-      document.getElementById('minimap-zoom-out').addEventListener('click', () => {
-        addChatMessage('System: Minimap zoom out.', 'yellow');
-      });
-
-      document.getElementById('minimap-settings').addEventListener('click', () => {
-        addChatMessage('System: Minimap settings are not implemented yet.', 'yellow');
-      });
+      // 우측 하단 메뉴 버튼 이벤트
+      document.getElementById('inventory-button').addEventListener('click', () => addChatMessage('System: Inventory is not implemented yet.', 'yellow'));
+      document.getElementById('skills-button').addEventListener('click', () => addChatMessage('System: Skills window is not implemented yet.', 'yellow'));
+      document.getElementById('quests-button').addEventListener('click', () => addChatMessage(`System: Active quest - ${gameState.quest.targetName} (${gameState.quest.current}/${gameState.quest.required}).`, 'yellow'));
+      document.getElementById('character-button').addEventListener('click', () => addChatMessage(`System: ${gameState.player.name}, Lv. ${gameState.player.level}.`, 'yellow'));
+      document.getElementById('options-button').addEventListener('click', () => addChatMessage('System: Options are not implemented yet.', 'yellow'));
+      document.getElementById('minimap-zoom-in').addEventListener('click', () => addChatMessage('System: Minimap zoom in.', 'yellow'));
+      document.getElementById('minimap-zoom-out').addEventListener('click', () => addChatMessage('System: Minimap zoom out.', 'yellow'));
+      document.getElementById('minimap-settings').addEventListener('click', () => addChatMessage('System: Minimap settings are not implemented yet.', 'yellow'));
     }
 
     class MainScene extends Phaser.Scene {
       constructor() {
         super('MainScene');
       }
-
-      preload() {}
 
       create() {
         this.worldWidth = 1600;
@@ -889,20 +843,19 @@
 
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
         updateCoordinates(this.player.x, this.player.y);
+
+        // UI에서 공격(1번 스킬) 이벤트 수신
+        window.addEventListener('player-attack', () => this.handlePlayerAttack());
       }
 
       createField() {
         const graphics = this.add.graphics();
-
         graphics.fillStyle(0x244e2e, 1);
         graphics.fillRect(0, 0, this.worldWidth, this.worldHeight);
 
         graphics.fillStyle(0x2f6a3a, 1);
         for (let i = 0; i < 70; i += 1) {
-          const x = Phaser.Math.Between(0, this.worldWidth);
-          const y = Phaser.Math.Between(0, this.worldHeight);
-          const radius = Phaser.Math.Between(20, 70);
-          graphics.fillCircle(x, y, radius);
+          graphics.fillCircle(Phaser.Math.Between(0, this.worldWidth), Phaser.Math.Between(0, this.worldHeight), Phaser.Math.Between(20, 70));
         }
 
         graphics.fillStyle(0x9b7a44, 0.55);
@@ -926,55 +879,148 @@
         this.player.body.setCollideWorldBounds(true);
 
         this.playerNameText = this.add.text(0, 0, 'Adventurer', {
-          fontSize: '13px',
-          color: '#ffffff',
-          stroke: '#000000',
-          strokeThickness: 3
+          fontSize: '13px', color: '#ffffff', stroke: '#000000', strokeThickness: 3
         }).setOrigin(0.5, 1);
       }
 
       createEnemies() {
         const enemyPositions = [
-          { x: 360, y: 280 },
-          { x: 1120, y: 260 },
-          { x: 1070, y: 680 },
-          { x: 610, y: 720 },
-          { x: 930, y: 380 }
+          { x: 360, y: 280 }, { x: 1120, y: 260 }, { x: 1070, y: 680 },
+          { x: 610, y: 720 }, { x: 930, y: 380 }
         ];
 
-        this.enemies = enemyPositions.map((position) => {
-          const enemy = this.add.circle(position.x, position.y, 16, 0xff5858);
-          const label = this.add.text(position.x, position.y - 24, 'Slime', {
-            fontSize: '12px',
-            color: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 3
+        // 몬스터 물리엔진 및 상태 속성 추가
+        this.enemiesData = enemyPositions.map((pos) => {
+          const sprite = this.add.circle(pos.x, pos.y, 16, 0xff5858);
+          this.physics.add.existing(sprite);
+          sprite.body.setCircle(16);
+          sprite.body.setCollideWorldBounds(true);
+          sprite.body.setBounce(0.5); // 타격 시 밀리는 효과
+
+          const label = this.add.text(pos.x, pos.y - 24, 'Slime', {
+            fontSize: '12px', color: '#ffffff', stroke: '#000000', strokeThickness: 3
           }).setOrigin(0.5, 1);
 
-          return { enemy, label };
+          return {
+            sprite, label, hp: 30, maxHp: 30, speed: 40, state: 'wander', lastAttackTime: 0
+          };
+        });
+
+        // 몬스터 배회(Wander) 로직 - 2초마다 랜덤 방향 이동
+        this.time.addEvent({
+          delay: 2000,
+          callback: () => {
+            this.enemiesData.forEach(e => {
+              if (e.hp > 0 && e.state === 'wander') {
+                const angle = Phaser.Math.Between(0, 360);
+                this.physics.velocityFromAngle(angle, e.speed);
+              }
+            });
+          },
+          loop: true
         });
       }
 
-      update() {
+      handlePlayerAttack() {
+        let closestEnemy = null;
+        let minDistance = 65; // 타격 가능 사거리
+
+        // 사거리 내 가장 가까운 적 탐색
+        this.enemiesData.forEach(e => {
+          if (e.hp <= 0) return;
+          const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, e.sprite.x, e.sprite.y);
+          if (dist < minDistance) {
+            minDistance = dist;
+            closestEnemy = e;
+          }
+        });
+
+        if (closestEnemy) {
+          closestEnemy.hp -= 15;
+          addChatMessage(`System: Slime에게 15 피해! (HP: ${closestEnemy.hp}/${closestEnemy.maxHp})`, 'yellow');
+          
+          // 피격 시 몬스터가 플레이어를 쳐다보고 추적 시작, 살짝 넉백
+          closestEnemy.state = 'chase';
+          const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, closestEnemy.sprite.x, closestEnemy.sprite.y);
+          this.physics.velocityFromRotation(angle, 150, closestEnemy.sprite.body.velocity);
+
+          if (closestEnemy.hp <= 0) {
+            this.killEnemy(closestEnemy);
+          }
+        } else {
+          addChatMessage('System: 타격 사거리 내에 몬스터가 없습니다.', 'yellow');
+        }
+      }
+
+      async killEnemy(enemy) {
+        enemy.sprite.destroy();
+        enemy.label.destroy();
+        addChatMessage('System: Slime을 처치했습니다!', 'green');
+
+        // 퀘스트 카운트
+        const quest = gameState.quest;
+        if (quest.current < quest.required) {
+          quest.current += 1;
+          updateQuestUi();
+          if (quest.current >= quest.required) addChatMessage('System: 퀘스트 완료! 마을로 돌아가세요.', 'green');
+        }
+
+        // 경험치 및 레벨업
+        gameState.player.exp += 35;
+        if (gameState.player.exp >= gameState.player.nextExp) {
+          gameState.player.level += 1;
+          gameState.player.exp -= gameState.player.nextExp;
+          gameState.player.nextExp = Math.floor(gameState.player.nextExp * 1.5); // 다음 렙업 요구치 증가
+          gameState.player.maxHp += 20;
+          gameState.player.hp = gameState.player.maxHp;
+          addChatMessage(`System: 레벨 업! Lv. ${gameState.player.level}`, 'green');
+        }
+        updatePlayerHud();
+
+        // 60% 확률로 아이템 드랍 (API 연동)
+        if (Math.random() < 0.6) {
+          const drop = await getDrop();
+          addChatMessage(`System: 🎁 전리품 획득! [${drop.rarity}] ${drop.name} x${drop.count}`, 'yellow');
+        }
+      }
+
+      update(time) {
+        // 플레이어 이동 (WASD / 방향키)
         const velocity = new Phaser.Math.Vector2(0, 0);
+        if (this.cursors.left.isDown || this.wasd.left.isDown) velocity.x = -1;
+        else if (this.cursors.right.isDown || this.wasd.right.isDown) velocity.x = 1;
 
-        if (this.cursors.left.isDown || this.wasd.left.isDown) {
-          velocity.x = -1;
-        } else if (this.cursors.right.isDown || this.wasd.right.isDown) {
-          velocity.x = 1;
-        }
-
-        if (this.cursors.up.isDown || this.wasd.up.isDown) {
-          velocity.y = -1;
-        } else if (this.cursors.down.isDown || this.wasd.down.isDown) {
-          velocity.y = 1;
-        }
+        if (this.cursors.up.isDown || this.wasd.up.isDown) velocity.y = -1;
+        else if (this.cursors.down.isDown || this.wasd.down.isDown) velocity.y = 1;
 
         velocity.normalize().scale(gameState.player.speed);
         this.player.body.setVelocity(velocity.x, velocity.y);
-
         this.playerNameText.setPosition(this.player.x, this.player.y - 24);
         updateCoordinates(this.player.x, this.player.y);
+
+        // 몬스터 AI 상태 업데이트
+        this.enemiesData.forEach(e => {
+          if (e.hp <= 0) return;
+          e.label.setPosition(e.sprite.x, e.sprite.y - 24);
+
+          const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, e.sprite.x, e.sprite.y);
+
+          // 인식 거리 진입 시 추적 모드, 멀어지면 배회 모드
+          if (dist < 120) e.state = 'chase';
+          else if (dist > 300) e.state = 'wander';
+
+          if (e.state === 'chase') {
+            this.physics.moveToObject(e.sprite, this.player, e.speed + 20);
+            
+            // 몬스터의 플레이어 공격 (쿨타임 1.5초)
+            if (dist < 35 && time > e.lastAttackTime + 1500) {
+              e.lastAttackTime = time;
+              gameState.player.hp = Math.max(0, gameState.player.hp - 10);
+              updatePlayerHud();
+              addChatMessage('System: Slime에게 10의 피해를 입었습니다!', 'yellow');
+            }
+          }
+        });
       }
     }
 
@@ -987,26 +1033,19 @@
         backgroundColor: '#173821',
         physics: {
           default: 'arcade',
-          arcade: {
-            debug: false
-          }
+          arcade: { debug: false }
         },
         scene: MainScene
       };
 
       const game = new Phaser.Game(config);
-
-      window.addEventListener('resize', () => {
-        game.scale.resize(window.innerWidth, window.innerHeight);
-      });
-
+      window.addEventListener('resize', () => game.scale.resize(window.innerWidth, window.innerHeight));
       return game;
     }
 
     window.addEventListener('DOMContentLoaded', () => {
       cacheUiElements();
       bindUiEvents();
-
       updateFieldUi();
       updateServerTime();
       updatePlayerHud();
@@ -1014,10 +1053,20 @@
 
       setInterval(updateServerTime, 1000 * 30);
 
+      // --- [HP 자동 회복 로직] ---
+      // 1초마다 동작하며, 30초면 전체 HP가 차오르도록 계산
+      setInterval(() => {
+        const player = gameState.player;
+        if (player.hp > 0 && player.hp < player.maxHp) {
+          const regenAmount = Math.max(1, Math.floor(player.maxHp / 30));
+          player.hp = Math.min(player.maxHp, player.hp + regenAmount);
+          updatePlayerHud();
+        }
+      }, 1000);
+
       createGame();
 
-      addChatMessage('System: Use WASD or arrow keys to move.', 'yellow');
-      addChatMessage('System: Press skill 1 or type /quest to progress.', 'yellow');
+      addChatMessage('System: WASD로 이동하고, 슬라임 근처에서 1번 스킬을 눌러 공격하세요.', 'yellow');
     });
   </script>
 </body>
