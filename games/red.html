@@ -251,15 +251,15 @@
       </div>
       <div class="build-item" data-build-type="Fence">
         <div class="build-info"><h4>Fence (울타리)</h4><p>방어용 벽. 몬스터 길막기 용도.</p></div>
-        <div class="build-cost">100 Wood<br>50 G</div>
+        <div class="build-cost">50 Wood<br>50 G</div>
       </div>
       <div class="build-item" data-build-type="Crossbow">
         <div class="build-info"><h4>Auto Crossbow</h4><p>클릭하여 연사력/데미지 업그레이드.</p></div>
-        <div class="build-cost">5,000 Wood<br>1,000 G</div>
+        <div class="build-cost">1,000 Wood<br>1,000 G</div>
       </div>
       <div class="build-item" data-build-type="Armory">
         <div class="build-info"><h4>Armory (무기고)</h4><p>클릭하여 기본 공격력 업그레이드.</p></div>
-        <div class="build-cost">10,000 Wood<br>5,000 G</div>
+        <div class="build-cost">5,000 Wood<br>5,000 G</div>
       </div>
     </section>
 
@@ -312,7 +312,7 @@
 
     const vPad = { up: false, down: false, left: false, right: false };
 
-    const BUILD_COSTS = { 'Campfire': { wood: 30, gold: 0 }, 'Fence': { wood: 100, gold: 50 }, 'Crossbow': { wood: 5000, gold: 1000 }, 'Armory': { wood: 10000, gold: 5000 } };
+    const BUILD_COSTS = { 'Campfire': { wood: 30, gold: 0 }, 'Fence': { wood: 50, gold: 50 }, 'Crossbow': { wood: 1000, gold: 1000 }, 'Armory': { wood: 5000, gold: 5000 } };
     const PRICE_MAP = { "Normal": 10, "Magic": 40, "Rare": 100, "Epic": 500, "Legendary": 2000 };
 
     const MONSTER_TYPES = [
@@ -371,6 +371,25 @@
     function addChatMessage(msg, className = '') {
       const div = document.createElement('div'); if (className) div.className = className; div.textContent = msg; 
       ui.chatBody.appendChild(div); ui.chatBody.scrollTop = ui.chatBody.scrollHeight;
+    }
+
+    function addInventoryItem(itemName, count = 1, rarity = 'Normal', options = {}) {
+      const qty = Math.max(1, Number(count) || 1);
+      const itemRarity = rarity || 'Normal';
+
+      if (!gameState.inventory[itemName]) {
+        gameState.inventory[itemName] = { count: 0, rarity: itemRarity };
+      }
+
+      gameState.inventory[itemName].count += qty;
+
+      if (options.log !== false) {
+        addChatMessage(`획득: [${itemRarity}] ${itemName} x${qty}`, 'green');
+      }
+
+      if (ui.inventoryPanel && ui.inventoryPanel.style.display === 'flex') {
+        updateInventoryUi();
+      }
     }
 
     function updateCoordinates(x, y) {
@@ -505,8 +524,7 @@
           gameState.inventory[currentSellItem].count -= qty;
           if (gameState.inventory[currentSellItem].count <= 0) delete gameState.inventory[currentSellItem];
           const cookedName = `구운 ${currentSellItem}`;
-          if (!gameState.inventory[cookedName]) gameState.inventory[cookedName] = { count: 0, rarity: 'Magic' };
-          gameState.inventory[cookedName].count += qty;
+          addInventoryItem(cookedName, qty, 'Magic');
           updateInventoryUi();
         }
         ui.sellModal.style.display = 'none';
@@ -690,9 +708,8 @@
             closestTarget.hp -= 15;
             if (closestTarget.hp <= 0) {
               closestTarget.destroy(); 
-              if(!gameState.inventory['Wood']) gameState.inventory['Wood'] = {count:0, rarity:'Normal'};
-              gameState.inventory['Wood'].count += Phaser.Math.Between(2, 5);
-              if(ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
+              const woodAmount = Phaser.Math.Between(2, 5);
+              addInventoryItem('Wood', woodAmount, 'Normal');
             }
           } else {
             closestTarget.hp -= gameState.player.baseDmg; 
@@ -723,15 +740,12 @@
 
         if (Math.random() < 0.5) {
           const meatName = `${enemy.type.name} 고기`;
-          if (!gameState.inventory[meatName]) gameState.inventory[meatName] = { count: 0, rarity: 'Normal' };
-          gameState.inventory[meatName].count += 1;
+          addInventoryItem(meatName, 1, 'Normal');
         }
         if (Math.random() < 0.7) {
           const drop = await getDrop();
-          if (!gameState.inventory[drop.name]) gameState.inventory[drop.name] = { count: 0, rarity: drop.rarity };
-          gameState.inventory[drop.name].count += drop.count;
+          addInventoryItem(drop.name, drop.count, drop.rarity || 'Normal');
         }
-        if(ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
 
         this.enemiesData = this.enemiesData.filter(e => e !== enemy);
         setTimeout(() => this.spawnRandomMonster(), 10000);
