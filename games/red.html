@@ -71,11 +71,28 @@
     .inv-slot:hover { border-color: #FFD66B; background: rgba(255,214,107,0.1); }
     .item-icon { font-size: 20px; font-weight: bold; color: #fff; }
     .item-count { position: absolute; bottom: 2px; right: 4px; font-size: 10px; color: #fff; }
-    .inv-slot[data-tooltip]:hover::after {
-      content: attr(data-tooltip); position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
-      background: #000; color: #FFD66B; padding: 4px 8px; font-size: 11px; border-radius: 4px;
-      white-space: nowrap; pointer-events: none; z-index: 11; border: 1px solid #333;
+
+    /* [글로벌 툴팁 - 잘림 방지] */
+    #global-tooltip {
+      position: absolute; background: #000; color: #FFD66B; padding: 6px 10px;
+      font-size: 12px; border-radius: 4px; pointer-events: none; z-index: 9999;
+      border: 1px solid #333; display: none; white-space: nowrap; box-shadow: 0 4px 6px rgba(0,0,0,0.5);
     }
+
+    /* [판매 확인 팝업] */
+    .sell-modal {
+      display: none; flex-direction: column; gap: 12px; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 260px; padding: 20px; z-index: 20;
+    }
+    .sell-modal input {
+      width: 60px; padding: 4px; background: rgba(0,0,0,0.5); border: 1px solid #555; color: #fff; text-align: center; border-radius: 4px;
+    }
+    .sell-modal-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+    .sell-modal-btns button {
+      padding: 6px 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; background: rgba(255,255,255,0.1); cursor: pointer;
+    }
+    .sell-modal-btns button.confirm { background: rgba(124, 255, 138, 0.2); border-color: #7CFF8A; color: #7CFF8A; }
+    .sell-modal-btns button:hover { opacity: 0.8; }
 
     .chat-panel { left: 16px; bottom: 142px; width: 390px; height: 210px; display: flex; flex-direction: column; overflow: hidden; }
     .chat-tabs { display: flex; gap: 4px; padding: 8px 8px 0; }
@@ -102,8 +119,7 @@
 
     .skill-bar { display: flex; justify-content: center; gap: 8px; }
     .skill-bar .slot { position: relative; width: 54px; height: 54px; display: grid; place-items: center; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.18); background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05)); font-size: 24px; cursor: pointer; transition: 0.12s; }
-    .skill-bar .slot:hover:not(:disabled) { transform: translateY(-2px); border-color: rgba(120, 190, 255, 0.8); background: linear-gradient(135deg, rgba(120, 190, 255, 0.25), rgba(255, 255, 255, 0.07)); }
-    .skill-bar .num { position: absolute; left: 6px; top: 4px; font-size: 11px; color: #d7e8ff; }
+    .skill-bar .slot.locked { opacity: 0.45; cursor: default; }
 
     .menu-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
     .menu-buttons button { min-width: 102px; padding: 9px 10px; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 8px; background: rgba(255, 255, 255, 0.08); font-size: 12px; cursor: pointer; }
@@ -112,6 +128,8 @@
 </head>
 
 <body>
+  <div id="global-tooltip"></div>
+
   <div id="app">
     <div id="game-container"></div>
 
@@ -124,7 +142,8 @@
     <section class="panel minimap-panel">
       <div class="panel-title">Minimap</div>
       <div id="minimap">
-        <div id="minimap-entities"></div> <div id="mini-player"></div>
+        <div id="minimap-entities"></div>
+        <div id="mini-player"></div>
       </div>
     </section>
 
@@ -138,20 +157,28 @@
 
     <section class="panel inventory-panel" id="inventory-panel">
       <div class="inventory-header">
-        <span class="panel-title" style="margin:0;">Inventory (Click to Sell)</span>
+        <span class="panel-title" style="margin:0;">Inventory</span>
         <button class="close-btn" id="close-inventory">✕</button>
       </div>
       <div class="inventory-grid" id="inventory-grid"></div>
     </section>
 
-    <section class="panel chat-panel">
-      <div class="chat-tabs" role="tablist">
-        <button type="button" class="active">All</button>
+    <section class="panel sell-modal" id="sell-modal">
+      <div class="panel-title" id="sell-title" style="margin-bottom: 0;">Sell Item</div>
+      <div>수량: <input type="number" id="sell-qty" min="1" value="1" /> / <span id="sell-max">1</span></div>
+      <div>수익: <span id="sell-profit" class="yellow">0 G</span></div>
+      <div class="sell-modal-btns">
+        <button id="sell-cancel">취소</button>
+        <button id="sell-confirm" class="confirm">판매</button>
       </div>
+    </section>
+
+    <section class="panel chat-panel">
+      <div class="chat-tabs" role="tablist"><button type="button" class="active">All</button></div>
       <div class="chat-body" id="chat-body">
         <div>Welcome to Mythic Realms!</div>
-        <div class="yellow">System: 나무에 다가가 1번 스킬을 누르면 벌목할 수 있습니다.</div>
-        <div class="yellow">System: 인벤토리를 열어 아이템을 클릭하면 판매됩니다.</div>
+        <div class="yellow">System: 마우스 좌클릭으로 대상을 공격하거나 나무를 벌목하세요.</div>
+        <div class="yellow">System: 인벤토리를 열어 아이템을 클릭하면 판매할 수 있습니다.</div>
         <div id="coord-line">X: 0 / Y: 0</div>
       </div>
       <div class="chat-input-row">
@@ -187,9 +214,7 @@
       </div>
 
       <div class="skill-bar">
-        <button type="button" class="slot" data-skill-key="1"><span class="num">1</span>⚔</button>
-        <button type="button" class="slot" data-skill-key="2"><span class="num">2</span>⚡</button>
-        <button type="button" class="slot locked" disabled><span class="num">3</span>🔒</button>
+        <button type="button" class="slot locked"><span class="num">L</span>🖱️</button>
       </div>
 
       <nav class="menu-buttons">
@@ -202,36 +227,34 @@
   <script>
     // --- [게임 데이터 및 구조] ---
     const gameState = {
-      worldWidth: 16000, // 10배 넓어진 맵
+      worldWidth: 16000,
       worldHeight: 10000,
       player: {
         name: 'Adventurer', level: 1, hp: 120, maxHp: 120, mp: 60, maxMp: 60, exp: 20, nextExp: 100, x: 8000, y: 5000, speed: 350, gold: 0
       },
       quest: { current: 0, required: 10 },
-      inventory: {} // { "ItemName": { count: 1, rarity: "Normal" } }
+      inventory: {} 
     };
 
-    // 아이템 희귀도별 가격 책정
     const PRICE_MAP = { "Normal": 10, "Magic": 30, "Rare": 100, "Epic": 500, "Legendary": 2000, "i6": 150 };
 
-    // 몬스터 도감 (등급별 밸런스)
+    // [체급 밸런스 패치] - 체력 및 공격력 대폭 상향
     const MONSTER_TYPES = [
-      { name: 'Chicken', hp: 20, speed: 60, color: 0xffffff, size: 10, dmg: 2, exp: 10 },
-      { name: 'Slime', hp: 30, speed: 40, color: 0x7CFF8A, size: 14, dmg: 5, exp: 15 },
-      { name: 'Dog', hp: 45, speed: 90, color: 0xc2b280, size: 14, dmg: 8, exp: 25 },
-      { name: 'Goat', hp: 55, speed: 70, color: 0xdddddd, size: 15, dmg: 10, exp: 30 },
-      { name: 'Pig', hp: 70, speed: 50, color: 0xffb6c1, size: 16, dmg: 12, exp: 40 },
-      { name: 'Wolf', hp: 80, speed: 110, color: 0x808080, size: 16, dmg: 18, exp: 60 },
-      { name: 'Boar', hp: 100, speed: 85, color: 0x8b4513, size: 18, dmg: 20, exp: 70 },
-      { name: 'Cow', hp: 140, speed: 45, color: 0xf5f5dc, size: 22, dmg: 15, exp: 80 },
-      { name: 'Horse', hp: 120, speed: 120, color: 0xa0522d, size: 20, dmg: 22, exp: 90 },
-      { name: 'Bear', hp: 250, speed: 70, color: 0x4b3621, size: 26, dmg: 35, exp: 150 },
-      { name: 'Tiger', hp: 220, speed: 130, color: 0xff8c00, size: 24, dmg: 40, exp: 200 }
+      { name: 'Chicken', hp: 50, speed: 60, color: 0xffffff, size: 10, dmg: 5, exp: 10 },
+      { name: 'Slime', hp: 80, speed: 40, color: 0x7CFF8A, size: 14, dmg: 8, exp: 15 },
+      { name: 'Dog', hp: 120, speed: 90, color: 0xc2b280, size: 14, dmg: 15, exp: 25 },
+      { name: 'Goat', hp: 150, speed: 70, color: 0xdddddd, size: 15, dmg: 18, exp: 30 },
+      { name: 'Pig', hp: 200, speed: 50, color: 0xffb6c1, size: 16, dmg: 20, exp: 40 },
+      { name: 'Wolf', hp: 300, speed: 110, color: 0x808080, size: 16, dmg: 35, exp: 60 },
+      { name: 'Boar', hp: 400, speed: 85, color: 0x8b4513, size: 18, dmg: 40, exp: 70 },
+      { name: 'Cow', hp: 500, speed: 45, color: 0xf5f5dc, size: 22, dmg: 30, exp: 80 },
+      { name: 'Horse', hp: 450, speed: 120, color: 0xa0522d, size: 20, dmg: 35, exp: 90 },
+      { name: 'Bear', hp: 1000, speed: 70, color: 0x4b3621, size: 26, dmg: 60, exp: 150 },
+      { name: 'Tiger', hp: 900, speed: 130, color: 0xff8c00, size: 24, dmg: 75, exp: 200 }
     ];
 
     const ui = {};
 
-    // --- [API 설정] ---
     const USE_SERVER = true;
     const SERVER_OPEN_URL = "https://mrdindoin.ddns.net/gti/api/open_chest";
 
@@ -248,7 +271,6 @@
       return { rarity: "Normal", name: "Beast Fur", count: 1 };
     }
 
-    // --- [UI 업데이트 함수 모음] ---
     function cacheUiElements() {
       ui.hpFill = document.getElementById('hp-fill'); ui.hpText = document.getElementById('hp-text');
       ui.mpFill = document.getElementById('mp-fill'); ui.mpText = document.getElementById('mp-text');
@@ -258,7 +280,11 @@
       ui.chatInput = document.getElementById('chat-input'); ui.chatSendButton = document.getElementById('chat-send-button');
       ui.miniPlayer = document.getElementById('mini-player'); ui.minimapEntities = document.getElementById('minimap-entities');
       ui.inventoryPanel = document.getElementById('inventory-panel'); ui.inventoryGrid = document.getElementById('inventory-grid');
-      ui.skillButtons = document.querySelectorAll('[data-skill-key]');
+      ui.tooltip = document.getElementById('global-tooltip');
+
+      ui.sellModal = document.getElementById('sell-modal'); ui.sellTitle = document.getElementById('sell-title');
+      ui.sellQty = document.getElementById('sell-qty'); ui.sellMax = document.getElementById('sell-max');
+      ui.sellProfit = document.getElementById('sell-profit');
     }
 
     function updatePlayerHud() {
@@ -279,12 +305,25 @@
     function updateCoordinates(x, y) {
       gameState.player.x = Math.floor(x); gameState.player.y = Math.floor(y);
       ui.coordLine.textContent = `X: ${gameState.player.x} / Y: ${gameState.player.y}`;
-      // 미니맵 갱신 (16000x10000 맵 비율 적용)
       ui.miniPlayer.style.left = `${(x / gameState.worldWidth) * 100}%`;
       ui.miniPlayer.style.top = `${(y / gameState.worldHeight) * 100}%`;
     }
 
-    // --- [인벤토리 및 판매 시스템] ---
+    // --- [판매 팝업 상태 관리] ---
+    let currentSellItem = null;
+    let currentSellPrice = 0;
+    let currentSellMax = 0;
+
+    function openSellModal(itemName, itemObj, price) {
+      currentSellItem = itemName; currentSellPrice = price; currentSellMax = itemObj.count;
+      ui.sellModal.style.display = 'flex';
+      ui.sellTitle.textContent = `Sell: ${itemName}`;
+      ui.sellQty.value = 1; ui.sellQty.max = currentSellMax; ui.sellMax.textContent = currentSellMax;
+      ui.sellProfit.textContent = `${price} G`;
+      ui.tooltip.style.display = 'none'; // 팝업 열리면 툴팁 숨김
+    }
+
+    // --- [인벤토리 렌더링 및 글로벌 툴팁 이벤트] ---
     function updateInventoryUi() {
       ui.inventoryGrid.innerHTML = ''; 
       const items = Object.keys(gameState.inventory);
@@ -305,17 +344,24 @@
           else if(itemObj.rarity === 'Rare') color = "#55aaff";
 
           slot.style.borderColor = color;
-          slot.setAttribute('data-tooltip', `${itemName} (Sell: ${price}G)`); 
           slot.innerHTML = `<span class="item-icon" style="color:${color}">${itemName.charAt(0)}</span><span class="item-count">x${itemObj.count}</span>`;
           
-          // 판매 로직
-          slot.onclick = () => {
-            gameState.player.gold += price;
-            gameState.inventory[itemName].count--;
-            if(gameState.inventory[itemName].count <= 0) delete gameState.inventory[itemName];
-            addChatMessage(`System: ${itemName} 판매 (+${price} G)`, 'green');
-            updatePlayerHud(); updateInventoryUi();
+          // 툴팁 이벤트 (CSS hover 대신 마우스 포인터 따라다니도록 처리)
+          slot.onmouseenter = () => {
+            ui.tooltip.style.display = 'block';
+            ui.tooltip.textContent = `${itemName} (Sell: ${price}G)`;
           };
+          slot.onmousemove = (e) => {
+            let x = e.clientX + 15; let y = e.clientY + 15;
+            // 화면 밖으로 나가지 않도록 보정
+            if (x + ui.tooltip.offsetWidth > window.innerWidth) x = e.clientX - ui.tooltip.offsetWidth - 5;
+            if (y + ui.tooltip.offsetHeight > window.innerHeight) y = e.clientY - ui.tooltip.offsetHeight - 5;
+            ui.tooltip.style.left = x + 'px'; ui.tooltip.style.top = y + 'px';
+          };
+          slot.onmouseleave = () => { ui.tooltip.style.display = 'none'; };
+
+          // 클릭 시 판매 모달 오픈
+          slot.onclick = () => openSellModal(itemName, itemObj, price);
         }
         ui.inventoryGrid.appendChild(slot);
       }
@@ -331,10 +377,27 @@
         updateInventoryUi();
       });
       document.getElementById('close-inventory').addEventListener('click', () => ui.inventoryPanel.style.display = 'none');
-      ui.skillButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (btn.dataset.skillKey === '1') window.dispatchEvent(new CustomEvent('player-attack'));
-        });
+
+      // 판매 모달 로직
+      ui.sellQty.addEventListener('input', (e) => {
+        let val = parseInt(e.target.value) || 1;
+        if (val < 1) val = 1; if (val > currentSellMax) val = currentSellMax;
+        e.target.value = val;
+        ui.sellProfit.textContent = `${(val * currentSellPrice).toLocaleString()} G`;
+      });
+      document.getElementById('sell-cancel').addEventListener('click', () => ui.sellModal.style.display = 'none');
+      document.getElementById('sell-confirm').addEventListener('click', () => {
+        let qty = parseInt(ui.sellQty.value) || 1;
+        if (qty > 0 && currentSellItem && gameState.inventory[currentSellItem]) {
+          let profit = qty * currentSellPrice;
+          gameState.player.gold += profit;
+          gameState.inventory[currentSellItem].count -= qty;
+          if (gameState.inventory[currentSellItem].count <= 0) delete gameState.inventory[currentSellItem];
+          
+          addChatMessage(`System: ${currentSellItem} x${qty} 판매 완료 (+${profit.toLocaleString()} G)`, 'green');
+          updatePlayerHud(); updateInventoryUi();
+        }
+        ui.sellModal.style.display = 'none';
       });
     }
 
@@ -348,109 +411,76 @@
         this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight);
         this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
 
-        // 롱빈터 스타일 커스텀 텍스처 생성 (메모리 최적화)
         this.createCustomTextures();
-
-        // 맵 배경 (타일)
         this.add.tileSprite(this.worldWidth/2, this.worldHeight/2, this.worldWidth, this.worldHeight, 'bg_grass');
 
-        // 오브젝트 그룹
         this.treesGroup = this.physics.add.staticGroup();
         this.enemiesData = [];
 
-        // 초기 스폰
         this.spawnForest();
         for(let i=0; i<300; i++) this.spawnRandomMonster();
 
-        // 플레이어 생성
         this.player = this.physics.add.sprite(8000, 5000, 'player_tex');
         this.player.body.setCircle(15);
         this.player.body.setCollideWorldBounds(true);
         this.playerNameText = this.add.text(0, 0, 'Adventurer', { fontSize: '14px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
-        // 충돌 설정
         this.physics.add.collider(this.player, this.treesGroup);
-
         this.wasd = this.input.keyboard.addKeys({ up: 'W', left: 'A', down: 'S', right: 'D' });
-        window.addEventListener('player-attack', () => this.handlePlayerAttack());
 
-        // 미니맵 레이더 업데이트 루프 (성능 최적화를 위해 0.5초마다)
+        // [마우스 클릭 공격 연동]
+        this.input.on('pointerdown', (pointer) => {
+          // 캔버스를 클릭했을 때만 동작 (UI 클릭 방지)
+          if (pointer.event.target.tagName === 'CANVAS') {
+            this.handlePlayerAttack();
+          }
+        });
+
         setInterval(() => this.updateRadar(), 500);
       }
 
-      // [롱빈터 스타일 텍스처 굽기]
       createCustomTextures() {
         let g = this.make.graphics({ add: false });
-        
-        // 잔디 타일
-        g.fillStyle(0x388047); g.fillRect(0,0,200,200);
-        g.fillStyle(0x3d8a4d); g.fillCircle(40,40,8); g.fillCircle(140,120,12);
+        g.fillStyle(0x388047); g.fillRect(0,0,200,200); g.fillStyle(0x3d8a4d); g.fillCircle(40,40,8); g.fillCircle(140,120,12);
         g.generateTexture('bg_grass', 200, 200); g.clear();
-
-        // 나무
-        g.fillStyle(0x000000, 0.3); g.fillEllipse(30, 55, 36, 16); // 그림자
-        g.fillStyle(0x5c3a21); g.fillRoundedRect(24, 30, 12, 25, 4); // 기둥
-        g.fillStyle(0x276336); g.fillCircle(30, 25, 24); // 나뭇잎 하단
-        g.fillStyle(0x388c4c); g.fillCircle(30, 15, 18); // 나뭇잎 상단
+        g.fillStyle(0x000000, 0.3); g.fillEllipse(30, 55, 36, 16); g.fillStyle(0x5c3a21); g.fillRoundedRect(24, 30, 12, 25, 4);
+        g.fillStyle(0x276336); g.fillCircle(30, 25, 24); g.fillStyle(0x388c4c); g.fillCircle(30, 15, 18);
         g.generateTexture('tree_tex', 60, 60); g.clear();
-
-        // 플레이어
-        g.fillStyle(0x000000, 0.3); g.fillEllipse(15, 28, 24, 10);
-        g.fillStyle(0x5da8ff); g.fillCircle(15, 15, 15);
+        g.fillStyle(0x000000, 0.3); g.fillEllipse(15, 28, 24, 10); g.fillStyle(0x5da8ff); g.fillCircle(15, 15, 15);
         g.fillStyle(0x000000); g.fillCircle(10, 12, 2); g.fillCircle(20, 12, 2);
         g.generateTexture('player_tex', 30, 30); g.clear();
-
-        // 베이스 몬스터 (추후 tint 적용)
-        g.fillStyle(0x000000, 0.3); g.fillEllipse(16, 28, 24, 10);
-        g.fillStyle(0xffffff); g.fillCircle(16, 16, 16);
+        g.fillStyle(0x000000, 0.3); g.fillEllipse(16, 28, 24, 10); g.fillStyle(0xffffff); g.fillCircle(16, 16, 16);
         g.fillStyle(0x000000); g.fillCircle(11, 14, 2); g.fillCircle(21, 14, 2);
         g.generateTexture('monster_tex', 32, 32);
       }
 
       spawnForest() {
-        // 16000x10000 맵에 나무 1500그루 분산
         for(let i=0; i<1500; i++) {
-          let x = Phaser.Math.Between(100, this.worldWidth - 100);
-          let y = Phaser.Math.Between(100, this.worldHeight - 100);
-          let tree = this.treesGroup.create(x, y, 'tree_tex');
-          tree.body.setCircle(15, 15, 30); // 물리 충돌체크는 기둥부분만
-          tree.hp = 30; // 벌목 체력
+          let x = Phaser.Math.Between(100, this.worldWidth - 100); let y = Phaser.Math.Between(100, this.worldHeight - 100);
+          let tree = this.treesGroup.create(x, y, 'tree_tex'); tree.body.setCircle(15, 15, 30); tree.hp = 30;
         }
       }
 
-      spawnRandomMonster(specificX, specificY) {
+      spawnRandomMonster() {
         const type = Phaser.Utils.Array.GetRandom(MONSTER_TYPES);
-        let x = specificX || Phaser.Math.Between(200, this.worldWidth - 200);
-        let y = specificY || Phaser.Math.Between(200, this.worldHeight - 200);
-
+        let x = Phaser.Math.Between(200, this.worldWidth - 200); let y = Phaser.Math.Between(200, this.worldHeight - 200);
         let sprite = this.physics.add.sprite(x, y, 'monster_tex');
-        sprite.setTint(type.color);
-        sprite.setScale(type.size / 16);
-        sprite.body.setCircle(16);
-        sprite.body.setCollideWorldBounds(true);
-        sprite.body.setBounce(0.5);
-
+        sprite.setTint(type.color); sprite.setScale(type.size / 16);
+        sprite.body.setCircle(16); sprite.body.setCollideWorldBounds(true); sprite.body.setBounce(0.5);
         let label = this.add.text(x, y - 30, type.name, { fontSize: '12px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
-
-        this.enemiesData.push({
-          sprite, label, type, hp: type.hp, state: 'wander', lastAttackTime: 0
-        });
+        this.enemiesData.push({ sprite, label, type, hp: type.hp, state: 'wander', lastAttackTime: 0 });
       }
 
       handlePlayerAttack() {
-        let closestTarget = null;
-        let isTree = false;
-        let minDistance = 75; // 공격 사거리
+        let closestTarget = null; let isTree = false; let minDistance = 75;
 
-        // 1. 적 탐색
         this.enemiesData.forEach(e => {
           if (e.hp <= 0) return;
           const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, e.sprite.x, e.sprite.y);
           if (dist < minDistance) { minDistance = dist; closestTarget = e; }
         });
 
-        // 2. 나무 탐색 (가장 가까운 적이 없거나, 나무가 더 가까우면 덮어쓰기)
         this.treesGroup.getChildren().forEach(tree => {
           if(!tree.active) return;
           const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, tree.x, tree.y);
@@ -462,17 +492,15 @@
             closestTarget.hp -= 15;
             addChatMessage(`System: 나무를 치고 있습니다. (HP: ${closestTarget.hp}/30)`, 'yellow');
             if (closestTarget.hp <= 0) {
-              closestTarget.destroy(); // 나무 파괴
-              addChatMessage(`System: 벌목 성공! [Wood] 획득.`, 'green');
+              closestTarget.destroy(); addChatMessage(`System: 벌목 성공! [Wood] 획득.`, 'green');
               if(!gameState.inventory['Wood']) gameState.inventory['Wood'] = {count:0, rarity:'Normal'};
               gameState.inventory['Wood'].count += Phaser.Math.Between(1, 3);
-              if(document.getElementById('inventory-panel').style.display === 'flex') updateInventoryUi();
+              if(ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
             }
           } else {
-            // 몬스터 타격
-            closestTarget.hp -= 25;
+            closestTarget.hp -= 25; // 기본 공격력
             addChatMessage(`System: ${closestTarget.type.name} 타격! (HP: ${closestTarget.hp}/${closestTarget.type.hp})`, 'yellow');
-            closestTarget.state = 'chase'; // 넉백 및 어그로
+            closestTarget.state = 'chase'; 
             this.physics.velocityFromRotation(Phaser.Math.Angle.Between(this.player.x, this.player.y, closestTarget.sprite.x, closestTarget.sprite.y), 180, closestTarget.sprite.body.velocity);
             if (closestTarget.hp <= 0) this.killEnemy(closestTarget);
           }
@@ -485,14 +513,12 @@
         enemy.sprite.destroy(); enemy.label.destroy();
         addChatMessage(`System: ${enemy.type.name} 처치!`, 'green');
 
-        // 퀘스트
         if(gameState.quest.current < gameState.quest.required) {
           gameState.quest.current++;
           document.getElementById('quest-progress').textContent = `- Defeat any Monsters (${gameState.quest.current}/10)`;
           if(gameState.quest.current >= gameState.quest.required) addChatMessage('System: 퀘스트 완료!', 'green');
         }
 
-        // 경험치
         gameState.player.exp += enemy.type.exp;
         if (gameState.player.exp >= gameState.player.nextExp) {
           gameState.player.level++; gameState.player.exp -= gameState.player.nextExp;
@@ -502,16 +528,14 @@
         }
         updatePlayerHud();
 
-        // 전리품 획득
         if (Math.random() < 0.7) {
           const drop = await getDrop();
           addChatMessage(`System: 🎁 전리품 획득! [${drop.rarity}] ${drop.name} x${drop.count}`, 'yellow');
           if (!gameState.inventory[drop.name]) gameState.inventory[drop.name] = { count: 0, rarity: drop.rarity };
           gameState.inventory[drop.name].count += drop.count;
-          if(document.getElementById('inventory-panel').style.display === 'flex') updateInventoryUi();
+          if(ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
         }
 
-        // 배열에서 제거 후 10초 뒤 리젠
         this.enemiesData = this.enemiesData.filter(e => e !== enemy);
         setTimeout(() => this.spawnRandomMonster(), 10000);
       }
@@ -524,7 +548,6 @@
         vel.normalize().scale(gameState.player.speed);
         this.player.body.setVelocity(vel.x, vel.y);
         
-        // Z-Index 정렬 (Y축 기준, 롱빈터식 3D효과)
         this.player.setDepth(this.player.y);
         this.treesGroup.getChildren().forEach(t => t.setDepth(t.y));
         
@@ -532,16 +555,13 @@
         this.playerNameText.setDepth(this.player.y + 10);
         updateCoordinates(this.player.x, this.player.y);
 
-        // 몬스터 AI 업데이트
         this.enemiesData.forEach(e => {
           if (e.hp <= 0) return;
           e.sprite.setDepth(e.sprite.y);
-          e.label.setPosition(e.sprite.x, e.sprite.y - 30);
-          e.label.setDepth(e.sprite.y + 10);
+          e.label.setPosition(e.sprite.x, e.sprite.y - 30); e.label.setDepth(e.sprite.y + 10);
 
           const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, e.sprite.x, e.sprite.y);
-          
-          if (dist < 150 && e.type.name !== 'Chicken' && e.type.name !== 'Pig') e.state = 'chase'; // 비선공 몬스터 제외
+          if (dist < 150 && !['Chicken', 'Pig', 'Cow', 'Horse', 'Goat'].includes(e.type.name)) e.state = 'chase';
           else if (dist > 400) e.state = 'wander';
 
           if (e.state === 'wander' && Math.random() < 0.01) {
@@ -557,40 +577,30 @@
         });
       }
 
-      // 미니맵 레이더 업데이트
       updateRadar() {
         ui.minimapEntities.innerHTML = '';
         this.enemiesData.forEach(e => {
           if(e.hp <= 0) return;
-          // 미니맵 최적화: 플레이어 반경 2000 픽셀 내부의 적만 표시
           if(Phaser.Math.Distance.Between(this.player.x, this.player.y, e.sprite.x, e.sprite.y) < 2000) {
-            const dot = document.createElement('div');
-            dot.className = 'mini-dot enemy';
-            dot.style.left = `${(e.sprite.x / this.worldWidth) * 100}%`;
-            dot.style.top = `${(e.sprite.y / this.worldHeight) * 100}%`;
+            const dot = document.createElement('div'); dot.className = 'mini-dot enemy';
+            dot.style.left = `${(e.sprite.x / this.worldWidth) * 100}%`; dot.style.top = `${(e.sprite.y / this.worldHeight) * 100}%`;
             ui.minimapEntities.appendChild(dot);
           }
         });
       }
     }
 
-    // --- [게임 초기화] ---
     window.addEventListener('DOMContentLoaded', () => {
       cacheUiElements(); bindUiEvents(); updatePlayerHud();
-
-      // HP 30초 풀피 자동회복
       setInterval(() => {
         if (gameState.player.hp > 0 && gameState.player.hp < gameState.player.maxHp) {
-          gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + Math.max(1, Math.floor(gameState.player.maxHp / 30)));
-          updatePlayerHud();
+          gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + Math.max(1, Math.floor(gameState.player.maxHp / 30))); updatePlayerHud();
         }
       }, 1000);
-
       new Phaser.Game({
         type: Phaser.AUTO, parent: 'game-container', width: window.innerWidth, height: window.innerHeight,
         backgroundColor: '#173821', physics: { default: 'arcade', arcade: { debug: false } }, scene: MainScene
       });
-
       window.addEventListener('resize', () => {
         document.querySelector('canvas').width = window.innerWidth;
         document.querySelector('canvas').height = window.innerHeight;
