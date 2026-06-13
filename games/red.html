@@ -316,10 +316,10 @@
     const PRICE_MAP = { "Normal": 10, "Magic": 40, "Rare": 100, "Epic": 500, "Legendary": 2000 };
 
     const MONSTER_TYPES = [
-      { name: '닭', hp: 50, speed: 60, color: 0xffffff, size: 10, dmg: 5, exp: 10 },
-      { name: '돼지', hp: 200, speed: 50, color: 0xffb6c1, size: 16, dmg: 20, exp: 40 },
-      { name: '늑대', hp: 300, speed: 110, color: 0x808080, size: 16, dmg: 35, exp: 60 },
-      { name: '곰', hp: 1000, speed: 70, color: 0x4b3621, size: 26, dmg: 60, exp: 150 }
+      { name: '닭', hp: 50, speed: 60, texture: 'chicken_tex', bodyRadius: 10, labelOffset: 28, barWidth: 38, dmg: 5, exp: 10 },
+      { name: '돼지', hp: 200, speed: 50, texture: 'pig_tex', bodyRadius: 15, labelOffset: 34, barWidth: 46, dmg: 20, exp: 40 },
+      { name: '늑대', hp: 300, speed: 110, texture: 'wolf_tex', bodyRadius: 16, labelOffset: 36, barWidth: 52, dmg: 35, exp: 60 },
+      { name: '곰', hp: 1000, speed: 70, texture: 'bear_tex', bodyRadius: 25, labelOffset: 48, barWidth: 68, dmg: 60, exp: 150 }
     ];
 
     const ui = {};
@@ -456,7 +456,19 @@
           if(obj.rarity === 'Legendary') color = "#ff5555"; else if(obj.rarity === 'Epic') color = "#d255ff"; else if(obj.rarity === 'Rare') color = "#55aaff"; else if(obj.rarity === 'Magic') color = "#7CFF8A";
           
           slot.style.borderColor = color;
+          slot.title = `${name} / ${obj.rarity} / x${obj.count}`;
           slot.innerHTML = `<span class="item-icon" style="color:${color}">${name.charAt(0)}</span><span class="item-count">x${obj.count}</span>`;
+          slot.onmouseenter = (e) => {
+            ui.tooltip.innerHTML = `${name}<br><span style="color:${color}">등급: ${obj.rarity}</span><br>수량: ${obj.count}<br>판매가: ${price.toLocaleString()} G`;
+            ui.tooltip.style.display = 'block';
+            ui.tooltip.style.left = `${e.pageX + 12}px`;
+            ui.tooltip.style.top = `${e.pageY + 12}px`;
+          };
+          slot.onmousemove = (e) => {
+            ui.tooltip.style.left = `${e.pageX + 12}px`;
+            ui.tooltip.style.top = `${e.pageY + 12}px`;
+          };
+          slot.onmouseleave = () => { ui.tooltip.style.display = 'none'; };
           slot.onclick = () => openSellModal(name, obj, price);
         }
         ui.inventoryGrid.appendChild(slot);
@@ -646,7 +658,11 @@
         g.fillStyle(0x388047); g.fillRect(0,0,200,200); g.fillStyle(0x3d8a4d); g.fillCircle(40,40,8); g.fillCircle(140,120,12); g.generateTexture('bg_grass', 200, 200); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(30, 55, 36, 16); g.fillStyle(0x5c3a21); g.fillRoundedRect(24, 30, 12, 25, 4); g.fillStyle(0x276336); g.fillCircle(30, 25, 24); g.fillStyle(0x388c4c); g.fillCircle(30, 15, 18); g.generateTexture('tree_tex', 60, 60); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(15, 28, 24, 10); g.fillStyle(0x5da8ff); g.fillCircle(15, 15, 15); g.fillStyle(0x000000); g.fillCircle(10, 12, 2); g.fillCircle(20, 12, 2); g.generateTexture('player_tex', 30, 30); g.clear();
-        g.fillStyle(0x000000, 0.3); g.fillEllipse(16, 28, 24, 10); g.fillStyle(0xffffff); g.fillCircle(16, 16, 16); g.fillStyle(0x000000); g.fillCircle(11, 14, 2); g.fillCircle(21, 14, 2); g.generateTexture('monster_tex', 32, 32); g.clear();
+        // 몬스터별 전용 텍스처: 이름과 외형이 바로 구분되도록 단순 도형으로 구성
+        g.fillStyle(0x000000, 0.3); g.fillEllipse(18, 34, 26, 10); g.fillStyle(0xffffff); g.fillCircle(18, 20, 14); g.fillStyle(0xffd66b); g.fillTriangle(30, 18, 39, 22, 30, 26); g.fillStyle(0xff5858); g.fillTriangle(12, 7, 18, 0, 24, 7); g.fillStyle(0x111111); g.fillCircle(14, 18, 2); g.generateTexture('chicken_tex', 42, 42); g.clear();
+        g.fillStyle(0x000000, 0.3); g.fillEllipse(24, 38, 38, 12); g.fillStyle(0xffa8bc); g.fillEllipse(24, 24, 34, 24); g.fillStyle(0xffcad6); g.fillCircle(38, 23, 10); g.fillStyle(0x222222); g.fillCircle(40, 20, 2); g.fillStyle(0xd96d86); g.fillCircle(44, 24, 2); g.fillCircle(38, 25, 2); g.generateTexture('pig_tex', 52, 48); g.clear();
+        g.fillStyle(0x000000, 0.3); g.fillEllipse(25, 39, 40, 12); g.fillStyle(0x737373); g.fillEllipse(25, 25, 36, 24); g.fillStyle(0x555555); g.fillTriangle(11, 13, 16, 2, 21, 14); g.fillTriangle(30, 14, 36, 2, 39, 16); g.fillStyle(0x111111); g.fillCircle(20, 22, 2); g.fillCircle(32, 22, 2); g.fillStyle(0xffffff); g.fillTriangle(24, 30, 27, 35, 30, 30); g.generateTexture('wolf_tex', 56, 52); g.clear();
+        g.fillStyle(0x000000, 0.35); g.fillEllipse(35, 60, 58, 18); g.fillStyle(0x4b3621); g.fillEllipse(35, 34, 52, 46); g.fillStyle(0x3a2919); g.fillCircle(18, 15, 10); g.fillCircle(52, 15, 10); g.fillStyle(0x7a5430); g.fillEllipse(35, 40, 30, 22); g.fillStyle(0x111111); g.fillCircle(27, 30, 3); g.fillCircle(43, 30, 3); g.fillCircle(35, 39, 4); g.generateTexture('bear_tex', 76, 76); g.clear();
         g.fillStyle(0x6b4423); g.fillRect(0, 15, 40, 10); g.fillRect(5, 5, 8, 30); g.fillRect(25, 5, 8, 30); g.generateTexture('fence_tex', 40, 40); g.clear();
         g.fillStyle(0x3a2311); g.fillRect(5, 10, 30, 20); g.fillStyle(0x888888); g.fillRect(18, 5, 4, 30); g.fillRect(5, 20, 30, 4); g.generateTexture('crossbow_tex', 40, 40); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(40, 75, 70, 20); g.fillStyle(0x4a2e15); g.fillRect(10, 20, 60, 50); g.fillStyle(0x5c3a21); g.fillRect(5, 10, 70, 15); g.fillStyle(0x222222); g.fillRect(30, 40, 20, 30); g.generateTexture('armory_tex', 80, 80); g.clear();
@@ -663,10 +679,44 @@
       spawnRandomMonster() {
         const type = Phaser.Utils.Array.GetRandom(MONSTER_TYPES);
         let x = Phaser.Math.Between(200, this.worldWidth - 200); let y = Phaser.Math.Between(200, this.worldHeight - 200);
-        let sprite = this.physics.add.sprite(x, y, 'monster_tex');
-        sprite.setTint(type.color); sprite.setScale(type.size / 16); sprite.body.setCircle(16); sprite.body.setCollideWorldBounds(true); sprite.body.setBounce(0.5);
-        let label = this.add.text(x, y - 30, type.name, { fontSize: '12px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
-        this.enemiesData.push({ sprite, label, type, hp: type.hp, state: 'wander', lastAttackTime: 0 });
+        let sprite = this.physics.add.sprite(x, y, type.texture);
+        sprite.body.setCircle(type.bodyRadius); sprite.body.setCollideWorldBounds(true); sprite.body.setBounce(0.5);
+
+        let label = this.add.text(x, y - type.labelOffset, type.name, { fontSize: '12px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
+        let hpBarBg = this.add.rectangle(x, y - type.labelOffset + 7, type.barWidth, 5, 0x000000, 0.72).setOrigin(0.5, 0.5);
+        let hpBarFill = this.add.rectangle(x - type.barWidth / 2, y - type.labelOffset + 7, type.barWidth, 3, 0x37d85b, 1).setOrigin(0, 0.5);
+        let hpText = this.add.text(x, y - type.labelOffset + 15, `${type.hp}/${type.hp}`, { fontSize: '9px', color: '#eaffea', stroke: '#000', strokeThickness: 2 }).setOrigin(0.5, 0.5);
+
+        this.enemiesData.push({ sprite, label, hpBarBg, hpBarFill, hpText, type, hp: type.hp, maxHp: type.hp, state: 'wander', lastAttackTime: 0 });
+      }
+
+      updateEnemyHealthBar(enemy) {
+        const ratio = Math.max(0, Math.min(1, enemy.hp / enemy.maxHp));
+        const barWidth = enemy.type.barWidth;
+        const barY = enemy.sprite.y - enemy.type.labelOffset + 7;
+        const hpColor = ratio > 0.6 ? 0x37d85b : (ratio > 0.3 ? 0xffd66b : 0xff5858);
+
+        enemy.label.setPosition(enemy.sprite.x, enemy.sprite.y - enemy.type.labelOffset);
+        enemy.hpBarBg.setPosition(enemy.sprite.x, barY);
+        enemy.hpBarFill.setPosition(enemy.sprite.x - barWidth / 2, barY);
+        enemy.hpBarFill.width = barWidth * ratio;
+        enemy.hpBarFill.fillColor = hpColor;
+        enemy.hpText.setText(`${Math.max(0, Math.ceil(enemy.hp))}/${enemy.maxHp}`);
+        enemy.hpText.setPosition(enemy.sprite.x, enemy.sprite.y - enemy.type.labelOffset + 15);
+
+        const uiDepth = enemy.sprite.y + 10;
+        enemy.label.setDepth(uiDepth);
+        enemy.hpBarBg.setDepth(uiDepth);
+        enemy.hpBarFill.setDepth(uiDepth + 1);
+        enemy.hpText.setDepth(uiDepth + 2);
+      }
+
+      destroyEnemyUi(enemy) {
+        enemy.sprite.destroy();
+        enemy.label.destroy();
+        enemy.hpBarBg.destroy();
+        enemy.hpBarFill.destroy();
+        enemy.hpText.destroy();
       }
 
       placeBuilding(x, y) {
@@ -713,6 +763,7 @@
             }
           } else {
             closestTarget.hp -= gameState.player.baseDmg; 
+            this.updateEnemyHealthBar(closestTarget);
             closestTarget.state = 'chase'; 
             this.physics.velocityFromRotation(Phaser.Math.Angle.Between(this.player.x, this.player.y, closestTarget.sprite.x, closestTarget.sprite.y), 180, closestTarget.sprite.body.velocity);
             if (closestTarget.hp <= 0) this.killEnemy(closestTarget);
@@ -721,7 +772,7 @@
       }
 
       async killEnemy(enemy) {
-        enemy.sprite.destroy(); enemy.label.destroy();
+        this.destroyEnemyUi(enemy);
         gameState.player.gold += enemy.type.exp;
 
         if(gameState.quest.current < gameState.quest.required) {
@@ -797,6 +848,7 @@
               this.enemiesData.forEach(e => { let d = Phaser.Math.Distance.Between(b.x, b.y, e.sprite.x, e.sprite.y); if (d < minD) { minD = d; target = e; } });
               if (target) {
                 b.lastFireTime = time; target.hp -= (20 + b.level * 10); 
+                this.updateEnemyHealthBar(target);
                 let line = this.add.line(0,0, b.x, b.y, target.sprite.x, target.sprite.y, 0xffd66b).setOrigin(0,0);
                 this.tweens.add({ targets: line, alpha: 0, duration: 150, onComplete: () => line.destroy() });
                 target.state = 'chase'; if(target.hp <= 0) this.killEnemy(target);
@@ -811,7 +863,8 @@
 
         this.enemiesData.forEach(e => {
           if (e.hp <= 0) return;
-          e.sprite.setDepth(e.sprite.y); e.label.setPosition(e.sprite.x, e.sprite.y - 30); e.label.setDepth(e.sprite.y + 10);
+          e.sprite.setDepth(e.sprite.y);
+          this.updateEnemyHealthBar(e);
 
           let target = this.player; let dist = Phaser.Math.Distance.Between(e.sprite.x, e.sprite.y, this.player.x, this.player.y); let isTargetBldg = false;
           this.buildingsGroup.getChildren().forEach(b => {
