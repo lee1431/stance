@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>동전 쌓기 게임</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #151515;
+  font-family: Arial, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  touch-action: manipulation;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#gameWrap {
+  position: relative;
+  width: min(100vw, 430px);
+  height: min(100vh, 860px);
+  background: #111;
+  overflow: hidden;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#hud {
+  position: absolute;
+  top: 24px;
+  left: 22px;
+  z-index: 3;
+  color: white;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.3;
+  text-shadow:
+    -2px -2px 0 #1d4a66,
+     2px -2px 0 #1d4a66,
+    -2px  2px 0 #1d4a66,
+     2px  2px 0 #1d4a66,
+     0 4px 8px rgba(0,0,0,0.35);
+}
+
+#hud .small {
+  font-size: 19px;
+  line-height: 1.2;
+}
+
+#pauseBtn {
+  position: absolute;
+  top: 24px;
+  right: 22px;
+  z-index: 3;
+  width: 66px;
+  height: 66px;
+  border-radius: 18px;
+  background: rgba(0, 31, 52, 0.65);
+  color: white;
+  font-size: 34px;
+  font-weight: 900;
+  border: 0;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.25);
+  cursor: pointer;
+}
+
+#message {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 44%;
+  transform: translate(-50%, -50%);
+  width: 82%;
+  padding: 20px 18px;
+  border-radius: 14px;
+  text-align: center;
+  color: white;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1.5;
+  background: rgba(13, 45, 63, 0.72);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+  text-shadow: 0 3px 5px rgba(0,0,0,0.45);
+  user-select: none;
+}
+
+.yellow {
+  color: #ffe03b;
+}
+
+.green {
+  color: #7cff8d;
+}
+</style>
+</head>
+
+<body>
+<div id="gameWrap">
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    점수: <span id="score">0</span><br>
+    최고: <span id="best">0</span><br>
+    <span class="small">해독: <span id="decode">0</span>%</span>
+  </div>
+
+  <button id="pauseBtn" type="button">Ⅱ</button>
+
+  <div id="message">
+    타이밍을 맞춰 <span class="yellow">클릭 또는 스페이스!</span><br>
+    동전을 떨어뜨려 쌓아보세요!<br>
+    <span class="green">성공할 때마다 숨겨진 코드가 공개됩니다</span>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const scoreEl = document.getElementById("score");
+const bestEl = document.getElementById("best");
+const decodeEl = document.getElementById("decode");
+const messageEl = document.getElementById("message");
+const pauseBtn = document.getElementById("pauseBtn");
+
+let W = 400;
+let H = 800;
+let dpr = 1;
+
+const GAME = {
+  ready: "ready",
+  moving: "moving",
+  falling: "falling",
+  over: "over",
+  pause: "pause"
+};
+
+let state = GAME.ready;
+let previousState = GAME.ready;
+
+let score = 0;
+let best = Number(localStorage.getItem("coinStackBest") || 0);
+
+let stack = [];
+let activeCoin = null;
+
+let coinW = 16;
+let coinH = 5;
+
+let targetY = 0;
+let moveSpeed = 2.7;
+let fallSpeed = 0;
+let direction = 1;
+let shakeTime = 0;
+
+const REVEAL_COLS = 40;
+const REVEAL_ROWS = 25;
+const TOTAL_REVEAL_CELLS = REVEAL_COLS * REVEAL_ROWS;
+
+let revealCells = [];
+let hiddenCellIndices = [];
+let decodePercent = 0;
+
+const REVEAL_PER_SUCCESS = 12;
+const REVEAL_PER_PERFECT = 24;
+
+const hiddenCodeLines = [
+  "function createMovingCoin() {",
+  "  activeCoin = {",
+  "    x: W / 2,",
+  "    y: H * 0.19,",
+  "    w: coinW,",
+  "    h: coinH",
+  "  };",
+  "}",
+  "",
+  "function judgeLanding(topCoin) {",
+  "  const offset = Math.abs(activeCoin.x - topCoin.x);",
+  "  const allowed = coinW * 0.8;",
+  "  if (offset > allowed) gameOver();",
+  "  revealRandomCode(12);",
+  "}",
+  "",
+  "const secret = 'COIN STACK WEB GAME';",
+  "const mission = 'REVEAL THE HIDDEN CODE';",
+  "",
+  "for (let i = 0; i < 1000; i++) {",
+  "  // hidden fragment",
+  "}",
+  "",
+  "console.log('Nice stack!');",
+  "console.log('Keep going...');",
+  "",
+  "/*",
+  "  Hidden code area",
+  "  is revealed randomly",
+  "  whenever the player stacks coins.",
+  "*/",
+  "",
+  "function revealRandomCode(count) {",
+  "  // remove random cover pieces",
+  "}",
+  "",
+  "return 'SUCCESS';"
+];
+
+bestEl.textContent = best;
+
+function resize() {
+  const rect = canvas.getBoundingClientRect();
+  dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+  W = Math.floor(rect.width);
+  H = Math.floor(rect.height);
+
+  canvas.width = Math.floor(W * dpr);
+  canvas.height = Math.floor(H * dpr);
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  coinW = Math.max(14, Math.min(18, W * 0.04));
+  coinH = Math.max(4, coinW * 0.32);
+
+  targetY = H * 0.72 - coinH * 0.35;
+
+  if (stack.length > 0) {
+    normalizeVisibleStack();
+  }
+
+  if (activeCoin && state !== GAME.falling) {
+    activeCoin.y = H * 0.19;
+  }
+}
+
+window.addEventListener("resize", resize);
+
+function resetGame() {
+  score = 0;
+  moveSpeed = 2.7;
+  direction = 1;
+  shakeTime = 0;
+
+  scoreEl.textContent = score;
+
+  stack = [
+    {
+      x: W / 2,
+      y: targetY,
+      w: coinW,
+      h: coinH
+    }
+  ];
+
+  createActiveCoin();
+  initRevealMask();
+
+  state = GAME.ready;
+  pauseBtn.textContent = "Ⅱ";
+
+  messageEl.style.display = "block";
+  messageEl.innerHTML = `
+    타이밍을 맞춰 <span class="yellow">클릭 또는 스페이스!</span><br>
+    동전을 떨어뜨려 쌓아보세요!<br>
+    <span class="green">성공할 때마다 숨겨진 코드가 공개됩니다</span>
+  `;
+}
+
+function createActiveCoin() {
+  activeCoin = {
+    x: W / 2,
+    y: H * 0.19,
+    w: coinW,
+    h: coinH,
+    vx: moveSpeed * direction
+  };
+
+  fallSpeed = 0;
+}
+
+function normalizeVisibleStack() {
+  const visible = stack.slice(-5);
+  const startY = targetY;
+
+  for (let i = visible.length - 1; i >= 0; i--) {
+    const fromTop = visible.length - 1 - i;
+    visible[i].y = startY + fromTop * coinH * 2.2;
+  }
+
+  stack = visible;
+}
+
+function moveStackRandomly() {
+  const maxMove = Math.min(34, W * 0.09);
+  const move = randomBetween(-maxMove, maxMove);
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+
+  for (const coin of stack) {
+    minX = Math.min(minX, coin.x - coin.w / 2);
+    maxX = Math.max(maxX, coin.x + coin.w / 2);
+  }
+
+  let dx = move;
+
+  if (minX + dx < 18) {
+    dx = 18 - minX;
+  }
+
+  if (maxX + dx > W - 18) {
+    dx = W - 18 - maxX;
+  }
+
+  for (const coin of stack) {
+    coin.x += dx;
+  }
+}
+
+function randomBetween(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function initRevealMask() {
+  revealCells = new Array(TOTAL_REVEAL_CELLS).fill(false);
+  hiddenCellIndices = [];
+
+  for (let i = 0; i < TOTAL_REVEAL_CELLS; i++) {
+    hiddenCellIndices.push(i);
+  }
+
+  updateDecodePercent();
+}
+
+function updateDecodePercent() {
+  const opened = revealCells.filter(Boolean).length;
+  decodePercent = Math.floor((opened / TOTAL_REVEAL_CELLS) * 100);
+  decodeEl.textContent = decodePercent;
+}
+
+function revealRandomCode(count) {
+  for (let i = 0; i < count; i++) {
+    if (hiddenCellIndices.length === 0) break;
+
+    const randomPos = Math.floor(Math.random() * hiddenCellIndices.length);
+    const pickedIndex = hiddenCellIndices[randomPos];
+
+    revealCells[pickedIndex] = true;
+    hiddenCellIndices.splice(randomPos, 1);
+  }
+
+  updateDecodePercent();
+}
+
+function startMoving() {
+  state = GAME.moving;
+  messageEl.style.display = "none";
+}
+
+function dropCoin() {
+  if (state === GAME.ready) {
+    startMoving();
+    return;
+  }
+
+  if (state === GAME.moving) {
+    state = GAME.falling;
+    fallSpeed = 0;
+    return;
+  }
+
+  if (state === GAME.over) {
+    resetGame();
+    return;
+  }
+}
+
+function togglePause(e) {
+  e.stopPropagation();
+
+  if (state === GAME.over || state === GAME.ready) return;
+
+  if (state === GAME.pause) {
+    state = previousState;
+    pauseBtn.textContent = "Ⅱ";
+    messageEl.style.display = "none";
+  } else {
+    previousState = state;
+    state = GAME.pause;
+    pauseBtn.textContent = "▶";
+    messageEl.style.display = "block";
+    messageEl.innerHTML = `
+      일시정지<br>
+      <span class="yellow">버튼을 누르면 계속</span>
+    `;
+  }
+}
+
+pauseBtn.addEventListener("click", togglePause);
+canvas.addEventListener("pointerdown", dropCoin);
+
+document.addEventListener("keydown", function(e) {
+  if (e.code === "Space") {
+    e.preventDefault();
+    dropCoin();
+  }
+
+  if (e.code === "KeyP") {
+    togglePause(e);
+  }
+});
+
+function update() {
+  if (
+    state === GAME.pause ||
+    state === GAME.ready ||
+    state === GAME.over
+  ) {
+    return;
+  }
+
+  if (shakeTime > 0) {
+    shakeTime--;
+  }
+
+  if (state === GAME.moving) {
+    activeCoin.x += activeCoin.vx;
+
+    const half = activeCoin.w / 2;
+
+    if (activeCoin.x >= W - half - 18) {
+      activeCoin.x = W - half - 18;
+      activeCoin.vx *= -1;
+    }
+
+    if (activeCoin.x <= half + 18) {
+      activeCoin.x = half + 18;
+      activeCoin.vx *= -1;
+    }
+  }
+
+  if (state === GAME.falling) {
+    fallSpeed += 0.75;
+    activeCoin.y += fallSpeed;
+
+    const topCoin = stack[stack.length - 1];
+
+    if (activeCoin.y >= topCoin.y - coinH * 2.2) {
+      judgeLanding(topCoin);
+    }
+  }
+}
+
+function judgeLanding(topCoin) {
+  const offset = Math.abs(activeCoin.x - topCoin.x);
+  const allowed = coinW * 0.8;
+  const perfect = coinW * 0.18;
+
+  if (offset > allowed) {
+    gameOver();
+    return;
+  }
+
+  let revealCount = REVEAL_PER_SUCCESS;
+
+  if (offset <= perfect) {
+    score += 2;
+    shakeTime = 8;
+    revealCount = REVEAL_PER_PERFECT;
+  } else {
+    score += 1;
+  }
+
+  scoreEl.textContent = score;
+
+  if (score > best) {
+    best = score;
+    localStorage.setItem("coinStackBest", best);
+    bestEl.textContent = best;
+  }
+
+  revealRandomCode(revealCount);
+
+  stack.push({
+    x: activeCoin.x,
+    y: topCoin.y - coinH * 2.2,
+    w: coinW,
+    h: coinH
+  });
+
+  normalizeVisibleStack();
+  moveStackRandomly();
+
+  moveSpeed = Math.min(7.2, moveSpeed + 0.12);
+  direction = Math.random() > 0.5 ? 1 : -1;
+
+  createActiveCoin();
+  activeCoin.vx = moveSpeed * direction;
+
+  state = GAME.moving;
+}
+
+function gameOver() {
+  state = GAME.over;
+
+  let extra = "";
+
+  if (decodePercent >= 100) {
+    extra = `<br><span class="green">숨겨진 코드 해독 완료!</span>`;
+  }
+
+  messageEl.style.display = "block";
+  messageEl.innerHTML = `
+    게임 오버<br>
+    점수: <span class="yellow">${score}</span><br>
+    해독률: <span class="green">${decodePercent}%</span>${extra}<br><br>
+    클릭하여 재시작
+  `;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  let sx = 0;
+  let sy = 0;
+
+  if (shakeTime > 0) {
+    sx = (Math.random() - 0.5) * 2;
+    sy = (Math.random() - 0.5) * 1;
+  }
+
+  ctx.save();
+  ctx.translate(sx, sy);
+
+  drawBackground();
+
+  for (const coin of stack) {
+    drawCoin(coin);
+  }
+
+  if (activeCoin && state !== GAME.over) {
+    drawCoin(activeCoin, true);
+  }
+
+  ctx.restore();
+}
+
+function drawBackground() {
+  const sky = ctx.createLinearGradient(0, 0, 0, H * 0.72);
+  sky.addColorStop(0, "#22b7f4");
+  sky.addColorStop(1, "#c9f7ff");
+
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  drawCloud(W * 0.12, H * 0.48, 0.8);
+  drawCloud(W * 0.85, H * 0.54, 0.75);
+
+  ctx.fillStyle = "#8e642d";
+  ctx.fillRect(0, H * 0.72, W, H * 0.035);
+
+  const floorGrad = ctx.createLinearGradient(0, H * 0.755, 0, H);
+  floorGrad.addColorStop(0, "#6b3d15");
+  floorGrad.addColorStop(1, "#2a1608");
+
+  ctx.fillStyle = floorGrad;
+  ctx.fillRect(0, H * 0.755, W, H * 0.245);
+
+  drawHiddenCodeZone();
+}
+
+function drawHiddenCodeZone() {
+  const zoneY = H * 0.755;
+  const zoneH = H * 0.245;
+  const zoneX = 0;
+  const zoneW = W;
+
+  const pad = 14;
+  const panelX = zoneX + pad;
+  const panelY = zoneY + pad;
+  const panelW = zoneW - pad * 2;
+  const panelH = zoneH - pad * 2;
+
+  ctx.save();
+
+  roundRect(panelX, panelY, panelW, panelH, 12);
+  ctx.fillStyle = "rgba(10, 12, 8, 0.72)";
+  ctx.fill();
+
+  roundRect(panelX, panelY, panelW, panelH, 12);
+  ctx.strokeStyle = "rgba(172, 255, 129, 0.16)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.beginPath();
+  roundRect(panelX, panelY, panelW, panelH, 12);
+  ctx.clip();
+
+  ctx.fillStyle = "#8bff7a";
+  ctx.font = "11px Consolas, Monaco, monospace";
+  ctx.textBaseline = "top";
+
+  const lineHeight = 12;
+  let textY = panelY + 8;
+
+  for (let i = 0; i < hiddenCodeLines.length; i++) {
+    ctx.fillText(hiddenCodeLines[i], panelX + 8, textY);
+    textY += lineHeight;
+
+    if (textY > panelY + panelH - 10) {
+      break;
+    }
+  }
+
+  ctx.strokeStyle = "rgba(130, 255, 130, 0.06)";
+
+  for (let y = panelY + 2; y < panelY + panelH; y += 4) {
+    ctx.beginPath();
+    ctx.moveTo(panelX, y);
+    ctx.lineTo(panelX + panelW, y);
+    ctx.stroke();
+  }
+
+  const cellW = panelW / REVEAL_COLS;
+  const cellH = panelH / REVEAL_ROWS;
+
+  for (let row = 0; row < REVEAL_ROWS; row++) {
+    for (let col = 0; col < REVEAL_COLS; col++) {
+      const idx = row * REVEAL_COLS + col;
+
+      if (revealCells[idx]) {
+        continue;
+      }
+
+      const x = panelX + col * cellW;
+      const y = panelY + row * cellH;
+
+      const coverGrad = ctx.createLinearGradient(x, y, x, y + cellH);
+      coverGrad.addColorStop(0, "rgba(88, 49, 20, 0.98)");
+      coverGrad.addColorStop(1, "rgba(48, 25, 9, 0.98)");
+
+      ctx.fillStyle = coverGrad;
+      ctx.fillRect(x, y, cellW + 0.7, cellH + 0.7);
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawCloud(x, y, s) {
+  ctx.save();
+  ctx.globalAlpha = 0.8;
+  ctx.fillStyle = "white";
+
+  ctx.beginPath();
+  ctx.arc(x, y, 34 * s, 0, Math.PI * 2);
+  ctx.arc(x + 34 * s, y - 12 * s, 44 * s, 0, Math.PI * 2);
+  ctx.arc(x + 78 * s, y + 4 * s, 32 * s, 0, Math.PI * 2);
+  ctx.rect(x - 34 * s, y, 140 * s, 42 * s);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawCoin(coin, isActive = false) {
+  const x = coin.x;
+  const y = coin.y;
+  const w = coin.w;
+  const h = coin.h;
+
+  ctx.save();
+
+  if (isActive) {
+    ctx.shadowColor = "rgba(0,0,0,0.25)";
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 3;
+  }
+
+  ctx.fillStyle = "#7d4b08";
+  roundEllipse(x, y + h * 0.6, w * 0.52, h * 0.55);
+  ctx.fill();
+
+  const sideGrad = ctx.createLinearGradient(x, y, x, y + h);
+  sideGrad.addColorStop(0, "#ffdd27");
+  sideGrad.addColorStop(0.5, "#ffb900");
+  sideGrad.addColorStop(1, "#c87b00");
+
+  ctx.fillStyle = sideGrad;
+  ctx.fillRect(x - w / 2, y, w, h * 0.7);
+
+  ctx.strokeStyle = "#8b5500";
+  ctx.lineWidth = 1.2;
+  ctx.strokeRect(x - w / 2, y, w, h * 0.7);
+
+  const topGrad = ctx.createRadialGradient(
+    x - w * 0.18,
+    y - h * 0.24,
+    1,
+    x,
+    y - h * 0.2,
+    w * 0.55
+  );
+
+  topGrad.addColorStop(0, "#fff36b");
+  topGrad.addColorStop(0.45, "#ffd41f");
+  topGrad.addColorStop(1, "#ffb700");
+
+  ctx.fillStyle = topGrad;
+  roundEllipse(x, y, w * 0.54, h * 0.8);
+  ctx.fill();
+
+  ctx.strokeStyle = "#855000";
+  ctx.lineWidth = 1.2;
+  roundEllipse(x, y, w * 0.54, h * 0.8);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function roundEllipse(x, y, rx, ry) {
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+resize();
+resetGame();
+loop();
+</script>
+</body>
+</html>
