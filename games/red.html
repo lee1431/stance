@@ -13,6 +13,27 @@
     #app { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: #0f1f1a; }
     #game-container { position: absolute; inset: 0; z-index: 1; }
 
+    /* [로그인 / 시작 화면] */
+    #login-screen {
+      position: absolute; inset: 0; background: #0f1f1a; z-index: 10000;
+      display: flex; justify-content: center; align-items: center; flex-direction: column;
+    }
+    .login-box {
+      background: rgba(12, 18, 24, 0.9); padding: 40px; border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.16); text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .login-box h2 { margin: 0 0 20px 0; color: #FFD66B; letter-spacing: 2px; }
+    .login-box input {
+      width: 100%; padding: 12px; margin-bottom: 20px; background: rgba(0,0,0,0.5);
+      border: 1px solid #555; color: #fff; border-radius: 6px; text-align: center; font-size: 16px; outline: none;
+    }
+    .login-box input:focus { border-color: #FFD66B; }
+    .login-box button {
+      padding: 12px 20px; background: rgba(124, 255, 138, 0.2); border: 1px solid #7CFF8A;
+      color: #7CFF8A; border-radius: 6px; font-size: 16px; font-weight: bold; width: 100%; transition: 0.2s;
+    }
+    .login-box button:hover { background: rgba(124, 255, 138, 0.4); }
+
     .panel { position: absolute; z-index: 5; background: rgba(12, 18, 24, 0.82); border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 10px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35); backdrop-filter: blur(4px); color: #e9f4ff; }
     .panel-title { font-weight: 700; font-size: 14px; margin-bottom: 8px; color: #fff; display: flex; justify-content: space-between;}
     .panel-row { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; line-height: 1.6; }
@@ -55,7 +76,8 @@
     .modal-btns button { padding: 6px 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; background: rgba(255,255,255,0.1); }
     .modal-btns button.confirm { background: rgba(124, 255, 138, 0.2); border-color: #7CFF8A; color: #7CFF8A; }
     .modal-btns button.upgrade { background: rgba(255, 214, 107, 0.2); border-color: #FFD66B; color: #FFD66B; }
-    .modal-btns button.cook { background: rgba(255, 69, 0, 0.2); border-color: #ff4500; color: #ff6347; } /* 굽기 버튼 색상 */
+    .modal-btns button.cook { background: rgba(255, 69, 0, 0.2); border-color: #ff4500; color: #ff6347; } 
+    .modal-btns button.eat { background: rgba(85, 170, 255, 0.2); border-color: #55aaff; color: #55aaff; } /* 먹기 버튼 */
 
     #death-screen { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; }
     #death-screen h1 { color: #ff5858; font-size: 48px; letter-spacing: 4px; margin-bottom: 20px; text-shadow: 0 0 20px rgba(255,88,88,0.5); }
@@ -93,6 +115,16 @@
 </head>
 
 <body>
+
+  <!-- [초기 접속 화면] -->
+  <div id="login-screen">
+    <div class="login-box">
+      <h2>STANCE MMORPG</h2>
+      <input type="text" id="login-name" placeholder="캐릭터 이름을 입력하세요..." maxlength="12" autocomplete="off" />
+      <button id="login-btn">게임 시작</button>
+    </div>
+  </div>
+
   <div id="death-screen">
     <h1>YOU DIED</h1>
     <p>Respawning in...</p>
@@ -124,11 +156,13 @@
       </div>
     </section>
 
+    <!-- 인벤토리 -->
     <section class="panel inventory-panel" id="inventory-panel">
       <div class="panel-title">Inventory <button class="close-btn" id="close-inventory">✕</button></div>
       <div class="inventory-grid" id="inventory-grid"></div>
     </section>
 
+    <!-- 인벤토리 아이템 액션 모달 -->
     <section class="panel modal-box" id="sell-modal">
       <div class="panel-title" id="sell-title" style="margin-bottom: 0;">Item Action</div>
       <div>수량: <input type="number" id="sell-qty" min="1" value="1" /> / <span id="sell-max">1</span></div>
@@ -136,10 +170,12 @@
       <div class="modal-btns">
         <button id="sell-cancel">취소</button>
         <button id="sell-cook" class="cook" style="display:none;">굽기</button>
+        <button id="sell-eat" class="eat" style="display:none;">먹기</button>
         <button id="sell-confirm" class="confirm">판매</button>
       </div>
     </section>
 
+    <!-- 업그레이드 모달 -->
     <section class="panel modal-box" id="upgrade-modal">
       <div class="panel-title" id="upg-title" style="margin-bottom: 0;">Upgrade Facility</div>
       <div id="upg-desc" style="font-size: 13px; color: #ccc;">건물을 강화합니다.</div>
@@ -151,11 +187,12 @@
       </div>
     </section>
 
+    <!-- 건설 메뉴 -->
     <section class="panel build-panel" id="build-panel">
       <div class="panel-title">Build Structures <span id="build-limit-text" class="yellow" style="font-size:11px;">0/0</span> <button class="close-btn" id="close-build">✕</button></div>
       
       <div class="build-item" data-build-type="Campfire">
-        <div class="build-info"><h4>Campfire (모닥불)</h4><p>1분 유지. 근처에서 고기를 구울 수 있습니다.</p></div>
+        <div class="build-info"><h4>Campfire (모닥불)</h4><p>1분 유지. 생고기를 구울 수 있습니다.</p></div>
         <div class="build-cost">30 Wood<br>0 G</div>
       </div>
       <div class="build-item" data-build-type="Fence">
@@ -174,9 +211,8 @@
 
     <section class="panel chat-panel">
       <div class="chat-body" id="chat-body">
-        <div>Welcome to Mythic Realms!</div>
-        <div class="yellow">System: 모닥불을 지으면 근처에서 고기를 구워 가치를 올릴 수 있습니다.</div>
-        <div class="yellow">System: Wood와 Gold를 모아 다양한 건물을 건설하세요.</div>
+        <div class="yellow">System: 캐릭터 이름을 입력하여 접속했습니다.</div>
+        <div class="yellow">System: 구운 고기를 인벤토리에서 클릭하여 [먹기]를 누르면 체력이 50 회복됩니다.</div>
         <div id="coord-line">X: 0 / Y: 0</div>
       </div>
       <div class="chat-input-row">
@@ -236,7 +272,6 @@
     };
     gameState.buildLimit = gameState.player.level * 3;
 
-    // 건설 비용 추가 (Campfire)
     const BUILD_COSTS = {
       'Campfire': { wood: 30, gold: 0 },
       'Fence': { wood: 100, gold: 50 },
@@ -244,10 +279,8 @@
       'Armory': { wood: 10000, gold: 5000 }
     };
 
-    // 요리 시 등급이 상승하여 가격 상승 유도
     const PRICE_MAP = { "Normal": 10, "Magic": 40, "Rare": 100, "Epic": 500, "Legendary": 2000, "i6": 150 };
 
-    // [한글화 적용]
     const MONSTER_TYPES = [
       { name: '닭', hp: 50, speed: 60, color: 0xffffff, size: 10, dmg: 5, exp: 10 },
       { name: '슬라임', hp: 80, speed: 40, color: 0x7CFF8A, size: 14, dmg: 8, exp: 15 },
@@ -263,7 +296,7 @@
     ];
 
     const ui = {};
-    window.currentScene = null; // 거리 계산용 씬 참조
+    window.currentScene = null; 
 
     async function getDrop() {
       try {
@@ -290,7 +323,7 @@
       
       ui.sellModal = document.getElementById('sell-modal'); ui.sellTitle = document.getElementById('sell-title');
       ui.sellQty = document.getElementById('sell-qty'); ui.sellMax = document.getElementById('sell-max'); ui.sellProfit = document.getElementById('sell-profit');
-      ui.sellCookBtn = document.getElementById('sell-cook');
+      ui.sellCookBtn = document.getElementById('sell-cook'); ui.sellEatBtn = document.getElementById('sell-eat');
       
       ui.upgModal = document.getElementById('upgrade-modal'); ui.upgTitle = document.getElementById('upg-title');
       ui.upgDesc = document.getElementById('upg-desc'); ui.upgCurrent = document.getElementById('upg-current'); ui.upgCost = document.getElementById('upg-cost');
@@ -298,6 +331,8 @@
       ui.buildPanel = document.getElementById('build-panel'); ui.buildLimitText = document.getElementById('build-limit-text');
       ui.buildModeText = document.getElementById('build-mode-text');
       ui.deathScreen = document.getElementById('death-screen'); ui.deathTimer = document.getElementById('death-timer');
+      
+      ui.loginScreen = document.getElementById('login-screen'); ui.loginName = document.getElementById('login-name'); ui.loginBtn = document.getElementById('login-btn');
     }
 
     function updatePlayerHud() {
@@ -334,7 +369,7 @@
       }, 1000);
     }
 
-    // --- [인벤토리 모달 로직 (판매 + 요리)] ---
+    // --- [인벤토리 모달 로직 (판매/요리/먹기)] ---
     let currentSellItem = null, currentSellPrice = 0, currentSellMax = 0;
     
     function openSellModal(itemName, itemObj, price) {
@@ -343,7 +378,7 @@
       ui.sellQty.value = 1; ui.sellQty.max = currentSellMax; ui.sellMax.textContent = currentSellMax;
       ui.sellProfit.textContent = `${price} G`; ui.tooltip.style.display = 'none';
 
-      // 생고기 & 모닥불 주변 체크
+      // 생고기 & 모닥불 체크
       let isRawMeat = itemName.endsWith("고기") && !itemName.startsWith("구운");
       let nearCampfire = false;
       if (window.currentScene) {
@@ -353,9 +388,11 @@
           }
         });
       }
-      
-      if (isRawMeat && nearCampfire) ui.sellCookBtn.style.display = 'inline-block';
-      else ui.sellCookBtn.style.display = 'none';
+      ui.sellCookBtn.style.display = (isRawMeat && nearCampfire) ? 'inline-block' : 'none';
+
+      // 구운 고기 (먹기 버튼 활성화)
+      let isCookedMeat = itemName.startsWith("구운") && itemName.endsWith("고기");
+      ui.sellEatBtn.style.display = isCookedMeat ? 'inline-block' : 'none';
     }
 
     window.currentUpgradeBldg = null;
@@ -398,7 +435,6 @@
       }
     }
 
-    // [글로벌 빌드 상태]
     window.activeBuildType = null; window.activeBuildRotation = 0;
 
     function bindUiEvents() {
@@ -414,7 +450,6 @@
       });
       document.getElementById('close-build').addEventListener('click', () => ui.buildPanel.style.display = 'none');
 
-      // 건설 시작
       document.querySelectorAll('.build-item').forEach(el => {
         el.addEventListener('click', () => {
           const type = el.dataset.buildType; const cost = BUILD_COSTS[type];
@@ -444,7 +479,6 @@
         }
       });
 
-      // 판매 모달 로직
       ui.sellQty.addEventListener('input', (e) => {
         let val = parseInt(e.target.value) || 1;
         if (val < 1) val = 1; if (val > currentSellMax) val = currentSellMax;
@@ -456,11 +490,9 @@
       ui.sellCookBtn.addEventListener('click', () => {
         let qty = parseInt(ui.sellQty.value) || 1;
         if (qty > 0 && currentSellItem && gameState.inventory[currentSellItem]) {
-          // 생고기 차감
           gameState.inventory[currentSellItem].count -= qty;
           if (gameState.inventory[currentSellItem].count <= 0) delete gameState.inventory[currentSellItem];
           
-          // 구운 고기 생성
           const cookedName = `구운 ${currentSellItem}`;
           if (!gameState.inventory[cookedName]) gameState.inventory[cookedName] = { count: 0, rarity: 'Magic' };
           gameState.inventory[cookedName].count += qty;
@@ -471,6 +503,23 @@
         ui.sellModal.style.display = 'none';
       });
 
+      // 먹기(회복) 로직
+      ui.sellEatBtn.addEventListener('click', () => {
+        let qty = parseInt(ui.sellQty.value) || 1;
+        if (qty > 0 && currentSellItem && gameState.inventory[currentSellItem]) {
+          let healAmount = 50 * qty;
+          gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + healAmount);
+          
+          gameState.inventory[currentSellItem].count -= qty;
+          if (gameState.inventory[currentSellItem].count <= 0) delete gameState.inventory[currentSellItem];
+
+          addChatMessage(`System: 🍗 ${currentSellItem} ${qty}개를 먹고 체력을 ${healAmount} 회복했습니다.`, 'green');
+          updatePlayerHud(); updateInventoryUi();
+        }
+        ui.sellModal.style.display = 'none';
+      });
+
+      // 판매 로직
       document.getElementById('sell-confirm').addEventListener('click', () => {
         let qty = parseInt(ui.sellQty.value) || 1;
         if (qty > 0 && currentSellItem && gameState.inventory[currentSellItem]) {
@@ -483,6 +532,7 @@
         ui.sellModal.style.display = 'none';
       });
 
+      // 업그레이드 로직
       document.getElementById('upg-cancel').addEventListener('click', () => ui.upgModal.style.display = 'none');
       document.getElementById('upg-confirm').addEventListener('click', () => {
         const bldg = window.currentUpgradeBldg; if(!bldg) return;
@@ -525,7 +575,8 @@
 
         this.player = this.physics.add.sprite(8000, 5000, 'player_tex');
         this.player.body.setCircle(15); this.player.body.setCollideWorldBounds(true);
-        this.playerNameText = this.add.text(0, 0, 'Adventurer', { fontSize: '14px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
+        // 플레이어 이름은 gameState 연동
+        this.playerNameText = this.add.text(0, 0, gameState.player.name, { fontSize: '14px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
         this.physics.add.collider(this.player, this.treesGroup);
@@ -568,16 +619,14 @@
         g.fillStyle(0x000000, 0.3); g.fillEllipse(15, 28, 24, 10); g.fillStyle(0x5da8ff); g.fillCircle(15, 15, 15); g.fillStyle(0x000000); g.fillCircle(10, 12, 2); g.fillCircle(20, 12, 2); g.generateTexture('player_tex', 30, 30); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(16, 28, 24, 10); g.fillStyle(0xffffff); g.fillCircle(16, 16, 16); g.fillStyle(0x000000); g.fillCircle(11, 14, 2); g.fillCircle(21, 14, 2); g.generateTexture('monster_tex', 32, 32); g.clear();
         
-        // 건축물
         g.fillStyle(0x6b4423); g.fillRect(0, 15, 40, 10); g.fillRect(5, 5, 8, 30); g.fillRect(25, 5, 8, 30); g.generateTexture('fence_tex', 40, 40); g.clear();
         g.fillStyle(0x3a2311); g.fillRect(5, 10, 30, 20); g.fillStyle(0x888888); g.fillRect(18, 5, 4, 30); g.fillRect(5, 20, 30, 4); g.generateTexture('crossbow_tex', 40, 40); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(40, 75, 70, 20); g.fillStyle(0x4a2e15); g.fillRect(10, 20, 60, 50); g.fillStyle(0x5c3a21); g.fillRect(5, 10, 70, 15); g.fillStyle(0x222222); g.fillRect(30, 40, 20, 30); g.generateTexture('armory_tex', 80, 80); g.clear();
         
-        // 모닥불 텍스처
         g.fillStyle(0x000000, 0.3); g.fillEllipse(20, 35, 30, 10);
-        g.fillStyle(0x5c3a21); g.fillRect(5, 25, 30, 6); g.fillRect(15, 15, 10, 20); // 장작
-        g.fillStyle(0xff4500); g.fillTriangle(20, 5, 10, 25, 30, 25); // 불꽃 외부
-        g.fillStyle(0xffd700); g.fillTriangle(20, 15, 15, 25, 25, 25); // 불꽃 내부
+        g.fillStyle(0x5c3a21); g.fillRect(5, 25, 30, 6); g.fillRect(15, 15, 10, 20); 
+        g.fillStyle(0xff4500); g.fillTriangle(20, 5, 10, 25, 30, 25); 
+        g.fillStyle(0xffd700); g.fillTriangle(20, 15, 15, 25, 25, 25); 
         g.generateTexture('campfire_tex', 40, 40); g.clear();
       }
 
@@ -622,7 +671,7 @@
         bldg.setAngle(window.activeBuildRotation); bldg.body.setCircle(radius);
         bldg.bType = type; bldg.hp = maxHp; bldg.maxHp = maxHp; bldg.level = 1; bldg.lastFireTime = 0;
         
-        if(type === 'Campfire') bldg.burnOutTime = this.time.now + 60000; // 60초 소멸 타이머
+        if(type === 'Campfire') bldg.burnOutTime = this.time.now + 60000;
 
         addChatMessage(`System: ${type} 건설 완료!`, 'green');
         updatePlayerHud(); window.activeBuildType = null; ui.buildModeText.style.display = 'none';
@@ -685,7 +734,6 @@
         }
         updatePlayerHud();
 
-        // [고기 드랍 (50% 확률)]
         if (Math.random() < 0.5) {
           const meatName = `${enemy.type.name} 고기`;
           if (!gameState.inventory[meatName]) gameState.inventory[meatName] = { count: 0, rarity: 'Normal' };
@@ -694,7 +742,6 @@
           if(ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
         }
 
-        // [기본 API 드랍 (70% 확률)]
         if (Math.random() < 0.7) {
           const drop = await getDrop();
           addChatMessage(`System: 🎁 전리품! [${drop.rarity}] ${drop.name} x${drop.count}`, 'yellow');
@@ -732,13 +779,12 @@
         this.player.setDepth(this.player.y);
         this.treesGroup.getChildren().forEach(t => t.setDepth(t.y));
         
-        // 건물 업데이트 (모닥불 소멸 처리 포함)
         this.buildingsGroup.getChildren().forEach(b => {
           if (!b.active) return;
           b.setDepth(b.y);
           if (b.bType === 'Campfire' && time > b.burnOutTime) {
             b.destroy(); addChatMessage('System: 모닥불이 다 타서 꺼졌습니다.', 'yellow');
-            if (ui.sellModal.style.display === 'flex') ui.sellModal.style.display = 'none'; // 모달 닫기 방어코드
+            if (ui.sellModal.style.display === 'flex') ui.sellModal.style.display = 'none'; 
           } else if (b.bType === 'Crossbow') {
             let fireDelay = Math.max(300, 1000 - (b.level * 100)); 
             if (time > b.lastFireTime + fireDelay) {
@@ -757,6 +803,8 @@
           }
         });
         
+        // 이름 동기화
+        this.playerNameText.setText(gameState.player.name);
         this.playerNameText.setPosition(this.player.x, this.player.y - 30); this.playerNameText.setDepth(this.player.y + 10);
         updateCoordinates(this.player.x, this.player.y);
 
@@ -820,19 +868,38 @@
       }
     }
 
+    // --- [게임 초기화 (로그인 후 실행)] ---
     window.addEventListener('DOMContentLoaded', () => {
-      cacheUiElements(); bindUiEvents(); updatePlayerHud();
-      setInterval(() => {
-        if (!gameState.isDead && gameState.player.hp > 0 && gameState.player.hp < gameState.player.maxHp) {
-          gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + 10); updatePlayerHud();
-        }
-      }, 1000);
-      new Phaser.Game({
-        type: Phaser.AUTO, parent: 'game-container', width: window.innerWidth, height: window.innerHeight,
-        backgroundColor: '#173821', physics: { default: 'arcade', arcade: { debug: false } }, scene: MainScene
+      cacheUiElements(); bindUiEvents(); 
+
+      // 로그인 버튼 클릭 시 게임 엔진 초기화
+      ui.loginBtn.addEventListener('click', () => {
+        let enteredName = ui.loginName.value.trim();
+        if(enteredName) gameState.player.name = enteredName;
+        
+        ui.loginScreen.style.display = 'none';
+        updatePlayerHud();
+
+        // HP 자동 회복
+        setInterval(() => {
+          if (!gameState.isDead && gameState.player.hp > 0 && gameState.player.hp < gameState.player.maxHp) {
+            gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + 10); updatePlayerHud();
+          }
+        }, 1000);
+
+        new Phaser.Game({
+          type: Phaser.AUTO, parent: 'game-container', width: window.innerWidth, height: window.innerHeight,
+          backgroundColor: '#173821', physics: { default: 'arcade', arcade: { debug: false } }, scene: MainScene
+        });
+        
+        window.addEventListener('resize', () => {
+          document.querySelector('canvas').width = window.innerWidth; document.querySelector('canvas').height = window.innerHeight;
+        });
       });
-      window.addEventListener('resize', () => {
-        document.querySelector('canvas').width = window.innerWidth; document.querySelector('canvas').height = window.innerHeight;
+      
+      // 엔터키 로그인
+      ui.loginName.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter') ui.loginBtn.click();
       });
     });
   </script>
