@@ -6,454 +6,169 @@
   <title>Fantasy Web MMORPG Prototype</title>
 
   <style>
-    * {
-      box-sizing: border-box;
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%; margin: 0; overflow: hidden;
+      font-family: Arial, Helvetica, sans-serif; background: #101820; color: #f5f5f5;
     }
-
-    html,
-    body {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      overflow: hidden;
-      font-family: Arial, Helvetica, sans-serif;
-      background: #101820;
-      color: #f5f5f5;
-    }
-
-    button,
-    input {
-      font-family: inherit;
-    }
-
-    button {
-      color: inherit;
-    }
+    button, input { font-family: inherit; }
+    button { color: inherit; }
 
     #app {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-      background: #0f1f1a;
+      position: relative; width: 100vw; height: 100vh; overflow: hidden; background: #0f1f1a;
     }
-
-    #game-container {
-      position: absolute;
-      inset: 0;
-      z-index: 1;
-    }
+    #game-container { position: absolute; inset: 0; z-index: 1; }
 
     .panel {
-      position: absolute;
-      z-index: 5;
-      background: rgba(12, 18, 24, 0.82);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      border-radius: 10px;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-      backdrop-filter: blur(4px);
-      color: #e9f4ff;
+      position: absolute; z-index: 5; background: rgba(12, 18, 24, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35); backdrop-filter: blur(4px); color: #e9f4ff;
     }
+    .panel-title { font-weight: 700; font-size: 14px; margin-bottom: 8px; color: #fff; }
+    .panel-row { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; line-height: 1.6; }
+    .green { color: #7CFF8A; }
+    .yellow { color: #FFD66B; }
 
-    .panel-title {
-      font-weight: 700;
-      font-size: 14px;
-      margin-bottom: 8px;
-      color: #fff;
-    }
-
-    .panel-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      font-size: 12px;
-      line-height: 1.6;
-    }
-
-    .green {
-      color: #7CFF8A;
-    }
-
-    .yellow {
-      color: #FFD66B;
-    }
-
-    .top-left-panel {
-      top: 16px;
-      left: 16px;
-      width: 220px;
-      padding: 12px;
-    }
-
-    .minimap-panel {
-      top: 16px;
-      right: 16px;
-      width: 220px;
-      padding: 12px;
-    }
+    .top-left-panel { top: 16px; left: 16px; width: 220px; padding: 12px; }
+    .minimap-panel { top: 16px; right: 16px; width: 220px; padding: 12px; }
 
     #minimap {
-      position: relative;
-      width: 100%;
-      height: 135px;
-      overflow: hidden;
-      border-radius: 8px;
-      background:
-        radial-gradient(circle at 28% 30%, rgba(110, 255, 130, 0.32), transparent 18%),
-        radial-gradient(circle at 72% 65%, rgba(110, 255, 130, 0.18), transparent 22%),
-        linear-gradient(135deg, #173821, #244e2e);
+      position: relative; width: 100%; height: 135px; overflow: hidden; border-radius: 8px;
+      background: radial-gradient(circle at 28% 30%, rgba(110, 255, 130, 0.32), transparent 18%),
+                  radial-gradient(circle at 72% 65%, rgba(110, 255, 130, 0.18), transparent 22%),
+                  linear-gradient(135deg, #173821, #244e2e);
       border: 1px solid rgba(255, 255, 255, 0.16);
     }
-
     .mini-path {
-      position: absolute;
-      left: 5%;
-      top: 48%;
-      width: 90%;
-      height: 16px;
-      border-radius: 999px;
-      background: rgba(210, 180, 120, 0.35);
-      transform: rotate(-12deg);
+      position: absolute; left: 5%; top: 48%; width: 90%; height: 16px; border-radius: 999px;
+      background: rgba(210, 180, 120, 0.35); transform: rotate(-12deg);
     }
-
     .mini-dot {
-      position: absolute;
-      width: 8px;
-      height: 8px;
-      left: var(--x);
-      top: var(--y);
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
+      position: absolute; width: 8px; height: 8px; left: var(--x); top: var(--y);
+      border-radius: 50%; transform: translate(-50%, -50%);
     }
-
-    .mini-dot.enemy {
-      background: #ff5858;
-      box-shadow: 0 0 8px rgba(255, 88, 88, 0.8);
-    }
-
+    .mini-dot.enemy { background: #ff5858; box-shadow: 0 0 8px rgba(255, 88, 88, 0.8); }
     #mini-player {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #5da8ff;
-      box-shadow: 0 0 10px rgba(93, 168, 255, 0.9);
-      transform: translate(-50%, -50%);
+      position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; border-radius: 50%;
+      background: #5da8ff; box-shadow: 0 0 10px rgba(93, 168, 255, 0.9); transform: translate(-50%, -50%);
     }
-
-    .mini-controls {
-      display: flex;
-      justify-content: flex-end;
-      gap: 6px;
-      margin-top: 8px;
-    }
-
+    .mini-controls { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; }
     .mini-controls button {
-      width: 28px;
-      height: 26px;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 6px;
-      background: rgba(255, 255, 255, 0.08);
-      cursor: pointer;
+      width: 28px; height: 26px; border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08); cursor: pointer;
     }
 
-    .quest-panel {
-      top: 230px;
-      right: 16px;
-      width: 220px;
-      padding: 12px;
-    }
+    .quest-panel { top: 230px; right: 16px; width: 220px; padding: 12px; }
+    .quest-item { font-size: 13px; line-height: 1.6; }
+    .quest-name { color: #ffe08a; font-weight: 700; }
+    .quest-desc { color: #d9e7ef; }
 
-    .quest-item {
-      font-size: 13px;
-      line-height: 1.6;
+    /* --- [인벤토리 UI 추가] --- */
+    .inventory-panel {
+      display: none; /* 기본 숨김 */
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 320px; max-height: 400px; padding: 16px;
+      display: flex; flex-direction: column; z-index: 10;
     }
-
-    .quest-name {
-      color: #ffe08a;
-      font-weight: 700;
+    .inventory-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 8px;
     }
-
-    .quest-desc {
-      color: #d9e7ef;
+    .close-btn { background: transparent; border: none; font-size: 16px; cursor: pointer; color: #aaa; }
+    .close-btn:hover { color: #fff; }
+    .inventory-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+      overflow-y: auto; padding-right: 4px;
+    }
+    .inv-slot {
+      aspect-ratio: 1; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px; display: flex; flex-direction: column; justify-content: center; align-items: center;
+      position: relative; cursor: pointer;
+    }
+    .inv-slot:hover { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.1); }
+    .item-icon { font-size: 20px; font-weight: bold; color: #FFD66B; }
+    .item-count { position: absolute; bottom: 2px; right: 4px; font-size: 10px; color: #fff; }
+    /* 툴팁 (아이템 이름) */
+    .inv-slot[data-name]:hover::after {
+      content: attr(data-name);
+      position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
+      background: #000; color: #fff; padding: 4px 8px; font-size: 11px; border-radius: 4px;
+      white-space: nowrap; pointer-events: none; z-index: 11;
     }
 
     .chat-panel {
-      left: 16px;
-      bottom: 142px;
-      width: 390px;
-      height: 210px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+      left: 16px; bottom: 142px; width: 390px; height: 210px;
+      display: flex; flex-direction: column; overflow: hidden;
     }
-
-    .chat-tabs {
-      display: flex;
-      gap: 4px;
-      padding: 8px 8px 0;
-    }
-
+    .chat-tabs { display: flex; gap: 4px; padding: 8px 8px 0; }
     .chat-tabs button {
-      padding: 5px 10px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      border-radius: 6px;
-      background: rgba(255, 255, 255, 0.07);
-      font-size: 12px;
-      cursor: pointer;
+      padding: 5px 10px; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 6px;
+      background: rgba(255, 255, 255, 0.07); font-size: 12px; cursor: pointer;
     }
-
-    .chat-tabs button.active {
-      background: rgba(85, 155, 255, 0.35);
-      border-color: rgba(110, 175, 255, 0.6);
-    }
-
-    .chat-body {
-      flex: 1;
-      padding: 10px;
-      overflow-y: auto;
-      font-size: 12px;
-      line-height: 1.5;
-      color: #dfefff;
-    }
-
-    .chat-input-row {
-      display: flex;
-      gap: 6px;
-      padding: 8px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
+    .chat-tabs button.active { background: rgba(85, 155, 255, 0.35); border-color: rgba(110, 175, 255, 0.6); }
+    .chat-body { flex: 1; padding: 10px; overflow-y: auto; font-size: 12px; line-height: 1.5; color: #dfefff; }
+    .chat-input-row { display: flex; gap: 6px; padding: 8px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
     .chat-input-row input {
-      flex: 1;
-      min-width: 0;
-      padding: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      border-radius: 6px;
-      background: rgba(0, 0, 0, 0.25);
-      color: #fff;
-      outline: none;
+      flex: 1; min-width: 0; padding: 8px; border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 6px; background: rgba(0, 0, 0, 0.25); color: #fff; outline: none;
     }
-
     .chat-input-row button {
-      padding: 0 12px;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      border-radius: 6px;
-      background: rgba(80, 145, 255, 0.35);
-      cursor: pointer;
+      padding: 0 12px; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 6px;
+      background: rgba(80, 145, 255, 0.35); cursor: pointer;
     }
 
     .hud {
-      position: absolute;
-      left: 16px;
-      right: 16px;
-      bottom: 16px;
-      z-index: 5;
-      min-height: 108px;
-      display: grid;
-      grid-template-columns: 360px 1fr 380px;
-      gap: 16px;
-      align-items: center;
-      padding: 14px;
-      border-radius: 14px;
-      background: rgba(9, 13, 18, 0.86);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.46);
-      backdrop-filter: blur(5px);
+      position: absolute; left: 16px; right: 16px; bottom: 16px; z-index: 5;
+      min-height: 108px; display: grid; grid-template-columns: 360px 1fr 380px; gap: 16px;
+      align-items: center; padding: 14px; border-radius: 14px; background: rgba(9, 13, 18, 0.86);
+      border: 1px solid rgba(255, 255, 255, 0.16); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.46); backdrop-filter: blur(5px);
     }
-
-    .portrait-wrap {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
+    .portrait-wrap { display: flex; align-items: center; gap: 12px; }
     .portrait {
-      width: 76px;
-      height: 76px;
-      display: grid;
-      place-items: center;
-      border-radius: 14px;
-      font-size: 38px;
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.05));
+      width: 76px; height: 76px; display: grid; place-items: center; border-radius: 14px;
+      font-size: 38px; background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.05));
       border: 1px solid rgba(255, 255, 255, 0.16);
     }
+    .player-info { flex: 1; min-width: 0; }
+    .name-line { margin-bottom: 8px; font-weight: 700; color: #fff; }
+    .stat-row { display: grid; grid-template-columns: 34px 1fr 92px; gap: 8px; align-items: center; margin-top: 5px; font-size: 12px; }
+    .label { font-weight: 700; color: #eaf4ff; }
+    .bar { height: 10px; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, 0.12); }
+    .fill { height: 100%; border-radius: 999px; transition: width 0.18s ease; }
+    .fill.hp { background: linear-gradient(90deg, #ff4d4d, #ff8a8a); }
+    .fill.mp { background: linear-gradient(90deg, #3f7cff, #7ab3ff); }
+    .fill.exp { background: linear-gradient(90deg, #f7c948, #ffe88a); }
+    .value { white-space: nowrap; color: #dcecff; }
 
-    .player-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .name-line {
-      margin-bottom: 8px;
-      font-weight: 700;
-      color: #fff;
-    }
-
-    .stat-row {
-      display: grid;
-      grid-template-columns: 34px 1fr 92px;
-      gap: 8px;
-      align-items: center;
-      margin-top: 5px;
-      font-size: 12px;
-    }
-
-    .label {
-      font-weight: 700;
-      color: #eaf4ff;
-    }
-
-    .bar {
-      height: 10px;
-      overflow: hidden;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.12);
-    }
-
-    .fill {
-      height: 100%;
-      border-radius: 999px;
-      transition: width 0.18s ease;
-    }
-
-    .fill.hp {
-      background: linear-gradient(90deg, #ff4d4d, #ff8a8a);
-    }
-
-    .fill.mp {
-      background: linear-gradient(90deg, #3f7cff, #7ab3ff);
-    }
-
-    .fill.exp {
-      background: linear-gradient(90deg, #f7c948, #ffe88a);
-    }
-
-    .value {
-      white-space: nowrap;
-      color: #dcecff;
-    }
-
-    .skill-bar {
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-    }
-
+    .skill-bar { display: flex; justify-content: center; gap: 8px; }
     .skill-bar .slot {
-      position: relative;
-      width: 54px;
-      height: 54px;
-      display: grid;
-      place-items: center;
-      border-radius: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
-      font-size: 24px;
-      cursor: pointer;
+      position: relative; width: 54px; height: 54px; display: grid; place-items: center;
+      border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.18);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05)); font-size: 24px; cursor: pointer;
       transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
     }
-
     .skill-bar .slot:hover:not(:disabled) {
-      transform: translateY(-2px);
-      border-color: rgba(120, 190, 255, 0.8);
+      transform: translateY(-2px); border-color: rgba(120, 190, 255, 0.8);
       background: linear-gradient(135deg, rgba(120, 190, 255, 0.25), rgba(255, 255, 255, 0.07));
     }
+    .skill-bar .slot:active:not(:disabled) { transform: translateY(0); }
+    .skill-bar .slot.locked, .skill-bar .slot:disabled { opacity: 0.45; cursor: not-allowed; }
+    .skill-bar .num { position: absolute; left: 6px; top: 4px; font-size: 11px; color: #d7e8ff; }
 
-    .skill-bar .slot:active:not(:disabled) {
-      transform: translateY(0);
-    }
-
-    .skill-bar .slot.locked,
-    .skill-bar .slot:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-
-    .skill-bar .num {
-      position: absolute;
-      left: 6px;
-      top: 4px;
-      font-size: 11px;
-      color: #d7e8ff;
-    }
-
-    .menu-buttons {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      gap: 8px;
-    }
-
+    .menu-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
     .menu-buttons button {
-      min-width: 102px;
-      padding: 9px 10px;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.08);
-      font-size: 12px;
-      cursor: pointer;
+      min-width: 102px; padding: 9px 10px; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08); font-size: 12px; cursor: pointer;
     }
+    .menu-buttons button:hover, .mini-controls button:hover, .chat-input-row button:hover { background: rgba(100, 165, 255, 0.28); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
-    .menu-buttons button:hover,
-    .mini-controls button:hover,
-    .chat-input-row button:hover {
-      background: rgba(100, 165, 255, 0.28);
-    }
-
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
-
-    @media (max-width: 1100px) {
-      .hud {
-        grid-template-columns: 320px 1fr;
-      }
-
-      .menu-buttons {
-        display: none;
-      }
-
-      .chat-panel {
-        width: 340px;
-      }
-    }
-
+    @media (max-width: 1100px) { .hud { grid-template-columns: 320px 1fr; } .menu-buttons { display: none; } .chat-panel { width: 340px; } }
     @media (max-width: 820px) {
-      .top-left-panel,
-      .minimap-panel,
-      .quest-panel {
-        display: none;
-      }
-
-      .chat-panel {
-        left: 10px;
-        right: 10px;
-        bottom: 132px;
-        width: auto;
-      }
-
-      .hud {
-        left: 10px;
-        right: 10px;
-        bottom: 10px;
-        grid-template-columns: 1fr;
-      }
-
-      .skill-bar {
-        justify-content: flex-start;
-        overflow-x: auto;
-      }
+      .top-left-panel, .minimap-panel, .quest-panel { display: none; }
+      .chat-panel { left: 10px; right: 10px; bottom: 132px; width: auto; }
+      .hud { left: 10px; right: 10px; bottom: 10px; grid-template-columns: 1fr; }
+      .skill-bar { justify-content: flex-start; overflow-x: auto; }
     }
   </style>
 </head>
@@ -464,55 +179,50 @@
 
     <section class="panel top-left-panel" aria-label="필드 정보">
       <div class="panel-title" id="field-name">Verdant Plains</div>
-
-      <div class="panel-row">
-        <span class="green" id="channel-name">Channel 1</span>
-        <span id="server-time">10:24</span>
-      </div>
-
-      <div class="panel-row">
-        <span>Field Status:</span>
-        <span class="green" id="field-status">Safe</span>
-      </div>
+      <div class="panel-row"> <span class="green" id="channel-name">Channel 1</span> <span id="server-time">10:24</span> </div>
+      <div class="panel-row"> <span>Field Status:</span> <span class="green" id="field-status">Safe</span> </div>
     </section>
 
     <section class="panel minimap-panel" aria-label="미니맵">
       <div class="panel-title" id="minimap-field-name">Verdant Plains</div>
-
       <div id="minimap">
         <div class="mini-path"></div>
-
         <div class="mini-dot enemy" style="--x: 22%; --y: 28%;" aria-label="적"></div>
         <div class="mini-dot enemy" style="--x: 75%; --y: 22%;" aria-label="적"></div>
         <div class="mini-dot enemy" style="--x: 70%; --y: 68%;" aria-label="적"></div>
-
         <div id="mini-player" aria-label="플레이어 위치"></div>
       </div>
-
       <div class="mini-controls">
-        <button type="button" id="minimap-zoom-in" aria-label="미니맵 확대">+</button>
-        <button type="button" id="minimap-zoom-out" aria-label="미니맵 축소">-</button>
-        <button type="button" id="minimap-settings" aria-label="미니맵 설정">⚙</button>
+        <button type="button" id="minimap-zoom-in">+</button>
+        <button type="button" id="minimap-zoom-out">-</button>
+        <button type="button" id="minimap-settings">⚙</button>
       </div>
     </section>
 
     <section class="panel quest-panel" aria-label="퀘스트 추적">
       <div class="panel-title">Quest Tracker</div>
-
       <div class="quest-item" id="active-quest">
         <div class="quest-name" id="quest-name">◆ The Beginning</div>
         <div class="quest-desc" id="quest-progress">- Defeat Green Slimes (0/5)</div>
       </div>
     </section>
 
+    <section class="panel inventory-panel" id="inventory-panel" style="display: none;" aria-label="인벤토리">
+      <div class="inventory-header">
+        <span class="panel-title" style="margin:0;">Inventory</span>
+        <button class="close-btn" id="close-inventory">✕</button>
+      </div>
+      <div class="inventory-grid" id="inventory-grid">
+        </div>
+    </section>
+
     <section class="panel chat-panel" aria-label="채팅">
-      <div class="chat-tabs" role="tablist" aria-label="채팅 탭">
+      <div class="chat-tabs" role="tablist">
         <button type="button" class="active" data-chat-tab="all" aria-pressed="true">All</button>
         <button type="button" data-chat-tab="party" aria-pressed="false">Party</button>
         <button type="button" data-chat-tab="guild" aria-pressed="false">Guild</button>
         <button type="button" data-chat-tab="system" aria-pressed="false">System</button>
       </div>
-
       <div class="chat-body" id="chat-body" aria-live="polite">
         <div>Welcome to Mythic Realms Online!</div>
         <div>Type /help for a list of commands.</div>
@@ -520,9 +230,7 @@
         <div><span class="yellow">System:</span> Field is safe.</div>
         <div id="coord-line">X: 0 / Y: 0</div>
       </div>
-
       <div class="chat-input-row">
-        <label class="sr-only" for="chat-input">채팅 메시지</label>
         <input id="chat-input" type="text" placeholder="Enter message..." autocomplete="off" />
         <button type="button" id="chat-send-button">Send</button>
       </div>
@@ -530,69 +238,36 @@
 
     <section class="hud" aria-label="플레이어 HUD">
       <div class="portrait-wrap">
-        <div class="portrait" id="player-portrait" aria-label="플레이어 초상화">🙂</div>
-
+        <div class="portrait" id="player-portrait">🙂</div>
         <div class="player-info">
           <div class="name-line" id="player-name-line">Lv. 1 Adventurer</div>
-
           <div class="stat-row">
             <span class="label">HP</span>
-            <div class="bar" aria-hidden="true">
-              <div class="fill hp" id="hp-fill" style="width: 100%;"></div>
-            </div>
+            <div class="bar"><div class="fill hp" id="hp-fill" style="width: 100%;"></div></div>
             <span class="value" id="hp-text">120 / 120</span>
           </div>
-
           <div class="stat-row">
             <span class="label">MP</span>
-            <div class="bar" aria-hidden="true">
-              <div class="fill mp" id="mp-fill" style="width: 100%;"></div>
-            </div>
+            <div class="bar"><div class="fill mp" id="mp-fill" style="width: 100%;"></div></div>
             <span class="value" id="mp-text">60 / 60</span>
           </div>
-
           <div class="stat-row">
             <span class="label">EXP</span>
-            <div class="bar" aria-hidden="true">
-              <div class="fill exp" id="exp-fill" style="width: 20%;"></div>
-            </div>
+            <div class="bar"><div class="fill exp" id="exp-fill" style="width: 20%;"></div></div>
             <span class="value" id="exp-text">20 / 100 (20%)</span>
           </div>
         </div>
       </div>
 
       <div class="skill-bar" aria-label="스킬 슬롯">
-        <button type="button" class="slot" data-skill-key="1" aria-label="1번 스킬: 기본 공격">
-          <span class="num">1</span>⚔
-        </button>
-
-        <button type="button" class="slot" data-skill-key="2" aria-label="2번 스킬: 번개 공격">
-          <span class="num">2</span>⚡
-        </button>
-
-        <button type="button" class="slot" data-skill-key="3" aria-label="3번 스킬: 방어">
-          <span class="num">3</span>🛡
-        </button>
-
-        <button type="button" class="slot" data-skill-key="4" aria-label="4번 스킬: 소용돌이">
-          <span class="num">4</span>🌀
-        </button>
-
-        <button type="button" class="slot" data-skill-key="5" aria-label="5번 스킬: 이동기">
-          <span class="num">5</span>👣
-        </button>
-
-        <button type="button" class="slot" data-skill-key="6" aria-label="6번 스킬: 화염 공격">
-          <span class="num">6</span>🔥
-        </button>
-
-        <button type="button" class="slot" data-skill-key="7" aria-label="7번 스킬: 특수 공격">
-          <span class="num">7</span>✴
-        </button>
-
-        <button type="button" class="slot locked" data-skill-key="8" aria-label="8번 스킬: 잠김" disabled>
-          <span class="num">8</span>🔒
-        </button>
+        <button type="button" class="slot" data-skill-key="1"><span class="num">1</span>⚔</button>
+        <button type="button" class="slot" data-skill-key="2"><span class="num">2</span>⚡</button>
+        <button type="button" class="slot" data-skill-key="3"><span class="num">3</span>🛡</button>
+        <button type="button" class="slot" data-skill-key="4"><span class="num">4</span>🌀</button>
+        <button type="button" class="slot" data-skill-key="5"><span class="num">5</span>👣</button>
+        <button type="button" class="slot" data-skill-key="6"><span class="num">6</span>🔥</button>
+        <button type="button" class="slot" data-skill-key="7"><span class="num">7</span>✴</button>
+        <button type="button" class="slot locked" data-skill-key="8" disabled><span class="num">8</span>🔒</button>
       </div>
 
       <nav class="menu-buttons" aria-label="게임 메뉴">
@@ -607,37 +282,22 @@
 
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
-
   <script>
     const gameState = {
       fieldName: 'Verdant Plains',
       channel: 'Channel 1',
       fieldStatus: 'Safe',
       player: {
-        name: 'Adventurer',
-        level: 1,
-        hp: 120,
-        maxHp: 120,
-        mp: 60,
-        maxMp: 60,
-        exp: 20,
-        nextExp: 100,
-        x: 0,
-        y: 0,
-        speed: 180
+        name: 'Adventurer', level: 1, hp: 120, maxHp: 120, mp: 60, maxMp: 60, exp: 20, nextExp: 100, x: 0, y: 0, speed: 180
       },
-      quest: {
-        name: '◆ The Beginning',
-        targetName: 'Green Slimes',
-        current: 0,
-        required: 5
-      }
+      quest: { name: '◆ The Beginning', targetName: 'Green Slimes', current: 0, required: 5 },
+      
+      // [인벤토리 데이터 저장소 추가] - name을 key로 삼아 count를 누적
+      inventory: {} 
     };
 
     const ui = {};
 
-    // --- [API 설정] ---
     const USE_SERVER = true;
     const SERVER_OPEN_URL = "https://mrdindoin.ddns.net/gti/api/open_chest";
 
@@ -645,379 +305,265 @@
       if (USE_SERVER) {
         try {
           const res = await fetch(SERVER_OPEN_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "open" })
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "open" })
           });
           const data = await res.json();
           if (data.ok) return { rarity: data.rarity || "i6", name: data.item_name || data.item || "Unknown", count: data.count || 1 };
-        } catch(e) {
-          console.warn("API 호출 실패, 기본 드랍으로 대체합니다.");
-        }
+        } catch(e) { console.warn("API Call Failed."); }
       }
       return { rarity: "Normal", name: "Slime Jelly", count: 1 };
     }
 
     function cacheUiElements() {
-      ui.fieldName = document.getElementById('field-name');
-      ui.minimapFieldName = document.getElementById('minimap-field-name');
-      ui.channelName = document.getElementById('channel-name');
-      ui.serverTime = document.getElementById('server-time');
-      ui.fieldStatus = document.getElementById('field-status');
-
-      ui.hpFill = document.getElementById('hp-fill');
-      ui.hpText = document.getElementById('hp-text');
-      ui.mpFill = document.getElementById('mp-fill');
-      ui.mpText = document.getElementById('mp-text');
-      ui.expFill = document.getElementById('exp-fill');
-      ui.expText = document.getElementById('exp-text');
-      ui.playerNameLine = document.getElementById('player-name-line');
-
-      ui.questName = document.getElementById('quest-name');
-      ui.questProgress = document.getElementById('quest-progress');
-
-      ui.coordLine = document.getElementById('coord-line');
-      ui.chatBody = document.getElementById('chat-body');
-      ui.chatInput = document.getElementById('chat-input');
-      ui.chatSendButton = document.getElementById('chat-send-button');
-
-      ui.miniPlayer = document.getElementById('mini-player');
-      ui.skillButtons = document.querySelectorAll('[data-skill-key]');
+      ui.fieldName = document.getElementById('field-name'); ui.minimapFieldName = document.getElementById('minimap-field-name');
+      ui.channelName = document.getElementById('channel-name'); ui.serverTime = document.getElementById('server-time');
+      ui.fieldStatus = document.getElementById('field-status'); ui.hpFill = document.getElementById('hp-fill');
+      ui.hpText = document.getElementById('hp-text'); ui.mpFill = document.getElementById('mp-fill');
+      ui.mpText = document.getElementById('mp-text'); ui.expFill = document.getElementById('exp-fill');
+      ui.expText = document.getElementById('exp-text'); ui.playerNameLine = document.getElementById('player-name-line');
+      ui.questName = document.getElementById('quest-name'); ui.questProgress = document.getElementById('quest-progress');
+      ui.coordLine = document.getElementById('coord-line'); ui.chatBody = document.getElementById('chat-body');
+      ui.chatInput = document.getElementById('chat-input'); ui.chatSendButton = document.getElementById('chat-send-button');
+      ui.miniPlayer = document.getElementById('mini-player'); ui.skillButtons = document.querySelectorAll('[data-skill-key]');
       ui.chatTabs = document.querySelectorAll('[data-chat-tab]');
+      
+      // 인벤토리 DOM
+      ui.inventoryPanel = document.getElementById('inventory-panel');
+      ui.inventoryGrid = document.getElementById('inventory-grid');
+      ui.closeInventoryBtn = document.getElementById('close-inventory');
+      ui.inventoryBtn = document.getElementById('inventory-button');
     }
 
-    function clamp(value, min, max) {
-      return Math.max(min, Math.min(max, value));
-    }
-
-    function percent(current, max) {
-      if (max <= 0) return 0;
-      return clamp((current / max) * 100, 0, 100);
-    }
+    function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+    function percent(current, max) { return max <= 0 ? 0 : clamp((current / max) * 100, 0, 100); }
 
     function updateFieldUi() {
-      ui.fieldName.textContent = gameState.fieldName;
-      ui.minimapFieldName.textContent = gameState.fieldName;
-      ui.channelName.textContent = gameState.channel;
-      ui.fieldStatus.textContent = gameState.fieldStatus;
+      ui.fieldName.textContent = gameState.fieldName; ui.minimapFieldName.textContent = gameState.fieldName;
+      ui.channelName.textContent = gameState.channel; ui.fieldStatus.textContent = gameState.fieldStatus;
     }
 
     function updateServerTime() {
       const now = new Date();
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      ui.serverTime.textContent = `${hours}:${minutes}`;
+      ui.serverTime.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     }
 
     function updatePlayerHud() {
-      const player = gameState.player;
-      const hpPercent = percent(player.hp, player.maxHp);
-      const mpPercent = percent(player.mp, player.maxMp);
-      const expPercent = percent(player.exp, player.nextExp);
-
-      ui.hpFill.style.width = `${hpPercent}%`;
-      ui.hpText.textContent = `${player.hp} / ${player.maxHp}`;
-      ui.mpFill.style.width = `${mpPercent}%`;
-      ui.mpText.textContent = `${player.mp} / ${player.maxMp}`;
-      ui.expFill.style.width = `${expPercent}%`;
-      ui.expText.textContent = `${player.exp} / ${player.nextExp} (${Math.floor(expPercent)}%)`;
-      ui.playerNameLine.textContent = `Lv. ${player.level} ${player.name}`;
+      const p = gameState.player;
+      ui.hpFill.style.width = `${percent(p.hp, p.maxHp)}%`; ui.hpText.textContent = `${p.hp} / ${p.maxHp}`;
+      ui.mpFill.style.width = `${percent(p.mp, p.maxMp)}%`; ui.mpText.textContent = `${p.mp} / ${p.maxMp}`;
+      ui.expFill.style.width = `${percent(p.exp, p.nextExp)}%`; ui.expText.textContent = `${p.exp} / ${p.nextExp} (${Math.floor(percent(p.exp, p.nextExp))}%)`;
+      ui.playerNameLine.textContent = `Lv. ${p.level} ${p.name}`;
     }
 
     function updateQuestUi() {
-      const quest = gameState.quest;
-      ui.questName.textContent = quest.name;
-      ui.questProgress.textContent = `- Defeat ${quest.targetName} (${quest.current}/${quest.required})`;
+      const q = gameState.quest;
+      ui.questName.textContent = q.name; ui.questProgress.textContent = `- Defeat ${q.targetName} (${q.current}/${q.required})`;
     }
 
     function updateCoordinates(x, y) {
-      gameState.player.x = Math.floor(x);
-      gameState.player.y = Math.floor(y);
+      gameState.player.x = Math.floor(x); gameState.player.y = Math.floor(y);
       ui.coordLine.textContent = `X: ${gameState.player.x} / Y: ${gameState.player.y}`;
-
-      const miniX = clamp((x / 1600) * 100, 4, 96);
-      const miniY = clamp((y / 1000) * 100, 4, 96);
-      ui.miniPlayer.style.left = `${miniX}%`;
-      ui.miniPlayer.style.top = `${miniY}%`;
+      ui.miniPlayer.style.left = `${clamp((x / 1600) * 100, 4, 96)}%`; ui.miniPlayer.style.top = `${clamp((y / 1000) * 100, 4, 96)}%`;
     }
 
     function addChatMessage(message, className = '') {
       const line = document.createElement('div');
       if (className) line.className = className;
-      line.textContent = message;
-      ui.chatBody.appendChild(line);
-      ui.chatBody.scrollTop = ui.chatBody.scrollHeight;
+      line.textContent = message; ui.chatBody.appendChild(line); ui.chatBody.scrollTop = ui.chatBody.scrollHeight;
     }
 
     function sendChatMessage() {
       const message = ui.chatInput.value.trim();
       if (!message) return;
-
-      if (message === '/help') {
-        addChatMessage('System: Commands - /help, /where, /damage, /heal, /quest', 'yellow');
-      } else if (message === '/where') {
-        addChatMessage(`System: Current position is X: ${gameState.player.x} / Y: ${gameState.player.y}`, 'yellow');
-      } else if (message === '/damage') {
-        gameState.player.hp = clamp(gameState.player.hp - 15, 0, gameState.player.maxHp);
-        updatePlayerHud();
-        addChatMessage('System: You took 15 damage.', 'yellow');
-      } else if (message === '/heal') {
-        gameState.player.hp = gameState.player.maxHp;
-        updatePlayerHud();
-        addChatMessage('System: HP fully restored.', 'green');
-      } else {
-        addChatMessage(`You: ${message}`);
-      }
+      if (message === '/help') addChatMessage('System: Commands - /help, /where, /damage, /heal', 'yellow');
+      else if (message === '/where') addChatMessage(`System: X: ${gameState.player.x} / Y: ${gameState.player.y}`, 'yellow');
+      else if (message === '/damage') { gameState.player.hp = clamp(gameState.player.hp - 15, 0, gameState.player.maxHp); updatePlayerHud(); }
+      else if (message === '/heal') { gameState.player.hp = gameState.player.maxHp; updatePlayerHud(); }
+      else addChatMessage(`You: ${message}`);
       ui.chatInput.value = '';
+    }
+
+    // --- [인벤토리 UI 업데이트 로직] ---
+    function updateInventoryUi() {
+      ui.inventoryGrid.innerHTML = ''; // 기존 슬롯 초기화
+      const items = Object.keys(gameState.inventory);
+
+      // 최소 16개의 슬롯을 그리도록 (빈 슬롯 포함)
+      const totalSlots = Math.max(16, items.length + (4 - items.length % 4)); 
+
+      for (let i = 0; i < totalSlots; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'inv-slot';
+
+        if (i < items.length) {
+          const itemName = items[i];
+          const itemCount = gameState.inventory[itemName];
+          const shortName = itemName.charAt(0).toUpperCase(); // 아이템 이름의 첫 글자 추출
+
+          slot.setAttribute('data-name', itemName); // CSS 툴팁용 속성
+          slot.innerHTML = `
+            <span class="item-icon">${shortName}</span>
+            <span class="item-count">x${itemCount}</span>
+          `;
+        }
+        ui.inventoryGrid.appendChild(slot);
+      }
+    }
+
+    function toggleInventory() {
+      if (ui.inventoryPanel.style.display === 'none' || !ui.inventoryPanel.style.display) {
+        ui.inventoryPanel.style.display = 'flex';
+        updateInventoryUi(); // 열 때 최신 상태 렌더링
+      } else {
+        ui.inventoryPanel.style.display = 'none';
+      }
     }
 
     function bindUiEvents() {
       ui.chatSendButton.addEventListener('click', sendChatMessage);
-      ui.chatInput.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') sendChatMessage();
-      });
+      ui.chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); });
 
-      ui.skillButtons.forEach((button) => {
-        button.addEventListener('click', () => {
-          const skillKey = button.dataset.skillKey;
-          
-          // 1번 스킬(기본 공격)을 누르면 Phaser 씬으로 이벤트 전달
-          if (skillKey === '1') {
-            window.dispatchEvent(new CustomEvent('player-attack'));
-          } else if (skillKey === '2') {
-            gameState.player.mp = clamp(gameState.player.mp - 10, 0, gameState.player.maxMp);
-            updatePlayerHud();
-            addChatMessage(`System: Skill ${skillKey} used.`, 'yellow');
-          } else {
-            addChatMessage(`System: Skill ${skillKey} used.`, 'yellow');
-          }
+      ui.skillButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.dataset.skillKey;
+          if (key === '1') window.dispatchEvent(new CustomEvent('player-attack'));
+          else { gameState.player.mp = clamp(gameState.player.mp - 10, 0, gameState.player.maxMp); updatePlayerHud(); }
         });
       });
 
-      ui.chatTabs.forEach((button) => {
-        button.addEventListener('click', () => {
-          ui.chatTabs.forEach((tab) => {
-            tab.classList.remove('active');
-            tab.setAttribute('aria-pressed', 'false');
-          });
-          button.classList.add('active');
-          button.setAttribute('aria-pressed', 'true');
-          addChatMessage(`System: Chat tab changed to ${button.textContent}.`, 'yellow');
+      ui.chatTabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+          ui.chatTabs.forEach(t => { t.classList.remove('active'); t.setAttribute('aria-pressed', 'false'); });
+          btn.classList.add('active'); btn.setAttribute('aria-pressed', 'true');
         });
       });
 
-      // 우측 하단 메뉴 버튼 이벤트
-      document.getElementById('inventory-button').addEventListener('click', () => addChatMessage('System: Inventory is not implemented yet.', 'yellow'));
+      // 인벤토리 버튼 연결
+      ui.inventoryBtn.addEventListener('click', toggleInventory);
+      ui.closeInventoryBtn.addEventListener('click', () => ui.inventoryPanel.style.display = 'none');
+
       document.getElementById('skills-button').addEventListener('click', () => addChatMessage('System: Skills window is not implemented yet.', 'yellow'));
       document.getElementById('quests-button').addEventListener('click', () => addChatMessage(`System: Active quest - ${gameState.quest.targetName} (${gameState.quest.current}/${gameState.quest.required}).`, 'yellow'));
       document.getElementById('character-button').addEventListener('click', () => addChatMessage(`System: ${gameState.player.name}, Lv. ${gameState.player.level}.`, 'yellow'));
-      document.getElementById('options-button').addEventListener('click', () => addChatMessage('System: Options are not implemented yet.', 'yellow'));
-      document.getElementById('minimap-zoom-in').addEventListener('click', () => addChatMessage('System: Minimap zoom in.', 'yellow'));
-      document.getElementById('minimap-zoom-out').addEventListener('click', () => addChatMessage('System: Minimap zoom out.', 'yellow'));
-      document.getElementById('minimap-settings').addEventListener('click', () => addChatMessage('System: Minimap settings are not implemented yet.', 'yellow'));
     }
 
     class MainScene extends Phaser.Scene {
-      constructor() {
-        super('MainScene');
-      }
+      constructor() { super('MainScene'); }
 
       create() {
-        this.worldWidth = 1600;
-        this.worldHeight = 1000;
-
+        this.worldWidth = 1600; this.worldHeight = 1000;
         this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
         this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight);
 
-        this.createField();
-        this.createPlayer();
-        this.createEnemies();
+        this.createField(); this.createPlayer(); this.createEnemies();
 
         this.cursors = this.input.keyboard.createCursorKeys();
-        this.wasd = this.input.keyboard.addKeys({
-          up: Phaser.Input.Keyboard.KeyCodes.W,
-          left: Phaser.Input.Keyboard.KeyCodes.A,
-          down: Phaser.Input.Keyboard.KeyCodes.S,
-          right: Phaser.Input.Keyboard.KeyCodes.D
-        });
+        this.wasd = this.input.keyboard.addKeys({ up: 'W', left: 'A', down: 'S', right: 'D' });
 
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
         updateCoordinates(this.player.x, this.player.y);
 
-        // UI에서 공격(1번 스킬) 이벤트 수신
         window.addEventListener('player-attack', () => this.handlePlayerAttack());
       }
 
       createField() {
         const graphics = this.add.graphics();
-        graphics.fillStyle(0x244e2e, 1);
-        graphics.fillRect(0, 0, this.worldWidth, this.worldHeight);
-
-        graphics.fillStyle(0x2f6a3a, 1);
-        for (let i = 0; i < 70; i += 1) {
-          graphics.fillCircle(Phaser.Math.Between(0, this.worldWidth), Phaser.Math.Between(0, this.worldHeight), Phaser.Math.Between(20, 70));
-        }
-
-        graphics.fillStyle(0x9b7a44, 0.55);
-        graphics.fillEllipse(800, 500, 1450, 130);
-        graphics.fillEllipse(700, 560, 600, 80);
-
-        for (let i = 0; i < 40; i += 1) {
-          const treeX = Phaser.Math.Between(40, this.worldWidth - 40);
-          const treeY = Phaser.Math.Between(40, this.worldHeight - 40);
-          this.add.circle(treeX, treeY, 18, 0x17381f);
-          this.add.circle(treeX - 8, treeY + 5, 12, 0x1f5a2d);
-          this.add.rectangle(treeX, treeY + 18, 8, 22, 0x5d3a1a);
-        }
+        graphics.fillStyle(0x244e2e, 1); graphics.fillRect(0, 0, this.worldWidth, this.worldHeight);
+        graphics.fillStyle(0x2f6a3a, 1); for (let i = 0; i < 70; i++) graphics.fillCircle(Phaser.Math.Between(0, this.worldWidth), Phaser.Math.Between(0, this.worldHeight), Phaser.Math.Between(20, 70));
+        graphics.fillStyle(0x9b7a44, 0.55); graphics.fillEllipse(800, 500, 1450, 130); graphics.fillEllipse(700, 560, 600, 80);
       }
 
       createPlayer() {
-        this.player = this.add.circle(800, 500, 18, 0x5da8ff);
-        this.physics.add.existing(this.player);
-
-        this.player.body.setCircle(18);
-        this.player.body.setCollideWorldBounds(true);
-
-        this.playerNameText = this.add.text(0, 0, 'Adventurer', {
-          fontSize: '13px', color: '#ffffff', stroke: '#000000', strokeThickness: 3
-        }).setOrigin(0.5, 1);
+        this.player = this.add.circle(800, 500, 18, 0x5da8ff); this.physics.add.existing(this.player);
+        this.player.body.setCircle(18); this.player.body.setCollideWorldBounds(true);
+        this.playerNameText = this.add.text(0, 0, 'Adventurer', { fontSize: '13px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
       }
 
       createEnemies() {
-        const enemyPositions = [
-          { x: 360, y: 280 }, { x: 1120, y: 260 }, { x: 1070, y: 680 },
-          { x: 610, y: 720 }, { x: 930, y: 380 }
-        ];
-
-        // 몬스터 물리엔진 및 상태 속성 추가
-        this.enemiesData = enemyPositions.map((pos) => {
-          const sprite = this.add.circle(pos.x, pos.y, 16, 0xff5858);
-          this.physics.add.existing(sprite);
-          sprite.body.setCircle(16);
-          sprite.body.setCollideWorldBounds(true);
-          sprite.body.setBounce(0.5); // 타격 시 밀리는 효과
-
-          const label = this.add.text(pos.x, pos.y - 24, 'Slime', {
-            fontSize: '12px', color: '#ffffff', stroke: '#000000', strokeThickness: 3
-          }).setOrigin(0.5, 1);
-
-          return {
-            sprite, label, hp: 30, maxHp: 30, speed: 40, state: 'wander', lastAttackTime: 0
-          };
+        const positions = [{x:360,y:280},{x:1120,y:260},{x:1070,y:680},{x:610,y:720},{x:930,y:380}];
+        this.enemiesData = positions.map(p => {
+          const sprite = this.add.circle(p.x, p.y, 16, 0xff5858); this.physics.add.existing(sprite);
+          sprite.body.setCircle(16); sprite.body.setCollideWorldBounds(true); sprite.body.setBounce(0.5);
+          const label = this.add.text(p.x, p.y - 24, 'Slime', { fontSize: '12px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
+          return { sprite, label, hp: 30, maxHp: 30, speed: 40, state: 'wander', lastAttackTime: 0 };
         });
 
-        // 몬스터 배회(Wander) 로직 - 2초마다 랜덤 방향 이동
         this.time.addEvent({
-          delay: 2000,
-          callback: () => {
-            this.enemiesData.forEach(e => {
-              if (e.hp > 0 && e.state === 'wander') {
-                const angle = Phaser.Math.Between(0, 360);
-                this.physics.velocityFromAngle(angle, e.speed);
-              }
-            });
-          },
-          loop: true
+          delay: 2000, loop: true,
+          callback: () => this.enemiesData.forEach(e => { if(e.hp>0 && e.state==='wander') this.physics.velocityFromAngle(Phaser.Math.Between(0,360), e.speed); })
         });
       }
 
       handlePlayerAttack() {
-        let closestEnemy = null;
-        let minDistance = 65; // 타격 가능 사거리
-
-        // 사거리 내 가장 가까운 적 탐색
+        let closest = null; let minDist = 65;
         this.enemiesData.forEach(e => {
           if (e.hp <= 0) return;
           const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, e.sprite.x, e.sprite.y);
-          if (dist < minDistance) {
-            minDistance = dist;
-            closestEnemy = e;
-          }
+          if (dist < minDist) { minDist = dist; closest = e; }
         });
 
-        if (closestEnemy) {
-          closestEnemy.hp -= 15;
-          addChatMessage(`System: Slime에게 15 피해! (HP: ${closestEnemy.hp}/${closestEnemy.maxHp})`, 'yellow');
-          
-          // 피격 시 몬스터가 플레이어를 쳐다보고 추적 시작, 살짝 넉백
-          closestEnemy.state = 'chase';
-          const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, closestEnemy.sprite.x, closestEnemy.sprite.y);
-          this.physics.velocityFromRotation(angle, 150, closestEnemy.sprite.body.velocity);
-
-          if (closestEnemy.hp <= 0) {
-            this.killEnemy(closestEnemy);
-          }
-        } else {
-          addChatMessage('System: 타격 사거리 내에 몬스터가 없습니다.', 'yellow');
-        }
+        if (closest) {
+          closest.hp -= 15; addChatMessage(`System: Slime에게 15 피해! (HP: ${closest.hp}/${closest.maxHp})`, 'yellow');
+          closest.state = 'chase';
+          this.physics.velocityFromRotation(Phaser.Math.Angle.Between(this.player.x, this.player.y, closest.sprite.x, closest.sprite.y), 150, closest.sprite.body.velocity);
+          if (closest.hp <= 0) this.killEnemy(closest);
+        } else addChatMessage('System: 타격 사거리 내에 몬스터가 없습니다.', 'yellow');
       }
 
       async killEnemy(enemy) {
-        enemy.sprite.destroy();
-        enemy.label.destroy();
-        addChatMessage('System: Slime을 처치했습니다!', 'green');
+        enemy.sprite.destroy(); enemy.label.destroy(); addChatMessage('System: Slime 처치!', 'green');
 
-        // 퀘스트 카운트
-        const quest = gameState.quest;
-        if (quest.current < quest.required) {
-          quest.current += 1;
-          updateQuestUi();
-          if (quest.current >= quest.required) addChatMessage('System: 퀘스트 완료! 마을로 돌아가세요.', 'green');
+        if (gameState.quest.current < gameState.quest.required) {
+          gameState.quest.current += 1; updateQuestUi();
+          if (gameState.quest.current >= gameState.quest.required) addChatMessage('System: 퀘스트 완료!', 'green');
         }
 
-        // 경험치 및 레벨업
         gameState.player.exp += 35;
         if (gameState.player.exp >= gameState.player.nextExp) {
-          gameState.player.level += 1;
-          gameState.player.exp -= gameState.player.nextExp;
-          gameState.player.nextExp = Math.floor(gameState.player.nextExp * 1.5); // 다음 렙업 요구치 증가
-          gameState.player.maxHp += 20;
-          gameState.player.hp = gameState.player.maxHp;
-          addChatMessage(`System: 레벨 업! Lv. ${gameState.player.level}`, 'green');
+          gameState.player.level++; gameState.player.exp -= gameState.player.nextExp; gameState.player.nextExp = Math.floor(gameState.player.nextExp * 1.5);
+          gameState.player.maxHp += 20; gameState.player.hp = gameState.player.maxHp; addChatMessage(`System: 레벨 업! Lv. ${gameState.player.level}`, 'green');
         }
         updatePlayerHud();
 
-        // 60% 확률로 아이템 드랍 (API 연동)
+        // [아이템 획득 및 인벤토리 저장]
         if (Math.random() < 0.6) {
           const drop = await getDrop();
           addChatMessage(`System: 🎁 전리품 획득! [${drop.rarity}] ${drop.name} x${drop.count}`, 'yellow');
+          
+          // gameState.inventory 객체에 아이템 이름으로 수량 누적
+          if (!gameState.inventory[drop.name]) {
+             gameState.inventory[drop.name] = 0;
+          }
+          gameState.inventory[drop.name] += drop.count;
+
+          // 인벤토리 창이 열려있다면 즉시 화면 갱신
+          if (ui.inventoryPanel.style.display === 'flex') {
+            updateInventoryUi();
+          }
         }
       }
 
       update(time) {
-        // 플레이어 이동 (WASD / 방향키)
-        const velocity = new Phaser.Math.Vector2(0, 0);
-        if (this.cursors.left.isDown || this.wasd.left.isDown) velocity.x = -1;
-        else if (this.cursors.right.isDown || this.wasd.right.isDown) velocity.x = 1;
+        const vel = new Phaser.Math.Vector2(0, 0);
+        if (this.cursors.left.isDown || this.wasd.left.isDown) vel.x = -1; else if (this.cursors.right.isDown || this.wasd.right.isDown) vel.x = 1;
+        if (this.cursors.up.isDown || this.wasd.up.isDown) vel.y = -1; else if (this.cursors.down.isDown || this.wasd.down.isDown) vel.y = 1;
 
-        if (this.cursors.up.isDown || this.wasd.up.isDown) velocity.y = -1;
-        else if (this.cursors.down.isDown || this.wasd.down.isDown) velocity.y = 1;
-
-        velocity.normalize().scale(gameState.player.speed);
-        this.player.body.setVelocity(velocity.x, velocity.y);
+        vel.normalize().scale(gameState.player.speed);
+        this.player.body.setVelocity(vel.x, vel.y);
         this.playerNameText.setPosition(this.player.x, this.player.y - 24);
         updateCoordinates(this.player.x, this.player.y);
 
-        // 몬스터 AI 상태 업데이트
         this.enemiesData.forEach(e => {
           if (e.hp <= 0) return;
           e.label.setPosition(e.sprite.x, e.sprite.y - 24);
-
           const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, e.sprite.x, e.sprite.y);
-
-          // 인식 거리 진입 시 추적 모드, 멀어지면 배회 모드
-          if (dist < 120) e.state = 'chase';
-          else if (dist > 300) e.state = 'wander';
+          if (dist < 120) e.state = 'chase'; else if (dist > 300) e.state = 'wander';
 
           if (e.state === 'chase') {
             this.physics.moveToObject(e.sprite, this.player, e.speed + 20);
-            
-            // 몬스터의 플레이어 공격 (쿨타임 1.5초)
             if (dist < 35 && time > e.lastAttackTime + 1500) {
-              e.lastAttackTime = time;
-              gameState.player.hp = Math.max(0, gameState.player.hp - 10);
-              updatePlayerHud();
-              addChatMessage('System: Slime에게 10의 피해를 입었습니다!', 'yellow');
+              e.lastAttackTime = time; gameState.player.hp = Math.max(0, gameState.player.hp - 10);
+              updatePlayerHud(); addChatMessage('System: Slime에게 10 피해를 입었습니다!', 'yellow');
             }
           }
         });
@@ -1025,48 +571,21 @@
     }
 
     function createGame() {
-      const config = {
-        type: Phaser.AUTO,
-        parent: 'game-container',
-        width: window.innerWidth,
-        height: window.innerHeight,
-        backgroundColor: '#173821',
-        physics: {
-          default: 'arcade',
-          arcade: { debug: false }
-        },
-        scene: MainScene
-      };
-
+      const config = { type: Phaser.AUTO, parent: 'game-container', width: window.innerWidth, height: window.innerHeight, backgroundColor: '#173821', physics: { default: 'arcade', arcade: { debug: false } }, scene: MainScene };
       const game = new Phaser.Game(config);
       window.addEventListener('resize', () => game.scale.resize(window.innerWidth, window.innerHeight));
       return game;
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      cacheUiElements();
-      bindUiEvents();
-      updateFieldUi();
-      updateServerTime();
-      updatePlayerHud();
-      updateQuestUi();
-
+      cacheUiElements(); bindUiEvents(); updateFieldUi(); updateServerTime(); updatePlayerHud(); updateQuestUi();
       setInterval(updateServerTime, 1000 * 30);
-
-      // --- [HP 자동 회복 로직] ---
-      // 1초마다 동작하며, 30초면 전체 HP가 차오르도록 계산
       setInterval(() => {
-        const player = gameState.player;
-        if (player.hp > 0 && player.hp < player.maxHp) {
-          const regenAmount = Math.max(1, Math.floor(player.maxHp / 30));
-          player.hp = Math.min(player.maxHp, player.hp + regenAmount);
-          updatePlayerHud();
+        if (gameState.player.hp > 0 && gameState.player.hp < gameState.player.maxHp) {
+          gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + Math.max(1, Math.floor(gameState.player.maxHp / 30))); updatePlayerHud();
         }
       }, 1000);
-
       createGame();
-
-      addChatMessage('System: WASD로 이동하고, 슬라임 근처에서 1번 스킬을 눌러 공격하세요.', 'yellow');
     });
   </script>
 </body>
