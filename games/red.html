@@ -24,11 +24,12 @@
     #minimap { position: relative; width: 100%; height: 135px; overflow: hidden; border-radius: 8px; background: radial-gradient(circle at 28% 30%, rgba(110, 255, 130, 0.32), transparent 18%), radial-gradient(circle at 72% 65%, rgba(110, 255, 130, 0.18), transparent 22%), linear-gradient(135deg, #173821, #244e2e); border: 1px solid rgba(255, 255, 255, 0.16); }
     #mini-player { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: #5da8ff; box-shadow: 0 0 10px rgba(93, 168, 255, 0.9); transform: translate(-50%, -50%); z-index: 10; }
     .mini-dot.enemy { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #ff5858; transform: translate(-50%, -50%); }
+    .mini-dot.bldg { position: absolute; width: 6px; height: 6px; border-radius: 2px; background: #55aaff; transform: translate(-50%, -50%); box-shadow: 0 0 6px #55aaff; }
 
     .quest-panel { top: 230px; right: 16px; width: 220px; padding: 12px; }
     .quest-item { font-size: 13px; line-height: 1.6; } .quest-name { color: #ffe08a; font-weight: 700; } .quest-desc { color: #d9e7ef; }
 
-    /* [인벤토리 UI] - 시작 시 무조건 닫힘 보장 */
+    /* [인벤토리 UI] */
     .inventory-panel { display: none; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 320px; max-height: 400px; padding: 16px; flex-direction: column; z-index: 10; }
     .close-btn { background: transparent; border: none; font-size: 16px; color: #aaa; } .close-btn:hover { color: #fff; }
     .inventory-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; overflow-y: auto; padding-right: 4px; }
@@ -38,22 +39,23 @@
     .item-count { position: absolute; bottom: 2px; right: 4px; font-size: 10px; color: #fff; }
 
     /* [건설 UI] */
-    .build-panel { display: none; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 340px; padding: 16px; flex-direction: column; z-index: 10; }
+    .build-panel { display: none; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 360px; padding: 16px; flex-direction: column; z-index: 10; }
     .build-item { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.4); padding: 10px; margin-bottom: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); }
     .build-item:hover { border-color: #7CFF8A; background: rgba(124,255,138,0.1); }
     .build-info h4 { margin: 0 0 4px 0; font-size: 14px; color: #fff; }
     .build-info p { margin: 0; font-size: 11px; color: #aaa; }
-    .build-cost { font-size: 12px; color: #FFD66B; font-weight: bold; }
+    .build-cost { font-size: 12px; color: #FFD66B; font-weight: bold; text-align: right;}
 
     /* 글로벌 툴팁 & 모달 */
     #global-tooltip { position: absolute; background: #000; color: #FFD66B; padding: 6px 10px; font-size: 12px; border-radius: 4px; pointer-events: none; z-index: 9999; border: 1px solid #333; display: none; white-space: nowrap; box-shadow: 0 4px 6px rgba(0,0,0,0.5); }
-    .sell-modal { display: none; flex-direction: column; gap: 12px; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 260px; padding: 20px; z-index: 20; }
-    .sell-modal input { width: 60px; padding: 4px; background: rgba(0,0,0,0.5); border: 1px solid #555; color: #fff; text-align: center; border-radius: 4px; }
-    .sell-modal-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
-    .sell-modal-btns button { padding: 6px 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; background: rgba(255,255,255,0.1); }
-    .sell-modal-btns button.confirm { background: rgba(124, 255, 138, 0.2); border-color: #7CFF8A; color: #7CFF8A; }
+    
+    .modal-box { display: none; flex-direction: column; gap: 12px; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; padding: 20px; z-index: 20; }
+    .modal-box input { width: 60px; padding: 4px; background: rgba(0,0,0,0.5); border: 1px solid #555; color: #fff; text-align: center; border-radius: 4px; }
+    .modal-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+    .modal-btns button { padding: 6px 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; background: rgba(255,255,255,0.1); }
+    .modal-btns button.confirm { background: rgba(124, 255, 138, 0.2); border-color: #7CFF8A; color: #7CFF8A; }
+    .modal-btns button.upgrade { background: rgba(255, 214, 107, 0.2); border-color: #FFD66B; color: #FFD66B; }
 
-    /* 데스 패널티 화면 */
     #death-screen { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; }
     #death-screen h1 { color: #ff5858; font-size: 48px; letter-spacing: 4px; margin-bottom: 20px; text-shadow: 0 0 20px rgba(255,88,88,0.5); }
     #death-screen p { color: #fff; font-size: 20px; }
@@ -85,8 +87,7 @@
     .menu-buttons button { min-width: 90px; padding: 9px 10px; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 8px; background: rgba(255, 255, 255, 0.08); font-size: 12px; }
     .menu-buttons button:hover { background: rgba(100, 165, 255, 0.28); }
     
-    /* 빌드 모드 텍스트 오버레이 */
-    #build-mode-text { display:none; position: absolute; top: 120px; left: 50%; transform: translateX(-50%); font-size: 24px; color: #FFD66B; font-weight: bold; z-index: 5; text-shadow: 0 2px 4px #000; pointer-events: none;}
+    #build-mode-text { display:none; position: absolute; top: 120px; left: 50%; transform: translateX(-50%); font-size: 20px; color: #FFD66B; font-weight: bold; z-index: 5; text-shadow: 0 2px 4px #000; pointer-events: none; padding: 10px 20px; background: rgba(0,0,0,0.5); border-radius: 8px; border: 1px solid #FFD66B;}
   </style>
 </head>
 
@@ -98,7 +99,7 @@
   </div>
 
   <div id="global-tooltip"></div>
-  <div id="build-mode-text">건설 모드: 배치할 위치를 클릭하세요 (우클릭 취소)</div>
+  <div id="build-mode-text">🛠️ 건설 모드: [좌클릭] 배치 / [우클릭] 회전 / [ESC] 취소</div>
 
   <div id="app">
     <div id="game-container"></div>
@@ -127,37 +128,49 @@
       <div class="inventory-grid" id="inventory-grid"></div>
     </section>
 
-    <section class="panel sell-modal" id="sell-modal">
+    <section class="panel modal-box" id="sell-modal">
       <div class="panel-title" id="sell-title" style="margin-bottom: 0;">Sell Item</div>
       <div>수량: <input type="number" id="sell-qty" min="1" value="1" /> / <span id="sell-max">1</span></div>
       <div>수익: <span id="sell-profit" class="yellow">0 G</span></div>
-      <div class="sell-modal-btns">
+      <div class="modal-btns">
         <button id="sell-cancel">취소</button>
         <button id="sell-confirm" class="confirm">판매</button>
       </div>
     </section>
 
+    <section class="panel modal-box" id="upgrade-modal">
+      <div class="panel-title" id="upg-title" style="margin-bottom: 0;">Upgrade Facility</div>
+      <div id="upg-desc" style="font-size: 13px; color: #ccc;">건물을 강화합니다.</div>
+      <div style="margin-top: 10px;">현재: <span id="upg-current" class="green">Lv. 1</span></div>
+      <div>비용: <span id="upg-cost" class="yellow">1000 G</span></div>
+      <div class="modal-btns">
+        <button id="upg-cancel">취소</button>
+        <button id="upg-confirm" class="upgrade">업그레이드</button>
+      </div>
+    </section>
+
     <section class="panel build-panel" id="build-panel">
       <div class="panel-title">Build Structures <span id="build-limit-text" class="yellow" style="font-size:11px;">0/0</span> <button class="close-btn" id="close-build">✕</button></div>
-      <div class="build-item" data-build-type="Fence" data-cost="100">
+      
+      <div class="build-item" data-build-type="Fence">
         <div class="build-info"><h4>Fence (울타리)</h4><p>방어용 벽. 몬스터 길막기 용도.</p></div>
-        <div class="build-cost">100 Wood</div>
+        <div class="build-cost">100 Wood<br>50 G</div>
       </div>
-      <div class="build-item" data-build-type="Crossbow" data-cost="5000">
-        <div class="build-info"><h4>Auto Crossbow</h4><p>접근하는 몬스터 자동 공격.</p></div>
-        <div class="build-cost">5000 Wood</div>
+      <div class="build-item" data-build-type="Crossbow">
+        <div class="build-info"><h4>Auto Crossbow</h4><p>클릭하여 연사력/데미지 업그레이드.</p></div>
+        <div class="build-cost">5,000 Wood<br>1,000 G</div>
       </div>
-      <div class="build-item" data-build-type="Armory" data-cost="10000">
-        <div class="build-info"><h4>Armory (무기고)</h4><p>대형 컨테이너/로그하우스.</p></div>
-        <div class="build-cost">10000 Wood</div>
+      <div class="build-item" data-build-type="Armory">
+        <div class="build-info"><h4>Armory (무기고)</h4><p>클릭하여 기본 공격력 업그레이드.</p></div>
+        <div class="build-cost">10,000 Wood<br>5,000 G</div>
       </div>
     </section>
 
     <section class="panel chat-panel">
       <div class="chat-body" id="chat-body">
         <div>Welcome to Mythic Realms!</div>
-        <div class="yellow">System: 마우스 좌클릭으로 대상을 공격하거나 나무를 벌목하세요.</div>
-        <div class="yellow">System: Wood를 모아 건설(Build) 버튼을 눌러 건물을 지으세요.</div>
+        <div class="yellow">System: 지어진 무기고(Armory)나 크로스보우를 클릭하면 업그레이드 가능합니다.</div>
+        <div class="yellow">System: Wood와 Gold를 모아 건설(Build) 하세요.</div>
         <div id="coord-line">X: 0 / Y: 0</div>
       </div>
       <div class="chat-input-row">
@@ -208,14 +221,22 @@
     // --- [게임 데이터 및 구조] ---
     const gameState = {
       worldWidth: 16000, worldHeight: 10000,
-      player: { name: 'Adventurer', level: 1, hp: 120, maxHp: 120, mp: 60, maxMp: 60, exp: 20, nextExp: 100, x: 8000, y: 5000, speed: 350, gold: 0 },
+      player: { 
+        name: 'Adventurer', level: 1, hp: 120, maxHp: 120, mp: 60, maxMp: 60, exp: 20, nextExp: 100, x: 8000, y: 5000, speed: 350, gold: 0,
+        baseDmg: 25, // 기본 공격력
+        dmgLevel: 1  // 무기고 공격력 업그레이드 레벨
+      },
       quest: { current: 0, required: 10 },
-      inventory: {},
-      isDead: false,
-      buildLimit: 0, // 레벨업 시 갱신
-      builtCount: 0  // 현재 지은 건물 수
+      inventory: {}, isDead: false, buildLimit: 0, builtCount: 0
     };
     gameState.buildLimit = gameState.player.level * 3;
+
+    // 건설 비용 정의
+    const BUILD_COSTS = {
+      'Fence': { wood: 100, gold: 50 },
+      'Crossbow': { wood: 5000, gold: 1000 },
+      'Armory': { wood: 10000, gold: 5000 }
+    };
 
     const PRICE_MAP = { "Normal": 10, "Magic": 30, "Rare": 100, "Epic": 500, "Legendary": 2000, "i6": 150 };
 
@@ -257,8 +278,13 @@
       
       ui.inventoryPanel = document.getElementById('inventory-panel'); ui.inventoryGrid = document.getElementById('inventory-grid');
       ui.tooltip = document.getElementById('global-tooltip');
+      
+      // 모달
       ui.sellModal = document.getElementById('sell-modal'); ui.sellTitle = document.getElementById('sell-title');
       ui.sellQty = document.getElementById('sell-qty'); ui.sellMax = document.getElementById('sell-max'); ui.sellProfit = document.getElementById('sell-profit');
+      
+      ui.upgModal = document.getElementById('upgrade-modal'); ui.upgTitle = document.getElementById('upg-title');
+      ui.upgDesc = document.getElementById('upg-desc'); ui.upgCurrent = document.getElementById('upg-current'); ui.upgCost = document.getElementById('upg-cost');
       
       ui.buildPanel = document.getElementById('build-panel'); ui.buildLimitText = document.getElementById('build-limit-text');
       ui.buildModeText = document.getElementById('build-mode-text');
@@ -286,35 +312,44 @@
       ui.miniPlayer.style.left = `${(x / gameState.worldWidth) * 100}%`; ui.miniPlayer.style.top = `${(y / gameState.worldHeight) * 100}%`;
     }
 
-    // --- [죽음 및 부활 처리] ---
     function handlePlayerDeath() {
       if (gameState.isDead) return;
-      gameState.isDead = true;
-      ui.deathScreen.style.display = 'flex';
-      let countdown = 10;
-      ui.deathTimer.textContent = countdown;
-      
+      gameState.isDead = true; ui.deathScreen.style.display = 'flex';
+      let countdown = 10; ui.deathTimer.textContent = countdown;
       const timerInterval = setInterval(() => {
-        countdown--;
-        ui.deathTimer.textContent = countdown;
+        countdown--; ui.deathTimer.textContent = countdown;
         if (countdown <= 0) {
-          clearInterval(timerInterval);
-          gameState.isDead = false;
-          gameState.player.hp = gameState.player.maxHp;
-          ui.deathScreen.style.display = 'none';
-          updatePlayerHud();
-          window.dispatchEvent(new CustomEvent('player-respawn'));
+          clearInterval(timerInterval); gameState.isDead = false; gameState.player.hp = gameState.player.maxHp;
+          ui.deathScreen.style.display = 'none'; updatePlayerHud(); window.dispatchEvent(new CustomEvent('player-respawn'));
         }
       }, 1000);
     }
 
-    // --- [인벤토리 및 판매 모달] ---
+    // --- [모달 로직] ---
     let currentSellItem = null, currentSellPrice = 0, currentSellMax = 0;
     function openSellModal(itemName, itemObj, price) {
       currentSellItem = itemName; currentSellPrice = price; currentSellMax = itemObj.count;
       ui.sellModal.style.display = 'flex'; ui.sellTitle.textContent = `Sell: ${itemName}`;
       ui.sellQty.value = 1; ui.sellQty.max = currentSellMax; ui.sellMax.textContent = currentSellMax;
       ui.sellProfit.textContent = `${price} G`; ui.tooltip.style.display = 'none';
+    }
+
+    window.currentUpgradeBldg = null;
+    function openUpgradeModal(bldg) {
+      window.currentUpgradeBldg = bldg;
+      ui.upgModal.style.display = 'flex';
+      
+      if (bldg.bType === 'Armory') {
+        ui.upgTitle.textContent = "Armory (무기고)";
+        ui.upgDesc.textContent = "플레이어의 기본 물리 공격력을 대폭 증가시킵니다.";
+        ui.upgCurrent.textContent = `Dmg: ${gameState.player.baseDmg}`;
+        ui.upgCost.textContent = `${(gameState.player.dmgLevel * 5000).toLocaleString()} G`;
+      } else if (bldg.bType === 'Crossbow') {
+        ui.upgTitle.textContent = "Auto Crossbow";
+        ui.upgDesc.textContent = "이 크로스보우의 데미지와 연사력을 강화합니다.";
+        ui.upgCurrent.textContent = `Lv. ${bldg.level} (Dmg: ${20 + bldg.level * 10})`;
+        ui.upgCost.textContent = `${(bldg.level * 1000).toLocaleString()} G`;
+      }
     }
 
     function updateInventoryUi() {
@@ -345,58 +380,66 @@
       }
     }
 
-    // --- [글로벌 빌드 모드 상태] ---
+    // [글로벌 빌드 상태]
     window.activeBuildType = null;
-    window.activeBuildCost = 0;
+    window.activeBuildRotation = 0;
 
     function bindUiEvents() {
-      ui.chatSendButton.addEventListener('click', () => {
-        if(!ui.chatInput.value) return; addChatMessage(`You: ${ui.chatInput.value}`); ui.chatInput.value = '';
-      });
+      ui.chatSendButton.addEventListener('click', () => { if(!ui.chatInput.value) return; addChatMessage(`You: ${ui.chatInput.value}`); ui.chatInput.value = ''; });
+      
       document.getElementById('inventory-button').addEventListener('click', () => {
-        ui.inventoryPanel.style.display = ui.inventoryPanel.style.display === 'flex' ? 'none' : 'flex';
-        ui.buildPanel.style.display = 'none'; updateInventoryUi();
+        ui.inventoryPanel.style.display = ui.inventoryPanel.style.display === 'flex' ? 'none' : 'flex'; ui.buildPanel.style.display = 'none'; updateInventoryUi();
       });
       document.getElementById('close-inventory').addEventListener('click', () => ui.inventoryPanel.style.display = 'none');
 
       document.getElementById('build-button').addEventListener('click', () => {
-        ui.buildPanel.style.display = ui.buildPanel.style.display === 'flex' ? 'none' : 'flex';
-        ui.inventoryPanel.style.display = 'none'; updatePlayerHud();
+        ui.buildPanel.style.display = ui.buildPanel.style.display === 'flex' ? 'none' : 'flex'; ui.inventoryPanel.style.display = 'none'; updatePlayerHud();
       });
       document.getElementById('close-build').addEventListener('click', () => ui.buildPanel.style.display = 'none');
 
-      // 건설 아이템 클릭 시 빌드 모드 활성화
+      // 건설 모드 시작
       document.querySelectorAll('.build-item').forEach(el => {
         el.addEventListener('click', () => {
           const type = el.dataset.buildType;
-          const cost = parseInt(el.dataset.cost);
+          const cost = BUILD_COSTS[type];
           const woodCount = gameState.inventory['Wood'] ? gameState.inventory['Wood'].count : 0;
           
-          if (woodCount < cost) {
-            addChatMessage(`System: Wood가 부족합니다. (필요: ${cost}, 보유: ${woodCount})`, 'yellow'); return;
+          if (woodCount < cost.wood || gameState.player.gold < cost.gold) {
+            addChatMessage(`System: 자원이 부족합니다. (필요: Wood ${cost.wood}, Gold ${cost.gold})`, 'yellow'); return;
           }
           if (gameState.builtCount >= gameState.buildLimit) {
             addChatMessage(`System: 최대 건설 수량에 도달했습니다. (레벨업 필요)`, 'yellow'); return;
           }
 
           window.activeBuildType = type;
-          window.activeBuildCost = cost;
+          window.activeBuildRotation = 0; // 초기화
           ui.buildPanel.style.display = 'none';
           ui.buildModeText.style.display = 'block';
-          addChatMessage(`System: [건설 모드] ${type} 배치를 위해 맵을 클릭하세요. (우클릭 취소)`, 'green');
         });
       });
 
-      // 우클릭으로 빌드 모드 취소
+      // 건설 모드 회전 (우클릭) 및 브라우저 메뉴 방지
       window.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         if (window.activeBuildType) {
-          window.activeBuildType = null;
-          ui.buildModeText.style.display = 'none';
-          addChatMessage('System: 건설 모드가 취소되었습니다.', 'yellow');
+          window.activeBuildRotation += 90;
+          addChatMessage('System: 건물을 회전했습니다.', 'yellow');
         }
       });
 
+      // 건설 모드 취소 (ESC)
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          if (window.activeBuildType) {
+            window.activeBuildType = null; ui.buildModeText.style.display = 'none';
+            addChatMessage('System: 건설 모드가 취소되었습니다.', 'yellow');
+          }
+          ui.upgModal.style.display = 'none';
+          ui.sellModal.style.display = 'none';
+        }
+      });
+
+      // 판매 모달 이벤트
       ui.sellQty.addEventListener('input', (e) => {
         let val = parseInt(e.target.value) || 1;
         if (val < 1) val = 1; if (val > currentSellMax) val = currentSellMax;
@@ -414,6 +457,32 @@
         }
         ui.sellModal.style.display = 'none';
       });
+
+      // 업그레이드 모달 이벤트
+      document.getElementById('upg-cancel').addEventListener('click', () => ui.upgModal.style.display = 'none');
+      document.getElementById('upg-confirm').addEventListener('click', () => {
+        const bldg = window.currentUpgradeBldg;
+        if(!bldg) return;
+
+        if (bldg.bType === 'Armory') {
+          const cost = gameState.player.dmgLevel * 5000;
+          if (gameState.player.gold >= cost) {
+            gameState.player.gold -= cost;
+            gameState.player.dmgLevel++;
+            gameState.player.baseDmg += 15;
+            addChatMessage(`System: 공격력이 영구적으로 증가했습니다! (현재 Dmg: ${gameState.player.baseDmg})`, 'green');
+          } else { addChatMessage('System: Gold가 부족합니다.', 'yellow'); }
+        } else if (bldg.bType === 'Crossbow') {
+          const cost = bldg.level * 1000;
+          if (gameState.player.gold >= cost) {
+            gameState.player.gold -= cost;
+            bldg.level++;
+            addChatMessage(`System: 크로스보우가 강화되었습니다! (현재 Lv. ${bldg.level})`, 'green');
+          } else { addChatMessage('System: Gold가 부족합니다.', 'yellow'); }
+        }
+        updatePlayerHud();
+        ui.upgModal.style.display = 'none';
+      });
     }
 
     // --- [Phaser 게임 씬] ---
@@ -429,7 +498,7 @@
         this.add.tileSprite(this.worldWidth/2, this.worldHeight/2, this.worldWidth, this.worldHeight, 'bg_grass');
 
         this.treesGroup = this.physics.add.staticGroup();
-        this.buildingsGroup = this.physics.add.staticGroup(); // 플레이어가 지은 건물
+        this.buildingsGroup = this.physics.add.staticGroup();
         this.enemiesData = [];
 
         this.spawnForest();
@@ -441,30 +510,40 @@
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
         this.physics.add.collider(this.player, this.treesGroup);
-        this.physics.add.collider(this.player, this.buildingsGroup); // 건물과 플레이어 충돌
+        this.physics.add.collider(this.player, this.buildingsGroup);
 
         this.wasd = this.input.keyboard.addKeys({ up: 'W', left: 'A', down: 'S', right: 'D' });
 
-        // 마우스 클릭 이벤트 (건설 or 공격)
         this.input.on('pointerdown', (pointer) => {
           if (pointer.event.target.tagName !== 'CANVAS' || gameState.isDead) return;
           
           if (window.activeBuildType) {
-            // 건설 모드
+            if (pointer.rightButtonDown()) return; // 우클릭은 회전이므로 통과
             this.placeBuilding(pointer.worldX, pointer.worldY);
           } else {
-            // 일반 공격 모드
+            // 건물 상호작용(업그레이드) 탐색
+            let clickedBldg = null;
+            this.buildingsGroup.getChildren().forEach(b => {
+              if (b.active && Phaser.Math.Distance.Between(pointer.worldX, pointer.worldY, b.x, b.y) < b.body.radius + 15) {
+                clickedBldg = b;
+              }
+            });
+
+            if (clickedBldg && (clickedBldg.bType === 'Armory' || clickedBldg.bType === 'Crossbow')) {
+              if (Phaser.Math.Distance.Between(this.player.x, this.player.y, clickedBldg.x, clickedBldg.y) < 200) {
+                openUpgradeModal(clickedBldg); return;
+              } else {
+                addChatMessage('System: 건물이 너무 멉니다. 가까이 가세요.', 'yellow'); return;
+              }
+            }
             this.handlePlayerAttack();
           }
         });
 
-        // 건설 모드 프리뷰 이미지
         this.buildPreview = this.add.sprite(0, 0, 'fence_tex').setAlpha(0.5).setVisible(false);
 
-        // 부활 이벤트 수신
         window.addEventListener('player-respawn', () => {
-          this.player.setPosition(8000, 5000); // 중앙 리스폰
-          this.player.body.setVelocity(0,0);
+          this.player.setPosition(8000, 5000); this.player.body.setVelocity(0,0);
         });
 
         setInterval(() => this.updateRadar(), 500);
@@ -477,18 +556,10 @@
         g.fillStyle(0x000000, 0.3); g.fillEllipse(15, 28, 24, 10); g.fillStyle(0x5da8ff); g.fillCircle(15, 15, 15); g.fillStyle(0x000000); g.fillCircle(10, 12, 2); g.fillCircle(20, 12, 2); g.generateTexture('player_tex', 30, 30); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(16, 28, 24, 10); g.fillStyle(0xffffff); g.fillCircle(16, 16, 16); g.fillStyle(0x000000); g.fillCircle(11, 14, 2); g.fillCircle(21, 14, 2); g.generateTexture('monster_tex', 32, 32); g.clear();
         
-        // [건축물 텍스처]
-        // 1. 울타리
-        g.fillStyle(0x6b4423); g.fillRect(0, 15, 40, 10); g.fillRect(5, 5, 8, 30); g.fillRect(25, 5, 8, 30);
-        g.generateTexture('fence_tex', 40, 40); g.clear();
-        // 2. 크로스보우
-        g.fillStyle(0x3a2311); g.fillRect(5, 10, 30, 20); g.fillStyle(0x888888); g.fillRect(18, 5, 4, 30); g.fillRect(5, 20, 30, 4);
-        g.generateTexture('crossbow_tex', 40, 40); g.clear();
-        // 3. 무기고 (로그하우스)
-        g.fillStyle(0x000000, 0.3); g.fillEllipse(40, 75, 70, 20);
-        g.fillStyle(0x4a2e15); g.fillRect(10, 20, 60, 50); g.fillStyle(0x5c3a21); g.fillRect(5, 10, 70, 15); // 지붕
-        g.fillStyle(0x222222); g.fillRect(30, 40, 20, 30); // 문
-        g.generateTexture('armory_tex', 80, 80); g.clear();
+        // 회전 대응 텍스처
+        g.fillStyle(0x6b4423); g.fillRect(0, 15, 40, 10); g.fillRect(5, 5, 8, 30); g.fillRect(25, 5, 8, 30); g.generateTexture('fence_tex', 40, 40); g.clear();
+        g.fillStyle(0x3a2311); g.fillRect(5, 10, 30, 20); g.fillStyle(0x888888); g.fillRect(18, 5, 4, 30); g.fillRect(5, 20, 30, 4); g.generateTexture('crossbow_tex', 40, 40); g.clear();
+        g.fillStyle(0x000000, 0.3); g.fillEllipse(40, 75, 70, 20); g.fillStyle(0x4a2e15); g.fillRect(10, 20, 60, 50); g.fillStyle(0x5c3a21); g.fillRect(5, 10, 70, 15); g.fillStyle(0x222222); g.fillRect(30, 40, 20, 30); g.generateTexture('armory_tex', 80, 80); g.clear();
       }
 
       spawnForest() {
@@ -508,24 +579,22 @@
         this.enemiesData.push({ sprite, label, type, hp: type.hp, state: 'wander', lastAttackTime: 0 });
       }
 
-      // [건물 배치 로직]
       placeBuilding(x, y) {
         const type = window.activeBuildType;
-        const cost = window.activeBuildCost;
+        const cost = BUILD_COSTS[type];
         
-        // 자원 재검사
-        if (!gameState.inventory['Wood'] || gameState.inventory['Wood'].count < cost) {
-          addChatMessage('System: Wood가 부족하여 건설이 취소되었습니다.', 'yellow');
-          this.cancelBuildMode(); return;
+        if (!gameState.inventory['Wood'] || gameState.inventory['Wood'].count < cost.wood || gameState.player.gold < cost.gold) {
+          addChatMessage('System: 자원이 부족하여 건설이 취소되었습니다.', 'yellow');
+          window.activeBuildType = null; ui.buildModeText.style.display = 'none'; return;
         }
         
-        // 거리 제한 (플레이어 근처에만)
-        if (Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) > 200) {
+        if (Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) > 250) {
           addChatMessage('System: 너무 멉니다. 캐릭터 근처에 지으세요.', 'yellow'); return;
         }
 
-        gameState.inventory['Wood'].count -= cost;
+        gameState.inventory['Wood'].count -= cost.wood;
         if(gameState.inventory['Wood'].count <= 0) delete gameState.inventory['Wood'];
+        gameState.player.gold -= cost.gold;
         gameState.builtCount++;
 
         let tex = 'fence_tex'; let maxHp = 300; let radius = 20;
@@ -533,22 +602,17 @@
         else if(type === 'Armory') { tex = 'armory_tex'; maxHp = 2000; radius = 40; }
 
         let bldg = this.buildingsGroup.create(x, y, tex);
+        bldg.setAngle(window.activeBuildRotation);
         bldg.body.setCircle(radius);
-        bldg.bType = type; bldg.hp = maxHp; bldg.maxHp = maxHp; bldg.lastFireTime = 0;
+        bldg.bType = type; bldg.hp = maxHp; bldg.maxHp = maxHp; bldg.level = 1; bldg.lastFireTime = 0;
         
-        addChatMessage(`System: ${type} 건설 완료! (-${cost} Wood)`, 'green');
+        addChatMessage(`System: ${type} 건설 완료! (-${cost.wood} Wood, -${cost.gold} G)`, 'green');
         updatePlayerHud();
-        this.cancelBuildMode();
-      }
-
-      cancelBuildMode() {
-        window.activeBuildType = null;
-        ui.buildModeText.style.display = 'none';
-        this.buildPreview.setVisible(false);
+        window.activeBuildType = null; ui.buildModeText.style.display = 'none';
       }
 
       handlePlayerAttack() {
-        let closestTarget = null; let isTree = false; let minDistance = 75; // 타격 사거리
+        let closestTarget = null; let isTree = false; let minDistance = 75;
 
         this.enemiesData.forEach(e => {
           if (e.hp <= 0) return;
@@ -572,23 +636,32 @@
               if(ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
             }
           } else {
-            closestTarget.hp -= 35; // 플레이어 데미지
+            // 업그레이드가 반영된 플레이어 공격력
+            closestTarget.hp -= gameState.player.baseDmg; 
             addChatMessage(`System: ${closestTarget.type.name} 타격! (HP: ${closestTarget.hp}/${closestTarget.type.hp})`, 'yellow');
             closestTarget.state = 'chase'; 
             this.physics.velocityFromRotation(Phaser.Math.Angle.Between(this.player.x, this.player.y, closestTarget.sprite.x, closestTarget.sprite.y), 180, closestTarget.sprite.body.velocity);
             if (closestTarget.hp <= 0) this.killEnemy(closestTarget);
           }
-        } else {
-          // 타격 이펙트(허공)
         }
       }
 
       async killEnemy(enemy) {
         enemy.sprite.destroy(); enemy.label.destroy();
+        
+        // 몬스터 처치 보상 (골드)
+        const goldEarned = enemy.type.exp;
+        gameState.player.gold += goldEarned;
+        addChatMessage(`System: ${enemy.type.name} 처치 보상 +${goldEarned} G`, 'yellow');
+
+        // 퀘스트 진행
         if(gameState.quest.current < gameState.quest.required) {
           gameState.quest.current++;
           document.getElementById('quest-progress').textContent = `- Defeat any Monsters (${gameState.quest.current}/10)`;
-          if(gameState.quest.current >= gameState.quest.required) addChatMessage('System: 퀘스트 완료!', 'green');
+          if(gameState.quest.current >= gameState.quest.required) {
+            gameState.player.gold += 1000;
+            addChatMessage('System: 퀘스트 완료 보상 +1000 G 획득!', 'green');
+          }
         }
 
         gameState.player.exp += enemy.type.exp;
@@ -596,7 +669,7 @@
           gameState.player.level++; gameState.player.exp -= gameState.player.nextExp;
           gameState.player.nextExp = Math.floor(gameState.player.nextExp * 1.5);
           gameState.player.maxHp += 30; gameState.player.hp = gameState.player.maxHp;
-          gameState.buildLimit = gameState.player.level * 3; // 건설 수량 증가
+          gameState.buildLimit = gameState.player.level * 3; 
           addChatMessage(`System: Level Up! Lv.${gameState.player.level}`, 'green');
         }
         updatePlayerHud();
@@ -616,11 +689,11 @@
       update(time) {
         if (gameState.isDead) return;
 
-        // 건설 프리뷰 업데이트
+        // 건설 프리뷰 (위치 및 회전 동기화)
         if (window.activeBuildType) {
           let ptr = this.input.activePointer;
           let tex = window.activeBuildType === 'Armory' ? 'armory_tex' : (window.activeBuildType === 'Crossbow' ? 'crossbow_tex' : 'fence_tex');
-          this.buildPreview.setTexture(tex).setPosition(ptr.worldX, ptr.worldY).setVisible(true).setDepth(9999);
+          this.buildPreview.setTexture(tex).setPosition(ptr.worldX, ptr.worldY).setAngle(window.activeBuildRotation).setVisible(true).setDepth(9999);
         } else {
           this.buildPreview.setVisible(false);
         }
@@ -640,39 +713,37 @@
         this.playerNameText.setDepth(this.player.y + 10);
         updateCoordinates(this.player.x, this.player.y);
 
-        // 오토 크로스보우 발사 로직 (1초마다)
+        // 오토 크로스보우 발사 로직
         this.buildingsGroup.getChildren().forEach(b => {
           if (!b.active || b.bType !== 'Crossbow') return;
-          if (time > b.lastFireTime + 1000) {
-            let target = null; let minD = 300; // 사거리 300
+          // 업그레이드 레벨에 따라 연사력(쿨타임 감소) 및 데미지 증가
+          let fireDelay = Math.max(300, 1000 - (b.level * 100)); 
+          if (time > b.lastFireTime + fireDelay) {
+            let target = null; let minD = 300; 
             this.enemiesData.forEach(e => {
               let d = Phaser.Math.Distance.Between(b.x, b.y, e.sprite.x, e.sprite.y);
               if (d < minD) { minD = d; target = e; }
             });
             if (target) {
               b.lastFireTime = time;
-              target.hp -= 20; // 크로스보우 데미지
-              // 발사 이펙트 라인 그리기
+              target.hp -= (20 + b.level * 10); 
               let line = this.add.line(0,0, b.x, b.y, target.sprite.x, target.sprite.y, 0xffd66b).setOrigin(0,0);
-              this.tweens.add({ targets: line, alpha: 0, duration: 200, onComplete: () => line.destroy() });
+              this.tweens.add({ targets: line, alpha: 0, duration: 150, onComplete: () => line.destroy() });
               target.state = 'chase';
               if(target.hp <= 0) this.killEnemy(target);
             }
           }
         });
 
-        // 몬스터 AI 업데이트 (건물 공격 포함)
+        // 몬스터 AI
         this.enemiesData.forEach(e => {
           if (e.hp <= 0) return;
-          e.sprite.setDepth(e.sprite.y);
-          e.label.setPosition(e.sprite.x, e.sprite.y - 30); e.label.setDepth(e.sprite.y + 10);
+          e.sprite.setDepth(e.sprite.y); e.label.setPosition(e.sprite.x, e.sprite.y - 30); e.label.setDepth(e.sprite.y + 10);
 
-          // 타겟 선정 (플레이어 우선 탐색 후 건물 체크)
           let target = this.player;
           let dist = Phaser.Math.Distance.Between(e.sprite.x, e.sprite.y, this.player.x, this.player.y);
           let isTargetBldg = false;
 
-          // 건물이 더 가까우면 건물을 타겟으로 변경
           this.buildingsGroup.getChildren().forEach(b => {
             if(!b.active) return;
             let d = Phaser.Math.Distance.Between(e.sprite.x, e.sprite.y, b.x, b.y);
@@ -687,7 +758,6 @@
           } else if (e.state === 'chase') {
             this.physics.moveToObject(e.sprite, target, e.type.speed);
             
-            // 타겟(플레이어 or 건물) 공격
             if (dist < 45 && time > e.lastAttackTime + 1500) {
               e.lastAttackTime = time; 
               if (isTargetBldg) {
@@ -708,6 +778,8 @@
 
       updateRadar() {
         ui.minimapEntities.innerHTML = '';
+        
+        // 몬스터 렌더링
         this.enemiesData.forEach(e => {
           if(e.hp <= 0) return;
           if(Phaser.Math.Distance.Between(this.player.x, this.player.y, e.sprite.x, e.sprite.y) < 2000) {
@@ -716,18 +788,24 @@
             ui.minimapEntities.appendChild(dot);
           }
         });
+
+        // 건축물 렌더링 (파란색 점)
+        this.buildingsGroup.getChildren().forEach(b => {
+          if(!b.active) return;
+          const dot = document.createElement('div'); dot.className = 'mini-dot bldg';
+          dot.style.left = `${(b.x / this.worldWidth) * 100}%`; dot.style.top = `${(b.y / this.worldHeight) * 100}%`;
+          ui.minimapEntities.appendChild(dot);
+        });
       }
     }
 
-    // --- [게임 초기화 및 자동 회복] ---
+    // --- [게임 초기화] ---
     window.addEventListener('DOMContentLoaded', () => {
       cacheUiElements(); bindUiEvents(); updatePlayerHud();
       
-      // HP 자동 회복 (1초당 10)
       setInterval(() => {
         if (!gameState.isDead && gameState.player.hp > 0 && gameState.player.hp < gameState.player.maxHp) {
-          gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + 10);
-          updatePlayerHud();
+          gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + 10); updatePlayerHud();
         }
       }, 1000);
 
