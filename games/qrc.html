@@ -95,39 +95,32 @@
 
     #build-mode-text { display:none; position: absolute; top: 80px; left: 50%; transform: translateX(-50%); font-size: 16px; color: #FFD66B; font-weight: bold; z-index: 5; text-shadow: 0 2px 4px #000; pointer-events: none; padding: 10px 20px; background: rgba(0,0,0,0.5); border-radius: 8px; border: 1px solid #FFD66B;}
 
-    /* 모바일 UI 컴포넌트 (PC에서는 숨김) */
+    /* 모바일 UI 컴포넌트 */
     .mobile-only { display: none; }
 
-    /* --- [모바일 반응형 처리] --- */
     @media (max-width: 800px) {
       .mobile-only { display: block; }
       
-      /* 개별 패널 제어용 토글 바 */
       #mobile-toggles { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; z-index: 50; }
       #mobile-toggles button { background: rgba(12, 18, 24, 0.8); border: 1px solid #FFD66B; color: #FFD66B; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; }
       #mobile-toggles button.active { background: rgba(255, 214, 107, 0.3); }
 
-      /* 패널들 기본적으로 숨김 (토글로 제어) */
       .minimap-panel { display: none; top: 50px; right: 10px; width: 160px; z-index: 40;}
       .quest-panel { display: none; top: 210px; right: 10px; width: 160px; z-index: 40; }
       .chat-panel { display: none; bottom: 150px; left: 10px; right: 10px; width: auto; height: 140px; z-index: 40; }
-      .top-left-panel { display: none; } /* 모바일에서는 좌측 상단 패널 생략 가능 */
+      .top-left-panel { display: none; } 
 
-      /* 모바일 HUD를 상단에 작게 배치하여 체력/경험치 확인 용이 */
       .hud { top: 10px; left: 10px; bottom: auto; right: auto; width: 220px; grid-template-columns: 1fr; padding: 10px; min-height: auto; gap: 5px; z-index: 40;}
-      .portrait { display: none; } /* 이모지 박스 숨김 */
+      .portrait { display: none; } 
       .stat-row { font-size: 10px; }
       .skill-bar { display: none; }
-      .menu-buttons { display: none; } /* 하단 가상패드와 충돌 방지를 위해 하단 메뉴 숨김 */
+      .menu-buttons { display: none; } 
 
-      /* 인벤토리/건설 모바일 최적화 */
       .inventory-panel, .build-panel { width: 95%; max-width: 360px; }
 
-      /* 모바일 전용 하단 메뉴 (인벤/건설) */
       #mobile-bottom-menu { display: flex; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); gap: 10px; z-index: 40; }
       #mobile-bottom-menu button { background: rgba(12, 18, 24, 0.8); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 12px; }
 
-      /* 가상 D-패드 (좌측 하단) */
       #virtual-dpad { position: absolute; bottom: 60px; left: 20px; display: grid; grid-template-columns: 45px 45px 45px; grid-template-rows: 45px 45px 45px; gap: 5px; z-index: 45; }
       .d-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: #fff; font-size: 18px; display: flex; justify-content: center; align-items: center; }
       .d-btn:active { background: rgba(255,255,255,0.4); }
@@ -136,7 +129,6 @@
       #btn-right { grid-column: 3; grid-row: 2; }
       #btn-down { grid-column: 2; grid-row: 3; }
 
-      /* 가상 공격 버튼 (우측 하단) */
       #virtual-attack { position: absolute; bottom: 60px; right: 20px; width: 70px; height: 70px; background: rgba(255, 69, 0, 0.3); border: 2px solid #ff4500; border-radius: 50%; color: #fff; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 14px; z-index: 45; box-shadow: 0 0 10px rgba(255, 69, 0, 0.5); }
       #virtual-attack:active { background: rgba(255, 69, 0, 0.6); }
     }
@@ -172,6 +164,7 @@
     </div>
 
     <div id="mobile-bottom-menu" class="mobile-only">
+      <button id="m-stat-btn">스탯</button>
       <button id="m-build-btn">건설</button>
       <button id="m-inv-btn">가방</button>
     </div>
@@ -220,6 +213,25 @@
       <div class="inventory-grid" id="inventory-grid"></div>
     </section>
 
+    <!-- 스탯 패널 -->
+    <section class="panel modal-box" id="stat-modal" style="width: 300px;">
+      <div class="panel-title">Character Stats <button class="close-btn" id="close-stat">✕</button></div>
+      <div style="font-size: 13px; color: #ccc; margin-bottom: 8px;">잔여 포인트: <span id="stat-points" class="yellow">0</span></div>
+      
+      <div class="build-item" style="margin-bottom:4px; padding: 8px 10px;">
+        <div class="build-info"><h4>힘 (STR)</h4><p>공격력 +5</p></div>
+        <div class="build-cost"><span id="stat-str" class="green">0</span> <button class="stat-up-btn" data-stat="str" style="margin-left:8px; padding:2px 8px; background:#444; border:1px solid #777; color:#fff; border-radius:4px;">+</button></div>
+      </div>
+      <div class="build-item" style="margin-bottom:4px; padding: 8px 10px;">
+        <div class="build-info"><h4>민첩 (AGI)</h4><p>이동속도 +5</p></div>
+        <div class="build-cost"><span id="stat-agi" class="green">0</span> <button class="stat-up-btn" data-stat="agi" style="margin-left:8px; padding:2px 8px; background:#444; border:1px solid #777; color:#fff; border-radius:4px;">+</button></div>
+      </div>
+      <div class="build-item" style="margin-bottom:4px; padding: 8px 10px;">
+        <div class="build-info"><h4>건강 (VIT)</h4><p>최대체력 +5</p></div>
+        <div class="build-cost"><span id="stat-vit" class="green">0</span> <button class="stat-up-btn" data-stat="vit" style="margin-left:8px; padding:2px 8px; background:#444; border:1px solid #777; color:#fff; border-radius:4px;">+</button></div>
+      </div>
+    </section>
+
     <section class="panel modal-box" id="sell-modal">
       <div class="panel-title" id="sell-title" style="margin-bottom: 0;">Item Action</div>
       <div>수량: <input type="number" id="sell-qty" min="1" value="1" /> / <span id="sell-max">1</span></div>
@@ -251,15 +263,15 @@
       </div>
       <div class="build-item" data-build-type="Fence">
         <div class="build-info"><h4>Fence (울타리)</h4><p>방어용 벽. 몬스터 길막기 용도.</p></div>
-        <div class="build-cost">100 Wood<br>50 G</div>
+        <div class="build-cost">50 Wood<br>50 G</div>
       </div>
       <div class="build-item" data-build-type="Crossbow">
         <div class="build-info"><h4>Auto Crossbow</h4><p>클릭하여 연사력/데미지 업그레이드.</p></div>
-        <div class="build-cost">5,000 Wood<br>1,000 G</div>
+        <div class="build-cost">1,000 Wood<br>1,000 G</div>
       </div>
       <div class="build-item" data-build-type="Armory">
         <div class="build-info"><h4>Armory (무기고)</h4><p>클릭하여 기본 공격력 업그레이드.</p></div>
-        <div class="build-cost">10,000 Wood<br>5,000 G</div>
+        <div class="build-cost">5,000 Wood<br>5,000 G</div>
       </div>
     </section>
 
@@ -294,6 +306,7 @@
       </div>
 
       <nav class="menu-buttons">
+        <button type="button" id="stat-button">Stats <span id="stat-badge" style="color:#FFD66B; display:none;">(+)</span></button>
         <button type="button" id="build-button">Build</button>
         <button type="button" id="inventory-button">Inventory</button>
       </nav>
@@ -304,7 +317,7 @@
   <script>
     const gameState = {
       worldWidth: 16000, worldHeight: 10000,
-      player: { name: 'Adventurer', level: 1, hp: 120, maxHp: 120, mp: 60, maxMp: 60, exp: 20, nextExp: 100, x: 8000, y: 5000, speed: 350, gold: 0, baseDmg: 25, dmgLevel: 1 },
+      player: { name: 'Adventurer', level: 1, hp: 120, maxHp: 120, mp: 60, maxMp: 60, exp: 20, nextExp: 100, x: 8000, y: 5000, speed: 35, gold: 0, baseDmg: 25, dmgLevel: 1, statPoints: 0, str: 0, agi: 0, vit: 0 },
       quest: { current: 0, required: 10 },
       inventory: {}, isDead: false, buildLimit: 0, builtCount: 0
     };
@@ -312,14 +325,14 @@
 
     const vPad = { up: false, down: false, left: false, right: false };
 
-    const BUILD_COSTS = { 'Campfire': { wood: 30, gold: 0 }, 'Fence': { wood: 100, gold: 50 }, 'Crossbow': { wood: 5000, gold: 1000 }, 'Armory': { wood: 10000, gold: 5000 } };
+    const BUILD_COSTS = { 'Campfire': { wood: 30, gold: 0 }, 'Fence': { wood: 50, gold: 50 }, 'Crossbow': { wood: 1000, gold: 1000 }, 'Armory': { wood: 5000, gold: 5000 } };
     const PRICE_MAP = { "Normal": 10, "Magic": 40, "Rare": 100, "Epic": 500, "Legendary": 2000 };
 
     const MONSTER_TYPES = [
-      { name: '닭', hp: 50, speed: 60, color: 0xffffff, size: 10, dmg: 5, exp: 10 },
-      { name: '돼지', hp: 200, speed: 50, color: 0xffb6c1, size: 16, dmg: 20, exp: 40 },
-      { name: '늑대', hp: 300, speed: 110, color: 0x808080, size: 16, dmg: 35, exp: 60 },
-      { name: '곰', hp: 1000, speed: 70, color: 0x4b3621, size: 26, dmg: 60, exp: 150 }
+      { name: '닭', hp: 50, speed: 60, texture: 'chicken_tex', bodyRadius: 10, labelOffset: 28, barWidth: 38, dmg: 5, exp: 10 },
+      { name: '돼지', hp: 200, speed: 50, texture: 'pig_tex', bodyRadius: 15, labelOffset: 34, barWidth: 46, dmg: 20, exp: 40 },
+      { name: '늑대', hp: 300, speed: 110, texture: 'wolf_tex', bodyRadius: 16, labelOffset: 36, barWidth: 52, dmg: 35, exp: 60 },
+      { name: '곰', hp: 1000, speed: 70, texture: 'bear_tex', bodyRadius: 25, labelOffset: 48, barWidth: 68, dmg: 60, exp: 150 }
     ];
 
     const ui = {};
@@ -354,6 +367,11 @@
       
       ui.buildPanel = document.getElementById('build-panel'); ui.buildLimitText = document.getElementById('build-limit-text');
       ui.buildModeText = document.getElementById('build-mode-text');
+      
+      ui.statModal = document.getElementById('stat-modal'); ui.statPoints = document.getElementById('stat-points');
+      ui.statStr = document.getElementById('stat-str'); ui.statAgi = document.getElementById('stat-agi'); 
+      ui.statVit = document.getElementById('stat-vit'); ui.statBadge = document.getElementById('stat-badge');
+
       ui.deathScreen = document.getElementById('death-screen'); ui.deathTimer = document.getElementById('death-timer');
       ui.loginScreen = document.getElementById('login-screen'); ui.loginName = document.getElementById('login-name'); ui.loginBtn = document.getElementById('login-btn');
     }
@@ -366,11 +384,41 @@
       ui.playerNameLine.textContent = `Lv. ${p.level} ${p.name}`;
       ui.goldText.textContent = `${p.gold.toLocaleString()} G`;
       ui.buildLimitText.textContent = `${gameState.builtCount} / ${gameState.buildLimit}`;
+      
+      if (p.statPoints > 0) {
+        ui.statBadge.style.display = 'inline';
+        ui.statBadge.textContent = `(${p.statPoints})`;
+      } else {
+        ui.statBadge.style.display = 'none';
+      }
+      ui.statPoints.textContent = p.statPoints;
+      ui.statStr.textContent = p.str;
+      ui.statAgi.textContent = p.agi;
+      ui.statVit.textContent = p.vit;
     }
 
     function addChatMessage(msg, className = '') {
       const div = document.createElement('div'); if (className) div.className = className; div.textContent = msg; 
       ui.chatBody.appendChild(div); ui.chatBody.scrollTop = ui.chatBody.scrollHeight;
+    }
+
+    function addInventoryItem(itemName, count = 1, rarity = 'Normal', options = {}) {
+      const qty = Math.max(1, Number(count) || 1);
+      const itemRarity = rarity || 'Normal';
+
+      if (!gameState.inventory[itemName]) {
+        gameState.inventory[itemName] = { count: 0, rarity: itemRarity };
+      }
+
+      gameState.inventory[itemName].count += qty;
+
+      if (options.log !== false) {
+        addChatMessage(`획득: [${itemRarity}] ${itemName} x${qty}`, 'green');
+      }
+
+      if (ui.inventoryPanel && ui.inventoryPanel.style.display === 'flex') {
+        updateInventoryUi();
+      }
     }
 
     function updateCoordinates(x, y) {
@@ -437,7 +485,19 @@
           if(obj.rarity === 'Legendary') color = "#ff5555"; else if(obj.rarity === 'Epic') color = "#d255ff"; else if(obj.rarity === 'Rare') color = "#55aaff"; else if(obj.rarity === 'Magic') color = "#7CFF8A";
           
           slot.style.borderColor = color;
+          slot.title = `${name} / ${obj.rarity} / x${obj.count}`;
           slot.innerHTML = `<span class="item-icon" style="color:${color}">${name.charAt(0)}</span><span class="item-count">x${obj.count}</span>`;
+          slot.onmouseenter = (e) => {
+            ui.tooltip.innerHTML = `${name}<br><span style="color:${color}">등급: ${obj.rarity}</span><br>수량: ${obj.count}<br>판매가: ${price.toLocaleString()} G`;
+            ui.tooltip.style.display = 'block';
+            ui.tooltip.style.left = `${e.pageX + 12}px`;
+            ui.tooltip.style.top = `${e.pageY + 12}px`;
+          };
+          slot.onmousemove = (e) => {
+            ui.tooltip.style.left = `${e.pageX + 12}px`;
+            ui.tooltip.style.top = `${e.pageY + 12}px`;
+          };
+          slot.onmouseleave = () => { ui.tooltip.style.display = 'none'; };
           slot.onclick = () => openSellModal(name, obj, price);
         }
         ui.inventoryGrid.appendChild(slot);
@@ -447,7 +507,6 @@
     window.activeBuildType = null; window.activeBuildRotation = 0;
 
     function bindUiEvents() {
-      // 모바일 패널 토글 로직
       const togglePanel = (btnId, panelId) => {
         document.getElementById(btnId).addEventListener('click', (e) => {
           const panel = document.getElementById(panelId);
@@ -459,11 +518,9 @@
       togglePanel('toggle-quest', 'ui-quest');
       togglePanel('toggle-chat', 'ui-chat');
 
-      // 모바일 인벤/건설 버튼 연결
       document.getElementById('m-build-btn').addEventListener('click', () => document.getElementById('build-button').click());
       document.getElementById('m-inv-btn').addEventListener('click', () => document.getElementById('inventory-button').click());
 
-      // 가상 패드 이벤트
       const bindVPad = (id, key) => {
         const el = document.getElementById(id);
         const press = (e) => { e.preventDefault(); vPad[key] = true; };
@@ -478,12 +535,33 @@
       vAtk.addEventListener('touchstart', triggerAttack); vAtk.addEventListener('mousedown', triggerAttack);
 
       ui.chatSendButton.addEventListener('click', () => { if(!ui.chatInput.value) return; addChatMessage(`You: ${ui.chatInput.value}`); ui.chatInput.value = ''; });
-      document.getElementById('inventory-button').addEventListener('click', () => { ui.inventoryPanel.style.display = ui.inventoryPanel.style.display === 'flex' ? 'none' : 'flex'; ui.buildPanel.style.display = 'none'; updateInventoryUi(); });
+      
+      document.getElementById('inventory-button').addEventListener('click', () => { ui.inventoryPanel.style.display = ui.inventoryPanel.style.display === 'flex' ? 'none' : 'flex'; ui.buildPanel.style.display = 'none'; ui.statModal.style.display = 'none'; updateInventoryUi(); });
       document.getElementById('close-inventory').addEventListener('click', () => ui.inventoryPanel.style.display = 'none');
-      document.getElementById('build-button').addEventListener('click', () => { ui.buildPanel.style.display = ui.buildPanel.style.display === 'flex' ? 'none' : 'flex'; ui.inventoryPanel.style.display = 'none'; updatePlayerHud(); });
+      
+      document.getElementById('build-button').addEventListener('click', () => { ui.buildPanel.style.display = ui.buildPanel.style.display === 'flex' ? 'none' : 'flex'; ui.inventoryPanel.style.display = 'none'; ui.statModal.style.display = 'none'; updatePlayerHud(); });
       document.getElementById('close-build').addEventListener('click', () => ui.buildPanel.style.display = 'none');
 
+      document.getElementById('stat-button').addEventListener('click', () => { ui.statModal.style.display = ui.statModal.style.display === 'flex' ? 'none' : 'flex'; ui.inventoryPanel.style.display = 'none'; ui.buildPanel.style.display = 'none'; });
+      document.getElementById('m-stat-btn').addEventListener('click', () => document.getElementById('stat-button').click());
+      document.getElementById('close-stat').addEventListener('click', () => ui.statModal.style.display = 'none');
+
+      document.querySelectorAll('.stat-up-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const stat = e.target.dataset.stat;
+          if (gameState.player.statPoints > 0) {
+            gameState.player.statPoints--;
+            gameState.player[stat]++;
+            if (stat === 'str') gameState.player.baseDmg += 5;
+            if (stat === 'agi') gameState.player.speed += 5;
+            if (stat === 'vit') { gameState.player.maxHp += 5; gameState.player.hp += 5; }
+            updatePlayerHud();
+          }
+        });
+      });
+
       document.querySelectorAll('.build-item').forEach(el => {
+        if(!el.dataset.buildType) return; // stat item 제외
         el.addEventListener('click', () => {
           const type = el.dataset.buildType; const cost = BUILD_COSTS[type];
           const woodCount = gameState.inventory['Wood'] ? gameState.inventory['Wood'].count : 0;
@@ -494,7 +572,7 @@
       });
 
       window.addEventListener('contextmenu', (e) => { e.preventDefault(); if (window.activeBuildType) { window.activeBuildRotation += 90; addChatMessage('건물 회전됨', 'yellow'); } });
-      window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { window.activeBuildType = null; ui.buildModeText.style.display = 'none'; ui.upgModal.style.display = 'none'; ui.sellModal.style.display = 'none'; } });
+      window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { window.activeBuildType = null; ui.buildModeText.style.display = 'none'; ui.upgModal.style.display = 'none'; ui.sellModal.style.display = 'none'; ui.statModal.style.display = 'none'; } });
 
       ui.sellQty.addEventListener('input', (e) => { let val = parseInt(e.target.value) || 1; if (val < 1) val = 1; if (val > currentSellMax) val = currentSellMax; e.target.value = val; ui.sellProfit.textContent = `${(val * currentSellPrice).toLocaleString()} G`; });
       document.getElementById('sell-cancel').addEventListener('click', () => ui.sellModal.style.display = 'none');
@@ -505,8 +583,7 @@
           gameState.inventory[currentSellItem].count -= qty;
           if (gameState.inventory[currentSellItem].count <= 0) delete gameState.inventory[currentSellItem];
           const cookedName = `구운 ${currentSellItem}`;
-          if (!gameState.inventory[cookedName]) gameState.inventory[cookedName] = { count: 0, rarity: 'Magic' };
-          gameState.inventory[cookedName].count += qty;
+          addInventoryItem(cookedName, qty, 'Magic');
           updateInventoryUi();
         }
         ui.sellModal.style.display = 'none';
@@ -548,7 +625,6 @@
       });
     }
 
-    // --- [Phaser 게임 씬] ---
     class MainScene extends Phaser.Scene {
       constructor() { super('MainScene'); }
 
@@ -584,7 +660,6 @@
             if (pointer.rightButtonDown()) return;
             this.placeBuilding(pointer.worldX, pointer.worldY);
           } else {
-            // 업그레이드 클릭 체크
             let clickedBldg = null;
             this.buildingsGroup.getChildren().forEach(b => {
               if (b.active && Phaser.Math.Distance.Between(pointer.worldX, pointer.worldY, b.x, b.y) < b.body.radius + 15) clickedBldg = b;
@@ -593,7 +668,6 @@
               if (Phaser.Math.Distance.Between(this.player.x, this.player.y, clickedBldg.x, clickedBldg.y) < 200) { openUpgradeModal(clickedBldg); return; } 
             }
 
-            // 타겟(몬스터/나무) 클릭 체크
             let clickedEntity = false;
             this.enemiesData.forEach(e => {
               if (e.hp > 0 && Phaser.Math.Distance.Between(pointer.worldX, pointer.worldY, e.sprite.x, e.sprite.y) < 30) clickedEntity = true;
@@ -605,14 +679,12 @@
             }
 
             if (clickedEntity) {
-              // 엔티티 클릭 시 제자리 멈춤 및 공격
               this.targetPosition = null;
               this.player.body.setVelocity(0, 0);
               this.handlePlayerAttack();
             } else {
-              // 빈 공간 클릭 시 해당 위치로 이동 목표 설정
               this.targetPosition = new Phaser.Math.Vector2(pointer.worldX, pointer.worldY);
-              this.handlePlayerAttack(); // 허공 타격
+              this.handlePlayerAttack(); 
             }
           }
         });
@@ -628,7 +700,10 @@
         g.fillStyle(0x388047); g.fillRect(0,0,200,200); g.fillStyle(0x3d8a4d); g.fillCircle(40,40,8); g.fillCircle(140,120,12); g.generateTexture('bg_grass', 200, 200); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(30, 55, 36, 16); g.fillStyle(0x5c3a21); g.fillRoundedRect(24, 30, 12, 25, 4); g.fillStyle(0x276336); g.fillCircle(30, 25, 24); g.fillStyle(0x388c4c); g.fillCircle(30, 15, 18); g.generateTexture('tree_tex', 60, 60); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(15, 28, 24, 10); g.fillStyle(0x5da8ff); g.fillCircle(15, 15, 15); g.fillStyle(0x000000); g.fillCircle(10, 12, 2); g.fillCircle(20, 12, 2); g.generateTexture('player_tex', 30, 30); g.clear();
-        g.fillStyle(0x000000, 0.3); g.fillEllipse(16, 28, 24, 10); g.fillStyle(0xffffff); g.fillCircle(16, 16, 16); g.fillStyle(0x000000); g.fillCircle(11, 14, 2); g.fillCircle(21, 14, 2); g.generateTexture('monster_tex', 32, 32); g.clear();
+        g.fillStyle(0x000000, 0.3); g.fillEllipse(18, 34, 26, 10); g.fillStyle(0xffffff); g.fillCircle(18, 20, 14); g.fillStyle(0xffd66b); g.fillTriangle(30, 18, 39, 22, 30, 26); g.fillStyle(0xff5858); g.fillTriangle(12, 7, 18, 0, 24, 7); g.fillStyle(0x111111); g.fillCircle(14, 18, 2); g.generateTexture('chicken_tex', 42, 42); g.clear();
+        g.fillStyle(0x000000, 0.3); g.fillEllipse(24, 38, 38, 12); g.fillStyle(0xffa8bc); g.fillEllipse(24, 24, 34, 24); g.fillStyle(0xffcad6); g.fillCircle(38, 23, 10); g.fillStyle(0x222222); g.fillCircle(40, 20, 2); g.fillStyle(0xd96d86); g.fillCircle(44, 24, 2); g.fillCircle(38, 25, 2); g.generateTexture('pig_tex', 52, 48); g.clear();
+        g.fillStyle(0x000000, 0.3); g.fillEllipse(25, 39, 40, 12); g.fillStyle(0x737373); g.fillEllipse(25, 25, 36, 24); g.fillStyle(0x555555); g.fillTriangle(11, 13, 16, 2, 21, 14); g.fillTriangle(30, 14, 36, 2, 39, 16); g.fillStyle(0x111111); g.fillCircle(20, 22, 2); g.fillCircle(32, 22, 2); g.fillStyle(0xffffff); g.fillTriangle(24, 30, 27, 35, 30, 30); g.generateTexture('wolf_tex', 56, 52); g.clear();
+        g.fillStyle(0x000000, 0.35); g.fillEllipse(35, 60, 58, 18); g.fillStyle(0x4b3621); g.fillEllipse(35, 34, 52, 46); g.fillStyle(0x3a2919); g.fillCircle(18, 15, 10); g.fillCircle(52, 15, 10); g.fillStyle(0x7a5430); g.fillEllipse(35, 40, 30, 22); g.fillStyle(0x111111); g.fillCircle(27, 30, 3); g.fillCircle(43, 30, 3); g.fillCircle(35, 39, 4); g.generateTexture('bear_tex', 76, 76); g.clear();
         g.fillStyle(0x6b4423); g.fillRect(0, 15, 40, 10); g.fillRect(5, 5, 8, 30); g.fillRect(25, 5, 8, 30); g.generateTexture('fence_tex', 40, 40); g.clear();
         g.fillStyle(0x3a2311); g.fillRect(5, 10, 30, 20); g.fillStyle(0x888888); g.fillRect(18, 5, 4, 30); g.fillRect(5, 20, 30, 4); g.generateTexture('crossbow_tex', 40, 40); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(40, 75, 70, 20); g.fillStyle(0x4a2e15); g.fillRect(10, 20, 60, 50); g.fillStyle(0x5c3a21); g.fillRect(5, 10, 70, 15); g.fillStyle(0x222222); g.fillRect(30, 40, 20, 30); g.generateTexture('armory_tex', 80, 80); g.clear();
@@ -645,10 +720,44 @@
       spawnRandomMonster() {
         const type = Phaser.Utils.Array.GetRandom(MONSTER_TYPES);
         let x = Phaser.Math.Between(200, this.worldWidth - 200); let y = Phaser.Math.Between(200, this.worldHeight - 200);
-        let sprite = this.physics.add.sprite(x, y, 'monster_tex');
-        sprite.setTint(type.color); sprite.setScale(type.size / 16); sprite.body.setCircle(16); sprite.body.setCollideWorldBounds(true); sprite.body.setBounce(0.5);
-        let label = this.add.text(x, y - 30, type.name, { fontSize: '12px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
-        this.enemiesData.push({ sprite, label, type, hp: type.hp, state: 'wander', lastAttackTime: 0 });
+        let sprite = this.physics.add.sprite(x, y, type.texture);
+        sprite.body.setCircle(type.bodyRadius); sprite.body.setCollideWorldBounds(true); sprite.body.setBounce(0.5);
+
+        let label = this.add.text(x, y - type.labelOffset, type.name, { fontSize: '12px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
+        let hpBarBg = this.add.rectangle(x, y - type.labelOffset + 7, type.barWidth, 5, 0x000000, 0.72).setOrigin(0.5, 0.5);
+        let hpBarFill = this.add.rectangle(x - type.barWidth / 2, y - type.labelOffset + 7, type.barWidth, 3, 0x37d85b, 1).setOrigin(0, 0.5);
+        let hpText = this.add.text(x, y - type.labelOffset + 15, `${type.hp}/${type.hp}`, { fontSize: '9px', color: '#eaffea', stroke: '#000', strokeThickness: 2 }).setOrigin(0.5, 0.5);
+
+        this.enemiesData.push({ sprite, label, hpBarBg, hpBarFill, hpText, type, hp: type.hp, maxHp: type.hp, state: 'wander', lastAttackTime: 0 });
+      }
+
+      updateEnemyHealthBar(enemy) {
+        const ratio = Math.max(0, Math.min(1, enemy.hp / enemy.maxHp));
+        const barWidth = enemy.type.barWidth;
+        const barY = enemy.sprite.y - enemy.type.labelOffset + 7;
+        const hpColor = ratio > 0.6 ? 0x37d85b : (ratio > 0.3 ? 0xffd66b : 0xff5858);
+
+        enemy.label.setPosition(enemy.sprite.x, enemy.sprite.y - enemy.type.labelOffset);
+        enemy.hpBarBg.setPosition(enemy.sprite.x, barY);
+        enemy.hpBarFill.setPosition(enemy.sprite.x - barWidth / 2, barY);
+        enemy.hpBarFill.width = barWidth * ratio;
+        enemy.hpBarFill.fillColor = hpColor;
+        enemy.hpText.setText(`${Math.max(0, Math.ceil(enemy.hp))}/${enemy.maxHp}`);
+        enemy.hpText.setPosition(enemy.sprite.x, enemy.sprite.y - enemy.type.labelOffset + 15);
+
+        const uiDepth = enemy.sprite.y + 10;
+        enemy.label.setDepth(uiDepth);
+        enemy.hpBarBg.setDepth(uiDepth);
+        enemy.hpBarFill.setDepth(uiDepth + 1);
+        enemy.hpText.setDepth(uiDepth + 2);
+      }
+
+      destroyEnemyUi(enemy) {
+        enemy.sprite.destroy();
+        enemy.label.destroy();
+        enemy.hpBarBg.destroy();
+        enemy.hpBarFill.destroy();
+        enemy.hpText.destroy();
       }
 
       placeBuilding(x, y) {
@@ -690,12 +799,12 @@
             closestTarget.hp -= 15;
             if (closestTarget.hp <= 0) {
               closestTarget.destroy(); 
-              if(!gameState.inventory['Wood']) gameState.inventory['Wood'] = {count:0, rarity:'Normal'};
-              gameState.inventory['Wood'].count += Phaser.Math.Between(2, 5);
-              if(ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
+              const woodAmount = Phaser.Math.Between(2, 5);
+              addInventoryItem('Wood', woodAmount, 'Normal');
             }
           } else {
             closestTarget.hp -= gameState.player.baseDmg; 
+            this.updateEnemyHealthBar(closestTarget);
             closestTarget.state = 'chase'; 
             this.physics.velocityFromRotation(Phaser.Math.Angle.Between(this.player.x, this.player.y, closestTarget.sprite.x, closestTarget.sprite.y), 180, closestTarget.sprite.body.velocity);
             if (closestTarget.hp <= 0) this.killEnemy(closestTarget);
@@ -704,7 +813,7 @@
       }
 
       async killEnemy(enemy) {
-        enemy.sprite.destroy(); enemy.label.destroy();
+        this.destroyEnemyUi(enemy);
         gameState.player.gold += enemy.type.exp;
 
         if(gameState.quest.current < gameState.quest.required) {
@@ -714,24 +823,29 @@
 
         gameState.player.exp += enemy.type.exp;
         if (gameState.player.exp >= gameState.player.nextExp) {
-          gameState.player.level++; gameState.player.exp -= gameState.player.nextExp;
-          gameState.player.nextExp = Math.floor(gameState.player.nextExp * 1.5);
-          gameState.player.maxHp += 30; gameState.player.hp = gameState.player.maxHp;
-          gameState.buildLimit = gameState.player.level * 3; 
+          if (gameState.player.level < 100) {
+            gameState.player.level++; 
+            gameState.player.exp -= gameState.player.nextExp;
+            gameState.player.nextExp = Math.floor(gameState.player.nextExp * 1.5);
+            gameState.player.statPoints++;
+            gameState.player.maxHp += 30; 
+            gameState.player.hp = gameState.player.maxHp;
+            gameState.buildLimit = gameState.player.level * 3; 
+            addChatMessage(`레벨 업! 스탯 포인트가 1 지급되었습니다.`, 'yellow');
+          } else {
+            gameState.player.exp = gameState.player.nextExp; 
+          }
         }
         updatePlayerHud();
 
         if (Math.random() < 0.5) {
           const meatName = `${enemy.type.name} 고기`;
-          if (!gameState.inventory[meatName]) gameState.inventory[meatName] = { count: 0, rarity: 'Normal' };
-          gameState.inventory[meatName].count += 1;
+          addInventoryItem(meatName, 1, 'Normal');
         }
         if (Math.random() < 0.7) {
           const drop = await getDrop();
-          if (!gameState.inventory[drop.name]) gameState.inventory[drop.name] = { count: 0, rarity: drop.rarity };
-          gameState.inventory[drop.name].count += drop.count;
+          addInventoryItem(drop.name, drop.count, drop.rarity || 'Normal');
         }
-        if(ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
 
         this.enemiesData = this.enemiesData.filter(e => e !== enemy);
         setTimeout(() => this.spawnRandomMonster(), 10000);
@@ -751,7 +865,6 @@
         const vel = new Phaser.Math.Vector2(0, 0);
         let usingKeyboardOrPad = false;
 
-        // PC WASD 또는 모바일 가상 패드 처리
         if (this.wasd.left.isDown || vPad.left) { vel.x = -1; usingKeyboardOrPad = true; }
         else if (this.wasd.right.isDown || vPad.right) { vel.x = 1; usingKeyboardOrPad = true; }
         if (this.wasd.up.isDown || vPad.up) { vel.y = -1; usingKeyboardOrPad = true; }
@@ -783,6 +896,7 @@
               this.enemiesData.forEach(e => { let d = Phaser.Math.Distance.Between(b.x, b.y, e.sprite.x, e.sprite.y); if (d < minD) { minD = d; target = e; } });
               if (target) {
                 b.lastFireTime = time; target.hp -= (20 + b.level * 10); 
+                this.updateEnemyHealthBar(target);
                 let line = this.add.line(0,0, b.x, b.y, target.sprite.x, target.sprite.y, 0xffd66b).setOrigin(0,0);
                 this.tweens.add({ targets: line, alpha: 0, duration: 150, onComplete: () => line.destroy() });
                 target.state = 'chase'; if(target.hp <= 0) this.killEnemy(target);
@@ -797,7 +911,8 @@
 
         this.enemiesData.forEach(e => {
           if (e.hp <= 0) return;
-          e.sprite.setDepth(e.sprite.y); e.label.setPosition(e.sprite.x, e.sprite.y - 30); e.label.setDepth(e.sprite.y + 10);
+          e.sprite.setDepth(e.sprite.y);
+          this.updateEnemyHealthBar(e);
 
           let target = this.player; let dist = Phaser.Math.Distance.Between(e.sprite.x, e.sprite.y, this.player.x, this.player.y); let isTargetBldg = false;
           this.buildingsGroup.getChildren().forEach(b => {
