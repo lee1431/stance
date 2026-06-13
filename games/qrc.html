@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Fantasy Web MMORPG Prototype</title>
+  <title>STANCE MMORPG Prototype</title>
   <style>
     * { box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font-family: Arial, Helvetica, sans-serif; background: #101820; color: #f5f5f5; touch-action: none; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font-family: Arial, Helvetica, sans-serif; background: #101820; color: #f5f5f5; touch-action: none; user-select: none; -webkit-user-select: none; }
     button, input { font-family: inherit; }
     button { color: inherit; cursor: pointer; }
 
@@ -14,24 +14,12 @@
     #game-container { position: absolute; inset: 0; z-index: 1; }
 
     /* [로그인 / 시작 화면] */
-    #login-screen {
-      position: absolute; inset: 0; background: #0f1f1a; z-index: 10000;
-      display: flex; justify-content: center; align-items: center; flex-direction: column;
-    }
-    .login-box {
-      background: rgba(12, 18, 24, 0.9); padding: 40px; border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.16); text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
+    #login-screen { position: absolute; inset: 0; background: #0f1f1a; z-index: 10000; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+    .login-box { background: rgba(12, 18, 24, 0.9); padding: 40px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.16); text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     .login-box h2 { margin: 0 0 20px 0; color: #FFD66B; letter-spacing: 2px; }
-    .login-box input {
-      width: 100%; padding: 12px; margin-bottom: 20px; background: rgba(0,0,0,0.5);
-      border: 1px solid #555; color: #fff; border-radius: 6px; text-align: center; font-size: 16px; outline: none;
-    }
+    .login-box input { width: 100%; padding: 12px; margin-bottom: 20px; background: rgba(0,0,0,0.5); border: 1px solid #555; color: #fff; border-radius: 6px; text-align: center; font-size: 16px; outline: none; }
     .login-box input:focus { border-color: #FFD66B; }
-    .login-box button {
-      padding: 12px 20px; background: rgba(124, 255, 138, 0.2); border: 1px solid #7CFF8A;
-      color: #7CFF8A; border-radius: 6px; font-size: 16px; font-weight: bold; width: 100%; transition: 0.2s;
-    }
+    .login-box button { padding: 12px 20px; background: rgba(124, 255, 138, 0.2); border: 1px solid #7CFF8A; color: #7CFF8A; border-radius: 6px; font-size: 16px; font-weight: bold; width: 100%; transition: 0.2s; }
     .login-box button:hover { background: rgba(124, 255, 138, 0.4); }
 
     .panel { position: absolute; z-index: 5; background: rgba(12, 18, 24, 0.82); border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 10px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35); backdrop-filter: blur(4px); color: #e9f4ff; }
@@ -40,37 +28,33 @@
     .green { color: #7CFF8A; } .yellow { color: #FFD66B; }
 
     .top-left-panel { top: 16px; left: 16px; width: 220px; padding: 12px; }
-    .minimap-panel { top: 16px; right: 16px; width: 220px; padding: 12px; }
-
+    .minimap-panel { top: 16px; right: 16px; width: 220px; padding: 12px; transition: 0.2s; }
     #minimap { position: relative; width: 100%; height: 135px; overflow: hidden; border-radius: 8px; background: radial-gradient(circle at 28% 30%, rgba(110, 255, 130, 0.32), transparent 18%), radial-gradient(circle at 72% 65%, rgba(110, 255, 130, 0.18), transparent 22%), linear-gradient(135deg, #173821, #244e2e); border: 1px solid rgba(255, 255, 255, 0.16); }
     #mini-player { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: #5da8ff; box-shadow: 0 0 10px rgba(93, 168, 255, 0.9); transform: translate(-50%, -50%); z-index: 10; }
     .mini-dot.enemy { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #ff5858; transform: translate(-50%, -50%); }
     .mini-dot.bldg { position: absolute; width: 6px; height: 6px; border-radius: 2px; background: #55aaff; transform: translate(-50%, -50%); box-shadow: 0 0 6px #55aaff; }
 
-    .quest-panel { top: 230px; right: 16px; width: 220px; padding: 12px; }
+    .quest-panel { top: 230px; right: 16px; width: 220px; padding: 12px; transition: 0.2s; }
     .quest-item { font-size: 13px; line-height: 1.6; } .quest-name { color: #ffe08a; font-weight: 700; } .quest-desc { color: #d9e7ef; }
 
-    /* [인벤토리 UI] */
-    .inventory-panel { display: none; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 320px; max-height: 400px; padding: 16px; flex-direction: column; z-index: 10; }
+    /* [인벤토리 & 건설 UI] */
+    .inventory-panel, .build-panel { display: none; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 320px; padding: 16px; flex-direction: column; z-index: 20; }
     .close-btn { background: transparent; border: none; font-size: 16px; color: #aaa; } .close-btn:hover { color: #fff; }
-    .inventory-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; overflow-y: auto; padding-right: 4px; }
+    .inventory-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; overflow-y: auto; max-height: 300px; padding-right: 4px; }
     .inv-slot { aspect-ratio: 1; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; transition: 0.1s; cursor: pointer;}
     .inv-slot:hover { border-color: #FFD66B; background: rgba(255,214,107,0.1); }
     .item-icon { font-size: 20px; font-weight: bold; color: #fff; }
     .item-count { position: absolute; bottom: 2px; right: 4px; font-size: 10px; color: #fff; }
 
-    /* [건설 UI] */
-    .build-panel { display: none; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 360px; padding: 16px; flex-direction: column; z-index: 10; }
     .build-item { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.4); padding: 10px; margin-bottom: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); }
     .build-item:hover { border-color: #7CFF8A; background: rgba(124,255,138,0.1); }
     .build-info h4 { margin: 0 0 4px 0; font-size: 14px; color: #fff; }
     .build-info p { margin: 0; font-size: 11px; color: #aaa; }
     .build-cost { font-size: 12px; color: #FFD66B; font-weight: bold; text-align: right;}
 
-    /* 글로벌 툴팁 & 모달 */
-    #global-tooltip { position: absolute; background: #000; color: #FFD66B; padding: 6px 10px; font-size: 12px; border-radius: 4px; pointer-events: none; z-index: 9999; border: 1px solid #333; display: none; white-space: nowrap; box-shadow: 0 4px 6px rgba(0,0,0,0.5); }
-    
-    .modal-box { display: none; flex-direction: column; gap: 12px; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; padding: 20px; z-index: 20; }
+    /* 모달 */
+    #global-tooltip { position: absolute; background: #000; color: #FFD66B; padding: 6px 10px; font-size: 12px; border-radius: 4px; pointer-events: none; z-index: 9999; display: none; white-space: nowrap; border: 1px solid #333; }
+    .modal-box { display: none; flex-direction: column; gap: 12px; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; padding: 20px; z-index: 30; }
     .modal-box input { width: 60px; padding: 4px; background: rgba(0,0,0,0.5); border: 1px solid #555; color: #fff; text-align: center; border-radius: 4px; }
     .modal-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
     .modal-btns button { padding: 6px 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; background: rgba(255,255,255,0.1); }
@@ -84,7 +68,7 @@
     #death-screen p { color: #fff; font-size: 20px; }
     #death-timer { font-size: 32px; font-weight: bold; color: #FFD66B; margin-top: 10px; }
 
-    .chat-panel { left: 16px; bottom: 142px; width: 390px; height: 210px; display: flex; flex-direction: column; overflow: hidden; }
+    .chat-panel { left: 16px; bottom: 142px; width: 390px; height: 210px; display: flex; flex-direction: column; overflow: hidden; transition: 0.2s; }
     .chat-body { flex: 1; padding: 10px; overflow-y: auto; font-size: 12px; line-height: 1.5; color: #dfefff; pointer-events: auto; }
     .chat-input-row { display: flex; gap: 6px; padding: 8px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
     .chat-input-row input { flex: 1; padding: 8px; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 6px; background: rgba(0, 0, 0, 0.25); color: #fff; outline: none; }
@@ -105,53 +89,61 @@
     .value { white-space: nowrap; color: #dcecff; }
 
     .skill-bar { display: flex; justify-content: center; gap: 8px; }
-    .skill-bar .slot { position: relative; width: 54px; height: 54px; display: grid; place-items: center; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.18); background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05)); font-size: 24px; transition: 0.12s; }
+    .skill-bar .slot { position: relative; width: 54px; height: 54px; display: grid; place-items: center; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.18); background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05)); font-size: 24px; }
     .menu-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
     .menu-buttons button { min-width: 90px; padding: 9px 10px; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 8px; background: rgba(255, 255, 255, 0.08); font-size: 12px; }
-    .menu-buttons button:hover { background: rgba(100, 165, 255, 0.28); }
-    
-    #build-mode-text { display:none; position: absolute; top: 120px; left: 50%; transform: translateX(-50%); font-size: 20px; color: #FFD66B; font-weight: bold; z-index: 5; text-shadow: 0 2px 4px #000; pointer-events: none; padding: 10px 20px; background: rgba(0,0,0,0.5); border-radius: 8px; border: 1px solid #FFD66B;}
 
-    /* 모바일 토글 버튼 (기본 숨김) */
-    #mobile-menu-toggle {
-      display: none; position: absolute; top: 16px; left: 16px; z-index: 100;
-      background: rgba(12, 18, 24, 0.9); border: 1px solid #FFD66B; color: #FFD66B;
-      padding: 10px 14px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-    }
+    #build-mode-text { display:none; position: absolute; top: 80px; left: 50%; transform: translateX(-50%); font-size: 16px; color: #FFD66B; font-weight: bold; z-index: 5; text-shadow: 0 2px 4px #000; pointer-events: none; padding: 10px 20px; background: rgba(0,0,0,0.5); border-radius: 8px; border: 1px solid #FFD66B;}
+
+    /* 모바일 UI 컴포넌트 (PC에서는 숨김) */
+    .mobile-only { display: none; }
 
     /* --- [모바일 반응형 처리] --- */
     @media (max-width: 800px) {
-      #mobile-menu-toggle { display: block; }
+      .mobile-only { display: block; }
       
-      /* 기본적으로 패널들을 숨김 (접힌 상태) */
-      .toggleable-panel {
-        display: none !important;
-      }
-      
-      /* 메뉴가 열렸을 때 (팝업처럼 중앙 배치 및 레이아웃 조정) */
-      body.menu-open .toggleable-panel {
-        display: flex !important;
-      }
-      body.menu-open .top-left-panel { top: 60px; left: 16px; z-index: 50; }
-      body.menu-open .minimap-panel { top: 60px; right: 16px; z-index: 50; width: 160px; }
-      body.menu-open .quest-panel { top: 220px; right: 16px; z-index: 50; width: 160px; }
-      body.menu-open .chat-panel { left: 16px; right: 16px; width: auto; bottom: 130px; height: 160px; z-index: 50; }
+      /* 개별 패널 제어용 토글 바 */
+      #mobile-toggles { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; z-index: 50; }
+      #mobile-toggles button { background: rgba(12, 18, 24, 0.8); border: 1px solid #FFD66B; color: #FFD66B; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; }
+      #mobile-toggles button.active { background: rgba(255, 214, 107, 0.3); }
 
-      /* 모바일 HUD 컴팩트화 (항상 표시) */
-      .hud { grid-template-columns: 1fr; bottom: 10px; left: 10px; right: 10px; padding: 10px; gap: 8px; min-height: auto; }
-      .portrait-wrap { display: none; } /* 공간 확보를 위해 초상화 숨김 */
+      /* 패널들 기본적으로 숨김 (토글로 제어) */
+      .minimap-panel { display: none; top: 50px; right: 10px; width: 160px; z-index: 40;}
+      .quest-panel { display: none; top: 210px; right: 10px; width: 160px; z-index: 40; }
+      .chat-panel { display: none; bottom: 150px; left: 10px; right: 10px; width: auto; height: 140px; z-index: 40; }
+      .top-left-panel { display: none; } /* 모바일에서는 좌측 상단 패널 생략 가능 */
+
+      /* 모바일 HUD를 상단에 작게 배치하여 체력/경험치 확인 용이 */
+      .hud { top: 10px; left: 10px; bottom: auto; right: auto; width: 220px; grid-template-columns: 1fr; padding: 10px; min-height: auto; gap: 5px; z-index: 40;}
+      .portrait { display: none; } /* 이모지 박스 숨김 */
+      .stat-row { font-size: 10px; }
       .skill-bar { display: none; }
-      .menu-buttons { justify-content: center; }
+      .menu-buttons { display: none; } /* 하단 가상패드와 충돌 방지를 위해 하단 메뉴 숨김 */
 
-      /* 모달 크기 모바일 대응 */
-      .inventory-panel, .build-panel { width: 90%; max-width: 360px; }
-      .inventory-grid { grid-template-columns: repeat(4, 1fr); }
+      /* 인벤토리/건설 모바일 최적화 */
+      .inventory-panel, .build-panel { width: 95%; max-width: 360px; }
+
+      /* 모바일 전용 하단 메뉴 (인벤/건설) */
+      #mobile-bottom-menu { display: flex; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); gap: 10px; z-index: 40; }
+      #mobile-bottom-menu button { background: rgba(12, 18, 24, 0.8); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 12px; }
+
+      /* 가상 D-패드 (좌측 하단) */
+      #virtual-dpad { position: absolute; bottom: 60px; left: 20px; display: grid; grid-template-columns: 45px 45px 45px; grid-template-rows: 45px 45px 45px; gap: 5px; z-index: 45; }
+      .d-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: #fff; font-size: 18px; display: flex; justify-content: center; align-items: center; }
+      .d-btn:active { background: rgba(255,255,255,0.4); }
+      #btn-up { grid-column: 2; grid-row: 1; }
+      #btn-left { grid-column: 1; grid-row: 2; }
+      #btn-right { grid-column: 3; grid-row: 2; }
+      #btn-down { grid-column: 2; grid-row: 3; }
+
+      /* 가상 공격 버튼 (우측 하단) */
+      #virtual-attack { position: absolute; bottom: 60px; right: 20px; width: 70px; height: 70px; background: rgba(255, 69, 0, 0.3); border: 2px solid #ff4500; border-radius: 50%; color: #fff; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 14px; z-index: 45; box-shadow: 0 0 10px rgba(255, 69, 0, 0.5); }
+      #virtual-attack:active { background: rgba(255, 69, 0, 0.6); }
     }
   </style>
 </head>
 
 <body>
-  <button id="mobile-menu-toggle">☰ 메뉴 열기</button>
 
   <div id="login-screen">
     <div class="login-box">
@@ -168,27 +160,58 @@
   </div>
 
   <div id="global-tooltip"></div>
-  <div id="build-mode-text">🛠️ 건설 모드: [화면터치/클릭] 배치 / [우클릭] 회전 / [ESC] 취소</div>
+  <div id="build-mode-text">🛠️ 건설 모드: 화면 터치 배치 / [ESC] 취소</div>
 
   <div id="app">
     <div id="game-container"></div>
 
-    <section class="panel top-left-panel toggleable-panel">
+    <div id="mobile-toggles" class="mobile-only">
+      <button id="toggle-map">지도</button>
+      <button id="toggle-quest">퀘스트</button>
+      <button id="toggle-chat">채팅</button>
+    </div>
+
+    <div id="mobile-bottom-menu" class="mobile-only">
+      <button id="m-build-btn">건설</button>
+      <button id="m-inv-btn">가방</button>
+    </div>
+
+    <div id="virtual-dpad" class="mobile-only">
+      <div class="d-btn" id="btn-up">▲</div>
+      <div class="d-btn" id="btn-left">◀</div>
+      <div class="d-btn" id="btn-right">▶</div>
+      <div class="d-btn" id="btn-down">▼</div>
+    </div>
+    <div id="virtual-attack" class="mobile-only">ATTACK</div>
+
+    <section class="panel top-left-panel">
       <div class="panel-title" id="field-name">Vast Wilderness</div>
       <div class="panel-row"> <span class="green">Channel 1</span> <span id="server-time">10:24</span> </div>
       <div class="panel-row"> <span>Status:</span> <span class="green" id="field-status">Safe</span> </div>
     </section>
 
-    <section class="panel minimap-panel toggleable-panel">
+    <section class="panel minimap-panel" id="ui-map">
       <div class="panel-title">Minimap</div>
       <div id="minimap"><div id="minimap-entities"></div><div id="mini-player"></div></div>
     </section>
 
-    <section class="panel quest-panel toggleable-panel">
+    <section class="panel quest-panel" id="ui-quest">
       <div class="panel-title">Quest Tracker</div>
       <div class="quest-item">
         <div class="quest-name">◆ The Great Hunt</div>
         <div class="quest-desc" id="quest-progress">- 몬스터 사냥하기 (0/10)</div>
+      </div>
+    </section>
+
+    <section class="panel chat-panel" id="ui-chat">
+      <div class="chat-body" id="chat-body">
+        <div class="yellow">System: 캐릭터 이름을 입력하여 접속했습니다.</div>
+        <div class="yellow">System: PC는 WASD 이동, 모바일은 화면 패드를 이용하세요.</div>
+        <div id="coord-line">X: 0 / Y: 0</div>
+      </div>
+      <div class="chat-input-row">
+        <input id="chat-input" type="text" placeholder="Enter message..." autocomplete="off" />
+        <button type="button" id="chat-send-button">Send</button>
       </div>
     </section>
 
@@ -222,7 +245,6 @@
 
     <section class="panel build-panel" id="build-panel">
       <div class="panel-title">Build Structures <span id="build-limit-text" class="yellow" style="font-size:11px;">0/0</span> <button class="close-btn" id="close-build">✕</button></div>
-      
       <div class="build-item" data-build-type="Campfire">
         <div class="build-info"><h4>Campfire (모닥불)</h4><p>1분 유지. 생고기를 구울 수 있습니다.</p></div>
         <div class="build-cost">30 Wood<br>0 G</div>
@@ -238,18 +260,6 @@
       <div class="build-item" data-build-type="Armory">
         <div class="build-info"><h4>Armory (무기고)</h4><p>클릭하여 기본 공격력 업그레이드.</p></div>
         <div class="build-cost">10,000 Wood<br>5,000 G</div>
-      </div>
-    </section>
-
-    <section class="panel chat-panel toggleable-panel">
-      <div class="chat-body" id="chat-body">
-        <div class="yellow">System: 캐릭터 이름을 입력하여 접속했습니다.</div>
-        <div class="yellow">System: 마우스 클릭 또는 화면 터치로 이동이 가능합니다.</div>
-        <div id="coord-line">X: 0 / Y: 0</div>
-      </div>
-      <div class="chat-input-row">
-        <input id="chat-input" type="text" placeholder="Enter message..." autocomplete="off" />
-        <button type="button" id="chat-send-button">Send</button>
       </div>
     </section>
 
@@ -292,39 +302,24 @@
 
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
   <script>
-    // --- [게임 데이터 및 구조] ---
     const gameState = {
       worldWidth: 16000, worldHeight: 10000,
-      player: { 
-        name: 'Adventurer', level: 1, hp: 120, maxHp: 120, mp: 60, maxMp: 60, exp: 20, nextExp: 100, x: 8000, y: 5000, speed: 350, gold: 0,
-        baseDmg: 25, dmgLevel: 1
-      },
+      player: { name: 'Adventurer', level: 1, hp: 120, maxHp: 120, mp: 60, maxMp: 60, exp: 20, nextExp: 100, x: 8000, y: 5000, speed: 350, gold: 0, baseDmg: 25, dmgLevel: 1 },
       quest: { current: 0, required: 10 },
       inventory: {}, isDead: false, buildLimit: 0, builtCount: 0
     };
     gameState.buildLimit = gameState.player.level * 3;
 
-    const BUILD_COSTS = {
-      'Campfire': { wood: 30, gold: 0 },
-      'Fence': { wood: 100, gold: 50 },
-      'Crossbow': { wood: 5000, gold: 1000 },
-      'Armory': { wood: 10000, gold: 5000 }
-    };
+    const vPad = { up: false, down: false, left: false, right: false };
 
-    const PRICE_MAP = { "Normal": 10, "Magic": 40, "Rare": 100, "Epic": 500, "Legendary": 2000, "i6": 150 };
+    const BUILD_COSTS = { 'Campfire': { wood: 30, gold: 0 }, 'Fence': { wood: 100, gold: 50 }, 'Crossbow': { wood: 5000, gold: 1000 }, 'Armory': { wood: 10000, gold: 5000 } };
+    const PRICE_MAP = { "Normal": 10, "Magic": 40, "Rare": 100, "Epic": 500, "Legendary": 2000 };
 
     const MONSTER_TYPES = [
       { name: '닭', hp: 50, speed: 60, color: 0xffffff, size: 10, dmg: 5, exp: 10 },
-      { name: '슬라임', hp: 80, speed: 40, color: 0x7CFF8A, size: 14, dmg: 8, exp: 15 },
-      { name: '개', hp: 120, speed: 90, color: 0xc2b280, size: 14, dmg: 15, exp: 25 },
-      { name: '염소', hp: 150, speed: 70, color: 0xdddddd, size: 15, dmg: 18, exp: 30 },
       { name: '돼지', hp: 200, speed: 50, color: 0xffb6c1, size: 16, dmg: 20, exp: 40 },
       { name: '늑대', hp: 300, speed: 110, color: 0x808080, size: 16, dmg: 35, exp: 60 },
-      { name: '멧돼지', hp: 400, speed: 85, color: 0x8b4513, size: 18, dmg: 40, exp: 70 },
-      { name: '소', hp: 500, speed: 45, color: 0xf5f5dc, size: 22, dmg: 30, exp: 80 },
-      { name: '말', hp: 450, speed: 120, color: 0xa0522d, size: 20, dmg: 35, exp: 90 },
-      { name: '곰', hp: 1000, speed: 70, color: 0x4b3621, size: 26, dmg: 60, exp: 150 },
-      { name: '호랑이', hp: 900, speed: 130, color: 0xff8c00, size: 24, dmg: 75, exp: 200 }
+      { name: '곰', hp: 1000, speed: 70, color: 0x4b3621, size: 26, dmg: 60, exp: 150 }
     ];
 
     const ui = {};
@@ -332,9 +327,7 @@
 
     async function getDrop() {
       try {
-        const res = await fetch("https://mrdindoin.ddns.net/gti/api/open_chest", {
-          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "open" })
-        });
+        const res = await fetch("https://mrdindoin.ddns.net/gti/api/open_chest", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "open" }) });
         const data = await res.json();
         if (data.ok) return { rarity: data.rarity || "Normal", name: data.item_name || data.item || "Unknown", count: data.count || 1 };
       } catch(e) {}
@@ -352,7 +345,6 @@
       
       ui.inventoryPanel = document.getElementById('inventory-panel'); ui.inventoryGrid = document.getElementById('inventory-grid');
       ui.tooltip = document.getElementById('global-tooltip');
-      
       ui.sellModal = document.getElementById('sell-modal'); ui.sellTitle = document.getElementById('sell-title');
       ui.sellQty = document.getElementById('sell-qty'); ui.sellMax = document.getElementById('sell-max'); ui.sellProfit = document.getElementById('sell-profit');
       ui.sellCookBtn = document.getElementById('sell-cook'); ui.sellEatBtn = document.getElementById('sell-eat');
@@ -363,10 +355,7 @@
       ui.buildPanel = document.getElementById('build-panel'); ui.buildLimitText = document.getElementById('build-limit-text');
       ui.buildModeText = document.getElementById('build-mode-text');
       ui.deathScreen = document.getElementById('death-screen'); ui.deathTimer = document.getElementById('death-timer');
-      
       ui.loginScreen = document.getElementById('login-screen'); ui.loginName = document.getElementById('login-name'); ui.loginBtn = document.getElementById('login-btn');
-      
-      ui.mobileMenuToggle = document.getElementById('mobile-menu-toggle');
     }
 
     function updatePlayerHud() {
@@ -380,8 +369,8 @@
     }
 
     function addChatMessage(msg, className = '') {
-      const div = document.createElement('div'); if (className) div.className = className;
-      div.textContent = msg; ui.chatBody.appendChild(div); ui.chatBody.scrollTop = ui.chatBody.scrollHeight;
+      const div = document.createElement('div'); if (className) div.className = className; div.textContent = msg; 
+      ui.chatBody.appendChild(div); ui.chatBody.scrollTop = ui.chatBody.scrollHeight;
     }
 
     function updateCoordinates(x, y) {
@@ -403,7 +392,6 @@
       }, 1000);
     }
 
-    // --- [인벤토리 모달 로직 (판매/요리/먹기)] ---
     let currentSellItem = null, currentSellPrice = 0, currentSellMax = 0;
     
     function openSellModal(itemName, itemObj, price) {
@@ -416,13 +404,10 @@
       let nearCampfire = false;
       if (window.currentScene) {
         window.currentScene.buildingsGroup.getChildren().forEach(b => {
-          if (b.active && b.bType === 'Campfire' && Phaser.Math.Distance.Between(window.currentScene.player.x, window.currentScene.player.y, b.x, b.y) < 150) {
-            nearCampfire = true;
-          }
+          if (b.active && b.bType === 'Campfire' && Phaser.Math.Distance.Between(window.currentScene.player.x, window.currentScene.player.y, b.x, b.y) < 150) nearCampfire = true;
         });
       }
       ui.sellCookBtn.style.display = (isRawMeat && nearCampfire) ? 'inline-block' : 'none';
-
       let isCookedMeat = itemName.startsWith("구운") && itemName.endsWith("고기");
       ui.sellEatBtn.style.display = isCookedMeat ? 'inline-block' : 'none';
     }
@@ -431,11 +416,11 @@
     function openUpgradeModal(bldg) {
       window.currentUpgradeBldg = bldg; ui.upgModal.style.display = 'flex';
       if (bldg.bType === 'Armory') {
-        ui.upgTitle.textContent = "Armory (무기고)"; ui.upgDesc.textContent = "플레이어의 기본 물리 공격력을 대폭 증가시킵니다.";
+        ui.upgTitle.textContent = "Armory"; ui.upgDesc.textContent = "기본 물리 공격력 대폭 증가";
         ui.upgCurrent.textContent = `Dmg: ${gameState.player.baseDmg}`; ui.upgCost.textContent = `${(gameState.player.dmgLevel * 5000).toLocaleString()} G`;
       } else if (bldg.bType === 'Crossbow') {
-        ui.upgTitle.textContent = "Auto Crossbow"; ui.upgDesc.textContent = "이 크로스보우의 데미지와 연사력을 강화합니다.";
-        ui.upgCurrent.textContent = `Lv. ${bldg.level} (Dmg: ${20 + bldg.level * 10})`; ui.upgCost.textContent = `${(bldg.level * 1000).toLocaleString()} G`;
+        ui.upgTitle.textContent = "Auto Crossbow"; ui.upgDesc.textContent = "데미지/연사력 강화";
+        ui.upgCurrent.textContent = `Lv. ${bldg.level}`; ui.upgCost.textContent = `${(bldg.level * 1000).toLocaleString()} G`;
       }
     }
 
@@ -453,14 +438,6 @@
           
           slot.style.borderColor = color;
           slot.innerHTML = `<span class="item-icon" style="color:${color}">${name.charAt(0)}</span><span class="item-count">x${obj.count}</span>`;
-          slot.onmouseenter = () => { ui.tooltip.style.display = 'block'; ui.tooltip.textContent = `${name} (Sell: ${price}G)`; };
-          slot.onmousemove = (e) => {
-            let x = e.clientX + 15, y = e.clientY + 15;
-            if (x + ui.tooltip.offsetWidth > window.innerWidth) x = e.clientX - ui.tooltip.offsetWidth - 5;
-            if (y + ui.tooltip.offsetHeight > window.innerHeight) y = e.clientY - ui.tooltip.offsetHeight - 5;
-            ui.tooltip.style.left = x + 'px'; ui.tooltip.style.top = y + 'px';
-          };
-          slot.onmouseleave = () => { ui.tooltip.style.display = 'none'; };
           slot.onclick = () => openSellModal(name, obj, price);
         }
         ui.inventoryGrid.appendChild(slot);
@@ -470,59 +447,56 @@
     window.activeBuildType = null; window.activeBuildRotation = 0;
 
     function bindUiEvents() {
-      // 모바일 메뉴 토글 이벤트
-      ui.mobileMenuToggle.addEventListener('click', () => {
-        document.body.classList.toggle('menu-open');
-        const isOpen = document.body.classList.contains('menu-open');
-        ui.mobileMenuToggle.textContent = isOpen ? '✖ 메뉴 닫기' : '☰ 메뉴 열기';
-      });
+      // 모바일 패널 토글 로직
+      const togglePanel = (btnId, panelId) => {
+        document.getElementById(btnId).addEventListener('click', (e) => {
+          const panel = document.getElementById(panelId);
+          if(panel.style.display === 'block') { panel.style.display = ''; e.target.classList.remove('active'); }
+          else { panel.style.display = 'block'; e.target.classList.add('active'); }
+        });
+      };
+      togglePanel('toggle-map', 'ui-map');
+      togglePanel('toggle-quest', 'ui-quest');
+      togglePanel('toggle-chat', 'ui-chat');
+
+      // 모바일 인벤/건설 버튼 연결
+      document.getElementById('m-build-btn').addEventListener('click', () => document.getElementById('build-button').click());
+      document.getElementById('m-inv-btn').addEventListener('click', () => document.getElementById('inventory-button').click());
+
+      // 가상 패드 이벤트
+      const bindVPad = (id, key) => {
+        const el = document.getElementById(id);
+        const press = (e) => { e.preventDefault(); vPad[key] = true; };
+        const release = (e) => { e.preventDefault(); vPad[key] = false; };
+        el.addEventListener('touchstart', press); el.addEventListener('touchend', release);
+        el.addEventListener('mousedown', press); el.addEventListener('mouseup', release); el.addEventListener('mouseleave', release);
+      };
+      bindVPad('btn-up', 'up'); bindVPad('btn-down', 'down'); bindVPad('btn-left', 'left'); bindVPad('btn-right', 'right');
+      
+      const vAtk = document.getElementById('virtual-attack');
+      const triggerAttack = (e) => { e.preventDefault(); if(window.currentScene) window.currentScene.handlePlayerAttack(); };
+      vAtk.addEventListener('touchstart', triggerAttack); vAtk.addEventListener('mousedown', triggerAttack);
 
       ui.chatSendButton.addEventListener('click', () => { if(!ui.chatInput.value) return; addChatMessage(`You: ${ui.chatInput.value}`); ui.chatInput.value = ''; });
-      
-      document.getElementById('inventory-button').addEventListener('click', () => {
-        ui.inventoryPanel.style.display = ui.inventoryPanel.style.display === 'flex' ? 'none' : 'flex'; ui.buildPanel.style.display = 'none'; updateInventoryUi();
-      });
+      document.getElementById('inventory-button').addEventListener('click', () => { ui.inventoryPanel.style.display = ui.inventoryPanel.style.display === 'flex' ? 'none' : 'flex'; ui.buildPanel.style.display = 'none'; updateInventoryUi(); });
       document.getElementById('close-inventory').addEventListener('click', () => ui.inventoryPanel.style.display = 'none');
-
-      document.getElementById('build-button').addEventListener('click', () => {
-        ui.buildPanel.style.display = ui.buildPanel.style.display === 'flex' ? 'none' : 'flex'; ui.inventoryPanel.style.display = 'none'; updatePlayerHud();
-      });
+      document.getElementById('build-button').addEventListener('click', () => { ui.buildPanel.style.display = ui.buildPanel.style.display === 'flex' ? 'none' : 'flex'; ui.inventoryPanel.style.display = 'none'; updatePlayerHud(); });
       document.getElementById('close-build').addEventListener('click', () => ui.buildPanel.style.display = 'none');
 
       document.querySelectorAll('.build-item').forEach(el => {
         el.addEventListener('click', () => {
           const type = el.dataset.buildType; const cost = BUILD_COSTS[type];
           const woodCount = gameState.inventory['Wood'] ? gameState.inventory['Wood'].count : 0;
-          
-          if (woodCount < cost.wood || gameState.player.gold < cost.gold) {
-            addChatMessage(`System: 자원이 부족합니다. (필요: Wood ${cost.wood}, Gold ${cost.gold})`, 'yellow'); return;
-          }
-          if (type !== 'Campfire' && gameState.builtCount >= gameState.buildLimit) {
-            addChatMessage(`System: 최대 건설 수량에 도달했습니다. (레벨업 필요)`, 'yellow'); return;
-          }
-
-          window.activeBuildType = type; window.activeBuildRotation = 0;
-          ui.buildPanel.style.display = 'none'; ui.buildModeText.style.display = 'block';
+          if (woodCount < cost.wood || gameState.player.gold < cost.gold) { addChatMessage(`자원 부족 (필요: Wood ${cost.wood}, Gold ${cost.gold})`, 'yellow'); return; }
+          if (type !== 'Campfire' && gameState.builtCount >= gameState.buildLimit) { addChatMessage(`최대 건설 수량 도달`, 'yellow'); return; }
+          window.activeBuildType = type; window.activeBuildRotation = 0; ui.buildPanel.style.display = 'none'; ui.buildModeText.style.display = 'block';
         });
       });
 
-      window.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        if (window.activeBuildType) { window.activeBuildRotation += 90; addChatMessage('System: 건물을 회전했습니다.', 'yellow'); }
-      });
+      window.addEventListener('contextmenu', (e) => { e.preventDefault(); if (window.activeBuildType) { window.activeBuildRotation += 90; addChatMessage('건물 회전됨', 'yellow'); } });
+      window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { window.activeBuildType = null; ui.buildModeText.style.display = 'none'; ui.upgModal.style.display = 'none'; ui.sellModal.style.display = 'none'; } });
 
-      window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          if (window.activeBuildType) { window.activeBuildType = null; ui.buildModeText.style.display = 'none'; addChatMessage('System: 건설 취소', 'yellow'); }
-          ui.upgModal.style.display = 'none'; ui.sellModal.style.display = 'none';
-        }
-      });
-
-      ui.sellQty.addEventListener('input', (e) => {
-        let val = parseInt(e.target.value) || 1;
-        if (val < 1) val = 1; if (val > currentSellMax) val = currentSellMax;
-        e.target.value = val; ui.sellProfit.textContent = `${(val * currentSellPrice).toLocaleString()} G`;
-      });
+      ui.sellQty.addEventListener('input', (e) => { let val = parseInt(e.target.value) || 1; if (val < 1) val = 1; if (val > currentSellMax) val = currentSellMax; e.target.value = val; ui.sellProfit.textContent = `${(val * currentSellPrice).toLocaleString()} G`; });
       document.getElementById('sell-cancel').addEventListener('click', () => ui.sellModal.style.display = 'none');
       
       ui.sellCookBtn.addEventListener('click', () => {
@@ -530,12 +504,9 @@
         if (qty > 0 && currentSellItem && gameState.inventory[currentSellItem]) {
           gameState.inventory[currentSellItem].count -= qty;
           if (gameState.inventory[currentSellItem].count <= 0) delete gameState.inventory[currentSellItem];
-          
           const cookedName = `구운 ${currentSellItem}`;
           if (!gameState.inventory[cookedName]) gameState.inventory[cookedName] = { count: 0, rarity: 'Magic' };
           gameState.inventory[cookedName].count += qty;
-
-          addChatMessage(`System: 🔥 ${currentSellItem} ${qty}개를 요리하여 [${cookedName}] 획득!`, 'green');
           updateInventoryUi();
         }
         ui.sellModal.style.display = 'none';
@@ -544,13 +515,9 @@
       ui.sellEatBtn.addEventListener('click', () => {
         let qty = parseInt(ui.sellQty.value) || 1;
         if (qty > 0 && currentSellItem && gameState.inventory[currentSellItem]) {
-          let healAmount = 50 * qty;
-          gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + healAmount);
-          
+          let healAmount = 50 * qty; gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + healAmount);
           gameState.inventory[currentSellItem].count -= qty;
           if (gameState.inventory[currentSellItem].count <= 0) delete gameState.inventory[currentSellItem];
-
-          addChatMessage(`System: 🍗 ${currentSellItem} ${qty}개를 먹고 체력을 ${healAmount} 회복했습니다.`, 'green');
           updatePlayerHud(); updateInventoryUi();
         }
         ui.sellModal.style.display = 'none';
@@ -559,10 +526,9 @@
       document.getElementById('sell-confirm').addEventListener('click', () => {
         let qty = parseInt(ui.sellQty.value) || 1;
         if (qty > 0 && currentSellItem && gameState.inventory[currentSellItem]) {
-          let profit = qty * currentSellPrice; gameState.player.gold += profit;
+          gameState.player.gold += qty * currentSellPrice;
           gameState.inventory[currentSellItem].count -= qty;
           if (gameState.inventory[currentSellItem].count <= 0) delete gameState.inventory[currentSellItem];
-          addChatMessage(`System: ${currentSellItem} 판매 (+${profit.toLocaleString()} G)`, 'green');
           updatePlayerHud(); updateInventoryUi();
         }
         ui.sellModal.style.display = 'none';
@@ -573,16 +539,10 @@
         const bldg = window.currentUpgradeBldg; if(!bldg) return;
         if (bldg.bType === 'Armory') {
           const cost = gameState.player.dmgLevel * 5000;
-          if (gameState.player.gold >= cost) {
-            gameState.player.gold -= cost; gameState.player.dmgLevel++; gameState.player.baseDmg += 15;
-            addChatMessage(`System: 공격력이 영구적으로 증가했습니다! (현재 Dmg: ${gameState.player.baseDmg})`, 'green');
-          } else { addChatMessage('System: Gold가 부족합니다.', 'yellow'); }
+          if (gameState.player.gold >= cost) { gameState.player.gold -= cost; gameState.player.dmgLevel++; gameState.player.baseDmg += 15; }
         } else if (bldg.bType === 'Crossbow') {
           const cost = bldg.level * 1000;
-          if (gameState.player.gold >= cost) {
-            gameState.player.gold -= cost; bldg.level++;
-            addChatMessage(`System: 크로스보우가 강화되었습니다! (현재 Lv. ${bldg.level})`, 'green');
-          } else { addChatMessage('System: Gold가 부족합니다.', 'yellow'); }
+          if (gameState.player.gold >= cost) { gameState.player.gold -= cost; bldg.level++; }
         }
         updatePlayerHud(); ui.upgModal.style.display = 'none';
       });
@@ -598,7 +558,6 @@
         this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight);
         this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
 
-        // 마우스 이동 목표 좌표 변수 초기화
         this.targetPosition = null;
 
         this.createCustomTextures();
@@ -616,9 +575,6 @@
         this.playerNameText = this.add.text(0, 0, gameState.player.name, { fontSize: '14px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
-        this.physics.add.collider(this.player, this.treesGroup);
-        this.physics.add.collider(this.player, this.buildingsGroup);
-
         this.wasd = this.input.keyboard.addKeys({ up: 'W', left: 'A', down: 'S', right: 'D' });
 
         this.input.on('pointerdown', (pointer) => {
@@ -628,30 +584,42 @@
             if (pointer.rightButtonDown()) return;
             this.placeBuilding(pointer.worldX, pointer.worldY);
           } else {
+            // 업그레이드 클릭 체크
             let clickedBldg = null;
             this.buildingsGroup.getChildren().forEach(b => {
               if (b.active && Phaser.Math.Distance.Between(pointer.worldX, pointer.worldY, b.x, b.y) < b.body.radius + 15) clickedBldg = b;
             });
             if (clickedBldg && (clickedBldg.bType === 'Armory' || clickedBldg.bType === 'Crossbow')) {
               if (Phaser.Math.Distance.Between(this.player.x, this.player.y, clickedBldg.x, clickedBldg.y) < 200) { openUpgradeModal(clickedBldg); return; } 
-              else { addChatMessage('System: 건물이 너무 멉니다.', 'yellow'); return; }
             }
-            
-            // 마우스 이동 처리: 빈 공간이나 적을 클릭했을 때 해당 좌표로 이동 목표 설정
-            this.targetPosition = new Phaser.Math.Vector2(pointer.worldX, pointer.worldY);
-            
-            // 클릭 시 기존의 자동 근접 공격 로직 실행 (주변에 타겟이 있으면 타격)
-            this.handlePlayerAttack();
+
+            // 타겟(몬스터/나무) 클릭 체크
+            let clickedEntity = false;
+            this.enemiesData.forEach(e => {
+              if (e.hp > 0 && Phaser.Math.Distance.Between(pointer.worldX, pointer.worldY, e.sprite.x, e.sprite.y) < 30) clickedEntity = true;
+            });
+            if (!clickedEntity) {
+              this.treesGroup.getChildren().forEach(t => {
+                if (t.active && Phaser.Math.Distance.Between(pointer.worldX, pointer.worldY, t.x, t.y) < 30) clickedEntity = true;
+              });
+            }
+
+            if (clickedEntity) {
+              // 엔티티 클릭 시 제자리 멈춤 및 공격
+              this.targetPosition = null;
+              this.player.body.setVelocity(0, 0);
+              this.handlePlayerAttack();
+            } else {
+              // 빈 공간 클릭 시 해당 위치로 이동 목표 설정
+              this.targetPosition = new Phaser.Math.Vector2(pointer.worldX, pointer.worldY);
+              this.handlePlayerAttack(); // 허공 타격
+            }
           }
         });
 
         this.buildPreview = this.add.sprite(0, 0, 'fence_tex').setAlpha(0.5).setVisible(false);
 
-        window.addEventListener('player-respawn', () => {
-          this.player.setPosition(8000, 5000); this.player.body.setVelocity(0,0);
-          this.targetPosition = null;
-        });
-
+        window.addEventListener('player-respawn', () => { this.player.setPosition(8000, 5000); this.player.body.setVelocity(0,0); this.targetPosition = null; });
         setInterval(() => this.updateRadar(), 500);
       }
 
@@ -661,16 +629,10 @@
         g.fillStyle(0x000000, 0.3); g.fillEllipse(30, 55, 36, 16); g.fillStyle(0x5c3a21); g.fillRoundedRect(24, 30, 12, 25, 4); g.fillStyle(0x276336); g.fillCircle(30, 25, 24); g.fillStyle(0x388c4c); g.fillCircle(30, 15, 18); g.generateTexture('tree_tex', 60, 60); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(15, 28, 24, 10); g.fillStyle(0x5da8ff); g.fillCircle(15, 15, 15); g.fillStyle(0x000000); g.fillCircle(10, 12, 2); g.fillCircle(20, 12, 2); g.generateTexture('player_tex', 30, 30); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(16, 28, 24, 10); g.fillStyle(0xffffff); g.fillCircle(16, 16, 16); g.fillStyle(0x000000); g.fillCircle(11, 14, 2); g.fillCircle(21, 14, 2); g.generateTexture('monster_tex', 32, 32); g.clear();
-        
         g.fillStyle(0x6b4423); g.fillRect(0, 15, 40, 10); g.fillRect(5, 5, 8, 30); g.fillRect(25, 5, 8, 30); g.generateTexture('fence_tex', 40, 40); g.clear();
         g.fillStyle(0x3a2311); g.fillRect(5, 10, 30, 20); g.fillStyle(0x888888); g.fillRect(18, 5, 4, 30); g.fillRect(5, 20, 30, 4); g.generateTexture('crossbow_tex', 40, 40); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(40, 75, 70, 20); g.fillStyle(0x4a2e15); g.fillRect(10, 20, 60, 50); g.fillStyle(0x5c3a21); g.fillRect(5, 10, 70, 15); g.fillStyle(0x222222); g.fillRect(30, 40, 20, 30); g.generateTexture('armory_tex', 80, 80); g.clear();
-        
-        g.fillStyle(0x000000, 0.3); g.fillEllipse(20, 35, 30, 10);
-        g.fillStyle(0x5c3a21); g.fillRect(5, 25, 30, 6); g.fillRect(15, 15, 10, 20); 
-        g.fillStyle(0xff4500); g.fillTriangle(20, 5, 10, 25, 30, 25); 
-        g.fillStyle(0xffd700); g.fillTriangle(20, 15, 15, 25, 25, 25); 
-        g.generateTexture('campfire_tex', 40, 40); g.clear();
+        g.fillStyle(0x000000, 0.3); g.fillEllipse(20, 35, 30, 10); g.fillStyle(0x5c3a21); g.fillRect(5, 25, 30, 6); g.fillRect(15, 15, 10, 20); g.fillStyle(0xff4500); g.fillTriangle(20, 5, 10, 25, 30, 25); g.fillStyle(0xffd700); g.fillTriangle(20, 15, 15, 25, 25, 25); g.generateTexture('campfire_tex', 40, 40); g.clear();
       }
 
       spawnForest() {
@@ -684,39 +646,27 @@
         const type = Phaser.Utils.Array.GetRandom(MONSTER_TYPES);
         let x = Phaser.Math.Between(200, this.worldWidth - 200); let y = Phaser.Math.Between(200, this.worldHeight - 200);
         let sprite = this.physics.add.sprite(x, y, 'monster_tex');
-        sprite.setTint(type.color); sprite.setScale(type.size / 16);
-        sprite.body.setCircle(16); sprite.body.setCollideWorldBounds(true); sprite.body.setBounce(0.5);
+        sprite.setTint(type.color); sprite.setScale(type.size / 16); sprite.body.setCircle(16); sprite.body.setCollideWorldBounds(true); sprite.body.setBounce(0.5);
         let label = this.add.text(x, y - 30, type.name, { fontSize: '12px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
         this.enemiesData.push({ sprite, label, type, hp: type.hp, state: 'wander', lastAttackTime: 0 });
       }
 
       placeBuilding(x, y) {
         const type = window.activeBuildType; const cost = BUILD_COSTS[type];
-        
-        if (!gameState.inventory['Wood'] || gameState.inventory['Wood'].count < cost.wood || gameState.player.gold < cost.gold) {
-          addChatMessage('System: 자원이 부족하여 취소되었습니다.', 'yellow');
-          window.activeBuildType = null; ui.buildModeText.style.display = 'none'; return;
-        }
-        if (Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) > 250) {
-          addChatMessage('System: 너무 멉니다. 캐릭터 근처에 지으세요.', 'yellow'); return;
-        }
+        if (!gameState.inventory['Wood'] || gameState.inventory['Wood'].count < cost.wood || gameState.player.gold < cost.gold) return;
+        if (Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) > 250) return;
 
         gameState.inventory['Wood'].count -= cost.wood; if(gameState.inventory['Wood'].count <= 0) delete gameState.inventory['Wood'];
-        gameState.player.gold -= cost.gold;
-        if(type !== 'Campfire') gameState.builtCount++;
+        gameState.player.gold -= cost.gold; if(type !== 'Campfire') gameState.builtCount++;
 
         let tex = 'fence_tex'; let maxHp = 300; let radius = 20;
-        if(type === 'Crossbow') { tex = 'crossbow_tex'; maxHp = 500; radius = 20; }
-        else if(type === 'Armory') { tex = 'armory_tex'; maxHp = 2000; radius = 40; }
-        else if(type === 'Campfire') { tex = 'campfire_tex'; maxHp = 100; radius = 15; }
+        if(type === 'Crossbow') { tex = 'crossbow_tex'; maxHp = 500; } else if(type === 'Armory') { tex = 'armory_tex'; maxHp = 2000; radius = 40; } else if(type === 'Campfire') { tex = 'campfire_tex'; maxHp = 100; radius = 15; }
 
         let bldg = this.buildingsGroup.create(x, y, tex);
         bldg.setAngle(window.activeBuildRotation); bldg.body.setCircle(radius);
         bldg.bType = type; bldg.hp = maxHp; bldg.maxHp = maxHp; bldg.level = 1; bldg.lastFireTime = 0;
-        
         if(type === 'Campfire') bldg.burnOutTime = this.time.now + 60000;
 
-        addChatMessage(`System: ${type} 건설 완료!`, 'green');
         updatePlayerHud(); window.activeBuildType = null; ui.buildModeText.style.display = 'none';
       }
 
@@ -739,14 +689,13 @@
           if (isTree) {
             closestTarget.hp -= 15;
             if (closestTarget.hp <= 0) {
-              closestTarget.destroy(); addChatMessage(`System: 벌목 완료! [Wood] 획득.`, 'green');
+              closestTarget.destroy(); 
               if(!gameState.inventory['Wood']) gameState.inventory['Wood'] = {count:0, rarity:'Normal'};
               gameState.inventory['Wood'].count += Phaser.Math.Between(2, 5);
               if(ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
             }
           } else {
             closestTarget.hp -= gameState.player.baseDmg; 
-            addChatMessage(`System: ${closestTarget.type.name} 타격! (HP: ${closestTarget.hp}/${closestTarget.type.hp})`, 'yellow');
             closestTarget.state = 'chase'; 
             this.physics.velocityFromRotation(Phaser.Math.Angle.Between(this.player.x, this.player.y, closestTarget.sprite.x, closestTarget.sprite.y), 180, closestTarget.sprite.body.velocity);
             if (closestTarget.hp <= 0) this.killEnemy(closestTarget);
@@ -757,14 +706,10 @@
       async killEnemy(enemy) {
         enemy.sprite.destroy(); enemy.label.destroy();
         gameState.player.gold += enemy.type.exp;
-        addChatMessage(`System: ${enemy.type.name} 사냥 보상 +${enemy.type.exp} G`, 'yellow');
 
         if(gameState.quest.current < gameState.quest.required) {
-          gameState.quest.current++;
-          document.getElementById('quest-progress').textContent = `- 몬스터 사냥하기 (${gameState.quest.current}/10)`;
-          if(gameState.quest.current >= gameState.quest.required) {
-            gameState.player.gold += 1000; addChatMessage('System: 퀘스트 완료 보상 +1000 G 획득!', 'green');
-          }
+          gameState.quest.current++; document.getElementById('quest-progress').textContent = `- 몬스터 사냥하기 (${gameState.quest.current}/10)`;
+          if(gameState.quest.current >= gameState.quest.required) gameState.player.gold += 1000;
         }
 
         gameState.player.exp += enemy.type.exp;
@@ -773,7 +718,6 @@
           gameState.player.nextExp = Math.floor(gameState.player.nextExp * 1.5);
           gameState.player.maxHp += 30; gameState.player.hp = gameState.player.maxHp;
           gameState.buildLimit = gameState.player.level * 3; 
-          addChatMessage(`System: Level Up! Lv.${gameState.player.level}`, 'green');
         }
         updatePlayerHud();
 
@@ -781,17 +725,13 @@
           const meatName = `${enemy.type.name} 고기`;
           if (!gameState.inventory[meatName]) gameState.inventory[meatName] = { count: 0, rarity: 'Normal' };
           gameState.inventory[meatName].count += 1;
-          addChatMessage(`System: 🍖 전리품! ${meatName} 획득`, 'yellow');
-          if(ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
         }
-
         if (Math.random() < 0.7) {
           const drop = await getDrop();
-          addChatMessage(`System: 🎁 전리품! [${drop.rarity}] ${drop.name} x${drop.count}`, 'yellow');
           if (!gameState.inventory[drop.name]) gameState.inventory[drop.name] = { count: 0, rarity: drop.rarity };
           gameState.inventory[drop.name].count += drop.count;
-          if(ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
         }
+        if(ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
 
         this.enemiesData = this.enemiesData.filter(e => e !== enemy);
         setTimeout(() => this.spawnRandomMonster(), 10000);
@@ -802,37 +742,29 @@
 
         if (window.activeBuildType) {
           let ptr = this.input.activePointer;
-          let tex = 'fence_tex';
-          if(window.activeBuildType === 'Armory') tex = 'armory_tex';
-          else if(window.activeBuildType === 'Crossbow') tex = 'crossbow_tex';
-          else if(window.activeBuildType === 'Campfire') tex = 'campfire_tex';
-          
+          let tex = 'fence_tex'; if(window.activeBuildType === 'Armory') tex = 'armory_tex'; else if(window.activeBuildType === 'Crossbow') tex = 'crossbow_tex'; else if(window.activeBuildType === 'Campfire') tex = 'campfire_tex';
           this.buildPreview.setTexture(tex).setPosition(ptr.worldX, ptr.worldY).setAngle(window.activeBuildRotation).setVisible(true).setDepth(9999);
         } else {
           this.buildPreview.setVisible(false);
         }
 
         const vel = new Phaser.Math.Vector2(0, 0);
-        let usingKeyboard = false;
+        let usingKeyboardOrPad = false;
 
-        if (this.wasd.left.isDown) { vel.x = -1; usingKeyboard = true; }
-        else if (this.wasd.right.isDown) { vel.x = 1; usingKeyboard = true; }
-        if (this.wasd.up.isDown) { vel.y = -1; usingKeyboard = true; }
-        else if (this.wasd.down.isDown) { vel.y = 1; usingKeyboard = true; }
+        // PC WASD 또는 모바일 가상 패드 처리
+        if (this.wasd.left.isDown || vPad.left) { vel.x = -1; usingKeyboardOrPad = true; }
+        else if (this.wasd.right.isDown || vPad.right) { vel.x = 1; usingKeyboardOrPad = true; }
+        if (this.wasd.up.isDown || vPad.up) { vel.y = -1; usingKeyboardOrPad = true; }
+        else if (this.wasd.down.isDown || vPad.down) { vel.y = 1; usingKeyboardOrPad = true; }
 
-        // 이동 로직 (키보드 우선, 마우스 클릭 백업)
-        if (usingKeyboard) {
-          this.targetPosition = null; // 키보드 조작 시 마우스 이동 취소
+        if (usingKeyboardOrPad) {
+          this.targetPosition = null; 
           vel.normalize().scale(gameState.player.speed);
           this.player.body.setVelocity(vel.x, vel.y);
         } else if (this.targetPosition) {
           const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.targetPosition.x, this.targetPosition.y);
-          if (dist > 5) {
-            this.physics.moveToObject(this.player, this.targetPosition, gameState.player.speed);
-          } else {
-            this.player.body.setVelocity(0, 0);
-            this.targetPosition = null;
-          }
+          if (dist > 5) { this.physics.moveToObject(this.player, this.targetPosition, gameState.player.speed); } 
+          else { this.player.body.setVelocity(0, 0); this.targetPosition = null; }
         } else {
           this.player.body.setVelocity(0, 0);
         }
@@ -843,17 +775,12 @@
         this.buildingsGroup.getChildren().forEach(b => {
           if (!b.active) return;
           b.setDepth(b.y);
-          if (b.bType === 'Campfire' && time > b.burnOutTime) {
-            b.destroy(); addChatMessage('System: 모닥불이 다 타서 꺼졌습니다.', 'yellow');
-            if (ui.sellModal.style.display === 'flex') ui.sellModal.style.display = 'none'; 
-          } else if (b.bType === 'Crossbow') {
+          if (b.bType === 'Campfire' && time > b.burnOutTime) { b.destroy(); } 
+          else if (b.bType === 'Crossbow') {
             let fireDelay = Math.max(300, 1000 - (b.level * 100)); 
             if (time > b.lastFireTime + fireDelay) {
               let target = null; let minD = 300; 
-              this.enemiesData.forEach(e => {
-                let d = Phaser.Math.Distance.Between(b.x, b.y, e.sprite.x, e.sprite.y);
-                if (d < minD) { minD = d; target = e; }
-              });
+              this.enemiesData.forEach(e => { let d = Phaser.Math.Distance.Between(b.x, b.y, e.sprite.x, e.sprite.y); if (d < minD) { minD = d; target = e; } });
               if (target) {
                 b.lastFireTime = time; target.hp -= (20 + b.level * 10); 
                 let line = this.add.line(0,0, b.x, b.y, target.sprite.x, target.sprite.y, 0xffd66b).setOrigin(0,0);
@@ -864,7 +791,6 @@
           }
         });
         
-        // 이름 동기화
         this.playerNameText.setText(gameState.player.name);
         this.playerNameText.setPosition(this.player.x, this.player.y - 30); this.playerNameText.setDepth(this.player.y + 10);
         updateCoordinates(this.player.x, this.player.y);
@@ -873,33 +799,23 @@
           if (e.hp <= 0) return;
           e.sprite.setDepth(e.sprite.y); e.label.setPosition(e.sprite.x, e.sprite.y - 30); e.label.setDepth(e.sprite.y + 10);
 
-          let target = this.player;
-          let dist = Phaser.Math.Distance.Between(e.sprite.x, e.sprite.y, this.player.x, this.player.y);
-          let isTargetBldg = false;
-
+          let target = this.player; let dist = Phaser.Math.Distance.Between(e.sprite.x, e.sprite.y, this.player.x, this.player.y); let isTargetBldg = false;
           this.buildingsGroup.getChildren().forEach(b => {
-            if(!b.active) return;
-            let d = Phaser.Math.Distance.Between(e.sprite.x, e.sprite.y, b.x, b.y);
+            if(!b.active) return; let d = Phaser.Math.Distance.Between(e.sprite.x, e.sprite.y, b.x, b.y);
             if (d < dist && d < 200) { dist = d; target = b; isTargetBldg = true; }
           });
           
-          if (dist < 200 && !['닭', '돼지', '소', '말', '염소'].includes(e.type.name)) e.state = 'chase';
-          else if (dist > 400) e.state = 'wander';
+          if (dist < 200 && !['닭', '돼지', '소', '말', '염소'].includes(e.type.name)) e.state = 'chase'; else if (dist > 400) e.state = 'wander';
 
           if (e.state === 'wander' && Math.random() < 0.01) {
             this.physics.velocityFromAngle(Phaser.Math.Between(0, 360), e.type.speed * 0.5, e.sprite.body.velocity);
           } else if (e.state === 'chase') {
             this.physics.moveToObject(e.sprite, target, e.type.speed);
-            
             if (dist < 45 && time > e.lastAttackTime + 1500) {
               e.lastAttackTime = time; 
               if (isTargetBldg) {
                 target.hp -= e.type.dmg;
-                if (target.hp <= 0) {
-                  target.destroy(); 
-                  if(target.bType !== 'Campfire') { gameState.builtCount--; updatePlayerHud(); }
-                  addChatMessage(`System: 몬스터가 건물을 파괴했습니다!`, 'yellow');
-                }
+                if (target.hp <= 0) { target.destroy(); if(target.bType !== 'Campfire') { gameState.builtCount--; updatePlayerHud(); } }
               } else {
                 gameState.player.hp = Math.max(0, gameState.player.hp - e.type.dmg); updatePlayerHud();
                 if (gameState.player.hp <= 0) handlePlayerDeath();
@@ -929,16 +845,12 @@
       }
     }
 
-    // --- [게임 초기화 (로그인 후 실행)] ---
     window.addEventListener('DOMContentLoaded', () => {
       cacheUiElements(); bindUiEvents(); 
 
       ui.loginBtn.addEventListener('click', () => {
-        let enteredName = ui.loginName.value.trim();
-        if(enteredName) gameState.player.name = enteredName;
-        
-        ui.loginScreen.style.display = 'none';
-        updatePlayerHud();
+        let enteredName = ui.loginName.value.trim(); if(enteredName) gameState.player.name = enteredName;
+        ui.loginScreen.style.display = 'none'; updatePlayerHud();
 
         setInterval(() => {
           if (!gameState.isDead && gameState.player.hp > 0 && gameState.player.hp < gameState.player.maxHp) {
@@ -951,14 +863,10 @@
           backgroundColor: '#173821', physics: { default: 'arcade', arcade: { debug: false } }, scene: MainScene
         });
         
-        window.addEventListener('resize', () => {
-          document.querySelector('canvas').width = window.innerWidth; document.querySelector('canvas').height = window.innerHeight;
-        });
+        window.addEventListener('resize', () => { document.querySelector('canvas').width = window.innerWidth; document.querySelector('canvas').height = window.innerHeight; });
       });
       
-      ui.loginName.addEventListener('keydown', (e) => {
-        if(e.key === 'Enter') ui.loginBtn.click();
-      });
+      ui.loginName.addEventListener('keydown', (e) => { if(e.key === 'Enter') ui.loginBtn.click(); });
     });
   </script>
 </body>
