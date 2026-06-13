@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STANCE | Games</title>
+    <style>
+        /* 기본 리셋 및 전역 설정 */
+        :root {
+            --bg-base: #0a0a0a; /* 메인 배경 */
+            --bg-card: #151515; /* 카드 배경 */
+            --text-main: #ffffff;
+            --text-sub: #888888;
+            --border-color: #2a2a2a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-image: radial-gradient(circle at 50% 50%, #111 1px, transparent 1px);
+            background-size: 100px 100px; /* 은은한 배경 패턴 (선택사항) */
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+
+        /* 헤더 및 타이틀 */
+        .page-header {
+            margin-bottom: 40px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 30px;
+        }
+
+        /* 검색 영역 */
+        .search-box {
+            position: relative;
+            max-width: 400px;
+            margin-bottom: 40px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 15px 20px;
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            font-size: 16px;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #555;
+        }
+
+        .search-input::placeholder {
+            color: var(--text-sub);
+        }
+
+        /* 카드 그리드 영역 */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        /* 개별 카드 디자인 (기존 STANCE UI 참고) */
+        .card {
+            background-color: var(--bg-card);
+            padding: 30px 25px;
+            border-left: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        .card:hover {
+            background-color: #1c1c1c;
+            border-left-color: #ffffff; /* 마우스 오버 시 왼쪽 라인 포인트 */
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 15px 0;
+        }
+
+        .card-desc {
+            font-size: 14px;
+            color: var(--text-sub);
+            margin: 0;
+            line-height: 1.5;
+            word-break: keep-all;
+        }
+
+        .empty-message {
+            color: var(--text-sub);
+            padding: 20px 0;
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="page-header">
+            <h2 class="page-title">GAMES & SIMULATIONS</h2>
+            
+            <div class="search-box">
+                <input type="text" id="searchInput" class="search-input" placeholder="게임 이름이나 내용을 검색하세요...">
+            </div>
+        </div>
+
+        <div class="card-grid" id="gameGrid">
+            </div>
+    </div>
+
+    <script>
+        // 1. JSON 기반의 데이터 배열 (DB 대신 활용)
+        const gamesData = [
+            {
+                id: "g01",
+                title: "3D 붕어낚시 시뮬레이션",
+                desc: "Three.js 기반. 사실적인 찌올림과 내림낚시 물리엔진을 구현한 웹 게임입니다.",
+                url: "#"
+            },
+            {
+                id: "g02",
+                title: "LocalFlow 미니게임",
+                desc: "소상공인 물류 흐름을 관리하고 최적의 루트를 찾는 SCM 타이쿤 게임.",
+                url: "#"
+            },
+            {
+                id: "g03",
+                title: "태양광 트래커 캘리브레이션",
+                desc: "프레넬 렌즈의 초점을 맞추는 실시간 3D 조작 퍼즐입니다.",
+                url: "#"
+            },
+            {
+                id: "g04",
+                title: "스마트팜 온도 제어",
+                desc: "무동력 순환 난방 시스템의 밸브를 조절하여 온도를 맞추는 시뮬레이터.",
+                url: "#"
+            }
+        ];
+
+        const gameGrid = document.getElementById('gameGrid');
+        const searchInput = document.getElementById('searchInput');
+
+        // 2. 화면에 카드를 렌더링하는 함수 (바닐라 JS)
+        function renderCards(data) {
+            gameGrid.innerHTML = ''; // 기존 내용 초기화
+
+            if (data.length === 0) {
+                gameGrid.innerHTML = '<div class="empty-message">검색 조건에 맞는 게임이 없습니다.</div>';
+                return;
+            }
+
+            // Fragment를 사용하여 DOM 조작 최소화 (성능 최적화)
+            const fragment = document.createDocumentFragment();
+
+            data.forEach(game => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.onclick = () => window.location.href = game.url; // 클릭 시 이동
+
+                card.innerHTML = `
+                    <h3 class="card-title">${game.title}</h3>
+                    <p class="card-desc">${game.desc}</p>
+                `;
+                fragment.appendChild(card);
+            });
+
+            gameGrid.appendChild(fragment);
+        }
+
+        // 3. 검색 이벤트 리스너 추가
+        searchInput.addEventListener('input', (e) => {
+            const keyword = e.target.value.toLowerCase().trim();
+            
+            // 제목이나 설명에 검색어가 포함된 데이터만 필터링
+            const filteredGames = gamesData.filter(game => 
+                game.title.toLowerCase().includes(keyword) || 
+                game.desc.toLowerCase().includes(keyword)
+            );
+
+            renderCards(filteredGames);
+        });
+
+        // 4. 초기 페이지 로드 시 전체 데이터 렌더링
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCards(gamesData);
+        });
+    </script>
+</body>
+</html>
