@@ -83,6 +83,24 @@
     .modal-btns button.upgrade { background: rgba(255, 214, 107, 0.2); border-color: #FFD66B; color: #FFD66B; }
     .modal-btns button.cook { background: rgba(255, 69, 0, 0.2); border-color: #ff4500; color: #ff6347; } 
     .modal-btns button.eat { background: rgba(85, 170, 255, 0.2); border-color: #55aaff; color: #55aaff; }
+    .armory-card {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid rgba(255,214,107,0.35);
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(255,214,107,0.14), rgba(255,255,255,0.045));
+      color: #f6fbff;
+      text-align: left;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px 10px;
+      align-items: center;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.22);
+    }
+    .armory-card:hover { border-color: #FFD66B; background: linear-gradient(135deg, rgba(255,214,107,0.24), rgba(127,212,255,0.08)); }
+    .armory-card-title { font-size: 13px; font-weight: 800; color: #fff; }
+    .armory-card-level { font-size: 11px; color: #7CFF8A; white-space: nowrap; }
+    .armory-card-cost { grid-column: 1 / -1; font-size: 12px; color: #FFD66B; }
 
     #death-screen { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; }
     #death-screen h1 { color: #ff5858; font-size: 48px; letter-spacing: 4px; margin-bottom: 20px; text-shadow: 0 0 20px rgba(255,88,88,0.5); }
@@ -269,9 +287,21 @@
       <div style="margin-top: 10px;">현재: <span id="upg-current" class="green">Lv. 1</span></div>
       <div>비용: <span id="upg-cost" class="yellow">1000 G</span></div>
       <div id="upg-armory-options" style="display:none; flex-direction:column; gap:8px; margin-top:8px;">
-        <button class="upgrade armory-upg-btn" data-armory-upg="fenceHp">울타리 체력 증가</button>
-        <button class="upgrade armory-upg-btn" data-armory-upg="crossbowHp">크로스보우 체력 증가</button>
-        <button class="upgrade armory-upg-btn" data-armory-upg="crossbowDmg">크로스보우 공격력 증가</button>
+        <button class="armory-card armory-upg-btn" data-armory-upg="fenceHp">
+          <span class="armory-card-title">울타리 체력 증가</span>
+          <span class="armory-card-level">Lv.1 → 2</span>
+          <span class="armory-card-cost">비용: 1,200 G</span>
+        </button>
+        <button class="armory-card armory-upg-btn" data-armory-upg="crossbowHp">
+          <span class="armory-card-title">크로스보우 체력 증가</span>
+          <span class="armory-card-level">Lv.1 → 2</span>
+          <span class="armory-card-cost">비용: 1,500 G</span>
+        </button>
+        <button class="armory-card armory-upg-btn" data-armory-upg="crossbowDmg">
+          <span class="armory-card-title">크로스보우 공격력 증가</span>
+          <span class="armory-card-level">Lv.1 → 2</span>
+          <span class="armory-card-cost">비용: 2,000 G</span>
+        </button>
       </div>
       <div class="modal-btns">
         <button id="upg-cancel">취소</button>
@@ -362,12 +392,14 @@
       reconnectTimer: null,
       pollTimer: null,
       seenKeys: new Set(),
-      recentLocal: []
+      recentLocal: [],
+      sessionStartTs: 0,
+      maxVisibleMessages: 10
     };
     
     // [원본 복원] 빌드 코스트
-    const BUILD_COSTS = { 'Campfire': { wood: 3, gold: 0 }, 'Fence': { wood: 5, gold: 5 }, 'Crossbow': { wood: 1, gold: 1 }, 'Armory': { wood: 5, gold: 5 }, 'Raft': { wood: 2, gold: 2 } };
-    const ARMORY_UPGRADE_COSTS = { fenceHp: 12, crossbowHp: 15, crossbowDmg: 20 };
+    const BUILD_COSTS = { 'Campfire': { wood: 30, gold: 0 }, 'Fence': { wood: 50, gold: 50 }, 'Crossbow': { wood: 1000, gold: 1000 }, 'Armory': { wood: 5000, gold: 5000 }, 'Raft': { wood: 200, gold: 200 } };
+    const ARMORY_UPGRADE_COSTS = { fenceHp: 1200, crossbowHp: 1500, crossbowDmg: 2000 };
     const BUILDING_BASE_STATS = { Fence: { hp: 300, radius: 20 }, Crossbow: { hp: 500, radius: 20, dmg: 30 }, Armory: { hp: 2000, radius: 40 }, Campfire: { hp: 100, radius: 15 }, Raft: { hp: 600, radius: 55 } };
     const PRICE_MAP = { "Normal": 10, "Magic": 40, "Rare": 100, "Epic": 500, "Legendary": 2000 };
     const PLAYER_BLOCK_SIZE = 40;
@@ -529,26 +561,41 @@
           `<span style="color:${nameColor}; font-weight:bold;">${name}</span> ` +
           `<span style="color:#9fb1c5; font-size:11px;">${time} #${room}</span>` +
           caption +
-          `<div style="margin-top:6px;"><a href="${escapeHtml(m.url)}" target="_blank" rel="noopener" style="color:#7fd4ff;">이미지 열기</a></div>`
+          `<div style="margin-top:6px;"><a href="${escapeHtml(m.url)}" target="_blank" rel="noopener" style="color:#7fd4ff;">이미지 열기</a></div>`,
+          'world-chat-msg'
         );
+        trimWorldChatMessages();
         return;
       }
 
       addChatMessage(
         `<span style="color:${nameColor}; font-weight:bold;">${name}</span> ` +
         `<span style="color:#9fb1c5; font-size:11px;">${time} #${room}</span>` +
-        `<div style="margin-top:4px; white-space:pre-wrap;">${text}</div>`
+        `<div style="margin-top:4px; white-space:pre-wrap;">${text}</div>`,
+        'world-chat-msg'
       );
+      trimWorldChatMessages();
+    }
+
+    function trimWorldChatMessages() {
+      if (!ui.chatBody) return;
+      const rows = Array.from(ui.chatBody.querySelectorAll('.world-chat-msg'));
+      const overflow = rows.length - WORLD_CHAT.maxVisibleMessages;
+      if (overflow > 0) rows.slice(0, overflow).forEach(el => el.remove());
     }
 
     async function loadWorldChatHistory(options = {}) {
       const announce = options.announce === true;
+      const sinceSession = options.sinceSession === true;
       try {
         const res = await fetch(`${WORLD_CHAT.apiBase}/history?room=${encodeURIComponent(WORLD_CHAT.room)}&t=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) throw new Error(`history_${res.status}`);
         const list = await res.json();
-        if (announce) addChatMessage(`<span class="blue">WorldChat: 최근 대화 ${list.length}개를 불러왔습니다.</span>`);
-        list.forEach(m => addWorldChatMessage(m, { dedupe: true }));
+        const filtered = sinceSession
+          ? list.filter(m => !Number.isFinite(Number(m.ts)) || Number(m.ts) >= WORLD_CHAT.sessionStartTs)
+          : list;
+        if (announce) addChatMessage(`<span class="blue">WorldChat: 최근 대화 ${filtered.length}개를 불러왔습니다.</span>`);
+        filtered.forEach(m => addWorldChatMessage(m, { dedupe: true }));
       } catch (err) {
         if (announce) addChatMessage(`<span style="color:#ff8a8a;">WorldChat: 기록 불러오기 실패 (${escapeHtml(err.message || err)})</span>`);
       }
@@ -599,13 +646,14 @@
     async function initWorldChat() {
       if (WORLD_CHAT.initialized) return;
       WORLD_CHAT.initialized = true;
+      WORLD_CHAT.sessionStartTs = Date.now();
       addChatMessage(`<span class="blue">WorldChat: #${WORLD_CHAT.room} 입장 중...</span>`);
-      await loadWorldChatHistory({ announce: true });
       connectWorldChat();
 
-      // SSE가 브라우저/프록시 환경에서 지연될 때를 대비한 안전 폴링
+      // 최초 접속 시 이전 대화는 불러오지 않습니다.
+      // SSE 누락 보정용 폴링도 접속 이후 메시지만 반영하고, 화면에는 최대 10줄만 유지합니다.
       if (WORLD_CHAT.pollTimer) clearInterval(WORLD_CHAT.pollTimer);
-      WORLD_CHAT.pollTimer = setInterval(() => loadWorldChatHistory({ announce: false }), 1500);
+      WORLD_CHAT.pollTimer = setInterval(() => loadWorldChatHistory({ announce: false, sinceSession: true }), 1500);
     }
 
     async function sendWorldChat() {
@@ -710,6 +758,23 @@
       ui.sellEatBtn.style.display = isCookedMeat ? 'inline-block' : 'none';
     }
 
+    function showGlobalTooltip(html, e) {
+      if (!ui.tooltip) return;
+      ui.tooltip.innerHTML = html;
+      ui.tooltip.style.display = 'block';
+      moveGlobalTooltip(e);
+    }
+
+    function moveGlobalTooltip(e) {
+      if (!ui.tooltip || ui.tooltip.style.display === 'none') return;
+      ui.tooltip.style.left = `${e.pageX + 12}px`;
+      ui.tooltip.style.top = `${e.pageY + 12}px`;
+    }
+
+    function hideGlobalTooltip() {
+      if (ui.tooltip) ui.tooltip.style.display = 'none';
+    }
+
     // [방어 시설 강화] 무기고는 캐릭터가 아니라 설치된 방어 건물을 강화합니다.
     window.currentUpgradeBldg = null;
 
@@ -725,13 +790,31 @@
     function refreshArmoryUpgradeButtons() {
       if (!ui.upgArmoryOptions) return;
       const u = gameState.buildingUpgrades;
-      const labels = {
-        fenceHp: `울타리 체력 증가 (Lv.${u.fenceHpLevel} → ${u.fenceHpLevel + 1}) / ${getArmoryUpgradeCost('fenceHp').toLocaleString()} G`,
-        crossbowHp: `크로스보우 체력 증가 (Lv.${u.crossbowHpLevel} → ${u.crossbowHpLevel + 1}) / ${getArmoryUpgradeCost('crossbowHp').toLocaleString()} G`,
-        crossbowDmg: `크로스보우 공격력 증가 (Lv.${u.crossbowDmgLevel} → ${u.crossbowDmgLevel + 1}) / ${getArmoryUpgradeCost('crossbowDmg').toLocaleString()} G`
+      const data = {
+        fenceHp: {
+          title: '울타리 체력 증가',
+          level: `Lv.${u.fenceHpLevel} → ${u.fenceHpLevel + 1}`,
+          cost: getArmoryUpgradeCost('fenceHp'),
+          tip: '새로 설치하는 울타리와 이미 설치된 울타리의 최대 체력을 증가시킵니다. 기존 울타리는 현재 체력 비율을 유지합니다.'
+        },
+        crossbowHp: {
+          title: '크로스보우 체력 증가',
+          level: `Lv.${u.crossbowHpLevel} → ${u.crossbowHpLevel + 1}`,
+          cost: getArmoryUpgradeCost('crossbowHp'),
+          tip: '새로 설치하는 크로스보우와 이미 설치된 크로스보우의 최대 체력을 증가시킵니다. 기존 크로스보우는 현재 체력 비율을 유지합니다.'
+        },
+        crossbowDmg: {
+          title: '크로스보우 공격력 증가',
+          level: `Lv.${u.crossbowDmgLevel} → ${u.crossbowDmgLevel + 1}`,
+          cost: getArmoryUpgradeCost('crossbowDmg'),
+          tip: '크로스보우가 몬스터에게 주는 공격력을 증가시킵니다. 연사력은 크로스보우를 직접 클릭해서 따로 강화합니다.'
+        }
       };
       ui.upgArmoryOptions.querySelectorAll('.armory-upg-btn').forEach(btn => {
-        btn.textContent = labels[btn.dataset.armoryUpg] || btn.textContent;
+        const item = data[btn.dataset.armoryUpg];
+        if (!item) return;
+        btn.innerHTML = `<span class="armory-card-title">${item.title}</span><span class="armory-card-level">${item.level}</span><span class="armory-card-cost">비용: ${item.cost.toLocaleString()} G</span>`;
+        btn.dataset.tooltip = item.tip;
       });
     }
 
@@ -925,6 +1008,9 @@
       document.getElementById('upg-cancel').addEventListener('click', () => ui.upgModal.style.display = 'none');
       document.querySelectorAll('.armory-upg-btn').forEach(btn => {
         btn.addEventListener('click', () => applyArmoryUpgrade(btn.dataset.armoryUpg));
+        btn.addEventListener('mouseenter', (e) => { if (btn.dataset.tooltip) showGlobalTooltip(btn.dataset.tooltip, e); });
+        btn.addEventListener('mousemove', moveGlobalTooltip);
+        btn.addEventListener('mouseleave', hideGlobalTooltip);
       });
       document.getElementById('upg-confirm').addEventListener('click', () => {
         const bldg = window.currentUpgradeBldg; if(!bldg) return;
@@ -974,7 +1060,7 @@
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
         this.playerEnvironmentCollider = this.physics.add.collider(this.player, this.environmentGroup);
-        this.playerBuildingsCollider = this.physics.add.collider(this.player, this.buildingsGroup);
+        this.physics.add.collider(this.player, this.buildingsGroup);
 
         this.wasd = this.input.keyboard.addKeys({ up: 'W', left: 'A', down: 'S', right: 'D' });
 
@@ -1186,7 +1272,7 @@
         if (bldg.hpBarBg) bldg.hpBarBg.destroy();
         if (bldg.hpBarFill) bldg.hpBarFill.destroy();
         if (bldg.hpText) bldg.hpText.destroy();
-        if (bldg.bType === 'Raft' && gameState.raft.current === bldg) { gameState.raft.mounted = false; gameState.raft.current = null; if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = true; if (this.playerBuildingsCollider) this.playerBuildingsCollider.active = true; }
+        if (bldg.bType === 'Raft' && gameState.raft.current === bldg) { gameState.raft.mounted = false; gameState.raft.current = null; if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = true; }
         if (countAsBuilt && bldg.bType !== 'Campfire') {
           gameState.builtCount = Math.max(0, gameState.builtCount - 1);
           updatePlayerHud();
@@ -1320,13 +1406,11 @@
           this.targetPosition = null;
           this.player.setPosition(raft.x, raft.y);
           if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = false;
-          if (this.playerBuildingsCollider) this.playerBuildingsCollider.active = false;
           addChatMessage('<span style="color:#7fd4ff;">뗏목에 탑승했습니다. WASD/방향키로 물 위를 이동합니다.</span>');
         } else if (gameState.raft.current === raft) {
           gameState.raft.mounted = false;
           gameState.raft.current = null;
           if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = true;
-          if (this.playerBuildingsCollider) this.playerBuildingsCollider.active = true;
           addChatMessage('<span style="color:#7fd4ff;">뗏목에서 내렸습니다.</span>');
         }
       }
@@ -1364,7 +1448,7 @@
         bldg.lastFireTime = 0;
         if(type === 'Campfire') bldg.burnOutTime = this.time.now + 60000;
         if(type === 'Crossbow') bldg.attackDmg = this.getCrossbowDamage();
-        if(type === 'Raft') { bldg.hasOar = false; bldg.setImmovable(true); if (bldg.body) bldg.body.checkCollision.none = true; }
+        if(type === 'Raft') { bldg.hasOar = false; bldg.setImmovable(true); }
         this.createBuildingHealthUi(bldg);
 
         addChatMessage(`<span style="color:#7CFF8A;">건설 완료: ${type}</span>`);
@@ -1481,7 +1565,6 @@
           this.targetPosition = null;
           this.player.body.setVelocity(0, 0);
           if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = false;
-          if (this.playerBuildingsCollider) this.playerBuildingsCollider.active = false;
           if (usingKeyboardOrPad && raft.hasOar) {
             vel.normalize().scale(Math.max(25, gameState.player.speed * 0.75));
             const dt = Math.min(0.05, this.game.loop.delta / 1000);
@@ -1492,7 +1575,6 @@
           this.player.setPosition(raft.x, raft.y);
         } else if (usingKeyboardOrPad) {
           if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = true;
-          if (this.playerBuildingsCollider) this.playerBuildingsCollider.active = true;
           this.targetPosition = null; vel.normalize().scale(gameState.player.speed);
           this.player.body.setVelocity(vel.x, vel.y);
         } else if (this.targetPosition) {
