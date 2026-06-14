@@ -1,502 +1,1118 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <title>eBay 추천 블록 4개 이미지 코드 생성기</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>STANCE: Lonely Island Prototype</title>
   <style>
+    :root {
+      --i0-color: #ffd86b; /* Legendary */
+      --i1-color: #ff8b31; /* Mythic */
+      --i2-color: #7fd4ff; /* Rare */
+      --i3-color: #6ad66a; /* Magic */
+      --i4-color: #b56cff; /* Epic */
+      --i5-color: #aaaaaa; /* Normal */
+      --i6-color: #666666; /* Junk */
+    }
+
     * { box-sizing: border-box; }
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background:#f5f5f5;
-      margin:0;
-    }
-    .wrap {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 24px 16px 40px;
-    }
-    h1 {
-      font-size: 1.7rem;
-      margin-bottom: 6px;
-    }
-    .muted {
-      color:#666;
-      font-size:0.9rem;
-      margin-bottom:18px;
-    }
-    label {
-      display:block;
-      font-weight:600;
-      margin:10px 0 4px;
-      font-size:0.9rem;
-    }
-    input[type="text"] {
-      width:100%;
-      padding:8px 10px;
-      border-radius:8px;
-      border:1px solid #ccc;
-      font-size:0.9rem;
-      font-family:inherit;
-    }
-    .btn {
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      padding:8px 16px;
-      border-radius:999px;
-      border:1px solid #111;
-      background:#111;
-      color:#fff;
-      font-size:0.9rem;
-      margin-top:12px;
-      cursor:pointer;
-      text-decoration:none;
-      gap:6px;
-    }
-    .btn.sub {
-      background:#fff;
-      color:#111;
-      border-color:#ccc;
-      margin-left:8px;
-    }
-    .btn:disabled {
-      opacity:0.5;
-      cursor:default;
-    }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font-family: Arial, Helvetica, sans-serif; background: #0a1014; color: #f5f5f5; touch-action: none; user-select: none; -webkit-user-select: none; }
+    button, input { font-family: inherit; }
+    button { color: inherit; cursor: pointer; }
 
-    .url-grid {
-      display:grid;
-      grid-template-columns:repeat(auto-fit, minmax(220px,1fr));
-      gap:12px 18px;
-      margin-top:10px;
-    }
-    .url-card {
-      background:#fff;
-      border-radius:12px;
-      padding:10px 12px 12px;
-      box-shadow:0 2px 5px rgba(0,0,0,0.04);
-      border:1px solid #e4e4e4;
-    }
-    .url-title {
-      font-size:0.9rem;
-      font-weight:600;
-      margin-bottom:6px;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-    }
-    .url-tag {
-      font-size:0.75rem;
-      padding:2px 8px;
-      border-radius:999px;
-      background:#111;
-      color:#fff;
-    }
+    #app { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: #0a1014; }
+    #game-container { position: absolute; inset: 0; z-index: 1; }
 
-    .section-title {
-      margin-top:24px;
-      font-size:1rem;
-      font-weight:600;
-    }
-    .slot-grid {
-      margin-top:14px;
-      display:grid;
-      grid-template-columns:repeat(auto-fit, minmax(220px,1fr));
-      gap:16px;
-    }
+    /* [로그인 / 시작 화면] */
+    #login-screen { position: absolute; inset: 0; background: #0f1f1a; z-index: 10000; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+    .login-box { background: rgba(12, 18, 24, 0.9); padding: 40px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.16); text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .login-box h2 { margin: 0 0 20px 0; color: #7fd4ff; letter-spacing: 2px; }
+    .login-box input { width: 100%; padding: 12px; margin-bottom: 20px; background: rgba(0,0,0,0.5); border: 1px solid #555; color: #fff; border-radius: 6px; text-align: center; font-size: 16px; outline: none; }
+    .login-box input:focus { border-color: #7fd4ff; }
+    .login-box button { padding: 12px 20px; background: rgba(127, 212, 255, 0.2); border: 1px solid #7fd4ff; color: #7fd4ff; border-radius: 6px; font-size: 16px; font-weight: bold; width: 100%; transition: 0.2s; }
+    .login-box button:hover { background: rgba(127, 212, 255, 0.4); }
 
-    .slot {
-      background:#fff;
-      border-radius:14px;
-      padding:10px 10px 14px;
-      border:1px solid #e4e4e4;
-      box-shadow:0 2px 5px rgba(0,0,0,0.04);
-      min-height:210px;
-      display:flex;
-      flex-direction:column;
-    }
-    .slot-header {
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      font-size:0.9rem;
-      margin-bottom:8px;
-    }
-    .slot-name {
-      font-weight:600;
-    }
-    .slot-status {
-      font-size:0.75rem;
-      padding:2px 8px;
-      border-radius:999px;
-      background:#f2f2f2;
-      color:#555;
-    }
+    .panel { position: absolute; z-index: 5; background: rgba(12, 18, 24, 0.82); border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 10px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35); backdrop-filter: blur(4px); color: #e9f4ff; }
+    .panel-title { font-weight: 700; font-size: 14px; margin-bottom: 8px; color: #fff; display: flex; justify-content: space-between;}
+    .panel-row { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; line-height: 1.6; }
+    .green { color: #7CFF8A; } .yellow { color: #FFD66B; } .blue { color: #7fd4ff; }
 
-    .thumb-grid {
-      display:grid;
-      grid-template-columns:repeat(2, minmax(0,1fr));
-      gap:8px;
-      flex:1;
-    }
-    .thumb {
-      position:relative;
-      border-radius:10px;
-      overflow:hidden;
-      border:2px solid transparent;
-      background:#eee;
-      cursor:pointer;
-      aspect-ratio:4/3;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:0.8rem;
-      color:#999;
-    }
-    .thumb img {
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:block;
-    }
-    .thumb.selected {
-      border-color:#111;
-      box-shadow:0 0 0 2px #111;
-    }
-    .thumb-tag {
-      position:absolute;
-      bottom:6px;
-      left:6px;
-      padding:2px 8px;
-      border-radius:999px;
-      background:rgba(0,0,0,0.7);
-      color:#fff;
-      font-size:0.7rem;
-    }
+    .top-left-panel { top: 16px; left: 16px; width: 220px; padding: 12px; }
+    .minimap-panel { top: 16px; right: 16px; width: 220px; padding: 12px; transition: 0.2s; }
+    #minimap { position: relative; width: 100%; height: 135px; overflow: hidden; border-radius: 8px; background: #1a4b77; border: 1px solid rgba(255, 255, 255, 0.16); }
+    #minimap-island { position: absolute; left: 5%; top: 5%; width: 90%; height: 90%; background: #388047; border-radius: 10px; }
+    #minimap-lake { position: absolute; left: 60%; top: 30%; width: 15%; height: 20%; background: #3a8cd1; border-radius: 50%; }
+    #mini-player { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px #fff; transform: translate(-50%, -50%); z-index: 10; }
+    .mini-dot.enemy { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #ff5858; transform: translate(-50%, -50%); }
+    .mini-dot.bldg { position: absolute; width: 4px; height: 4px; border-radius: 2px; background: #ffd66b; transform: translate(-50%, -50%); }
 
-    .code-box {
-      margin-top:10px;
-    }
-    .code-area {
-      width:100%;
-      min-height:140px;
-      font-family:Menlo,Consolas,monospace;
-      font-size:0.85rem;
-      border-radius:10px;
-      border:1px solid #ccc;
-      padding:10px;
-      box-sizing:border-box;
-      background:#111;
-      color:#f5f5f5;
-      resize:vertical;
-    }
-    .code-footer {
-      margin-top:6px;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      font-size:0.8rem;
-      gap:8px;
-      flex-wrap:wrap;
-    }
-    .pill {
-      padding:2px 8px;
-      border-radius:999px;
-      background:#e9e9e9;
-      color:#555;
-    }
-    @media (max-width:600px) {
-      h1 { font-size:1.4rem; }
+    .quest-panel { top: 230px; right: 16px; width: 220px; padding: 12px; transition: 0.2s; }
+    .quest-item { font-size: 13px; line-height: 1.6; } .quest-name { color: #ffe08a; font-weight: 700; } .quest-desc { color: #d9e7ef; }
+
+    /* [인벤토리 & 건설 UI] */
+    .inventory-panel, .build-panel { display: none; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 320px; padding: 16px; flex-direction: column; z-index: 20; }
+    .close-btn { background: transparent; border: none; font-size: 16px; color: #aaa; } .close-btn:hover { color: #fff; }
+    .inventory-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; overflow-y: auto; max-height: 300px; padding-right: 4px; }
+    .inv-slot { aspect-ratio: 1; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; transition: 0.1s; cursor: pointer;}
+    .inv-slot:hover { filter: brightness(1.2); }
+    .item-icon { font-size: 20px; font-weight: bold; color: #fff; }
+    .item-count { position: absolute; bottom: 2px; right: 4px; font-size: 10px; color: #fff; text-shadow: 1px 1px 2px #000; }
+
+    .r-i0{border-color:var(--i0-color);background:linear-gradient(90deg,rgba(255,216,107,.16),rgba(0,0,0,.22));box-shadow:inset 0 0 15px rgba(0,0,0,.55),0 0 18px rgba(255,216,107,.22)}.r-i0 .item-icon,.r-i0 .inv-name,.log-rarity-i0,.log-name-i0,.reward-i0{color:var(--i0-color)}
+    .r-i1{border-color:var(--i1-color);background:linear-gradient(90deg,rgba(255,139,49,.15),rgba(0,0,0,.22))}.r-i1 .item-icon,.r-i1 .inv-name,.log-rarity-i1,.log-name-i1,.reward-i1{color:var(--i1-color)}
+    .r-i2{border-color:var(--i2-color);background:linear-gradient(90deg,rgba(127,212,255,.14),rgba(0,0,0,.22))}.r-i2 .item-icon,.r-i2 .inv-name,.log-rarity-i2,.log-name-i2,.reward-i2{color:var(--i2-color)}
+    .r-i3{border-color:var(--i3-color);background:linear-gradient(90deg,rgba(106,214,106,.14),rgba(0,0,0,.22))}.r-i3 .item-icon,.r-i3 .inv-name,.log-rarity-i3,.log-name-i3,.reward-i3{color:var(--i3-color)}
+    .r-i4{border-color:var(--i4-color);background:linear-gradient(90deg,rgba(181,108,255,.15),rgba(0,0,0,.22))}.r-i4 .item-icon,.r-i4 .inv-name,.log-rarity-i4,.log-name-i4,.reward-i4{color:var(--i4-color)}
+    .r-i5{border-color:var(--i5-color);background:linear-gradient(90deg,rgba(170,170,170,.12),rgba(0,0,0,.22))}.r-i5 .item-icon,.r-i5 .inv-name,.log-rarity-i5,.log-name-i5,.reward-i5{color:var(--i5-color)}
+    .r-i6{border-color:rgba(68,68,68,.85);background:linear-gradient(90deg,rgba(102,102,102,.10),rgba(0,0,0,.22))}.r-i6 .item-icon,.r-i6 .inv-name,.log-rarity-i6,.log-name-i6,.reward-i6{color:var(--i6-color)}
+
+    .build-item { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.4); padding: 10px; margin-bottom: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer;}
+    .build-item:hover { border-color: #7fd4ff; background: rgba(127,212,255,0.1); }
+    .build-info h4 { margin: 0 0 4px 0; font-size: 14px; color: #fff; }
+    .build-info p { margin: 0; font-size: 11px; color: #aaa; }
+    .build-cost { font-size: 12px; color: #FFD66B; font-weight: bold; text-align: right;}
+
+    /* 모달 */
+    #global-tooltip { position: absolute; background: #000; color: #fff; padding: 6px 10px; font-size: 12px; border-radius: 4px; pointer-events: none; z-index: 9999; display: none; white-space: nowrap; border: 1px solid #333; }
+    .modal-box { display: none; flex-direction: column; gap: 12px; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; padding: 20px; z-index: 30; }
+    .modal-box input { width: 60px; padding: 4px; background: rgba(0,0,0,0.5); border: 1px solid #555; color: #fff; text-align: center; border-radius: 4px; }
+    .modal-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+    .modal-btns button { padding: 6px 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; background: rgba(255,255,255,0.1); }
+    .modal-btns button.confirm { background: rgba(124, 255, 138, 0.2); border-color: #7CFF8A; color: #7CFF8A; }
+    .modal-btns button.upgrade { background: rgba(255, 214, 107, 0.2); border-color: #FFD66B; color: #FFD66B; }
+    .modal-btns button.cook { background: rgba(255, 69, 0, 0.2); border-color: #ff4500; color: #ff6347; } 
+    .modal-btns button.eat { background: rgba(85, 170, 255, 0.2); border-color: #55aaff; color: #55aaff; }
+
+    #death-screen { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; }
+    #death-screen h1 { color: #ff5858; font-size: 48px; letter-spacing: 4px; margin-bottom: 20px; text-shadow: 0 0 20px rgba(255,88,88,0.5); }
+    #death-screen p { color: #fff; font-size: 20px; }
+    #death-timer { font-size: 32px; font-weight: bold; color: #FFD66B; margin-top: 10px; }
+
+    .chat-panel { left: 16px; bottom: 142px; width: 390px; height: 210px; display: flex; flex-direction: column; overflow: hidden; transition: 0.2s; }
+    .chat-body { flex: 1; padding: 10px; overflow-y: auto; font-size: 12px; line-height: 1.5; color: #dfefff; pointer-events: auto; }
+    .chat-input-row { display: flex; gap: 6px; padding: 8px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+    .chat-input-row input { flex: 1; padding: 8px; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 6px; background: rgba(0, 0, 0, 0.25); color: #fff; outline: none; }
+    .chat-input-row button { padding: 0 12px; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 6px; background: rgba(80, 145, 255, 0.35); }
+
+    .hud { position: absolute; left: 16px; right: 16px; bottom: 16px; z-index: 5; min-height: 108px; display: grid; grid-template-columns: 360px 1fr 380px; gap: 16px; align-items: center; padding: 14px; border-radius: 14px; background: rgba(9, 13, 18, 0.86); border: 1px solid rgba(255, 255, 255, 0.16); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.46); backdrop-filter: blur(5px); }
+    .portrait-wrap { display: flex; align-items: center; gap: 12px; }
+    .portrait { width: 76px; height: 76px; display: grid; place-items: center; border-radius: 14px; font-size: 38px; background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.05)); border: 1px solid rgba(255, 255, 255, 0.16); }
+    .player-info { flex: 1; min-width: 0; }
+    .name-line { margin-bottom: 8px; font-weight: 700; color: #fff; display: flex; justify-content: space-between;}
+    .stat-row { display: grid; grid-template-columns: 34px 1fr 92px; gap: 8px; align-items: center; margin-top: 5px; font-size: 12px; }
+    .label { font-weight: 700; color: #eaf4ff; }
+    .bar { height: 10px; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, 0.12); }
+    .fill { height: 100%; border-radius: 999px; transition: width 0.18s ease; }
+    .fill.hp { background: linear-gradient(90deg, #ff4d4d, #ff8a8a); }
+    .fill.mp { background: linear-gradient(90deg, #3f7cff, #7ab3ff); }
+    .fill.exp { background: linear-gradient(90deg, #f7c948, #ffe88a); }
+    .value { white-space: nowrap; color: #dcecff; }
+
+    .menu-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+    .menu-buttons button { min-width: 90px; padding: 9px 10px; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 8px; background: rgba(255, 255, 255, 0.08); font-size: 12px; }
+
+    #build-mode-text { display:none; position: absolute; top: 80px; left: 50%; transform: translateX(-50%); font-size: 16px; color: #7fd4ff; font-weight: bold; z-index: 5; text-shadow: 0 2px 4px #000; pointer-events: none; padding: 10px 20px; background: rgba(0,0,0,0.6); border-radius: 8px; border: 1px solid #7fd4ff;}
+
+    /* 모바일 UI */
+    .mobile-only { display: none; }
+    @media (max-width: 800px) {
+      .mobile-only { display: block; }
+      #mobile-toggles { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; z-index: 50; }
+      #mobile-toggles button { background: rgba(12, 18, 24, 0.8); border: 1px solid #7fd4ff; color: #7fd4ff; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; }
+      #mobile-toggles button.active { background: rgba(127, 212, 255, 0.3); }
+      .minimap-panel { display: none; top: 50px; right: 10px; width: 160px; z-index: 40;}
+      .quest-panel { display: none; top: 210px; right: 10px; width: 160px; z-index: 40; }
+      .chat-panel { display: none; bottom: 150px; left: 10px; right: 10px; width: auto; height: 140px; z-index: 40; }
+      .top-left-panel { display: none; } 
+      .hud { top: 10px; left: 10px; bottom: auto; right: auto; width: 220px; grid-template-columns: 1fr; padding: 10px; min-height: auto; gap: 5px; z-index: 40;}
+      .portrait { display: none; } 
+      .stat-row { font-size: 10px; }
+      .menu-buttons { display: none; } 
+      .inventory-panel, .build-panel { width: 95%; max-width: 360px; }
+      #mobile-bottom-menu { display: flex; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); gap: 10px; z-index: 40; }
+      #mobile-bottom-menu button { background: rgba(12, 18, 24, 0.8); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 12px; }
+      #virtual-dpad { position: absolute; bottom: 60px; left: 20px; display: grid; grid-template-columns: 45px 45px 45px; grid-template-rows: 45px 45px 45px; gap: 5px; z-index: 45; }
+      .d-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: #fff; font-size: 18px; display: flex; justify-content: center; align-items: center; }
+      .d-btn:active { background: rgba(255,255,255,0.4); }
+      #btn-up { grid-column: 2; grid-row: 1; }
+      #btn-left { grid-column: 1; grid-row: 2; }
+      #btn-right { grid-column: 3; grid-row: 2; }
+      #btn-down { grid-column: 2; grid-row: 3; }
+      #virtual-attack { position: absolute; bottom: 60px; right: 20px; width: 70px; height: 70px; background: rgba(127, 212, 255, 0.3); border: 2px solid #7fd4ff; border-radius: 50%; color: #fff; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 14px; z-index: 45; box-shadow: 0 0 10px rgba(127, 212, 255, 0.5); }
+      #virtual-attack:active { background: rgba(127, 212, 255, 0.6); }
     }
   </style>
-
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9382191250873184"
-     crossorigin="anonymous"></script>
-  
 </head>
+
 <body>
-  <div class="wrap">
-    <h1>eBay 추천 블록 (4개) 이미지 코드 생성기</h1>
-    <div class="muted">
-      eBay 상품 URL 4개를 입력하면, 각 상품의 상세페이지에서 이미지를 모아 보여주고<br>
-      선택된 4개 이미지로 <code>.product-recommendation</code> 블록 HTML을 만들어 줍니다.
-    </div>
-
-    <!-- URL 입력 4개 -->
-    <div class="url-grid">
-      <div class="url-card">
-        <div class="url-title">
-          <span>추천 1번 상품 URL</span>
-          <span class="url-tag">slot 1</span>
-        </div>
-        <input type="text" id="url1" placeholder="https://www.ebay.com/itm/..." />
-      </div>
-      <div class="url-card">
-        <div class="url-title">
-          <span>추천 2번 상품 URL</span>
-          <span class="url-tag">slot 2</span>
-        </div>
-        <input type="text" id="url2" placeholder="https://www.ebay.com/itm/..." />
-      </div>
-      <div class="url-card">
-        <div class="url-title">
-          <span>추천 3번 상품 URL</span>
-          <span class="url-tag">slot 3</span>
-        </div>
-        <input type="text" id="url3" placeholder="https://www.ebay.com/itm/..." />
-      </div>
-      <div class="url-card">
-        <div class="url-title">
-          <span>추천 4번 상품 URL</span>
-          <span class="url-tag">slot 4</span>
-        </div>
-        <input type="text" id="url4" placeholder="https://www.ebay.com/itm/..." />
-      </div>
-    </div>
-
-    <button class="btn" id="btn-fetch">4개 상품 이미지 가져오기</button>
-
-    <!-- 슬롯별 이미지 선택 -->
-    <div class="section-title">1. 각 추천 슬롯의 대표 이미지 선택</div>
-    <div class="slot-grid">
-      <div class="slot" data-slot="slot1">
-        <div class="slot-header">
-          <span class="slot-name">추천 1번</span>
-          <span class="slot-status" id="status-slot1">URL 입력 후 "이미지 가져오기"</span>
-        </div>
-        <div class="thumb-grid" id="grid-slot1">
-          <!-- 이미지 썸네일들 -->
-        </div>
-      </div>
-      <div class="slot" data-slot="slot2">
-        <div class="slot-header">
-          <span class="slot-name">추천 2번</span>
-          <span class="slot-status" id="status-slot2">URL 입력 후 "이미지 가져오기"</span>
-        </div>
-        <div class="thumb-grid" id="grid-slot2"></div>
-      </div>
-      <div class="slot" data-slot="slot3">
-        <div class="slot-header">
-          <span class="slot-name">추천 3번</span>
-          <span class="slot-status" id="status-slot3">URL 입력 후 "이미지 가져오기"</span>
-        </div>
-        <div class="thumb-grid" id="grid-slot3"></div>
-      </div>
-      <div class="slot" data-slot="slot4">
-        <div class="slot-header">
-          <span class="slot-name">추천 4번</span>
-          <span class="slot-status" id="status-slot4">URL 입력 후 "이미지 가져오기"</span>
-        </div>
-        <div class="thumb-grid" id="grid-slot4"></div>
-      </div>
-    </div>
-
-    <!-- 최종 코드 -->
-    <div class="section-title">2. 생성된 최종 코드</div>
-    <div class="code-box">
-      <textarea id="final-code" class="code-area" readonly></textarea>
-      <div class="code-footer">
-        <span id="final-status" class="pill">4개의 대표 이미지를 모두 선택하면 코드가 생성됩니다.</span>
-        <button class="btn sub" id="btn-copy" disabled>코드 복사</button>
-      </div>
+  <div id="login-screen">
+    <div class="login-box">
+      <h2>LONELY ISLAND</h2>
+      <input type="text" id="login-name" placeholder="캐릭터 이름..." maxlength="12" autocomplete="off" />
+      <button id="login-btn">섬에 입장하기</button>
     </div>
   </div>
 
+  <div id="death-screen">
+    <h1>YOU DIED</h1>
+    <p>Respawning in...</p>
+    <div id="death-timer">10</div>
+  </div>
+
+  <div id="global-tooltip"></div>
+  <div id="build-mode-text">🛠️ 건설 모드: 화면 터치 배치 / [ESC] 취소</div>
+
+  <div id="app">
+    <div id="game-container"></div>
+
+    <div id="mobile-toggles" class="mobile-only">
+      <button id="toggle-map">지도</button>
+      <button id="toggle-quest">퀘스트</button>
+      <button id="toggle-chat">채팅</button>
+    </div>
+
+    <div id="mobile-bottom-menu" class="mobile-only">
+      <button id="m-stat-btn">스탯</button>
+      <button id="m-build-btn">건설</button>
+      <button id="m-inv-btn">가방</button>
+    </div>
+
+    <div id="virtual-dpad" class="mobile-only">
+      <div class="d-btn" id="btn-up">▲</div>
+      <div class="d-btn" id="btn-left">◀</div>
+      <div class="d-btn" id="btn-right">▶</div>
+      <div class="d-btn" id="btn-down">▼</div>
+    </div>
+    <div id="virtual-attack" class="mobile-only">ACTION</div>
+
+    <section class="panel top-left-panel">
+      <div class="panel-title" id="field-name">Lonely Island</div>
+      <div class="panel-row"> <span class="blue">Channel 1</span> <span id="server-time">10:00</span> </div>
+      <div class="panel-row"> <span id="biome-text">Biome: Grassland</span> </div>
+    </section>
+
+    <section class="panel minimap-panel" id="ui-map">
+      <div class="panel-title">Minimap</div>
+      <div id="minimap">
+        <div id="minimap-island"></div>
+        <div id="minimap-lake"></div>
+        <div id="minimap-entities"></div>
+        <div id="mini-player"></div>
+      </div>
+    </section>
+
+    <section class="panel quest-panel" id="ui-quest">
+      <div class="panel-title">Survival Tracker</div>
+      <div class="quest-item">
+        <div class="quest-name">◆ 벌목 및 생존</div>
+        <div class="quest-desc" id="quest-progress">- 몬스터 사냥하기 (0/10)</div>
+      </div>
+    </section>
+
+    <section class="panel chat-panel" id="ui-chat">
+      <div class="chat-body" id="chat-body">
+        <div class="blue">System: 론리아일랜드에 오신 것을 환영합니다.</div>
+        <div class="yellow">System: 바다 밖으로는 나갈 수 없으며, 언덕 위는 방어에 유리합니다.</div>
+        <div class="green">System: 가끔 등장하는 거대수에서는 많은 나무를 얻을 수 있습니다.</div>
+        <div id="coord-line">X: 0 / Y: 0</div>
+      </div>
+      <div class="chat-input-row">
+        <input id="chat-input" type="text" placeholder="Enter message..." autocomplete="off" />
+        <button type="button" id="chat-send-button">Send</button>
+      </div>
+    </section>
+
+    <section class="panel inventory-panel" id="inventory-panel">
+      <div class="panel-title">Inventory <button class="close-btn" id="close-inventory">✕</button></div>
+      <div class="inventory-grid" id="inventory-grid"></div>
+    </section>
+
+    <section class="panel modal-box" id="stat-modal" style="width: 300px;">
+      <div class="panel-title">Character Stats <button class="close-btn" id="close-stat">✕</button></div>
+      <div style="font-size: 13px; color: #ccc; margin-bottom: 8px;">잔여 포인트: <span id="stat-points" class="yellow">0</span></div>
+      
+      <div class="build-item" style="margin-bottom:4px; padding: 8px 10px;">
+        <div class="build-info"><h4>힘 (STR)</h4><p>공격력 +5</p></div>
+        <div class="build-cost"><span id="stat-str" class="green">0</span> <button class="stat-up-btn" data-stat="str" style="margin-left:8px; padding:2px 8px; background:#444; border:1px solid #777; color:#fff; border-radius:4px;">+</button></div>
+      </div>
+      <div class="build-item" style="margin-bottom:4px; padding: 8px 10px;">
+        <div class="build-info"><h4>민첩 (AGI)</h4><p>이동속도 +5</p></div>
+        <div class="build-cost"><span id="stat-agi" class="green">0</span> <button class="stat-up-btn" data-stat="agi" style="margin-left:8px; padding:2px 8px; background:#444; border:1px solid #777; color:#fff; border-radius:4px;">+</button></div>
+      </div>
+      <div class="build-item" style="margin-bottom:4px; padding: 8px 10px;">
+        <div class="build-info"><h4>건강 (VIT)</h4><p>최대체력 +5</p></div>
+        <div class="build-cost"><span id="stat-vit" class="green">0</span> <button class="stat-up-btn" data-stat="vit" style="margin-left:8px; padding:2px 8px; background:#444; border:1px solid #777; color:#fff; border-radius:4px;">+</button></div>
+      </div>
+    </section>
+
+    <section class="panel modal-box" id="sell-modal">
+      <div class="panel-title" id="sell-title" style="margin-bottom: 0;">Item Action</div>
+      <div>수량: <input type="number" id="sell-qty" min="1" value="1" /> / <span id="sell-max">1</span></div>
+      <div>수익: <span id="sell-profit" class="yellow">0 G</span></div>
+      <div class="modal-btns">
+        <button id="sell-cancel">취소</button>
+        <button id="sell-cook" class="cook" style="display:none;">굽기</button>
+        <button id="sell-eat" class="eat" style="display:none;">먹기</button>
+        <button id="sell-confirm" class="confirm">판매</button>
+      </div>
+    </section>
+
+    <section class="panel modal-box" id="upgrade-modal">
+      <div class="panel-title" id="upg-title" style="margin-bottom: 0;">Upgrade Facility</div>
+      <div id="upg-desc" style="font-size: 13px; color: #ccc;">건물을 강화합니다.</div>
+      <div style="margin-top: 10px;">현재: <span id="upg-current" class="green">Lv. 1</span></div>
+      <div>비용: <span id="upg-cost" class="yellow">1000 G</span></div>
+      <div class="modal-btns">
+        <button id="upg-cancel">취소</button>
+        <button id="upg-confirm" class="upgrade">업그레이드</button>
+      </div>
+    </section>
+
+    <section class="panel build-panel" id="build-panel">
+      <div class="panel-title">Build Structures <span id="build-limit-text" class="yellow" style="font-size:11px;">0/0</span> <button class="close-btn" id="close-build">✕</button></div>
+      <div class="build-item" data-build-type="Campfire">
+        <div class="build-info"><h4>Campfire (모닥불)</h4><p>1분 유지. 생고기를 구울 수 있습니다.</p></div>
+        <div class="build-cost">30 Wood<br>0 G</div>
+      </div>
+      <div class="build-item" data-build-type="Fence">
+        <div class="build-info"><h4>Fence (울타리)</h4><p>방어용 벽. 몬스터 길막기 용도.</p></div>
+        <div class="build-cost">50 Wood<br>50 G</div>
+      </div>
+      <div class="build-item" data-build-type="Crossbow">
+        <div class="build-info"><h4>Auto Crossbow</h4><p>클릭하여 연사력/데미지 업그레이드.</p></div>
+        <div class="build-cost">1,000 Wood<br>1,000 G</div>
+      </div>
+      <div class="build-item" data-build-type="Armory">
+        <div class="build-info"><h4>Armory (무기고)</h4><p>클릭하여 기본 공격력 업그레이드.</p></div>
+        <div class="build-cost">5,000 Wood<br>5,000 G</div>
+      </div>
+    </section>
+
+    <section class="hud">
+      <div class="portrait-wrap">
+        <div class="portrait" id="player-portrait">🏝️</div>
+        <div class="player-info">
+          <div class="name-line">
+            <span id="player-name-line">Lv. 1 Survivor</span>
+            <span style="color:#FFD66B; font-weight:bold;" id="gold-text">0 G</span>
+          </div>
+          <div class="stat-row">
+            <span class="label">HP</span>
+            <div class="bar"><div class="fill hp" id="hp-fill" style="width: 100%;"></div></div>
+            <span class="value" id="hp-text">120 / 120</span>
+          </div>
+          <div class="stat-row">
+            <span class="label">MP</span>
+            <div class="bar"><div class="fill mp" id="mp-fill" style="width: 100%;"></div></div>
+            <span class="value" id="mp-text">60 / 60</span>
+          </div>
+          <div class="stat-row">
+            <span class="label">EXP</span>
+            <div class="bar"><div class="fill exp" id="exp-fill" style="width: 20%;"></div></div>
+            <span class="value" id="exp-text">20 / 100 (20%)</span>
+          </div>
+        </div>
+      </div>
+      <div></div>
+      <nav class="menu-buttons">
+        <button type="button" id="stat-button">Stats <span id="stat-badge" style="color:#FFD66B; display:none;">(+)</span></button>
+        <button type="button" id="build-button">Build</button>
+        <button type="button" id="inventory-button">Inventory</button>
+      </nav>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
   <script>
-    // ★ 여기 URL을 네 서버 주소에 맞게 조정해도 됨
-    const API_URL = "https://localflow.ddns.net/ebayimages/api/ebay-desc-images";
-
-    const urlInputs = {
-      slot1: document.getElementById("url1"),
-      slot2: document.getElementById("url2"),
-      slot3: document.getElementById("url3"),
-      slot4: document.getElementById("url4"),
+    const gameState = {
+      worldWidth: 12000, worldHeight: 8000, 
+      player: { name: 'Survivor', level: 1, hp: 120, maxHp: 120, mp: 60, maxMp: 60, exp: 20, nextExp: 100, x: 6000, y: 4000, speed: 40, gold: 0, baseDmg: 25, dmgLevel: 1, statPoints: 0, str: 0, agi: 0, vit: 0 },
+      quest: { current: 0, required: 10 },
+      inventory: {}, isDead: false, buildLimit: 0, builtCount: 0
     };
+    gameState.buildLimit = gameState.player.level * 3;
 
-    const grids = {
-      slot1: document.getElementById("grid-slot1"),
-      slot2: document.getElementById("grid-slot2"),
-      slot3: document.getElementById("grid-slot3"),
-      slot4: document.getElementById("grid-slot4"),
-    };
-
-    const statusEls = {
-      slot1: document.getElementById("status-slot1"),
-      slot2: document.getElementById("status-slot2"),
-      slot3: document.getElementById("status-slot3"),
-      slot4: document.getElementById("status-slot4"),
-    };
-
-    const btnFetch   = document.getElementById("btn-fetch");
-    const finalCode  = document.getElementById("final-code");
-    const finalStatus= document.getElementById("final-status");
-    const btnCopy    = document.getElementById("btn-copy");
-
-    const selectedImages = {
-      slot1: null,
-      slot2: null,
-      slot3: null,
-      slot4: null,
-    };
-
-    async function fetchImagesForSlot(slotKey) {
-      const url = (urlInputs[slotKey].value || "").trim();
-      const grid = grids[slotKey];
-      const st   = statusEls[slotKey];
-
-      grid.innerHTML = "";
-      selectedImages[slotKey] = null;
-
-      if (!url) {
-        st.textContent = "URL이 비어 있습니다.";
-        return;
-      }
-
-      st.textContent = "불러오는 중...";
-
-      try {
-        const res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url })
-        });
-
-        const j = await res.json();
-        if (!res.ok) {
-          st.textContent = "에러: " + (j.message || j.error || res.status);
-          return;
-        }
-
-        const imgs = j.images || j; // (서버 구현에 따라 j.images 또는 j)
-        if (!imgs || !imgs.length) {
-          st.textContent = "이미지를 찾지 못했습니다.";
-          return;
-        }
-
-        imgs.forEach((img, idx) => {
-          const src = img.src || img; // 형태에 따라 처리
-          const div = document.createElement("div");
-          div.className = "thumb";
-
-          const tag = document.createElement("div");
-          tag.className = "thumb-tag";
-          tag.textContent = "이미지 " + (idx + 1);
-
-          const el = document.createElement("img");
-          el.src = src;
-
-          div.appendChild(el);
-          div.appendChild(tag);
-
-          div.addEventListener("click", () => {
-            // 같은 슬롯 내의 선택 표시 리셋
-            grid.querySelectorAll(".thumb").forEach(t => t.classList.remove("selected"));
-            div.classList.add("selected");
-            selectedImages[slotKey] = src;
-            st.textContent = "선택됨: 이미지 " + (idx + 1);
-            updateFinalCode();
-          });
-
-          grid.appendChild(div);
-        });
-
-        st.textContent = "대표 이미지를 선택하세요.";
-      } catch (e) {
-        console.error(e);
-        st.textContent = "요청 실패. 서버 또는 네트워크를 확인해 주세요.";
-      }
-    }
-
-    btnFetch.addEventListener("click", async () => {
-      finalStatus.textContent = "이미지 로딩 중...";
-      btnFetch.disabled = true;
-      btnCopy.disabled = true;
-      finalCode.value = "";
-
-      // 4개 슬롯 모두 병렬 요청
-      await Promise.all([
-        fetchImagesForSlot("slot1"),
-        fetchImagesForSlot("slot2"),
-        fetchImagesForSlot("slot3"),
-        fetchImagesForSlot("slot4"),
-      ]);
-
-      finalStatus.textContent = "각 슬롯에서 대표 이미지를 하나씩 선택해 주세요.";
-      btnFetch.disabled = false;
-    });
-
-    function updateFinalCode() {
-      const slots = [
-        selectedImages.slot1,
-        selectedImages.slot2,
-        selectedImages.slot3,
-        selectedImages.slot4,
-      ];
-
-      // 각 슬롯 상품 URL
-      const hrefs = [
-        (urlInputs.slot1.value || "").trim(),
-        (urlInputs.slot2.value || "").trim(),
-        (urlInputs.slot3.value || "").trim(),
-        (urlInputs.slot4.value || "").trim(),
-      ];
+    const vPad = { up: false, down: false, left: false, right: false };
     
-      // 이미지 4개 / URL 4개 다 채워져야 생성
-      if (slots.some(v => !v) || hrefs.some(v => !v)) {
-        finalCode.value = "4개의 대표 이미지와 4개의 상품 URL이 모두 있어야 코드가 생성됩니다.";
-        btnCopy.disabled = true;
-        finalStatus.textContent = "아직 비어 있는 슬롯 또는 URL이 있습니다.";
-        return;
-      }
+    // [원본 복원] 빌드 코스트
+    const BUILD_COSTS = { 'Campfire': { wood: 30, gold: 0 }, 'Fence': { wood: 50, gold: 50 }, 'Crossbow': { wood: 1000, gold: 1000 }, 'Armory': { wood: 5000, gold: 5000 } };
+    const PRICE_MAP = { "Normal": 10, "Magic": 40, "Rare": 100, "Epic": 500, "Legendary": 2000 };
+    const PLAYER_BLOCK_SIZE = 40;
+    const CAMPFIRE_COOK_RANGE = PLAYER_BLOCK_SIZE; // 캐릭터 1블럭 기준: 모닥불 중심에서 1블럭 이내에서만 굽기 가능
+    
+    // [원본 복원] 레어도 맵핑
+    const RARITY_MAP = { 
+      "Legendary": "i0", "i0": "i0", 
+      "Mythic": "i1", "i1": "i1", 
+      "Rare": "i2", "i2": "i2", 
+      "Magic": "i3", "i3": "i3", 
+      "Epic": "i4", "i4": "i4", 
+      "Normal": "i5", "i5": "i5", 
+      "Junk": "i6", "i6": "i6" 
+    };
+    const RARITY_DISPLAY_NAME = { "i0": "Legendary", "i1": "Mythic", "i2": "Rare", "i3": "Magic", "i4": "Epic", "i5": "Normal", "i6": "Junk" };
 
-      const html =
-`<div class="product-recommendation">
-  <h3>
-   🍊 You might also like
-  </h3>
-  <div class="recommendation-list">
-   <div class="recommendation-item">
-    <a href="${hrefs[0]}">
-     <img alt="" src="${slots[0]}">
-     </img>
-    </a>
-   </div>
-   <div class="recommendation-item">
-    <a href="${hrefs[1]}">
-     <img alt="" src="${slots[1]}">
-     </img>
-    </a>
-   </div>
-   <div class="recommendation-item">
-    <a href="${hrefs[2]}">
-     <img alt="" src="${slots[2]}">
-     </img>
-    </a>
-   </div>
-   <div class="recommendation-item">
-    <a href="${hrefs[3]}">
-     <img alt="" src="${slots[3]}">
-     </img>
-    </a>
-   </div>
-  </div>
- </div>`;
+    // [원본 복원] 몬스터 4종
+    const MONSTER_TYPES = [
+      { name: '닭', hp: 50, speed: 60, texture: 'chicken_tex', bodyRadius: 10, labelOffset: 28, barWidth: 38, dmg: 5, exp: 10 },
+      { name: '돼지', hp: 200, speed: 50, texture: 'pig_tex', bodyRadius: 15, labelOffset: 34, barWidth: 46, dmg: 20, exp: 40 },
+      { name: '늑대', hp: 300, speed: 110, texture: 'wolf_tex', bodyRadius: 16, labelOffset: 36, barWidth: 52, dmg: 35, exp: 60 },
+      { name: '곰', hp: 1000, speed: 70, texture: 'bear_tex', bodyRadius: 25, labelOffset: 48, barWidth: 68, dmg: 60, exp: 150 }
+    ];
 
-      finalCode.value = html;
-      btnCopy.disabled = false;
-      finalStatus.textContent = "코드가 생성되었습니다. '코드 복사' 버튼을 눌러 이베이에 붙여 넣으면 됩니다.";
+    const ui = {};
+    window.currentScene = null; 
+
+    // [원본 복원] 외부 API 페치 로직
+    async function getDrop() {
+      try {
+        const res = await fetch("https://mrdindoin.ddns.net/gti/api/open_chest", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "open" }) });
+        const data = await res.json();
+        if (data.ok) return { rarity: data.rarity || "Normal", name: data.item_name || data.item || "Unknown", count: data.count || 1 };
+      } catch(e) {}
+      return { rarity: "Normal", name: "동물 가죽", count: 1 };
     }
 
-    btnCopy.addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText(finalCode.value);
-        finalStatus.textContent = "복사 완료!";
-      } catch {
-        finalStatus.textContent = "복사 실패. 직접 드래그해서 복사해 주세요.";
-      }
-    });
+    function cacheUiElements() {
+      ui.hpFill = document.getElementById('hp-fill'); ui.hpText = document.getElementById('hp-text');
+      ui.mpFill = document.getElementById('mp-fill'); ui.mpText = document.getElementById('mp-text');
+      ui.expFill = document.getElementById('exp-fill'); ui.expText = document.getElementById('exp-text');
+      ui.playerNameLine = document.getElementById('player-name-line'); ui.goldText = document.getElementById('gold-text');
+      ui.coordLine = document.getElementById('coord-line'); ui.chatBody = document.getElementById('chat-body');
+      ui.chatInput = document.getElementById('chat-input'); ui.chatSendButton = document.getElementById('chat-send-button');
+      ui.miniPlayer = document.getElementById('mini-player'); ui.minimapEntities = document.getElementById('minimap-entities');
+      ui.biomeText = document.getElementById('biome-text');
+      
+      ui.inventoryPanel = document.getElementById('inventory-panel'); ui.inventoryGrid = document.getElementById('inventory-grid');
+      ui.tooltip = document.getElementById('global-tooltip');
+      ui.sellModal = document.getElementById('sell-modal'); ui.sellTitle = document.getElementById('sell-title');
+      ui.sellQty = document.getElementById('sell-qty'); ui.sellMax = document.getElementById('sell-max'); ui.sellProfit = document.getElementById('sell-profit');
+      ui.sellCookBtn = document.getElementById('sell-cook'); ui.sellEatBtn = document.getElementById('sell-eat');
+      
+      ui.upgModal = document.getElementById('upgrade-modal'); ui.upgTitle = document.getElementById('upg-title');
+      ui.upgDesc = document.getElementById('upg-desc'); ui.upgCurrent = document.getElementById('upg-current'); ui.upgCost = document.getElementById('upg-cost');
+      
+      ui.buildPanel = document.getElementById('build-panel'); ui.buildLimitText = document.getElementById('build-limit-text');
+      ui.buildModeText = document.getElementById('build-mode-text');
+      
+      ui.statModal = document.getElementById('stat-modal'); ui.statPoints = document.getElementById('stat-points');
+      ui.statStr = document.getElementById('stat-str'); ui.statAgi = document.getElementById('stat-agi'); ui.statVit = document.getElementById('stat-vit'); ui.statBadge = document.getElementById('stat-badge');
 
+      ui.deathScreen = document.getElementById('death-screen'); ui.deathTimer = document.getElementById('death-timer');
+      ui.loginScreen = document.getElementById('login-screen'); ui.loginName = document.getElementById('login-name'); ui.loginBtn = document.getElementById('login-btn');
+    }
+
+    function updatePlayerHud() {
+      const p = gameState.player;
+      ui.hpFill.style.width = `${Math.max(0, Math.min(100, (p.hp/p.maxHp)*100))}%`; ui.hpText.textContent = `${p.hp} / ${p.maxHp}`;
+      ui.mpFill.style.width = `${Math.max(0, Math.min(100, (p.mp/p.maxMp)*100))}%`; ui.mpText.textContent = `${p.mp} / ${p.maxMp}`;
+      ui.expFill.style.width = `${Math.max(0, Math.min(100, (p.exp/p.nextExp)*100))}%`; ui.expText.textContent = `${p.exp} / ${p.nextExp}`;
+      ui.playerNameLine.textContent = `Lv. ${p.level} ${p.name}`;
+      ui.goldText.textContent = `${p.gold.toLocaleString()} G`;
+      ui.buildLimitText.textContent = `${gameState.builtCount} / ${gameState.buildLimit}`;
+      
+      if (p.statPoints > 0) { ui.statBadge.style.display = 'inline'; ui.statBadge.textContent = `(${p.statPoints})`; } 
+      else { ui.statBadge.style.display = 'none'; }
+      ui.statPoints.textContent = p.statPoints; ui.statStr.textContent = p.str; ui.statAgi.textContent = p.agi; ui.statVit.textContent = p.vit;
+    }
+
+    function addChatMessage(msg, className = '') {
+      const div = document.createElement('div'); if (className) div.className = className; div.innerHTML = msg; 
+      ui.chatBody.appendChild(div); ui.chatBody.scrollTop = ui.chatBody.scrollHeight;
+    }
+
+    function addInventoryItem(itemName, count = 1, rarity = 'Normal') {
+      const qty = Math.max(1, Number(count) || 1);
+      const rarityCode = RARITY_MAP[rarity] || 'i5';
+      const displayRarity = RARITY_DISPLAY_NAME[rarityCode] || 'Normal';
+
+      if (!gameState.inventory[itemName]) gameState.inventory[itemName] = { count: 0, rarity: displayRarity };
+      gameState.inventory[itemName].count += qty;
+      
+      if (itemName !== 'Wood' || gameState.inventory['Wood'].count % 10 === 0) {
+        addChatMessage(`획득: <span class="log-rarity-${rarityCode}">[${displayRarity}]</span> <span class="log-name-${rarityCode}">${itemName}</span> x${qty}`);
+      }
+      if (ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
+    }
+
+    function updateCoordinates(x, y) {
+      gameState.player.x = Math.floor(x); gameState.player.y = Math.floor(y);
+      ui.coordLine.textContent = `X: ${gameState.player.x} / Y: ${gameState.player.y}`;
+      ui.miniPlayer.style.left = `${(x / gameState.worldWidth) * 100}%`; ui.miniPlayer.style.top = `${(y / gameState.worldHeight) * 100}%`;
+      
+      let biome = "Grassland";
+      if (x < 600 || x > gameState.worldWidth - 600 || y < 600 || y > gameState.worldHeight - 600) biome = "Ocean Shore";
+      else if (x > 8000 && x < 11000 && y > 5000 && y < 7000) biome = "Desert";
+      else if (Phaser.Math.Distance.Between(x, y, 7500, 3000) < 600) biome = "Freshwater Lake"; 
+      else if (x > 2000 && x < 4500 && y > 2000 && y < 4500) biome = "Highlands (언덕)";
+      
+      ui.biomeText.textContent = `Biome: ${biome}`;
+    }
+
+    function handlePlayerDeath() {
+      if (gameState.isDead) return;
+      gameState.isDead = true; ui.deathScreen.style.display = 'flex';
+      let countdown = 10; ui.deathTimer.textContent = countdown;
+      const timerInterval = setInterval(() => {
+        countdown--; ui.deathTimer.textContent = countdown;
+        if (countdown <= 0) {
+          clearInterval(timerInterval); gameState.isDead = false; gameState.player.hp = gameState.player.maxHp;
+          ui.deathScreen.style.display = 'none'; updatePlayerHud(); window.dispatchEvent(new CustomEvent('player-respawn'));
+        }
+      }, 1000);
+    }
+
+    // [원본 복원] 굽기 및 먹기 로직 부활
+    let currentSellItem = null, currentSellPrice = 0, currentSellMax = 0;
+    function openSellModal(itemName, itemObj, price) {
+      currentSellItem = itemName; currentSellPrice = price; currentSellMax = itemObj.count;
+      ui.sellModal.style.display = 'flex'; ui.sellTitle.textContent = `${itemName}`;
+      ui.sellQty.value = 1; ui.sellQty.max = currentSellMax; ui.sellMax.textContent = currentSellMax;
+      ui.sellProfit.textContent = `${price} G`; ui.tooltip.style.display = 'none';
+
+      let isRawMeat = itemName.endsWith("고기") && !itemName.startsWith("구운");
+      let nearCampfire = false;
+      if (window.currentScene && window.currentScene.player && window.currentScene.buildingsGroup) {
+        window.currentScene.buildingsGroup.getChildren().forEach(b => {
+          if (!b.active || b.bType !== 'Campfire') return;
+          const dist = Phaser.Math.Distance.Between(window.currentScene.player.x, window.currentScene.player.y, b.x, b.y);
+          if (dist <= CAMPFIRE_COOK_RANGE) nearCampfire = true;
+        });
+      }
+      ui.sellCookBtn.style.display = (isRawMeat && nearCampfire) ? 'inline-block' : 'none';
+      let isCookedMeat = itemName.startsWith("구운") && itemName.endsWith("고기");
+      ui.sellEatBtn.style.display = isCookedMeat ? 'inline-block' : 'none';
+    }
+
+    // [원본 복원] 건물 업그레이드 모달 부활
+    window.currentUpgradeBldg = null;
+    function openUpgradeModal(bldg) {
+      window.currentUpgradeBldg = bldg; ui.upgModal.style.display = 'flex';
+      if (bldg.bType === 'Armory') {
+        ui.upgTitle.textContent = "Armory"; ui.upgDesc.textContent = "기본 물리 공격력 대폭 증가";
+        ui.upgCurrent.textContent = `Dmg: ${gameState.player.baseDmg}`; ui.upgCost.textContent = `${(gameState.player.dmgLevel * 5000).toLocaleString()} G`;
+      } else if (bldg.bType === 'Crossbow') {
+        ui.upgTitle.textContent = "Auto Crossbow"; ui.upgDesc.textContent = "데미지/연사력 강화";
+        ui.upgCurrent.textContent = `Lv. ${bldg.level}`; ui.upgCost.textContent = `${(bldg.level * 1000).toLocaleString()} G`;
+      }
+    }
+
+    function updateInventoryUi() {
+      ui.inventoryGrid.innerHTML = ''; 
+      const items = Object.keys(gameState.inventory);
+      const totalSlots = Math.max(16, items.length + (4 - items.length % 4)); 
+
+      for (let i = 0; i < totalSlots; i++) {
+        const slot = document.createElement('div');
+        if (i < items.length) {
+          const name = items[i], obj = gameState.inventory[name], price = PRICE_MAP[obj.rarity] || 10;
+          const rarityCode = RARITY_MAP[obj.rarity] || 'i5';
+
+          slot.className = `inv-slot r-${rarityCode}`;
+          slot.innerHTML = `<span class="item-icon">${name.charAt(0)}</span><span class="item-count">x${obj.count}</span>`;
+          slot.onmouseenter = (e) => { ui.tooltip.innerHTML = `<span style="color:var(--${rarityCode}-color); font-weight:bold;">${name}</span><br>등급: ${obj.rarity}<br>수량: ${obj.count}<br>판매가: ${price} G`; ui.tooltip.style.display = 'block'; ui.tooltip.style.left = `${e.pageX + 12}px`; ui.tooltip.style.top = `${e.pageY + 12}px`; };
+          slot.onmousemove = (e) => { ui.tooltip.style.left = `${e.pageX + 12}px`; ui.tooltip.style.top = `${e.pageY + 12}px`; };
+          slot.onmouseleave = () => { ui.tooltip.style.display = 'none'; };
+          slot.onclick = () => openSellModal(name, obj, price);
+        } else { slot.className = 'inv-slot'; }
+        ui.inventoryGrid.appendChild(slot);
+      }
+    }
+
+    window.activeBuildType = null; window.activeBuildRotation = 0;
+
+    function bindUiEvents() {
+      const togglePanel = (btnId, panelId) => {
+        document.getElementById(btnId).addEventListener('click', (e) => {
+          const panel = document.getElementById(panelId);
+          if(panel.style.display === 'block') { panel.style.display = ''; e.target.classList.remove('active'); }
+          else { panel.style.display = 'block'; e.target.classList.add('active'); }
+        });
+      };
+      togglePanel('toggle-map', 'ui-map'); togglePanel('toggle-quest', 'ui-quest'); togglePanel('toggle-chat', 'ui-chat');
+      document.getElementById('m-build-btn').addEventListener('click', () => document.getElementById('build-button').click());
+      document.getElementById('m-inv-btn').addEventListener('click', () => document.getElementById('inventory-button').click());
+
+      const bindVPad = (id, key) => {
+        const el = document.getElementById(id);
+        const press = (e) => { e.preventDefault(); vPad[key] = true; }; const release = (e) => { e.preventDefault(); vPad[key] = false; };
+        el.addEventListener('touchstart', press); el.addEventListener('touchend', release);
+        el.addEventListener('mousedown', press); el.addEventListener('mouseup', release); el.addEventListener('mouseleave', release);
+      };
+      bindVPad('btn-up', 'up'); bindVPad('btn-down', 'down'); bindVPad('btn-left', 'left'); bindVPad('btn-right', 'right');
+      
+      const vAtk = document.getElementById('virtual-attack');
+      const triggerAttack = (e) => { e.preventDefault(); if(window.currentScene) window.currentScene.handlePlayerAttack(); };
+      vAtk.addEventListener('touchstart', triggerAttack); vAtk.addEventListener('mousedown', triggerAttack);
+
+      ui.chatSendButton.addEventListener('click', () => { if(!ui.chatInput.value) return; addChatMessage(`You: ${ui.chatInput.value}`); ui.chatInput.value = ''; });
+      
+      document.getElementById('inventory-button').addEventListener('click', () => { ui.inventoryPanel.style.display = ui.inventoryPanel.style.display === 'flex' ? 'none' : 'flex'; ui.buildPanel.style.display = 'none'; ui.statModal.style.display = 'none'; updateInventoryUi(); });
+      document.getElementById('close-inventory').addEventListener('click', () => ui.inventoryPanel.style.display = 'none');
+      
+      document.getElementById('build-button').addEventListener('click', () => { ui.buildPanel.style.display = ui.buildPanel.style.display === 'flex' ? 'none' : 'flex'; ui.inventoryPanel.style.display = 'none'; ui.statModal.style.display = 'none'; updatePlayerHud(); });
+      document.getElementById('close-build').addEventListener('click', () => ui.buildPanel.style.display = 'none');
+
+      document.getElementById('stat-button').addEventListener('click', () => { ui.statModal.style.display = ui.statModal.style.display === 'flex' ? 'none' : 'flex'; ui.inventoryPanel.style.display = 'none'; ui.buildPanel.style.display = 'none'; });
+      document.getElementById('m-stat-btn').addEventListener('click', () => document.getElementById('stat-button').click());
+      document.getElementById('close-stat').addEventListener('click', () => ui.statModal.style.display = 'none');
+
+      document.querySelectorAll('.stat-up-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const stat = e.target.dataset.stat;
+          if (gameState.player.statPoints > 0) {
+            gameState.player.statPoints--; gameState.player[stat]++;
+            if (stat === 'str') gameState.player.baseDmg += 5;
+            if (stat === 'agi') gameState.player.speed += 5;
+            if (stat === 'vit') { gameState.player.maxHp += 5; gameState.player.hp += 5; }
+            updatePlayerHud();
+          }
+        });
+      });
+
+      document.querySelectorAll('.build-item').forEach(el => {
+        if(!el.dataset.buildType) return;
+        el.addEventListener('click', () => {
+          const type = el.dataset.buildType; const cost = BUILD_COSTS[type];
+          const woodCount = gameState.inventory['Wood'] ? gameState.inventory['Wood'].count : 0;
+          if (woodCount < cost.wood || gameState.player.gold < cost.gold) { addChatMessage(`<span style="color:#FFD66B;">자원 부족 (필요: Wood ${cost.wood}, Gold ${cost.gold})</span>`); return; }
+          if (type !== 'Campfire' && gameState.builtCount >= gameState.buildLimit) { addChatMessage(`<span style="color:#FFD66B;">최대 건설 수량 도달</span>`); return; }
+          window.activeBuildType = type; window.activeBuildRotation = 0; ui.buildPanel.style.display = 'none'; ui.buildModeText.style.display = 'block';
+        });
+      });
+
+      window.addEventListener('contextmenu', (e) => { e.preventDefault(); if (window.activeBuildType) { window.activeBuildRotation += 90; addChatMessage('<span style="color:#FFD66B;">건물 회전됨</span>'); } });
+      window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { window.activeBuildType = null; ui.buildModeText.style.display = 'none'; ui.upgModal.style.display = 'none'; ui.sellModal.style.display = 'none'; ui.statModal.style.display = 'none'; } });
+
+      ui.sellQty.addEventListener('input', (e) => { let val = parseInt(e.target.value) || 1; if (val < 1) val = 1; if (val > currentSellMax) val = currentSellMax; e.target.value = val; ui.sellProfit.textContent = `${(val * currentSellPrice).toLocaleString()} G`; });
+      document.getElementById('sell-cancel').addEventListener('click', () => ui.sellModal.style.display = 'none');
+      
+      // [원본 복원] 요리/먹기 버튼 이벤트 부활
+      ui.sellCookBtn.addEventListener('click', () => {
+        let qty = parseInt(ui.sellQty.value) || 1;
+        if (qty > 0 && currentSellItem && gameState.inventory[currentSellItem]) {
+          gameState.inventory[currentSellItem].count -= qty;
+          if (gameState.inventory[currentSellItem].count <= 0) delete gameState.inventory[currentSellItem];
+          const cookedName = `구운 ${currentSellItem}`;
+          addInventoryItem(cookedName, qty, 'Magic');
+          updateInventoryUi();
+        }
+        ui.sellModal.style.display = 'none';
+      });
+
+      ui.sellEatBtn.addEventListener('click', () => {
+        let qty = parseInt(ui.sellQty.value) || 1;
+        if (qty > 0 && currentSellItem && gameState.inventory[currentSellItem]) {
+          let healAmount = 50 * qty; gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + healAmount);
+          gameState.inventory[currentSellItem].count -= qty;
+          if (gameState.inventory[currentSellItem].count <= 0) delete gameState.inventory[currentSellItem];
+          updatePlayerHud(); updateInventoryUi();
+        }
+        ui.sellModal.style.display = 'none';
+      });
+
+      document.getElementById('sell-confirm').addEventListener('click', () => {
+        let qty = parseInt(ui.sellQty.value) || 1;
+        if (qty > 0 && currentSellItem && gameState.inventory[currentSellItem]) {
+          gameState.player.gold += qty * currentSellPrice;
+          gameState.inventory[currentSellItem].count -= qty;
+          if (gameState.inventory[currentSellItem].count <= 0) delete gameState.inventory[currentSellItem];
+          updatePlayerHud(); updateInventoryUi();
+        }
+        ui.sellModal.style.display = 'none';
+      });
+
+      // [원본 복원] 업그레이드 모달 로직 부활
+      document.getElementById('upg-cancel').addEventListener('click', () => ui.upgModal.style.display = 'none');
+      document.getElementById('upg-confirm').addEventListener('click', () => {
+        const bldg = window.currentUpgradeBldg; if(!bldg) return;
+        if (bldg.bType === 'Armory') {
+          const cost = gameState.player.dmgLevel * 5000;
+          if (gameState.player.gold >= cost) { gameState.player.gold -= cost; gameState.player.dmgLevel++; gameState.player.baseDmg += 15; }
+        } else if (bldg.bType === 'Crossbow') {
+          const cost = bldg.level * 1000;
+          if (gameState.player.gold >= cost) { gameState.player.gold -= cost; bldg.level++; }
+        }
+        updatePlayerHud(); ui.upgModal.style.display = 'none';
+      });
+    }
+
+    class MainScene extends Phaser.Scene {
+      constructor() { super('MainScene'); }
+
+      create() {
+        window.currentScene = this;
+        this.worldWidth = gameState.worldWidth; this.worldHeight = gameState.worldHeight;
+        this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight);
+        
+        this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
+        this.cameras.main.setBackgroundColor('#1a4b77');
+
+        this.targetPosition = null;
+
+        this.createCustomTextures();
+
+        this.environmentGroup = this.physics.add.staticGroup(); 
+        this.treesGroup = this.physics.add.staticGroup();
+        this.buildingsGroup = this.physics.add.staticGroup();
+        this.enemiesData = [];
+
+        this.generateMapBiomes();
+        
+        this.spawnForest();
+        this.spawnGiantTrees();
+        for(let i=0; i<300; i++) this.spawnRandomMonster();
+
+        this.player = this.physics.add.sprite(6000, 4000, 'player_tex');
+        this.player.body.setCircle(15); this.player.body.setCollideWorldBounds(true);
+        this.playerNameText = this.add.text(0, 0, gameState.player.name, { fontSize: '14px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
+        this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+
+        this.physics.add.collider(this.player, this.environmentGroup);
+        this.physics.add.collider(this.player, this.buildingsGroup);
+
+        this.wasd = this.input.keyboard.addKeys({ up: 'W', left: 'A', down: 'S', right: 'D' });
+
+        this.input.on('pointerdown', (pointer) => {
+          if (pointer.event.target.tagName !== 'CANVAS' || gameState.isDead) return;
+          
+          if (window.activeBuildType) {
+            if (pointer.rightButtonDown()) return;
+            this.placeBuilding(pointer.worldX, pointer.worldY);
+          } else {
+            // [원본 복원] 건물 업그레이드 클릭 로직 부활
+            let clickedBldg = null;
+            this.buildingsGroup.getChildren().forEach(b => {
+              const clickRadius = (b.body && b.body.radius) ? b.body.radius : Math.max(b.displayWidth, b.displayHeight) / 2;
+              if (b.active && Phaser.Math.Distance.Between(pointer.worldX, pointer.worldY, b.x, b.y) < clickRadius + 15) clickedBldg = b;
+            });
+            if (clickedBldg && (clickedBldg.bType === 'Armory' || clickedBldg.bType === 'Crossbow')) {
+              if (Phaser.Math.Distance.Between(this.player.x, this.player.y, clickedBldg.x, clickedBldg.y) < 200) { openUpgradeModal(clickedBldg); return; } 
+            }
+
+            let clickedEntity = false;
+            this.enemiesData.forEach(e => { if (e.hp > 0 && Phaser.Math.Distance.Between(pointer.worldX, pointer.worldY, e.sprite.x, e.sprite.y) < 30) clickedEntity = true; });
+            if (!clickedEntity) {
+              this.treesGroup.getChildren().forEach(t => { if (t.active && Phaser.Math.Distance.Between(pointer.worldX, pointer.worldY, t.x, t.y) < (t.isGiant ? 50 : 30)) clickedEntity = true; });
+            }
+            if (clickedEntity) {
+              this.targetPosition = null; this.player.body.setVelocity(0, 0); this.handlePlayerAttack();
+            } else {
+              this.targetPosition = new Phaser.Math.Vector2(pointer.worldX, pointer.worldY);
+              this.handlePlayerAttack(); 
+            }
+          }
+        });
+
+        this.buildPreview = this.add.sprite(0, 0, 'fence_tex').setAlpha(0.5).setVisible(false);
+
+        window.addEventListener('player-respawn', () => { this.player.setPosition(6000, 4000); this.player.body.setVelocity(0,0); this.targetPosition = null; });
+        setInterval(() => this.updateRadar(), 500);
+      }
+
+      createCustomTextures() {
+        let g = this.make.graphics({ add: false });
+        g.fillStyle(0x388047); g.fillRect(0,0,200,200); g.fillStyle(0x3d8a4d); g.fillCircle(40,40,8); g.generateTexture('bg_grass', 200, 200); g.clear();
+        g.fillStyle(0xd6ba7a); g.fillRect(0,0,200,200); g.fillStyle(0xcca860); g.fillCircle(30,50,5); g.generateTexture('bg_sand', 200, 200); g.clear();
+        g.fillStyle(0x3a8cd1); g.fillRect(0,0,200,200); g.fillStyle(0x4ca1e6); g.fillEllipse(100,100,80,40); g.generateTexture('bg_lake', 200, 200); g.clear();
+        g.fillStyle(0x4e6b45); g.fillRect(0,0,200,200); g.generateTexture('bg_hill', 200, 200); g.clear();
+        g.fillStyle(0x4a4a4a); g.fillRect(0,0,50,50); g.fillStyle(0x333333); g.fillRect(0,40,50,10); g.generateTexture('cliff_tex', 50, 50); g.clear();
+        g.fillStyle(0x1a4b77, 0.5); g.fillRect(0,0,100,100); g.generateTexture('water_block', 100, 100); g.clear();
+        g.fillStyle(0x000000, 0.3); g.fillEllipse(30, 55, 36, 16); g.fillStyle(0x5c3a21); g.fillRoundedRect(24, 30, 12, 25, 4); g.fillStyle(0x276336); g.fillCircle(30, 25, 24); g.fillStyle(0x388c4c); g.fillCircle(30, 15, 18); g.generateTexture('tree_tex', 60, 60); g.clear();
+        g.fillStyle(0x000000, 0.4); g.fillEllipse(60, 110, 70, 30); g.fillStyle(0x4a2a18); g.fillRoundedRect(45, 60, 30, 50, 6); g.fillStyle(0x1c4a25); g.fillCircle(60, 50, 50); g.fillStyle(0x276b35); g.fillCircle(60, 30, 35); g.fillStyle(0x2a753a); g.fillCircle(40, 45, 30); g.fillCircle(80, 45, 30); g.generateTexture('giant_tree_tex', 120, 120); g.clear();
+
+        // [원본 복원] 닭 텍스처 등 4종 몹 텍스처 부활
+        g.fillStyle(0x000000, 0.3); g.fillEllipse(15, 28, 24, 10); g.fillStyle(0xffffff); g.fillCircle(15, 15, 15); g.fillStyle(0x000000); g.fillCircle(10, 12, 2); g.fillCircle(20, 12, 2); g.generateTexture('player_tex', 30, 30); g.clear();
+        g.fillStyle(0x000000, 0.3); g.fillEllipse(18, 34, 26, 10); g.fillStyle(0xffffff); g.fillCircle(18, 20, 14); g.fillStyle(0xffd66b); g.fillTriangle(30, 18, 39, 22, 30, 26); g.fillStyle(0xff5858); g.fillTriangle(12, 7, 18, 0, 24, 7); g.fillStyle(0x111111); g.fillCircle(14, 18, 2); g.generateTexture('chicken_tex', 42, 42); g.clear();
+        g.fillStyle(0x000000, 0.3); g.fillEllipse(24, 38, 38, 12); g.fillStyle(0xffa8bc); g.fillEllipse(24, 24, 34, 24); g.fillStyle(0xffcad6); g.fillCircle(38, 23, 10); g.fillStyle(0x222222); g.fillCircle(40, 20, 2); g.fillStyle(0xd96d86); g.fillCircle(44, 24, 2); g.fillCircle(38, 25, 2); g.generateTexture('pig_tex', 52, 48); g.clear();
+        g.fillStyle(0x000000, 0.3); g.fillEllipse(25, 39, 40, 12); g.fillStyle(0x737373); g.fillEllipse(25, 25, 36, 24); g.fillStyle(0x555555); g.fillTriangle(11, 13, 16, 2, 21, 14); g.fillTriangle(30, 14, 36, 2, 39, 16); g.fillStyle(0x111111); g.fillCircle(20, 22, 2); g.fillCircle(32, 22, 2); g.fillStyle(0xffffff); g.fillTriangle(24, 30, 27, 35, 30, 30); g.generateTexture('wolf_tex', 56, 52); g.clear();
+        g.fillStyle(0x000000, 0.35); g.fillEllipse(35, 60, 58, 18); g.fillStyle(0x4b3621); g.fillEllipse(35, 34, 52, 46); g.fillStyle(0x3a2919); g.fillCircle(18, 15, 10); g.fillCircle(52, 15, 10); g.fillStyle(0x7a5430); g.fillEllipse(35, 40, 30, 22); g.fillStyle(0x111111); g.fillCircle(27, 30, 3); g.fillCircle(43, 30, 3); g.fillCircle(35, 39, 4); g.generateTexture('bear_tex', 76, 76); g.clear();
+        
+        g.fillStyle(0x6b4423); g.fillRect(0, 15, 40, 10); g.fillRect(5, 5, 8, 30); g.fillRect(25, 5, 8, 30); g.generateTexture('fence_tex', 40, 40); g.clear();
+        g.fillStyle(0x3a2311); g.fillRect(5, 10, 30, 20); g.fillStyle(0x888888); g.fillRect(18, 5, 4, 30); g.fillRect(5, 20, 30, 4); g.generateTexture('crossbow_tex', 40, 40); g.clear();
+        g.fillStyle(0x000000, 0.3); g.fillEllipse(40, 75, 70, 20); g.fillStyle(0x4a2e15); g.fillRect(10, 20, 60, 50); g.fillStyle(0x5c3a21); g.fillRect(5, 10, 70, 15); g.fillStyle(0x222222); g.fillRect(30, 40, 20, 30); g.generateTexture('armory_tex', 80, 80); g.clear();
+        g.fillStyle(0x000000, 0.3); g.fillEllipse(20, 35, 30, 10); g.fillStyle(0x5c3a21); g.fillRect(5, 25, 30, 6); g.fillRect(15, 15, 10, 20); g.fillStyle(0xff4500); g.fillTriangle(20, 5, 10, 25, 30, 25); g.fillStyle(0xffd700); g.fillTriangle(20, 15, 15, 25, 25, 25); g.generateTexture('campfire_tex', 40, 40); g.clear();
+      }
+
+      generateMapBiomes() {
+        this.add.tileSprite(this.worldWidth/2, this.worldHeight/2, this.worldWidth - 1000, this.worldHeight - 1000, 'bg_sand');
+        this.add.tileSprite(this.worldWidth/2, this.worldHeight/2, this.worldWidth - 1400, this.worldHeight - 1400, 'bg_grass');
+        this.add.tileSprite(9500, 6000, 3000, 2000, 'bg_sand');
+        this.add.tileSprite(3250, 3250, 2500, 2500, 'bg_hill');
+        this.createCliffBorders(2000, 2000, 4500, 4500, 300);
+
+        let lake = this.add.tileSprite(7500, 3000, 1200, 1200, 'bg_lake');
+        let lakeCollider = this.environmentGroup.create(7500, 3000, 'water_block');
+        lakeCollider.setScale(12).refreshBody(); lakeCollider.setVisible(false);
+
+        for(let x=0; x<this.worldWidth; x+=500) {
+          let top = this.environmentGroup.create(x, 250, 'water_block').setScale(5).refreshBody().setVisible(false);
+          let bottom = this.environmentGroup.create(x, this.worldHeight - 250, 'water_block').setScale(5).refreshBody().setVisible(false);
+        }
+        for(let y=0; y<this.worldHeight; y+=500) {
+          let left = this.environmentGroup.create(250, y, 'water_block').setScale(5).refreshBody().setVisible(false);
+          let right = this.environmentGroup.create(this.worldWidth - 250, y, 'water_block').setScale(5).refreshBody().setVisible(false);
+        }
+      }
+
+      createCliffBorders(x1, y1, x2, y2, rampSize) {
+        const rampStart = ((x1 + x2) / 2) - (rampSize / 2);
+        const rampEnd = rampStart + rampSize;
+
+        for (let x = x1; x <= x2; x += 50) {
+          this.environmentGroup.create(x, y1, 'cliff_tex');
+          if (x < rampStart || x > rampEnd) this.environmentGroup.create(x, y2, 'cliff_tex');
+        }
+        for (let y = y1; y <= y2; y += 50) {
+          this.environmentGroup.create(x1, y, 'cliff_tex'); this.environmentGroup.create(x2, y, 'cliff_tex');
+        }
+      }
+
+      spawnForest() {
+        for(let i=0; i<800; i++) {
+          let x = Phaser.Math.Between(800, this.worldWidth - 800); 
+          let y = Phaser.Math.Between(800, this.worldHeight - 800);
+          if (Phaser.Math.Distance.Between(x, y, 7500, 3000) < 650) continue;
+
+          let tree = this.treesGroup.create(x, y, 'tree_tex'); 
+          tree.body.setCircle(15, 15, 30); tree.hp = 30; tree.isGiant = false;
+        }
+      }
+
+      spawnGiantTrees() {
+        for(let i=0; i<15; i++) {
+          let x = Phaser.Math.Between(1500, this.worldWidth - 1500); 
+          let y = Phaser.Math.Between(1500, this.worldHeight - 1500);
+          if (Phaser.Math.Distance.Between(x, y, 7500, 3000) < 700) continue;
+
+          let giantTree = this.treesGroup.create(x, y, 'giant_tree_tex');
+          giantTree.body.setCircle(30, 30, 60); 
+          giantTree.hp = 100; giantTree.isGiant = true; giantTree.setDepth(y);
+        }
+      }
+
+      spawnRandomMonster() {
+        const type = Phaser.Utils.Array.GetRandom(MONSTER_TYPES);
+        let x = Phaser.Math.Between(1000, this.worldWidth - 1000); let y = Phaser.Math.Between(1000, this.worldHeight - 1000);
+        if (Phaser.Math.Distance.Between(x, y, 7500, 3000) < 600) return; 
+
+        let sprite = this.physics.add.sprite(x, y, type.texture);
+        sprite.body.setCircle(type.bodyRadius); sprite.body.setCollideWorldBounds(true); sprite.body.setBounce(0.5);
+        this.physics.add.collider(sprite, this.environmentGroup);
+        this.physics.add.collider(sprite, this.buildingsGroup);
+
+        let label = this.add.text(x, y - type.labelOffset, type.name, { fontSize: '12px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
+        let hpBarBg = this.add.rectangle(x, y - type.labelOffset + 7, type.barWidth, 5, 0x000000, 0.72).setOrigin(0.5, 0.5);
+        let hpBarFill = this.add.rectangle(x - type.barWidth / 2, y - type.labelOffset + 7, type.barWidth, 3, 0x37d85b, 1).setOrigin(0, 0.5);
+        let hpText = this.add.text(x, y - type.labelOffset + 15, `${type.hp}/${type.hp}`, { fontSize: '9px', color: '#eaffea', stroke: '#000', strokeThickness: 2 }).setOrigin(0.5, 0.5);
+
+        this.enemiesData.push({ sprite, label, hpBarBg, hpBarFill, hpText, type, hp: type.hp, maxHp: type.hp, state: 'wander', lastAttackTime: 0 });
+      }
+
+      updateEnemyHealthBar(enemy) {
+        const ratio = Math.max(0, Math.min(1, enemy.hp / enemy.maxHp));
+        const barWidth = enemy.type.barWidth; const barY = enemy.sprite.y - enemy.type.labelOffset + 7;
+        const hpColor = ratio > 0.6 ? 0x37d85b : (ratio > 0.3 ? 0xffd66b : 0xff5858);
+
+        enemy.label.setPosition(enemy.sprite.x, enemy.sprite.y - enemy.type.labelOffset);
+        enemy.hpBarBg.setPosition(enemy.sprite.x, barY);
+        enemy.hpBarFill.setPosition(enemy.sprite.x - barWidth / 2, barY);
+        enemy.hpBarFill.width = barWidth * ratio; enemy.hpBarFill.fillColor = hpColor;
+        enemy.hpText.setText(`${Math.max(0, Math.ceil(enemy.hp))}/${enemy.maxHp}`);
+        enemy.hpText.setPosition(enemy.sprite.x, enemy.sprite.y - enemy.type.labelOffset + 15);
+
+        const uiDepth = enemy.sprite.y + 10;
+        enemy.label.setDepth(uiDepth); enemy.hpBarBg.setDepth(uiDepth); enemy.hpBarFill.setDepth(uiDepth + 1); enemy.hpText.setDepth(uiDepth + 2);
+      }
+
+      destroyEnemyUi(enemy) { enemy.sprite.destroy(); enemy.label.destroy(); enemy.hpBarBg.destroy(); enemy.hpBarFill.destroy(); enemy.hpText.destroy(); }
+
+      createBuildingHealthUi(bldg) {
+        if (!bldg || bldg.bType === 'Campfire') return;
+
+        const barWidth = bldg.bType === 'Armory' ? 72 : 54;
+        const offsetY = bldg.bType === 'Armory' ? 58 : 36;
+        const labelName = bldg.bType === 'Crossbow' ? 'Crossbow' : (bldg.bType === 'Fence' ? 'Fence' : bldg.bType);
+
+        bldg.hpBarWidth = barWidth;
+        bldg.hpBarOffsetY = offsetY;
+        bldg.hpLabel = this.add.text(bldg.x, bldg.y - offsetY - 10, labelName, { fontSize: '11px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
+        bldg.hpBarBg = this.add.rectangle(bldg.x, bldg.y - offsetY, barWidth, 5, 0x000000, 0.72).setOrigin(0.5, 0.5);
+        bldg.hpBarFill = this.add.rectangle(bldg.x - barWidth / 2, bldg.y - offsetY, barWidth, 3, 0x37d85b, 1).setOrigin(0, 0.5);
+        bldg.hpText = this.add.text(bldg.x, bldg.y - offsetY + 9, `${bldg.hp}/${bldg.maxHp}`, { fontSize: '9px', color: '#eaffea', stroke: '#000', strokeThickness: 2 }).setOrigin(0.5, 0.5);
+        this.updateBuildingHealthBar(bldg);
+      }
+
+      updateBuildingHealthBar(bldg) {
+        if (!bldg || !bldg.active || !bldg.hpBarFill) return;
+
+        const ratio = Math.max(0, Math.min(1, bldg.hp / bldg.maxHp));
+        const barWidth = bldg.hpBarWidth || 54;
+        const offsetY = bldg.hpBarOffsetY || 36;
+        const barY = bldg.y - offsetY;
+        const hpColor = ratio > 0.6 ? 0x37d85b : (ratio > 0.3 ? 0xffd66b : 0xff5858);
+        const uiDepth = bldg.y + 100;
+
+        bldg.hpLabel.setPosition(bldg.x, bldg.y - offsetY - 10).setDepth(uiDepth);
+        bldg.hpBarBg.setPosition(bldg.x, barY).setDepth(uiDepth);
+        bldg.hpBarFill.setPosition(bldg.x - barWidth / 2, barY).setDepth(uiDepth + 1);
+        bldg.hpBarFill.width = barWidth * ratio;
+        bldg.hpBarFill.fillColor = hpColor;
+        bldg.hpText.setText(`${Math.max(0, Math.ceil(bldg.hp))}/${bldg.maxHp}`);
+        bldg.hpText.setPosition(bldg.x, bldg.y - offsetY + 9).setDepth(uiDepth + 2);
+      }
+
+      destroyBuilding(bldg, countAsBuilt = true) {
+        if (!bldg || !bldg.active) return;
+        if (bldg.hpLabel) bldg.hpLabel.destroy();
+        if (bldg.hpBarBg) bldg.hpBarBg.destroy();
+        if (bldg.hpBarFill) bldg.hpBarFill.destroy();
+        if (bldg.hpText) bldg.hpText.destroy();
+        if (countAsBuilt && bldg.bType !== 'Campfire') {
+          gameState.builtCount = Math.max(0, gameState.builtCount - 1);
+          updatePlayerHud();
+        }
+        bldg.destroy();
+      }
+
+      placeBuilding(x, y) {
+        const type = window.activeBuildType; const cost = BUILD_COSTS[type];
+        if (!gameState.inventory['Wood'] || gameState.inventory['Wood'].count < cost.wood || gameState.player.gold < cost.gold) return;
+        if (Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) > 250) return;
+
+        gameState.inventory['Wood'].count -= cost.wood; if(gameState.inventory['Wood'].count <= 0) delete gameState.inventory['Wood'];
+        gameState.player.gold -= cost.gold; if(type !== 'Campfire') gameState.builtCount++;
+
+        // [원본 복원] Armory, Campfire 텍스처 및 스펙 부활
+        let tex = 'fence_tex'; let maxHp = 300; let radius = 20;
+        if(type === 'Crossbow') { tex = 'crossbow_tex'; maxHp = 500; } else if(type === 'Armory') { tex = 'armory_tex'; maxHp = 2000; radius = 40; } else if(type === 'Campfire') { tex = 'campfire_tex'; maxHp = 100; radius = 15; }
+
+        let bldg = this.buildingsGroup.create(x, y, tex);
+        bldg.setAngle(window.activeBuildRotation); bldg.body.setCircle(radius);
+        bldg.bType = type; bldg.hp = maxHp; bldg.maxHp = maxHp; bldg.level = 1; bldg.lastFireTime = 0;
+        if(type === 'Campfire') bldg.burnOutTime = this.time.now + 60000;
+        this.createBuildingHealthUi(bldg);
+
+        updatePlayerHud(); window.activeBuildType = null; ui.buildModeText.style.display = 'none';
+      }
+
+      handlePlayerAttack() {
+        let closestTarget = null; let isTree = false; let minDistance = 85;
+
+        this.enemiesData.forEach(e => {
+          if (e.hp <= 0) return;
+          const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, e.sprite.x, e.sprite.y);
+          if (dist < minDistance) { minDistance = dist; closestTarget = e; }
+        });
+
+        this.treesGroup.getChildren().forEach(tree => {
+          if(!tree.active) return;
+          let hitRange = tree.isGiant ? 100 : 75;
+          const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, tree.x, tree.y);
+          if (dist < minDistance && dist < hitRange) { minDistance = dist; closestTarget = tree; isTree = true; }
+        });
+
+        if (closestTarget) {
+          if (isTree) {
+            if (closestTarget.isGiant) {
+              closestTarget.hp -= 1; 
+              addInventoryItem('Wood', 1, 'Normal'); 
+              
+              let floatText = this.add.text(closestTarget.x, closestTarget.y - 80, "+1 Wood", { fontSize: '14px', color: '#7fd4ff', fontStyle: 'bold' }).setOrigin(0.5);
+              this.tweens.add({ targets: floatText, y: closestTarget.y - 120, alpha: 0, duration: 800, onComplete: () => floatText.destroy() });
+
+              if (closestTarget.hp <= 0) {
+                closestTarget.destroy(); 
+                addChatMessage(`<span style="color:#FFD66B;">거대수가 쓰러졌습니다.</span>`);
+              }
+            } else {
+              closestTarget.hp -= 15;
+              if (closestTarget.hp <= 0) {
+                closestTarget.destroy(); 
+                const woodAmount = Phaser.Math.Between(2, 5);
+                addInventoryItem('Wood', woodAmount, 'Normal');
+              }
+            }
+          } else {
+            closestTarget.hp -= gameState.player.baseDmg; 
+            this.updateEnemyHealthBar(closestTarget);
+            closestTarget.state = 'chase'; 
+            this.physics.velocityFromRotation(Phaser.Math.Angle.Between(this.player.x, this.player.y, closestTarget.sprite.x, closestTarget.sprite.y), 180, closestTarget.sprite.body.velocity);
+            if (closestTarget.hp <= 0) this.killEnemy(closestTarget);
+          }
+        }
+      }
+
+      // [원본 복원] 외부 API를 활용한 드랍 및 레벨업 로직 복원
+      async killEnemy(enemy) {
+        this.destroyEnemyUi(enemy);
+        gameState.player.gold += enemy.type.exp;
+
+        if(gameState.quest.current < gameState.quest.required) {
+          gameState.quest.current++; document.getElementById('quest-progress').textContent = `- 몬스터 사냥하기 (${gameState.quest.current}/10)`;
+          if(gameState.quest.current >= gameState.quest.required) gameState.player.gold += 1000;
+        }
+
+        gameState.player.exp += enemy.type.exp;
+        if (gameState.player.exp >= gameState.player.nextExp) {
+          if (gameState.player.level < 100) {
+            gameState.player.level++; 
+            gameState.player.exp -= gameState.player.nextExp;
+            gameState.player.nextExp = Math.floor(gameState.player.nextExp * 1.5);
+            gameState.player.statPoints++;
+            gameState.player.maxHp += 30; 
+            gameState.player.hp = gameState.player.maxHp;
+            gameState.buildLimit = gameState.player.level * 3; 
+            addChatMessage(`<span style="color:#FFD66B;">레벨 업! 스탯 포인트가 1 지급되었습니다.</span>`);
+          } else {
+            gameState.player.exp = gameState.player.nextExp; 
+          }
+        }
+        updatePlayerHud();
+
+        if (Math.random() < 0.5) {
+          const meatName = `${enemy.type.name} 고기`;
+          addInventoryItem(meatName, 1, 'Normal');
+        }
+        if (Math.random() < 0.7) {
+          const drop = await getDrop();
+          addInventoryItem(drop.name, drop.count, drop.rarity || 'Normal');
+        }
+
+        this.enemiesData = this.enemiesData.filter(e => e !== enemy);
+        setTimeout(() => this.spawnRandomMonster(), 10000);
+      }
+
+      update(time) {
+        if (gameState.isDead) return;
+
+        // [원본 복원] 빌드 프리뷰 수정
+        if (window.activeBuildType) {
+          let ptr = this.input.activePointer;
+          let tex = 'fence_tex'; if(window.activeBuildType === 'Armory') tex = 'armory_tex'; else if(window.activeBuildType === 'Crossbow') tex = 'crossbow_tex'; else if(window.activeBuildType === 'Campfire') tex = 'campfire_tex';
+          this.buildPreview.setTexture(tex).setPosition(ptr.worldX, ptr.worldY).setAngle(window.activeBuildRotation).setVisible(true).setDepth(9999);
+        } else {
+          this.buildPreview.setVisible(false);
+        }
+
+        const vel = new Phaser.Math.Vector2(0, 0); let usingKeyboardOrPad = false;
+        if (this.wasd.left.isDown || vPad.left) { vel.x = -1; usingKeyboardOrPad = true; }
+        else if (this.wasd.right.isDown || vPad.right) { vel.x = 1; usingKeyboardOrPad = true; }
+        if (this.wasd.up.isDown || vPad.up) { vel.y = -1; usingKeyboardOrPad = true; }
+        else if (this.wasd.down.isDown || vPad.down) { vel.y = 1; usingKeyboardOrPad = true; }
+
+        if (usingKeyboardOrPad) {
+          this.targetPosition = null; vel.normalize().scale(gameState.player.speed);
+          this.player.body.setVelocity(vel.x, vel.y);
+        } else if (this.targetPosition) {
+          const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.targetPosition.x, this.targetPosition.y);
+          if (dist > 5) { this.physics.moveToObject(this.player, this.targetPosition, gameState.player.speed); } 
+          else { this.player.body.setVelocity(0, 0); this.targetPosition = null; }
+        } else { this.player.body.setVelocity(0, 0); }
+        
+        this.player.setDepth(this.player.y);
+        this.treesGroup.getChildren().forEach(t => t.setDepth(t.y));
+        
+        // [원본 복원] 모닥불 소멸 및 크로스보우 연사력 로직 복원
+        this.buildingsGroup.getChildren().forEach(b => {
+          if (!b.active) return;
+          b.setDepth(b.y);
+          this.updateBuildingHealthBar(b);
+          if (b.bType === 'Campfire' && time > b.burnOutTime) { this.destroyBuilding(b, false); } 
+          else if (b.bType === 'Crossbow') {
+            let fireDelay = Math.max(300, 1000 - (b.level * 100)); 
+            if (time > b.lastFireTime + fireDelay) {
+              let target = null; let minD = 300; 
+              this.enemiesData.forEach(e => { let d = Phaser.Math.Distance.Between(b.x, b.y, e.sprite.x, e.sprite.y); if (d < minD) { minD = d; target = e; } });
+              if (target) {
+                b.lastFireTime = time; target.hp -= (20 + b.level * 10); 
+                this.updateEnemyHealthBar(target);
+                let line = this.add.line(0,0, b.x, b.y, target.sprite.x, target.sprite.y, 0xffd66b).setOrigin(0,0);
+                this.tweens.add({ targets: line, alpha: 0, duration: 150, onComplete: () => line.destroy() });
+                target.state = 'chase'; if(target.hp <= 0) this.killEnemy(target);
+              }
+            }
+          }
+        });
+        
+        this.playerNameText.setText(gameState.player.name);
+        this.playerNameText.setPosition(this.player.x, this.player.y - 30); this.playerNameText.setDepth(this.player.y + 10);
+        updateCoordinates(this.player.x, this.player.y);
+
+        this.enemiesData.forEach(e => {
+          if (e.hp <= 0) return;
+          e.sprite.setDepth(e.sprite.y);
+          this.updateEnemyHealthBar(e);
+
+          let target = this.player; let dist = Phaser.Math.Distance.Between(e.sprite.x, e.sprite.y, this.player.x, this.player.y); let isTargetBldg = false;
+          this.buildingsGroup.getChildren().forEach(b => {
+            if(!b.active) return; let d = Phaser.Math.Distance.Between(e.sprite.x, e.sprite.y, b.x, b.y);
+            if (d < dist && d < 200) { dist = d; target = b; isTargetBldg = true; }
+          });
+          
+          if (dist < 200 && !['닭', '돼지', '소', '말', '염소'].includes(e.type.name)) e.state = 'chase'; else if (dist > 400) e.state = 'wander';
+
+          if (e.state === 'wander' && Math.random() < 0.01) {
+            this.physics.velocityFromAngle(Phaser.Math.Between(0, 360), e.type.speed * 0.5, e.sprite.body.velocity);
+          } else if (e.state === 'chase') {
+            this.physics.moveToObject(e.sprite, target, e.type.speed);
+            if (dist < 45 && time > e.lastAttackTime + 1500) {
+              e.lastAttackTime = time; 
+              if (isTargetBldg) {
+                target.hp = Math.max(0, target.hp - e.type.dmg);
+                this.updateBuildingHealthBar(target);
+                if (target.hp <= 0) this.destroyBuilding(target, true);
+              } else {
+                gameState.player.hp = Math.max(0, gameState.player.hp - e.type.dmg); updatePlayerHud();
+                if (gameState.player.hp <= 0) handlePlayerDeath();
+              }
+            }
+          }
+        });
+      }
+
+      updateRadar() {
+        ui.minimapEntities.innerHTML = '';
+        this.enemiesData.forEach(e => {
+          if(e.hp <= 0) return;
+          if(Phaser.Math.Distance.Between(this.player.x, this.player.y, e.sprite.x, e.sprite.y) < 2000) {
+            const dot = document.createElement('div'); dot.className = 'mini-dot enemy';
+            dot.style.left = `${(e.sprite.x / this.worldWidth) * 100}%`; dot.style.top = `${(e.sprite.y / this.worldHeight) * 100}%`;
+            ui.minimapEntities.appendChild(dot);
+          }
+        });
+        this.buildingsGroup.getChildren().forEach(b => {
+          if(!b.active) return;
+          const dot = document.createElement('div'); dot.className = 'mini-dot bldg';
+          dot.style.left = `${(b.x / this.worldWidth) * 100}%`; dot.style.top = `${(b.y / this.worldHeight) * 100}%`;
+          if (b.bType === 'Campfire') { dot.style.background = '#ff4500'; dot.style.boxShadow = '0 0 6px #ff4500'; }
+          ui.minimapEntities.appendChild(dot);
+        });
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      cacheUiElements(); bindUiEvents(); 
+
+      ui.loginBtn.addEventListener('click', () => {
+        let enteredName = ui.loginName.value.trim(); if(enteredName) gameState.player.name = enteredName;
+        ui.loginScreen.style.display = 'none'; updatePlayerHud();
+
+        setInterval(() => {
+          if (!gameState.isDead && gameState.player.hp > 0 && gameState.player.hp < gameState.player.maxHp) {
+            gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + 10); updatePlayerHud();
+          }
+        }, 1000);
+
+        new Phaser.Game({
+          type: Phaser.AUTO, parent: 'game-container', width: window.innerWidth, height: window.innerHeight,
+          backgroundColor: '#0a1014', physics: { default: 'arcade', arcade: { debug: false } }, scene: MainScene
+        });
+        
+        window.addEventListener('resize', () => { document.querySelector('canvas').width = window.innerWidth; document.querySelector('canvas').height = window.innerHeight; });
+      });
+      ui.loginName.addEventListener('keydown', (e) => { if(e.key === 'Enter') ui.loginBtn.click(); });
+    });
   </script>
 </body>
 </html>
