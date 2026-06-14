@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>STANCE: Lonely Island Prototype</title>
+  <title>STANCE: Lonely Island Prototype v0.0.03</title>
   <style>
     :root {
       --i0-color: #ffd86b; /* Legendary */
@@ -38,12 +38,19 @@
     .panel-row { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; line-height: 1.6; }
     .green { color: #7CFF8A; } .yellow { color: #FFD66B; } .blue { color: #7fd4ff; }
 
-    .top-left-panel { top: 16px; left: 16px; width: 220px; padding: 12px; }
+    .top-left-panel { top: 16px; left: 16px; width: 260px; padding: 12px; }
+    .map-desc { margin-top: 6px; color: #d9e7ef; font-size: 11px; line-height: 1.45; }
     .minimap-panel { top: 16px; right: 16px; width: 220px; padding: 12px; transition: 0.2s; }
     #minimap { position: relative; width: 100%; height: 135px; overflow: hidden; border-radius: 8px; background: #1a4b77; border: 1px solid rgba(255, 255, 255, 0.16); }
-    #minimap-island { position: absolute; left: 5%; top: 5%; width: 90%; height: 90%; background: #388047; border-radius: 10px; }
-    #minimap-lake { position: absolute; left: 60%; top: 30%; width: 15%; height: 20%; background: #3a8cd1; border-radius: 50%; }
+    #minimap-terrain { position: absolute; inset: 0; z-index: 1; }
+    .mini-island { position: absolute; background: #388047; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; transform: translate(-50%, -50%); }
+    .mini-island.lvl2 { background: #92733d; }
+    .mini-island.lvl3 { background: #315d37; }
+    .mini-hill { position: absolute; background: rgba(78,107,69,0.9); border-radius: 8px; transform: translate(-50%, -50%); }
+    .mini-desert { position: absolute; background: rgba(214,186,122,0.9); border-radius: 8px; transform: translate(-50%, -50%); }
+    .mini-lake { position: absolute; background: #3a8cd1; border-radius: 50%; transform: translate(-50%, -50%); }
     #mini-player { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px #fff; transform: translate(-50%, -50%); z-index: 10; }
+    #minimap-entities { position: absolute; inset: 0; z-index: 5; }
     .mini-dot.enemy { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #ff5858; transform: translate(-50%, -50%); }
     .mini-dot.bldg { position: absolute; width: 4px; height: 4px; border-radius: 2px; background: #ffd66b; transform: translate(-50%, -50%); }
 
@@ -212,16 +219,18 @@
     <div id="virtual-attack" class="mobile-only">ACTION</div>
 
     <section class="panel top-left-panel">
-      <div class="panel-title" id="field-name">Lonely Island</div>
-      <div class="panel-row"> <span class="blue">Channel 1</span> <span id="server-time">10:00</span> </div>
-      <div class="panel-row"> <span id="biome-text">Biome: Grassland</span> </div>
+      <div class="panel-title" id="field-name">Map Info</div>
+      <div class="panel-row"><span class="blue">Channel 1</span><span id="server-time">10:00</span></div>
+      <div class="panel-row"><span>좌표</span><span id="coord-line">X: 0 / Y: 0</span></div>
+      <div class="panel-row"><span>섬</span><span id="island-text" class="yellow">Lv.1 시작 섬</span></div>
+      <div class="panel-row"><span>지형</span><span id="biome-text">Grassland</span></div>
+      <div class="map-desc" id="biome-desc">초원 지형입니다. 기본 자원과 낮은 등급 몬스터가 등장합니다.</div>
     </section>
 
     <section class="panel minimap-panel" id="ui-map">
       <div class="panel-title">Minimap</div>
       <div id="minimap">
-        <div id="minimap-island"></div>
-        <div id="minimap-lake"></div>
+        <div id="minimap-terrain"></div>
         <div id="minimap-entities"></div>
         <div id="mini-player"></div>
       </div>
@@ -240,7 +249,6 @@
         <div class="blue">System: 론리아일랜드에 오신 것을 환영합니다.</div>
         <div class="yellow">System: 바다 밖으로는 나갈 수 없으며, 언덕 위는 방어에 유리합니다.</div>
         <div class="green">System: 가끔 등장하는 거대수에서는 많은 나무를 얻을 수 있습니다.</div>
-        <div id="coord-line">X: 0 / Y: 0</div>
       </div>
       <div class="chat-input-row">
         <input id="chat-input" type="text" placeholder="Enter message..." autocomplete="off" />
@@ -373,8 +381,28 @@
 
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
   <script>
+    // [v0.0.03] 전체 면적은 기존 12,000 x 8,000 섬의 약 10배입니다.
+    // 여러 섬 사이가 전부 바다이므로, 다른 섬으로 이동하려면 뗏목이 필요합니다.
+    const MAP_ISLANDS = [
+      { id: 'lv1_start', level: 1, name: 'Lv.1 시작 섬', x: 6000, y: 4000, w: 12000, h: 8000, desc: '초보 생존 구역입니다. 닭, 돼지, 소, 늑대, 곰, 호랑이가 등장합니다.' },
+      { id: 'lv1_east', level: 1, name: 'Lv.1 동쪽 섬', x: 19000, y: 5200, w: 9000, h: 6200, desc: '시작 섬과 비슷하지만 자원이 더 분산되어 있습니다.' },
+      { id: 'lv2_south', level: 2, name: 'Lv.2 남쪽 섬', x: 11000, y: 16500, w: 11000, h: 7600, desc: '늪지와 사막이 섞인 중급 구역입니다. 악어, 하마, 코끼리, 아나콘다, 전갈, 캥거루가 등장합니다.' },
+      { id: 'lv2_east', level: 2, name: 'Lv.2 동쪽 섬', x: 28000, y: 15000, w: 9000, h: 7000, desc: '중급 몬스터 밀도가 높은 섬입니다.' },
+      { id: 'lv3_north', level: 3, name: 'Lv.3 북동 섬', x: 31500, y: 4800, w: 9000, h: 6500, desc: '고위험 구역입니다. 고릴라, 사자, 코뿔소, 순록, 블랙맘바가 등장합니다.' }
+    ];
+    const MAP_FEATURES = [
+      { island: 'lv1_start', type: 'hill', x: 3250, y: 3250, w: 2500, h: 2500, desc: '언덕 지형입니다. 방어에 유리하지만 절벽과 겹쳐 건설할 수 없습니다.' },
+      { island: 'lv1_start', type: 'desert', x: 9500, y: 6000, w: 3000, h: 2000, desc: '사막 지형입니다. 시야가 트이고 나무가 적습니다.' },
+      { island: 'lv1_start', type: 'lake', x: 7500, y: 3000, r: 600, desc: '담수 호수입니다. 물 위 건설은 뗏목 위에서만 가능합니다.' },
+      { island: 'lv1_east', type: 'hill', x: 18000, y: 4200, w: 2200, h: 1800, desc: '작은 언덕입니다. 방어 거점으로 활용할 수 있습니다.' },
+      { island: 'lv2_south', type: 'desert', x: 13200, y: 17100, w: 4200, h: 2500, desc: '건조 지대입니다. 전갈과 캥거루가 자주 출몰합니다.' },
+      { island: 'lv2_south', type: 'lake', x: 8800, y: 15700, r: 750, desc: '늪지성 물가입니다. 악어와 하마가 등장하는 구역입니다.' },
+      { island: 'lv2_east', type: 'lake', x: 28600, y: 15400, r: 650, desc: '동쪽 섬의 호수입니다.' },
+      { island: 'lv3_north', type: 'hill', x: 31400, y: 4700, w: 3200, h: 2100, desc: '고난도 언덕 지형입니다. 강한 몬스터가 접근합니다.' }
+    ];
+
     const gameState = {
-      worldWidth: 12000, worldHeight: 8000, 
+      worldWidth: 38000, worldHeight: 26000, 
       player: { name: 'Survivor', level: 1, hp: 120, maxHp: 120, mp: 60, maxMp: 60, exp: 20, nextExp: 100, x: 6000, y: 4000, speed: 40, gold: 0, baseDmg: 25, dmgLevel: 1, statPoints: 0, str: 0, agi: 0, vit: 0 },
       quest: { current: 0, required: 10 },
       inventory: {}, isDead: false, buildLimit: 0, builtCount: 0,
@@ -422,13 +450,33 @@
     };
     const RARITY_DISPLAY_NAME = { "i0": "Legendary", "i1": "Mythic", "i2": "Rare", "i3": "Magic", "i4": "Epic", "i5": "Normal", "i6": "Junk" };
 
-    // [원본 복원] 몬스터 4종
-    const MONSTER_TYPES = [
-      { name: '닭', hp: 50, speed: 60, texture: 'chicken_tex', bodyRadius: 10, labelOffset: 28, barWidth: 38, dmg: 5, exp: 10 },
-      { name: '돼지', hp: 200, speed: 50, texture: 'pig_tex', bodyRadius: 15, labelOffset: 34, barWidth: 46, dmg: 20, exp: 40 },
-      { name: '늑대', hp: 300, speed: 110, texture: 'wolf_tex', bodyRadius: 16, labelOffset: 36, barWidth: 52, dmg: 35, exp: 60 },
-      { name: '곰', hp: 1000, speed: 70, texture: 'bear_tex', bodyRadius: 25, labelOffset: 48, barWidth: 68, dmg: 60, exp: 150 }
-    ];
+    // [v0.0.03] 섬 레벨별 몬스터 테이블
+    const MONSTER_TYPES_BY_LEVEL = {
+      1: [
+        { name: '닭', hp: 50, speed: 60, texture: 'chicken_tex', bodyRadius: 10, labelOffset: 28, barWidth: 38, dmg: 5, exp: 10 },
+        { name: '돼지', hp: 200, speed: 50, texture: 'pig_tex', bodyRadius: 15, labelOffset: 34, barWidth: 46, dmg: 20, exp: 40 },
+        { name: '소', hp: 260, speed: 45, texture: 'cow_tex', bodyRadius: 17, labelOffset: 38, barWidth: 50, dmg: 18, exp: 45 },
+        { name: '늑대', hp: 300, speed: 110, texture: 'wolf_tex', bodyRadius: 16, labelOffset: 36, barWidth: 52, dmg: 35, exp: 60 },
+        { name: '곰', hp: 1000, speed: 70, texture: 'bear_tex', bodyRadius: 25, labelOffset: 48, barWidth: 68, dmg: 60, exp: 150 },
+        { name: '호랑이', hp: 850, speed: 125, texture: 'tiger_tex', bodyRadius: 22, labelOffset: 46, barWidth: 64, dmg: 75, exp: 180 }
+      ],
+      2: [
+        { name: '악어', hp: 900, speed: 75, texture: 'croc_tex', bodyRadius: 24, labelOffset: 46, barWidth: 66, dmg: 70, exp: 180 },
+        { name: '하마', hp: 1600, speed: 55, texture: 'hippo_tex', bodyRadius: 28, labelOffset: 52, barWidth: 76, dmg: 85, exp: 260 },
+        { name: '코끼리', hp: 2500, speed: 45, texture: 'elephant_tex', bodyRadius: 32, labelOffset: 58, barWidth: 86, dmg: 110, exp: 360 },
+        { name: '아나콘다', hp: 700, speed: 95, texture: 'anaconda_tex', bodyRadius: 19, labelOffset: 40, barWidth: 60, dmg: 80, exp: 190 },
+        { name: '전갈', hp: 520, speed: 100, texture: 'scorpion_tex', bodyRadius: 16, labelOffset: 36, barWidth: 54, dmg: 65, exp: 160 },
+        { name: '캥거루', hp: 780, speed: 115, texture: 'kangaroo_tex', bodyRadius: 20, labelOffset: 42, barWidth: 60, dmg: 70, exp: 190 }
+      ],
+      3: [
+        { name: '고릴라', hp: 2200, speed: 75, texture: 'gorilla_tex', bodyRadius: 28, labelOffset: 54, barWidth: 82, dmg: 120, exp: 420 },
+        { name: '사자', hp: 1700, speed: 120, texture: 'lion_tex', bodyRadius: 24, labelOffset: 48, barWidth: 74, dmg: 135, exp: 460 },
+        { name: '코뿔소', hp: 3200, speed: 70, texture: 'rhino_tex', bodyRadius: 32, labelOffset: 58, barWidth: 90, dmg: 150, exp: 560 },
+        { name: '순록', hp: 1200, speed: 105, texture: 'reindeer_tex', bodyRadius: 22, labelOffset: 46, barWidth: 68, dmg: 95, exp: 320 },
+        { name: '블랙맘바', hp: 950, speed: 135, texture: 'mamba_tex', bodyRadius: 17, labelOffset: 38, barWidth: 62, dmg: 160, exp: 500 }
+      ]
+    };
+    const MONSTER_TYPES = Object.values(MONSTER_TYPES_BY_LEVEL).flat();
 
     const ui = {};
     window.currentScene = null; 
@@ -450,8 +498,8 @@
       ui.playerNameLine = document.getElementById('player-name-line'); ui.goldText = document.getElementById('gold-text');
       ui.coordLine = document.getElementById('coord-line'); ui.chatBody = document.getElementById('chat-body');
       ui.chatInput = document.getElementById('chat-input'); ui.chatSendButton = document.getElementById('chat-send-button');
-      ui.miniPlayer = document.getElementById('mini-player'); ui.minimapEntities = document.getElementById('minimap-entities');
-      ui.biomeText = document.getElementById('biome-text');
+      ui.miniPlayer = document.getElementById('mini-player'); ui.minimapEntities = document.getElementById('minimap-entities'); ui.minimapTerrain = document.getElementById('minimap-terrain');
+      ui.biomeText = document.getElementById('biome-text'); ui.biomeDesc = document.getElementById('biome-desc'); ui.islandText = document.getElementById('island-text');
       
       ui.inventoryPanel = document.getElementById('inventory-panel'); ui.inventoryGrid = document.getElementById('inventory-grid');
       ui.tooltip = document.getElementById('global-tooltip');
@@ -716,16 +764,34 @@
 
     function updateCoordinates(x, y) {
       gameState.player.x = Math.floor(x); gameState.player.y = Math.floor(y);
-      ui.coordLine.textContent = `X: ${gameState.player.x} / Y: ${gameState.player.y}`;
+      if (ui.coordLine) ui.coordLine.textContent = `X: ${gameState.player.x} / Y: ${gameState.player.y}`;
       ui.miniPlayer.style.left = `${(x / gameState.worldWidth) * 100}%`; ui.miniPlayer.style.top = `${(y / gameState.worldHeight) * 100}%`;
-      
-      let biome = "Grassland";
-      if (x < 600 || x > gameState.worldWidth - 600 || y < 600 || y > gameState.worldHeight - 600) biome = "Ocean Shore";
-      else if (x > 8000 && x < 11000 && y > 5000 && y < 7000) biome = "Desert";
-      else if (Phaser.Math.Distance.Between(x, y, 7500, 3000) < 600) biome = "Freshwater Lake"; 
-      else if (x > 2000 && x < 4500 && y > 2000 && y < 4500) biome = "Highlands (언덕)";
-      
-      ui.biomeText.textContent = `Biome: ${biome}`;
+
+      let info = { islandName: 'Ocean', biome: 'Ocean', desc: '섬 사이의 바다입니다. 이동하려면 뗏목이 필요합니다.' };
+      if (window.currentScene && window.currentScene.getTerrainInfo) info = window.currentScene.getTerrainInfo(x, y);
+      if (ui.islandText) ui.islandText.textContent = info.islandName;
+      if (ui.biomeText) ui.biomeText.textContent = info.biome;
+      if (ui.biomeDesc) ui.biomeDesc.textContent = info.desc;
+    }
+
+    function renderMinimapTerrain() {
+      if (!ui.minimapTerrain) return;
+      ui.minimapTerrain.innerHTML = '';
+      const addRect = (cls, cx, cy, w, h) => {
+        const el = document.createElement('div'); el.className = cls;
+        el.style.left = `${((cx - w / 2) / gameState.worldWidth) * 100}%`;
+        el.style.top = `${((cy - h / 2) / gameState.worldHeight) * 100}%`;
+        el.style.width = `${(w / gameState.worldWidth) * 100}%`;
+        el.style.height = `${(h / gameState.worldHeight) * 100}%`;
+        ui.minimapTerrain.appendChild(el);
+      };
+      const addCircle = (cls, cx, cy, r) => addRect(cls, cx, cy, r * 2, r * 2);
+      MAP_ISLANDS.forEach(island => addRect(`mini-island lvl${island.level}`, island.x, island.y, island.w, island.h));
+      MAP_FEATURES.forEach(f => {
+        if (f.type === 'lake') addCircle('mini-lake', f.x, f.y, f.r);
+        else if (f.type === 'hill') addRect('mini-hill', f.x, f.y, f.w, f.h);
+        else if (f.type === 'desert') addRect('mini-desert', f.x, f.y, f.w, f.h);
+      });
     }
 
     function handlePlayerDeath() {
@@ -1092,8 +1158,9 @@
         this.spawnGiantTrees();
         for(let i=0; i<300; i++) this.spawnRandomMonster();
 
-        this.player = this.physics.add.sprite(6000, 4000, 'player_tex');
+        this.player = this.physics.add.sprite(gameState.player.x, gameState.player.y, 'player_tex');
         this.player.body.setCircle(15); this.player.body.setCollideWorldBounds(true);
+        this.lastLandPosition = new Phaser.Math.Vector2(this.player.x, this.player.y);
         this.playerNameText = this.add.text(0, 0, gameState.player.name, { fontSize: '14px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
@@ -1139,7 +1206,7 @@
 
         this.buildPreview = this.add.sprite(0, 0, 'fence_tex').setAlpha(0.5).setVisible(false);
 
-        window.addEventListener('player-respawn', () => { this.player.setPosition(6000, 4000); this.player.body.setVelocity(0,0); this.targetPosition = null; });
+        window.addEventListener('player-respawn', () => { this.player.setPosition(6000, 4000); this.lastLandPosition.set(6000, 4000); this.player.body.setVelocity(0,0); this.targetPosition = null; });
         setInterval(() => this.updateRadar(), 500);
       }
 
@@ -1160,6 +1227,27 @@
         g.fillStyle(0x000000, 0.3); g.fillEllipse(24, 38, 38, 12); g.fillStyle(0xffa8bc); g.fillEllipse(24, 24, 34, 24); g.fillStyle(0xffcad6); g.fillCircle(38, 23, 10); g.fillStyle(0x222222); g.fillCircle(40, 20, 2); g.fillStyle(0xd96d86); g.fillCircle(44, 24, 2); g.fillCircle(38, 25, 2); g.generateTexture('pig_tex', 52, 48); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(25, 39, 40, 12); g.fillStyle(0x737373); g.fillEllipse(25, 25, 36, 24); g.fillStyle(0x555555); g.fillTriangle(11, 13, 16, 2, 21, 14); g.fillTriangle(30, 14, 36, 2, 39, 16); g.fillStyle(0x111111); g.fillCircle(20, 22, 2); g.fillCircle(32, 22, 2); g.fillStyle(0xffffff); g.fillTriangle(24, 30, 27, 35, 30, 30); g.generateTexture('wolf_tex', 56, 52); g.clear();
         g.fillStyle(0x000000, 0.35); g.fillEllipse(35, 60, 58, 18); g.fillStyle(0x4b3621); g.fillEllipse(35, 34, 52, 46); g.fillStyle(0x3a2919); g.fillCircle(18, 15, 10); g.fillCircle(52, 15, 10); g.fillStyle(0x7a5430); g.fillEllipse(35, 40, 30, 22); g.fillStyle(0x111111); g.fillCircle(27, 30, 3); g.fillCircle(43, 30, 3); g.fillCircle(35, 39, 4); g.generateTexture('bear_tex', 76, 76); g.clear();
+
+        const makeAnimalTexture = (key, color, accent = 0xffffff, w = 64, h = 54) => {
+          g.fillStyle(0x000000, 0.32); g.fillEllipse(w / 2, h - 8, w * 0.72, 13);
+          g.fillStyle(color); g.fillEllipse(w / 2, h / 2, w * 0.62, h * 0.48);
+          g.fillStyle(accent); g.fillCircle(w * 0.66, h * 0.45, Math.max(7, h * 0.16));
+          g.fillStyle(0x111111); g.fillCircle(w * 0.62, h * 0.42, 2); g.fillCircle(w * 0.71, h * 0.42, 2);
+          g.generateTexture(key, w, h); g.clear();
+        };
+        makeAnimalTexture('cow_tex', 0xeeeeee, 0x333333, 62, 50);
+        makeAnimalTexture('tiger_tex', 0xe8902f, 0xffd08a, 70, 56);
+        makeAnimalTexture('croc_tex', 0x2f6b35, 0x7fb56a, 82, 42);
+        makeAnimalTexture('hippo_tex', 0x7d7180, 0xb3a6b7, 82, 58);
+        makeAnimalTexture('elephant_tex', 0x8e9297, 0xc1c5c9, 92, 66);
+        makeAnimalTexture('anaconda_tex', 0x2f5d28, 0xc2d977, 86, 34);
+        makeAnimalTexture('scorpion_tex', 0x6f4b2c, 0xd09250, 62, 44);
+        makeAnimalTexture('kangaroo_tex', 0xb47a3a, 0xe2b57a, 66, 58);
+        makeAnimalTexture('gorilla_tex', 0x313131, 0x777777, 76, 64);
+        makeAnimalTexture('lion_tex', 0xc28c3d, 0xe3bd6d, 76, 58);
+        makeAnimalTexture('rhino_tex', 0x71787c, 0xb5bdc2, 88, 62);
+        makeAnimalTexture('reindeer_tex', 0x8b5a2b, 0xd0a36a, 74, 60);
+        makeAnimalTexture('mamba_tex', 0x111111, 0x444444, 78, 32);
         
         g.fillStyle(0x6b4423); g.fillRect(0, 15, 40, 10); g.fillRect(5, 5, 8, 30); g.fillRect(25, 5, 8, 30); g.generateTexture('fence_tex', 40, 40); g.clear();
         g.fillStyle(0x3a2311); g.fillRect(5, 10, 30, 20); g.fillStyle(0x888888); g.fillRect(18, 5, 4, 30); g.fillRect(5, 20, 30, 4); g.generateTexture('crossbow_tex', 40, 40); g.clear();
@@ -1169,33 +1257,68 @@
       }
 
       generateMapBiomes() {
-        this.add.tileSprite(this.worldWidth/2, this.worldHeight/2, this.worldWidth - 1000, this.worldHeight - 1000, 'bg_sand');
-        this.add.tileSprite(this.worldWidth/2, this.worldHeight/2, this.worldWidth - 1400, this.worldHeight - 1400, 'bg_grass');
-        this.add.tileSprite(9500, 6000, 3000, 2000, 'bg_sand');
-        this.add.tileSprite(3250, 3250, 2500, 2500, 'bg_hill');
-        this.createCliffBorders(2000, 2000, 4500, 4500, 300);
+        // v0.0.03-hotfix: 큰 월드에서 38,000 x 26,000 TileSprite를 만들면
+        // 브라우저가 거대한 ImageData를 생성하려고 하면서 메모리 오류가 발생합니다.
+        // 월드 배경은 카메라 배경색으로 처리하고, 섬/지형은 벡터 사각형과 원으로 렌더링합니다.
+        this.waterZones = [];
+        this.cameras.main.setBackgroundColor('#1a4b77');
 
-        this.waterZones = [
-          { type: 'rect', x1: 0, y1: 0, x2: this.worldWidth, y2: 500 },
-          { type: 'rect', x1: 0, y1: this.worldHeight - 500, x2: this.worldWidth, y2: this.worldHeight },
-          { type: 'rect', x1: 0, y1: 0, x2: 500, y2: this.worldHeight },
-          { type: 'rect', x1: this.worldWidth - 500, y1: 0, x2: this.worldWidth, y2: this.worldHeight },
-          { type: 'circle', x: 7500, y: 3000, r: 600 }
-        ];
+        MAP_ISLANDS.forEach(island => {
+          this.add.rectangle(island.x, island.y, island.w, island.h, 0xd6ba7a, 1).setDepth(-20);
+          this.add.rectangle(island.x, island.y, Math.max(1, island.w - 800), Math.max(1, island.h - 800), 0x388047, 1).setDepth(-19);
+        });
 
-        let lake = this.add.tileSprite(7500, 3000, 1200, 1200, 'bg_lake');
-        let lakeCollider = this.environmentGroup.create(7500, 3000, 'water_block');
-        lakeCollider.isWater = true;
-        lakeCollider.setScale(12).refreshBody(); lakeCollider.setVisible(false);
+        MAP_FEATURES.forEach(f => {
+          if (f.type === 'desert') {
+            this.add.rectangle(f.x, f.y, f.w, f.h, 0xd6ba7a, 1).setDepth(-18);
+          } else if (f.type === 'hill') {
+            this.add.rectangle(f.x, f.y, f.w, f.h, 0x4e6b45, 1).setDepth(-18);
+            this.createCliffBorders(f.x - f.w / 2, f.y - f.h / 2, f.x + f.w / 2, f.y + f.h / 2, 300);
+          } else if (f.type === 'lake') {
+            this.add.circle(f.x, f.y, f.r, 0x3a8cd1, 1).setDepth(-17);
+            let lakeCollider = this.environmentGroup.create(f.x, f.y, 'water_block');
+            lakeCollider.isWater = true;
+            lakeCollider.waterRadius = f.r;
+            lakeCollider.setScale(Math.max(1, f.r / 50)).refreshBody();
+            lakeCollider.setVisible(false);
+          }
+        });
+      }
 
-        for(let x=0; x<this.worldWidth; x+=500) {
-          let top = this.environmentGroup.create(x, 250, 'water_block').setScale(5).refreshBody().setVisible(false); top.isWater = true;
-          let bottom = this.environmentGroup.create(x, this.worldHeight - 250, 'water_block').setScale(5).refreshBody().setVisible(false); bottom.isWater = true;
+      getIslandAt(x, y) {
+        return MAP_ISLANDS.find(island =>
+          x >= island.x - island.w / 2 && x <= island.x + island.w / 2 &&
+          y >= island.y - island.h / 2 && y <= island.y + island.h / 2
+        ) || null;
+      }
+
+      getFeatureAt(x, y) {
+        return MAP_FEATURES.find(f => {
+          if (f.type === 'lake') return Phaser.Math.Distance.Between(x, y, f.x, f.y) <= f.r;
+          return x >= f.x - f.w / 2 && x <= f.x + f.w / 2 && y >= f.y - f.h / 2 && y <= f.y + f.h / 2;
+        }) || null;
+      }
+
+      getTerrainInfo(x, y) {
+        const island = this.getIslandAt(x, y);
+        if (!island) return { islandName: 'Ocean', biome: 'Ocean', desc: '섬 사이의 바다입니다. 이동하려면 뗏목이 필요합니다.' };
+        const feature = this.getFeatureAt(x, y);
+        if (feature && feature.type === 'lake') return { islandName: island.name, biome: 'Freshwater Lake', desc: feature.desc };
+        if (feature && feature.type === 'hill') return { islandName: island.name, biome: 'Highlands (언덕)', desc: feature.desc };
+        if (feature && feature.type === 'desert') return { islandName: island.name, biome: 'Desert', desc: feature.desc };
+        return { islandName: island.name, biome: `Grassland Lv.${island.level}`, desc: island.desc };
+      }
+
+      getRandomLandPoint(level = null, margin = 600) {
+        const pool = level ? MAP_ISLANDS.filter(i => i.level === level) : MAP_ISLANDS;
+        for (let i = 0; i < 80; i++) {
+          const island = Phaser.Utils.Array.GetRandom(pool.length ? pool : MAP_ISLANDS);
+          const x = Phaser.Math.Between(Math.ceil(island.x - island.w / 2 + margin), Math.floor(island.x + island.w / 2 - margin));
+          const y = Phaser.Math.Between(Math.ceil(island.y - island.h / 2 + margin), Math.floor(island.y + island.h / 2 - margin));
+          if (!this.isWaterPosition(x, y)) return { x, y, island };
         }
-        for(let y=0; y<this.worldHeight; y+=500) {
-          let left = this.environmentGroup.create(250, y, 'water_block').setScale(5).refreshBody().setVisible(false); left.isWater = true;
-          let right = this.environmentGroup.create(this.worldWidth - 250, y, 'water_block').setScale(5).refreshBody().setVisible(false); right.isWater = true;
-        }
+        const fallback = pool[0] || MAP_ISLANDS[0];
+        return { x: fallback.x, y: fallback.y, island: fallback };
       }
 
       createCliffBorders(x1, y1, x2, y2, rampSize) {
@@ -1212,32 +1335,32 @@
       }
 
       spawnForest() {
-        for(let i=0; i<800; i++) {
-          let x = Phaser.Math.Between(800, this.worldWidth - 800); 
-          let y = Phaser.Math.Between(800, this.worldHeight - 800);
-          if (Phaser.Math.Distance.Between(x, y, 7500, 3000) < 650) continue;
-
-          let tree = this.treesGroup.create(x, y, 'tree_tex'); 
+        const treeCount = 1600;
+        for(let i=0; i<treeCount; i++) {
+          const p = this.getRandomLandPoint(null, 500);
+          const feature = this.getFeatureAt(p.x, p.y);
+          if (feature && feature.type === 'desert') continue;
+          let tree = this.treesGroup.create(p.x, p.y, 'tree_tex'); 
           tree.body.setCircle(15, 15, 30); tree.hp = 30; tree.isGiant = false;
         }
       }
 
       spawnGiantTrees() {
-        for(let i=0; i<15; i++) {
-          let x = Phaser.Math.Between(1500, this.worldWidth - 1500); 
-          let y = Phaser.Math.Between(1500, this.worldHeight - 1500);
-          if (Phaser.Math.Distance.Between(x, y, 7500, 3000) < 700) continue;
-
-          let giantTree = this.treesGroup.create(x, y, 'giant_tree_tex');
+        for(let i=0; i<35; i++) {
+          const p = this.getRandomLandPoint(null, 900);
+          const feature = this.getFeatureAt(p.x, p.y);
+          if (feature && feature.type === 'lake') continue;
+          let giantTree = this.treesGroup.create(p.x, p.y, 'giant_tree_tex');
           giantTree.body.setCircle(30, 30, 60); 
-          giantTree.hp = 100; giantTree.isGiant = true; giantTree.setDepth(y);
+          giantTree.hp = 100; giantTree.isGiant = true; giantTree.setDepth(p.y);
         }
       }
 
-      spawnRandomMonster() {
-        const type = Phaser.Utils.Array.GetRandom(MONSTER_TYPES);
-        let x = Phaser.Math.Between(1000, this.worldWidth - 1000); let y = Phaser.Math.Between(1000, this.worldHeight - 1000);
-        if (Phaser.Math.Distance.Between(x, y, 7500, 3000) < 600) return; 
+      spawnRandomMonster(level = null) {
+        const p = this.getRandomLandPoint(level, 700);
+        const types = MONSTER_TYPES_BY_LEVEL[p.island.level] || MONSTER_TYPES_BY_LEVEL[1];
+        const type = Phaser.Utils.Array.GetRandom(types);
+        let x = p.x; let y = p.y;
 
         let sprite = this.physics.add.sprite(x, y, type.texture);
         sprite.body.setCircle(type.bodyRadius); sprite.body.setCollideWorldBounds(true); sprite.body.setBounce(0.5);
@@ -1249,7 +1372,7 @@
         let hpBarFill = this.add.rectangle(x - type.barWidth / 2, y - type.labelOffset + 7, type.barWidth, 3, 0x37d85b, 1).setOrigin(0, 0.5);
         let hpText = this.add.text(x, y - type.labelOffset + 15, `${type.hp}/${type.hp}`, { fontSize: '9px', color: '#eaffea', stroke: '#000', strokeThickness: 2 }).setOrigin(0.5, 0.5);
 
-        this.enemiesData.push({ sprite, label, hpBarBg, hpBarFill, hpText, type, hp: type.hp, maxHp: type.hp, state: 'wander', lastAttackTime: 0 });
+        this.enemiesData.push({ sprite, label, hpBarBg, hpBarFill, hpText, type, islandId: p.island.id, hp: type.hp, maxHp: type.hp, state: 'wander', lastAttackTime: 0 });
       }
 
       updateEnemyHealthBar(enemy) {
@@ -1356,12 +1479,10 @@
       }
 
       isWaterPosition(x, y) {
-        if (!this.waterZones) return false;
-        return this.waterZones.some(z => {
-          if (z.type === 'rect') return x >= z.x1 && x <= z.x2 && y >= z.y1 && y <= z.y2;
-          if (z.type === 'circle') return Phaser.Math.Distance.Between(x, y, z.x, z.y) <= z.r;
-          return false;
-        });
+        const island = this.getIslandAt(x, y);
+        if (!island) return true;
+        const feature = this.getFeatureAt(x, y);
+        return !!(feature && feature.type === 'lake');
       }
 
       findSupportingRaft(x, y, radius = 20) {
@@ -1670,6 +1791,16 @@
           if (dist > 5) { this.physics.moveToObject(this.player, this.targetPosition, gameState.player.speed); } 
           else { this.player.body.setVelocity(0, 0); this.targetPosition = null; }
         } else { this.player.body.setVelocity(0, 0); }
+
+        if (!gameState.raft.mounted) {
+          if (this.isWaterPosition(this.player.x, this.player.y)) {
+            this.player.setPosition(this.lastLandPosition.x, this.lastLandPosition.y);
+            this.player.body.setVelocity(0, 0);
+            this.targetPosition = null;
+          } else {
+            this.lastLandPosition.set(this.player.x, this.player.y);
+          }
+        }
         
         this.player.setDepth(this.player.y);
         this.treesGroup.getChildren().forEach(t => t.setDepth(t.y));
@@ -1711,7 +1842,7 @@
             if (d < dist && d < 200) { dist = d; target = b; isTargetBldg = true; }
           });
           
-          if (dist < 200 && !['닭', '돼지', '소', '말', '염소'].includes(e.type.name)) e.state = 'chase'; else if (dist > 400) e.state = 'wander';
+          if (dist < 200 && !['닭', '돼지', '소'].includes(e.type.name)) e.state = 'chase'; else if (dist > 400) e.state = 'wander';
 
           if (e.state === 'wander' && Math.random() < 0.01) {
             this.physics.velocityFromAngle(Phaser.Math.Between(0, 360), e.type.speed * 0.5, e.sprite.body.velocity);
@@ -1754,7 +1885,7 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      cacheUiElements(); bindUiEvents(); 
+      cacheUiElements(); bindUiEvents(); renderMinimapTerrain(); 
 
       ui.loginBtn.addEventListener('click', () => {
         let enteredName = ui.loginName.value.trim(); if(enteredName) gameState.player.name = enteredName;
