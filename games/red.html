@@ -81,8 +81,28 @@
     .modal-btns button { padding: 6px 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; background: rgba(255,255,255,0.1); }
     .modal-btns button.confirm { background: rgba(124, 255, 138, 0.2); border-color: #7CFF8A; color: #7CFF8A; }
     .modal-btns button.upgrade { background: rgba(255, 214, 107, 0.2); border-color: #FFD66B; color: #FFD66B; }
+    .modal-btns button.demolish { background: rgba(255, 88, 88, 0.18); border-color: #ff5858; color: #ff8a8a; }
+    .modal-btns button.raft-action { background: rgba(127, 212, 255, 0.18); border-color: #7fd4ff; color: #7fd4ff; }
     .modal-btns button.cook { background: rgba(255, 69, 0, 0.2); border-color: #ff4500; color: #ff6347; } 
     .modal-btns button.eat { background: rgba(85, 170, 255, 0.2); border-color: #55aaff; color: #55aaff; }
+    .armory-card {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid rgba(255,214,107,0.35);
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(255,214,107,0.14), rgba(255,255,255,0.045));
+      color: #f6fbff;
+      text-align: left;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px 10px;
+      align-items: center;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.22);
+    }
+    .armory-card:hover { border-color: #FFD66B; background: linear-gradient(135deg, rgba(255,214,107,0.24), rgba(127,212,255,0.08)); }
+    .armory-card-title { font-size: 13px; font-weight: 800; color: #fff; }
+    .armory-card-level { font-size: 11px; color: #7CFF8A; white-space: nowrap; }
+    .armory-card-cost { grid-column: 1 / -1; font-size: 12px; color: #FFD66B; }
 
     #death-screen { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; }
     #death-screen h1 { color: #ff5858; font-size: 48px; letter-spacing: 4px; margin-bottom: 20px; text-shadow: 0 0 20px rgba(255,88,88,0.5); }
@@ -268,8 +288,27 @@
       <div id="upg-desc" style="font-size: 13px; color: #ccc;">건물을 강화합니다.</div>
       <div style="margin-top: 10px;">현재: <span id="upg-current" class="green">Lv. 1</span></div>
       <div>비용: <span id="upg-cost" class="yellow">1000 G</span></div>
+      <div id="upg-armory-options" style="display:none; flex-direction:column; gap:8px; margin-top:8px;">
+        <button class="armory-card armory-upg-btn" data-armory-upg="fenceHp">
+          <span class="armory-card-title">울타리 체력 증가</span>
+          <span class="armory-card-level">Lv.1 → 2</span>
+          <span class="armory-card-cost">비용: 1,200 G</span>
+        </button>
+        <button class="armory-card armory-upg-btn" data-armory-upg="crossbowHp">
+          <span class="armory-card-title">크로스보우 체력 증가</span>
+          <span class="armory-card-level">Lv.1 → 2</span>
+          <span class="armory-card-cost">비용: 1,500 G</span>
+        </button>
+        <button class="armory-card armory-upg-btn" data-armory-upg="crossbowDmg">
+          <span class="armory-card-title">크로스보우 공격력 증가</span>
+          <span class="armory-card-level">Lv.1 → 2</span>
+          <span class="armory-card-cost">비용: 2,000 G</span>
+        </button>
+      </div>
       <div class="modal-btns">
         <button id="upg-cancel">취소</button>
+        <button id="upg-raft-action" class="raft-action" style="display:none;">탑승/하선</button>
+        <button id="upg-demolish" class="demolish" style="display:none;">철거</button>
         <button id="upg-confirm" class="upgrade">업그레이드</button>
       </div>
     </section>
@@ -289,8 +328,12 @@
         <div class="build-cost">1,000 Wood<br>1,000 G</div>
       </div>
       <div class="build-item" data-build-type="Armory">
-        <div class="build-info"><h4>Armory (무기고)</h4><p>클릭하여 기본 공격력 업그레이드.</p></div>
+        <div class="build-info"><h4>Armory (무기고)</h4><p>울타리/크로스보우 방어 시설을 강화합니다.</p></div>
         <div class="build-cost">5,000 Wood<br>5,000 G</div>
+      </div>
+      <div class="build-item" data-build-type="Raft">
+        <div class="build-info"><h4>Raft (뗏목)</h4><p>물 위에 띄우는 발판. 탑승 시 Wood 1개로 노 생성.</p></div>
+        <div class="build-cost">200 Wood<br>200 G</div>
       </div>
     </section>
 
@@ -334,7 +377,9 @@
       worldWidth: 12000, worldHeight: 8000, 
       player: { name: 'Survivor', level: 1, hp: 120, maxHp: 120, mp: 60, maxMp: 60, exp: 20, nextExp: 100, x: 6000, y: 4000, speed: 40, gold: 0, baseDmg: 25, dmgLevel: 1, statPoints: 0, str: 0, agi: 0, vit: 0 },
       quest: { current: 0, required: 10 },
-      inventory: {}, isDead: false, buildLimit: 0, builtCount: 0
+      inventory: {}, isDead: false, buildLimit: 0, builtCount: 0,
+      buildingUpgrades: { fenceHpLevel: 1, crossbowHpLevel: 1, crossbowDmgLevel: 1 },
+      raft: { mounted: false, current: null }
     };
     gameState.buildLimit = gameState.player.level * 3;
 
@@ -351,11 +396,15 @@
       reconnectTimer: null,
       pollTimer: null,
       seenKeys: new Set(),
-      recentLocal: []
+      recentLocal: [],
+      sessionStartTs: 0,
+      maxVisibleMessages: 10
     };
     
     // [원본 복원] 빌드 코스트
-    const BUILD_COSTS = { 'Campfire': { wood: 30, gold: 0 }, 'Fence': { wood: 50, gold: 50 }, 'Crossbow': { wood: 1000, gold: 1000 }, 'Armory': { wood: 5000, gold: 5000 } };
+    const BUILD_COSTS = { 'Campfire': { wood: 30, gold: 0 }, 'Fence': { wood: 50, gold: 50 }, 'Crossbow': { wood: 1000, gold: 1000 }, 'Armory': { wood: 5000, gold: 5000 }, 'Raft': { wood: 200, gold: 200 } };
+    const ARMORY_UPGRADE_COSTS = { fenceHp: 1200, crossbowHp: 1500, crossbowDmg: 2000 };
+    const BUILDING_BASE_STATS = { Fence: { hp: 300, radius: 20 }, Crossbow: { hp: 500, radius: 20, dmg: 30 }, Armory: { hp: 2000, radius: 40 }, Campfire: { hp: 100, radius: 15 }, Raft: { hp: 600, radius: 55 } };
     const PRICE_MAP = { "Normal": 10, "Magic": 40, "Rare": 100, "Epic": 500, "Legendary": 2000 };
     const PLAYER_BLOCK_SIZE = 40;
     const CAMPFIRE_COOK_RANGE = PLAYER_BLOCK_SIZE; // 캐릭터 1블럭 기준: 모닥불 중심에서 1블럭 이내에서만 굽기 가능
@@ -410,7 +459,7 @@
       ui.sellCookBtn = document.getElementById('sell-cook'); ui.sellEatBtn = document.getElementById('sell-eat');
       
       ui.upgModal = document.getElementById('upgrade-modal'); ui.upgTitle = document.getElementById('upg-title');
-      ui.upgDesc = document.getElementById('upg-desc'); ui.upgCurrent = document.getElementById('upg-current'); ui.upgCost = document.getElementById('upg-cost');
+      ui.upgDesc = document.getElementById('upg-desc'); ui.upgCurrent = document.getElementById('upg-current'); ui.upgCost = document.getElementById('upg-cost'); ui.upgArmoryOptions = document.getElementById('upg-armory-options'); ui.upgDemolish = document.getElementById('upg-demolish'); ui.upgRaftAction = document.getElementById('upg-raft-action');
       
       ui.buildPanel = document.getElementById('build-panel'); ui.buildLimitText = document.getElementById('build-limit-text');
       ui.buildModeText = document.getElementById('build-mode-text');
@@ -516,26 +565,41 @@
           `<span style="color:${nameColor}; font-weight:bold;">${name}</span> ` +
           `<span style="color:#9fb1c5; font-size:11px;">${time} #${room}</span>` +
           caption +
-          `<div style="margin-top:6px;"><a href="${escapeHtml(m.url)}" target="_blank" rel="noopener" style="color:#7fd4ff;">이미지 열기</a></div>`
+          `<div style="margin-top:6px;"><a href="${escapeHtml(m.url)}" target="_blank" rel="noopener" style="color:#7fd4ff;">이미지 열기</a></div>`,
+          'world-chat-msg'
         );
+        trimWorldChatMessages();
         return;
       }
 
       addChatMessage(
         `<span style="color:${nameColor}; font-weight:bold;">${name}</span> ` +
         `<span style="color:#9fb1c5; font-size:11px;">${time} #${room}</span>` +
-        `<div style="margin-top:4px; white-space:pre-wrap;">${text}</div>`
+        `<div style="margin-top:4px; white-space:pre-wrap;">${text}</div>`,
+        'world-chat-msg'
       );
+      trimWorldChatMessages();
+    }
+
+    function trimWorldChatMessages() {
+      if (!ui.chatBody) return;
+      const rows = Array.from(ui.chatBody.querySelectorAll('.world-chat-msg'));
+      const overflow = rows.length - WORLD_CHAT.maxVisibleMessages;
+      if (overflow > 0) rows.slice(0, overflow).forEach(el => el.remove());
     }
 
     async function loadWorldChatHistory(options = {}) {
       const announce = options.announce === true;
+      const sinceSession = options.sinceSession === true;
       try {
         const res = await fetch(`${WORLD_CHAT.apiBase}/history?room=${encodeURIComponent(WORLD_CHAT.room)}&t=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) throw new Error(`history_${res.status}`);
         const list = await res.json();
-        if (announce) addChatMessage(`<span class="blue">WorldChat: 최근 대화 ${list.length}개를 불러왔습니다.</span>`);
-        list.forEach(m => addWorldChatMessage(m, { dedupe: true }));
+        const filtered = sinceSession
+          ? list.filter(m => !Number.isFinite(Number(m.ts)) || Number(m.ts) >= WORLD_CHAT.sessionStartTs)
+          : list;
+        if (announce) addChatMessage(`<span class="blue">WorldChat: 최근 대화 ${filtered.length}개를 불러왔습니다.</span>`);
+        filtered.forEach(m => addWorldChatMessage(m, { dedupe: true }));
       } catch (err) {
         if (announce) addChatMessage(`<span style="color:#ff8a8a;">WorldChat: 기록 불러오기 실패 (${escapeHtml(err.message || err)})</span>`);
       }
@@ -586,13 +650,14 @@
     async function initWorldChat() {
       if (WORLD_CHAT.initialized) return;
       WORLD_CHAT.initialized = true;
+      WORLD_CHAT.sessionStartTs = Date.now();
       addChatMessage(`<span class="blue">WorldChat: #${WORLD_CHAT.room} 입장 중...</span>`);
-      await loadWorldChatHistory({ announce: true });
       connectWorldChat();
 
-      // SSE가 브라우저/프록시 환경에서 지연될 때를 대비한 안전 폴링
+      // 최초 접속 시 이전 대화는 불러오지 않습니다.
+      // SSE 누락 보정용 폴링도 접속 이후 메시지만 반영하고, 화면에는 최대 10줄만 유지합니다.
       if (WORLD_CHAT.pollTimer) clearInterval(WORLD_CHAT.pollTimer);
-      WORLD_CHAT.pollTimer = setInterval(() => loadWorldChatHistory({ announce: false }), 1500);
+      WORLD_CHAT.pollTimer = setInterval(() => loadWorldChatHistory({ announce: false, sinceSession: true }), 1500);
     }
 
     async function sendWorldChat() {
@@ -697,16 +762,142 @@
       ui.sellEatBtn.style.display = isCookedMeat ? 'inline-block' : 'none';
     }
 
-    // [원본 복원] 건물 업그레이드 모달 부활
+    function showGlobalTooltip(html, e) {
+      if (!ui.tooltip) return;
+      ui.tooltip.innerHTML = html;
+      ui.tooltip.style.display = 'block';
+      moveGlobalTooltip(e);
+    }
+
+    function moveGlobalTooltip(e) {
+      if (!ui.tooltip || ui.tooltip.style.display === 'none') return;
+      ui.tooltip.style.left = `${e.pageX + 12}px`;
+      ui.tooltip.style.top = `${e.pageY + 12}px`;
+    }
+
+    function hideGlobalTooltip() {
+      if (ui.tooltip) ui.tooltip.style.display = 'none';
+    }
+
+    // [방어 시설 강화] 무기고는 캐릭터가 아니라 설치된 방어 건물을 강화합니다.
     window.currentUpgradeBldg = null;
+
+    function getArmoryUpgradeCost(type) {
+      const levelMap = {
+        fenceHp: gameState.buildingUpgrades.fenceHpLevel,
+        crossbowHp: gameState.buildingUpgrades.crossbowHpLevel,
+        crossbowDmg: gameState.buildingUpgrades.crossbowDmgLevel
+      };
+      return (ARMORY_UPGRADE_COSTS[type] || 1000) * (levelMap[type] || 1);
+    }
+
+    function refreshArmoryUpgradeButtons() {
+      if (!ui.upgArmoryOptions) return;
+      const u = gameState.buildingUpgrades;
+      const data = {
+        fenceHp: {
+          title: '울타리 체력 증가',
+          level: `Lv.${u.fenceHpLevel} → ${u.fenceHpLevel + 1}`,
+          cost: getArmoryUpgradeCost('fenceHp'),
+          tip: '새로 설치하는 울타리와 이미 설치된 울타리의 최대 체력을 증가시킵니다. 기존 울타리는 현재 체력 비율을 유지합니다.'
+        },
+        crossbowHp: {
+          title: '크로스보우 체력 증가',
+          level: `Lv.${u.crossbowHpLevel} → ${u.crossbowHpLevel + 1}`,
+          cost: getArmoryUpgradeCost('crossbowHp'),
+          tip: '새로 설치하는 크로스보우와 이미 설치된 크로스보우의 최대 체력을 증가시킵니다. 기존 크로스보우는 현재 체력 비율을 유지합니다.'
+        },
+        crossbowDmg: {
+          title: '크로스보우 공격력 증가',
+          level: `Lv.${u.crossbowDmgLevel} → ${u.crossbowDmgLevel + 1}`,
+          cost: getArmoryUpgradeCost('crossbowDmg'),
+          tip: '크로스보우가 몬스터에게 주는 공격력을 증가시킵니다. 연사력은 크로스보우를 직접 클릭해서 따로 강화합니다.'
+        }
+      };
+      ui.upgArmoryOptions.querySelectorAll('.armory-upg-btn').forEach(btn => {
+        const item = data[btn.dataset.armoryUpg];
+        if (!item) return;
+        btn.innerHTML = `<span class="armory-card-title">${item.title}</span><span class="armory-card-level">${item.level}</span><span class="armory-card-cost">비용: ${item.cost.toLocaleString()} G</span>`;
+        btn.dataset.tooltip = item.tip;
+      });
+    }
+
+    function applyArmoryUpgrade(type) {
+      const cost = getArmoryUpgradeCost(type);
+      if (gameState.player.gold < cost) {
+        addChatMessage(`<span style="color:#FFD66B;">골드 부족 (필요: ${cost.toLocaleString()} G)</span>`);
+        return;
+      }
+      gameState.player.gold -= cost;
+
+      if (type === 'fenceHp') {
+        gameState.buildingUpgrades.fenceHpLevel++;
+        if (window.currentScene) window.currentScene.applyBuildingUpgradeToExisting('Fence');
+        addChatMessage(`<span style="color:#7CFF8A;">무기고 강화: 울타리 체력 Lv.${gameState.buildingUpgrades.fenceHpLevel}</span>`);
+      } else if (type === 'crossbowHp') {
+        gameState.buildingUpgrades.crossbowHpLevel++;
+        if (window.currentScene) window.currentScene.applyBuildingUpgradeToExisting('Crossbow');
+        addChatMessage(`<span style="color:#7CFF8A;">무기고 강화: 크로스보우 체력 Lv.${gameState.buildingUpgrades.crossbowHpLevel}</span>`);
+      } else if (type === 'crossbowDmg') {
+        gameState.buildingUpgrades.crossbowDmgLevel++;
+        if (window.currentScene) window.currentScene.applyBuildingUpgradeToExisting('Crossbow');
+        addChatMessage(`<span style="color:#7CFF8A;">무기고 강화: 크로스보우 공격력 Lv.${gameState.buildingUpgrades.crossbowDmgLevel}</span>`);
+      }
+      updatePlayerHud();
+      refreshArmoryUpgradeButtons();
+      openUpgradeModal(window.currentUpgradeBldg);
+    }
+
+    function getBuildingDisplayName(type) {
+      return ({ Campfire: 'Campfire (모닥불)', Fence: 'Fence (울타리)', Crossbow: 'Auto Crossbow', Armory: 'Armory (무기고)', Raft: 'Raft (뗏목)' })[type] || type;
+    }
+
+    function getDemolishRefundPreview(bldg) {
+      if (!bldg || !BUILD_COSTS[bldg.bType]) return 0;
+      const healthRatio = Math.max(0, Math.min(1, (bldg.hp || 0) / (bldg.maxHp || 1)));
+      return Math.floor((BUILD_COSTS[bldg.bType].wood || 0) * 0.3 * healthRatio);
+    }
+
+    function refreshDemolishButton(bldg) {
+      if (!ui.upgDemolish) return;
+      const refund = getDemolishRefundPreview(bldg);
+      ui.upgDemolish.style.display = 'inline-block';
+      ui.upgDemolish.textContent = `철거 (+${refund} Wood)`;
+    }
+
     function openUpgradeModal(bldg) {
-      window.currentUpgradeBldg = bldg; ui.upgModal.style.display = 'flex';
+      window.currentUpgradeBldg = bldg;
+      ui.upgModal.style.display = 'flex';
+      ui.upgArmoryOptions.style.display = 'none';
+      ui.upgRaftAction.style.display = 'none';
+      document.getElementById('upg-confirm').style.display = 'none';
+      refreshDemolishButton(bldg);
+
       if (bldg.bType === 'Armory') {
-        ui.upgTitle.textContent = "Armory"; ui.upgDesc.textContent = "기본 물리 공격력 대폭 증가";
-        ui.upgCurrent.textContent = `Dmg: ${gameState.player.baseDmg}`; ui.upgCost.textContent = `${(gameState.player.dmgLevel * 5000).toLocaleString()} G`;
+        const u = gameState.buildingUpgrades;
+        ui.upgTitle.textContent = 'Armory';
+        ui.upgDesc.textContent = '캐릭터 능력치가 아니라 방어 시설을 강화합니다.';
+        ui.upgCurrent.innerHTML = `Fence HP Lv.${u.fenceHpLevel} / Crossbow HP Lv.${u.crossbowHpLevel} / Crossbow DMG Lv.${u.crossbowDmgLevel}`;
+        ui.upgCost.textContent = '아래 항목 선택';
+        ui.upgArmoryOptions.style.display = 'flex';
+        refreshArmoryUpgradeButtons();
       } else if (bldg.bType === 'Crossbow') {
-        ui.upgTitle.textContent = "Auto Crossbow"; ui.upgDesc.textContent = "데미지/연사력 강화";
-        ui.upgCurrent.textContent = `Lv. ${bldg.level}`; ui.upgCost.textContent = `${(bldg.level * 1000).toLocaleString()} G`;
+        ui.upgTitle.textContent = 'Auto Crossbow';
+        ui.upgDesc.textContent = '이 크로스보우의 연사력을 강화합니다. 공격력은 무기고에서 강화됩니다.';
+        ui.upgCurrent.textContent = `연사 Lv. ${bldg.level} / 공격력 ${bldg.attackDmg || 30} / HP ${Math.ceil(bldg.hp)}/${bldg.maxHp}`;
+        ui.upgCost.textContent = `${(bldg.level * 1000).toLocaleString()} G`;
+        document.getElementById('upg-confirm').style.display = 'inline-block';
+      } else if (bldg.bType === 'Raft') {
+        ui.upgTitle.textContent = 'Raft';
+        ui.upgDesc.textContent = bldg.hasOar ? '노가 장착되어 있습니다. 탑승/하선 또는 철거할 수 있습니다.' : '탑승 시 Wood 1개를 소비하여 노를 생성합니다.';
+        ui.upgCurrent.textContent = `HP ${Math.ceil(bldg.hp)}/${bldg.maxHp} / ${bldg.hasOar ? 'Oar: Ready' : 'Oar: 없음'}`;
+        ui.upgCost.textContent = bldg.hasOar ? '탑승/하선 가능' : '탑승 시 Wood 1 필요';
+        ui.upgRaftAction.style.display = 'inline-block';
+      } else {
+        ui.upgTitle.textContent = getBuildingDisplayName(bldg.bType);
+        ui.upgDesc.textContent = '이 건축물을 철거하고 현재 체력에 비례한 목재 일부를 회수합니다. 골드는 반환되지 않습니다.';
+        ui.upgCurrent.textContent = `HP ${Math.ceil(bldg.hp)}/${bldg.maxHp}`;
+        ui.upgCost.textContent = `예상 회수: ${getDemolishRefundPreview(bldg)} Wood`;
       }
     }
 
@@ -795,7 +986,7 @@
           const type = el.dataset.buildType; const cost = BUILD_COSTS[type];
           const woodCount = gameState.inventory['Wood'] ? gameState.inventory['Wood'].count : 0;
           if (woodCount < cost.wood || gameState.player.gold < cost.gold) { addChatMessage(`<span style="color:#FFD66B;">자원 부족 (필요: Wood ${cost.wood}, Gold ${cost.gold})</span>`); return; }
-          if (type !== 'Campfire' && gameState.builtCount >= gameState.buildLimit) { addChatMessage(`<span style="color:#FFD66B;">최대 건설 수량 도달</span>`); return; }
+          if (!['Campfire', 'Fence'].includes(type) && gameState.builtCount >= gameState.buildLimit) { addChatMessage(`<span style="color:#FFD66B;">최대 건설 수량 도달</span>`); return; }
           window.activeBuildType = type; window.activeBuildRotation = 0; ui.buildPanel.style.display = 'none'; ui.buildModeText.style.display = 'block';
         });
       });
@@ -841,16 +1032,34 @@
         ui.sellModal.style.display = 'none';
       });
 
-      // [원본 복원] 업그레이드 모달 로직 부활
+      // [방어 시설 강화] 업그레이드 모달 로직
       document.getElementById('upg-cancel').addEventListener('click', () => ui.upgModal.style.display = 'none');
+      ui.upgDemolish.addEventListener('click', () => {
+        if (window.currentScene && window.currentUpgradeBldg) window.currentScene.demolishBuilding(window.currentUpgradeBldg);
+      });
+      ui.upgRaftAction.addEventListener('click', () => {
+        if (window.currentScene && window.currentUpgradeBldg && window.currentUpgradeBldg.bType === 'Raft') {
+          window.currentScene.toggleRaft(window.currentUpgradeBldg);
+          openUpgradeModal(window.currentUpgradeBldg);
+        }
+      });
+      document.querySelectorAll('.armory-upg-btn').forEach(btn => {
+        btn.addEventListener('click', () => applyArmoryUpgrade(btn.dataset.armoryUpg));
+        btn.addEventListener('mouseenter', (e) => { if (btn.dataset.tooltip) showGlobalTooltip(btn.dataset.tooltip, e); });
+        btn.addEventListener('mousemove', moveGlobalTooltip);
+        btn.addEventListener('mouseleave', hideGlobalTooltip);
+      });
       document.getElementById('upg-confirm').addEventListener('click', () => {
         const bldg = window.currentUpgradeBldg; if(!bldg) return;
-        if (bldg.bType === 'Armory') {
-          const cost = gameState.player.dmgLevel * 5000;
-          if (gameState.player.gold >= cost) { gameState.player.gold -= cost; gameState.player.dmgLevel++; gameState.player.baseDmg += 15; }
-        } else if (bldg.bType === 'Crossbow') {
+        if (bldg.bType === 'Crossbow') {
           const cost = bldg.level * 1000;
-          if (gameState.player.gold >= cost) { gameState.player.gold -= cost; bldg.level++; }
+          if (gameState.player.gold >= cost) {
+            gameState.player.gold -= cost;
+            bldg.level++;
+            addChatMessage(`<span style="color:#7CFF8A;">크로스보우 연사 강화 Lv.${bldg.level}</span>`);
+          } else {
+            addChatMessage(`<span style="color:#FFD66B;">골드 부족 (필요: ${cost.toLocaleString()} G)</span>`);
+          }
         }
         updatePlayerHud(); ui.upgModal.style.display = 'none';
       });
@@ -887,7 +1096,7 @@
         this.playerNameText = this.add.text(0, 0, gameState.player.name, { fontSize: '14px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
-        this.physics.add.collider(this.player, this.environmentGroup);
+        this.playerEnvironmentCollider = this.physics.add.collider(this.player, this.environmentGroup);
         this.physics.add.collider(this.player, this.buildingsGroup);
 
         this.wasd = this.input.keyboard.addKeys({ up: 'W', left: 'A', down: 'S', right: 'D' });
@@ -905,8 +1114,12 @@
               const clickRadius = (b.body && b.body.radius) ? b.body.radius : Math.max(b.displayWidth, b.displayHeight) / 2;
               if (b.active && Phaser.Math.Distance.Between(pointer.worldX, pointer.worldY, b.x, b.y) < clickRadius + 15) clickedBldg = b;
             });
-            if (clickedBldg && (clickedBldg.bType === 'Armory' || clickedBldg.bType === 'Crossbow')) {
-              if (Phaser.Math.Distance.Between(this.player.x, this.player.y, clickedBldg.x, clickedBldg.y) < 200) { openUpgradeModal(clickedBldg); return; } 
+            if (clickedBldg) {
+              const interactRange = clickedBldg.bType === 'Raft' ? 160 : 200;
+              if (Phaser.Math.Distance.Between(this.player.x, this.player.y, clickedBldg.x, clickedBldg.y) < interactRange) {
+                openUpgradeModal(clickedBldg);
+                return;
+              }
             }
 
             let clickedEntity = false;
@@ -951,6 +1164,7 @@
         g.fillStyle(0x3a2311); g.fillRect(5, 10, 30, 20); g.fillStyle(0x888888); g.fillRect(18, 5, 4, 30); g.fillRect(5, 20, 30, 4); g.generateTexture('crossbow_tex', 40, 40); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(40, 75, 70, 20); g.fillStyle(0x4a2e15); g.fillRect(10, 20, 60, 50); g.fillStyle(0x5c3a21); g.fillRect(5, 10, 70, 15); g.fillStyle(0x222222); g.fillRect(30, 40, 20, 30); g.generateTexture('armory_tex', 80, 80); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(20, 35, 30, 10); g.fillStyle(0x5c3a21); g.fillRect(5, 25, 30, 6); g.fillRect(15, 15, 10, 20); g.fillStyle(0xff4500); g.fillTriangle(20, 5, 10, 25, 30, 25); g.fillStyle(0xffd700); g.fillTriangle(20, 15, 15, 25, 25, 25); g.generateTexture('campfire_tex', 40, 40); g.clear();
+        g.fillStyle(0x000000, 0.28); g.fillEllipse(60, 64, 110, 36); g.fillStyle(0x8b5a2b); g.fillRoundedRect(10, 20, 100, 45, 8); g.fillStyle(0x5c3a21); g.fillRect(18, 28, 84, 6); g.fillRect(18, 43, 84, 6); g.fillRect(25, 16, 8, 56); g.fillRect(55, 16, 8, 56); g.fillRect(85, 16, 8, 56); g.fillStyle(0xd7b076); g.fillRect(95, 8, 8, 55); g.generateTexture('raft_tex', 120, 80); g.clear();
       }
 
       generateMapBiomes() {
@@ -960,17 +1174,26 @@
         this.add.tileSprite(3250, 3250, 2500, 2500, 'bg_hill');
         this.createCliffBorders(2000, 2000, 4500, 4500, 300);
 
+        this.waterZones = [
+          { type: 'rect', x1: 0, y1: 0, x2: this.worldWidth, y2: 500 },
+          { type: 'rect', x1: 0, y1: this.worldHeight - 500, x2: this.worldWidth, y2: this.worldHeight },
+          { type: 'rect', x1: 0, y1: 0, x2: 500, y2: this.worldHeight },
+          { type: 'rect', x1: this.worldWidth - 500, y1: 0, x2: this.worldWidth, y2: this.worldHeight },
+          { type: 'circle', x: 7500, y: 3000, r: 600 }
+        ];
+
         let lake = this.add.tileSprite(7500, 3000, 1200, 1200, 'bg_lake');
         let lakeCollider = this.environmentGroup.create(7500, 3000, 'water_block');
+        lakeCollider.isWater = true;
         lakeCollider.setScale(12).refreshBody(); lakeCollider.setVisible(false);
 
         for(let x=0; x<this.worldWidth; x+=500) {
-          let top = this.environmentGroup.create(x, 250, 'water_block').setScale(5).refreshBody().setVisible(false);
-          let bottom = this.environmentGroup.create(x, this.worldHeight - 250, 'water_block').setScale(5).refreshBody().setVisible(false);
+          let top = this.environmentGroup.create(x, 250, 'water_block').setScale(5).refreshBody().setVisible(false); top.isWater = true;
+          let bottom = this.environmentGroup.create(x, this.worldHeight - 250, 'water_block').setScale(5).refreshBody().setVisible(false); bottom.isWater = true;
         }
         for(let y=0; y<this.worldHeight; y+=500) {
-          let left = this.environmentGroup.create(250, y, 'water_block').setScale(5).refreshBody().setVisible(false);
-          let right = this.environmentGroup.create(this.worldWidth - 250, y, 'water_block').setScale(5).refreshBody().setVisible(false);
+          let left = this.environmentGroup.create(250, y, 'water_block').setScale(5).refreshBody().setVisible(false); left.isWater = true;
+          let right = this.environmentGroup.create(this.worldWidth - 250, y, 'water_block').setScale(5).refreshBody().setVisible(false); right.isWater = true;
         }
       }
 
@@ -979,11 +1202,11 @@
         const rampEnd = rampStart + rampSize;
 
         for (let x = x1; x <= x2; x += 50) {
-          this.environmentGroup.create(x, y1, 'cliff_tex');
-          if (x < rampStart || x > rampEnd) this.environmentGroup.create(x, y2, 'cliff_tex');
+          let topCliff = this.environmentGroup.create(x, y1, 'cliff_tex'); topCliff.isTerrain = true;
+          if (x < rampStart || x > rampEnd) { let bottomCliff = this.environmentGroup.create(x, y2, 'cliff_tex'); bottomCliff.isTerrain = true; }
         }
         for (let y = y1; y <= y2; y += 50) {
-          this.environmentGroup.create(x1, y, 'cliff_tex'); this.environmentGroup.create(x2, y, 'cliff_tex');
+          let leftCliff = this.environmentGroup.create(x1, y, 'cliff_tex'); leftCliff.isTerrain = true; let rightCliff = this.environmentGroup.create(x2, y, 'cliff_tex'); rightCliff.isTerrain = true;
         }
       }
 
@@ -1049,8 +1272,8 @@
       createBuildingHealthUi(bldg) {
         if (!bldg || bldg.bType === 'Campfire') return;
 
-        const barWidth = bldg.bType === 'Armory' ? 72 : 54;
-        const offsetY = bldg.bType === 'Armory' ? 58 : 36;
+        const barWidth = bldg.bType === 'Armory' ? 72 : (bldg.bType === 'Raft' ? 80 : 54);
+        const offsetY = bldg.bType === 'Armory' ? 58 : (bldg.bType === 'Raft' ? 48 : 36);
         const labelName = bldg.bType === 'Crossbow' ? 'Crossbow' : (bldg.bType === 'Fence' ? 'Fence' : bldg.bType);
 
         bldg.hpBarWidth = barWidth;
@@ -1087,31 +1310,230 @@
         if (bldg.hpBarBg) bldg.hpBarBg.destroy();
         if (bldg.hpBarFill) bldg.hpBarFill.destroy();
         if (bldg.hpText) bldg.hpText.destroy();
-        if (countAsBuilt && bldg.bType !== 'Campfire') {
+        if (bldg.bType === 'Raft' && gameState.raft.current === bldg) { gameState.raft.mounted = false; gameState.raft.current = null; if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = true; }
+        if (countAsBuilt && !['Campfire', 'Fence'].includes(bldg.bType)) {
           gameState.builtCount = Math.max(0, gameState.builtCount - 1);
           updatePlayerHud();
         }
         bldg.destroy();
       }
 
+
+      getDemolishRefund(bldg) {
+        if (!bldg || !BUILD_COSTS[bldg.bType]) return 0;
+        const healthRatio = Math.max(0, Math.min(1, (bldg.hp || 0) / (bldg.maxHp || 1)));
+        return Math.floor((BUILD_COSTS[bldg.bType].wood || 0) * 0.3 * healthRatio);
+      }
+
+      hasRaftStructures(raft) {
+        let found = false;
+        this.buildingsGroup.getChildren().forEach(b => {
+          if (!b.active || b === raft) return;
+          if (b.supportRaft === raft) found = true;
+        });
+        return found;
+      }
+
+      demolishBuilding(bldg) {
+        if (!bldg || !bldg.active) return;
+        if (bldg.bType === 'Raft' && this.hasRaftStructures(bldg)) {
+          addChatMessage('<span style="color:#FFD66B;">뗏목 위 건축물을 먼저 철거해야 합니다.</span>');
+          return;
+        }
+        const refund = this.getDemolishRefund(bldg);
+        const name = getBuildingDisplayName(bldg.bType);
+        if (refund > 0) addInventoryItem('Wood', refund, 'Normal');
+        this.destroyBuilding(bldg, true);
+        ui.upgModal.style.display = 'none';
+        updateInventoryUi();
+        updatePlayerHud();
+        addChatMessage(`<span style="color:#ff8a8a;">철거 완료: ${name} / 회수 Wood ${refund}</span>`);
+      }
+
+      getBuildingRadius(type) {
+        return (BUILDING_BASE_STATS[type] && BUILDING_BASE_STATS[type].radius) || 22;
+      }
+
+      isWaterPosition(x, y) {
+        if (!this.waterZones) return false;
+        return this.waterZones.some(z => {
+          if (z.type === 'rect') return x >= z.x1 && x <= z.x2 && y >= z.y1 && y <= z.y2;
+          if (z.type === 'circle') return Phaser.Math.Distance.Between(x, y, z.x, z.y) <= z.r;
+          return false;
+        });
+      }
+
+      findSupportingRaft(x, y, radius = 20) {
+        let raft = null;
+        this.buildingsGroup.getChildren().forEach(b => {
+          if (!b.active || b.bType !== 'Raft') return;
+          const raftRadius = b.buildRadius || 55;
+          if (Phaser.Math.Distance.Between(x, y, b.x, b.y) <= Math.max(18, raftRadius - radius * 0.55)) raft = b;
+        });
+        return raft;
+      }
+
+      canPlaceBuilding(type, x, y) {
+        const radius = this.getBuildingRadius(type);
+        const onWater = this.isWaterPosition(x, y);
+        const supportingRaft = this.findSupportingRaft(x, y, radius);
+
+        if (Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) > 250) {
+          addChatMessage('<span style="color:#FFD66B;">너무 멀어서 건설할 수 없습니다.</span>');
+          return false;
+        }
+        if (type === 'Raft' && !onWater) {
+          addChatMessage('<span style="color:#FFD66B;">뗏목은 물 위에만 건설할 수 있습니다.</span>');
+          return false;
+        }
+        if (type !== 'Raft' && onWater && !supportingRaft) {
+          addChatMessage('<span style="color:#FFD66B;">물 위에는 뗏목 위에서만 건축할 수 있습니다.</span>');
+          return false;
+        }
+
+        let blocked = false;
+        this.environmentGroup.getChildren().forEach(o => {
+          if (blocked || !o.active || !o.isTerrain) return;
+          const blockRadius = Math.max(o.displayWidth || 50, o.displayHeight || 50) * 0.5;
+          if (Phaser.Math.Distance.Between(x, y, o.x, o.y) < radius + blockRadius) blocked = true;
+        });
+        if (blocked) {
+          addChatMessage('<span style="color:#FFD66B;">언덕/지형과 겹쳐서 건설할 수 없습니다.</span>');
+          return false;
+        }
+
+        this.treesGroup.getChildren().forEach(t => {
+          if (blocked || !t.active) return;
+          const treeRadius = t.isGiant ? 55 : 28;
+          if (Phaser.Math.Distance.Between(x, y, t.x, t.y) < radius + treeRadius) blocked = true;
+        });
+        if (blocked) {
+          addChatMessage('<span style="color:#FFD66B;">나무와 겹쳐서 건설할 수 없습니다.</span>');
+          return false;
+        }
+
+        this.enemiesData.forEach(e => {
+          if (blocked || e.hp <= 0) return;
+          if (Phaser.Math.Distance.Between(x, y, e.sprite.x, e.sprite.y) < radius + e.type.bodyRadius + 8) blocked = true;
+        });
+        if (blocked) {
+          addChatMessage('<span style="color:#FFD66B;">몬스터와 겹쳐서 건설할 수 없습니다.</span>');
+          return false;
+        }
+
+        this.buildingsGroup.getChildren().forEach(b => {
+          if (blocked || !b.active || b === supportingRaft) return;
+          const bRadius = b.buildRadius || ((b.body && b.body.radius) ? b.body.radius : 25);
+          if (Phaser.Math.Distance.Between(x, y, b.x, b.y) < radius + bRadius + 6) blocked = true;
+        });
+        if (blocked) {
+          addChatMessage('<span style="color:#FFD66B;">다른 건축물과 겹쳐서 건설할 수 없습니다.</span>');
+          return false;
+        }
+
+        return true;
+      }
+
+      getBuildingMaxHp(type) {
+        if (type === 'Fence') return BUILDING_BASE_STATS.Fence.hp + (gameState.buildingUpgrades.fenceHpLevel - 1) * 120;
+        if (type === 'Crossbow') return BUILDING_BASE_STATS.Crossbow.hp + (gameState.buildingUpgrades.crossbowHpLevel - 1) * 180;
+        return (BUILDING_BASE_STATS[type] && BUILDING_BASE_STATS[type].hp) || 300;
+      }
+
+      getCrossbowDamage() {
+        return BUILDING_BASE_STATS.Crossbow.dmg + (gameState.buildingUpgrades.crossbowDmgLevel - 1) * 15;
+      }
+
+      applyBuildingUpgradeToExisting(type) {
+        this.buildingsGroup.getChildren().forEach(b => {
+          if (!b.active || b.bType !== type) return;
+          const oldMax = b.maxHp || 1;
+          const ratio = Math.max(0, Math.min(1, b.hp / oldMax));
+          b.maxHp = this.getBuildingMaxHp(type);
+          b.hp = Math.max(1, Math.ceil(b.maxHp * ratio));
+          if (type === 'Crossbow') b.attackDmg = this.getCrossbowDamage();
+          this.updateBuildingHealthBar(b);
+        });
+      }
+
+      moveRaftStructures(raft, dx, dy) {
+        if (!raft || (!dx && !dy)) return;
+        this.buildingsGroup.getChildren().forEach(b => {
+          if (!b.active || b.supportRaft !== raft) return;
+          b.setPosition(b.x + dx, b.y + dy);
+          if (b.body) b.refreshBody();
+          this.updateBuildingHealthBar(b);
+        });
+      }
+
+      toggleRaft(raft) {
+        if (!raft || !raft.active) return;
+        if (!gameState.raft.mounted) {
+          if (!raft.hasOar) {
+            const wood = gameState.inventory.Wood ? gameState.inventory.Wood.count : 0;
+            if (wood < 1) {
+              addChatMessage('<span style="color:#FFD66B;">노를 만들 Wood 1개가 필요합니다.</span>');
+              return;
+            }
+            gameState.inventory.Wood.count -= 1;
+            if (gameState.inventory.Wood.count <= 0) delete gameState.inventory.Wood;
+            raft.hasOar = true;
+            addChatMessage('<span style="color:#7fd4ff;">Wood 1개를 소비하여 뗏목 노를 만들었습니다.</span>');
+            updateInventoryUi();
+          }
+          gameState.raft.mounted = true;
+          gameState.raft.current = raft;
+          this.targetPosition = null;
+          this.player.setPosition(raft.x, raft.y);
+          if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = false;
+          addChatMessage('<span style="color:#7fd4ff;">뗏목에 탑승했습니다. WASD/방향키로 물 위를 이동합니다.</span>');
+        } else if (gameState.raft.current === raft) {
+          gameState.raft.mounted = false;
+          gameState.raft.current = null;
+          if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = true;
+          addChatMessage('<span style="color:#7fd4ff;">뗏목에서 내렸습니다.</span>');
+        }
+      }
+
       placeBuilding(x, y) {
         const type = window.activeBuildType; const cost = BUILD_COSTS[type];
-        if (!gameState.inventory['Wood'] || gameState.inventory['Wood'].count < cost.wood || gameState.player.gold < cost.gold) return;
-        if (Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) > 250) return;
+        if (!cost) return;
+        if (!gameState.inventory['Wood'] || gameState.inventory['Wood'].count < cost.wood || gameState.player.gold < cost.gold) {
+          addChatMessage(`<span style="color:#FFD66B;">자원 부족 (필요: Wood ${cost.wood}, Gold ${cost.gold})</span>`);
+          return;
+        }
+        if (!this.canPlaceBuilding(type, x, y)) return;
+        const supportingRaft = type !== 'Raft' ? this.findSupportingRaft(x, y, this.getBuildingRadius(type)) : null;
 
-        gameState.inventory['Wood'].count -= cost.wood; if(gameState.inventory['Wood'].count <= 0) delete gameState.inventory['Wood'];
-        gameState.player.gold -= cost.gold; if(type !== 'Campfire') gameState.builtCount++;
+        gameState.inventory['Wood'].count -= cost.wood;
+        if(gameState.inventory['Wood'].count <= 0) delete gameState.inventory['Wood'];
+        gameState.player.gold -= cost.gold;
+        if(!['Campfire', 'Fence'].includes(type)) gameState.builtCount++;
 
-        // [원본 복원] Armory, Campfire 텍스처 및 스펙 부활
-        let tex = 'fence_tex'; let maxHp = 300; let radius = 20;
-        if(type === 'Crossbow') { tex = 'crossbow_tex'; maxHp = 500; } else if(type === 'Armory') { tex = 'armory_tex'; maxHp = 2000; radius = 40; } else if(type === 'Campfire') { tex = 'campfire_tex'; maxHp = 100; radius = 15; }
+        let tex = 'fence_tex';
+        let radius = this.getBuildingRadius(type);
+        let maxHp = this.getBuildingMaxHp(type);
+        if(type === 'Crossbow') tex = 'crossbow_tex';
+        else if(type === 'Armory') tex = 'armory_tex';
+        else if(type === 'Campfire') tex = 'campfire_tex';
+        else if(type === 'Raft') tex = 'raft_tex';
 
         let bldg = this.buildingsGroup.create(x, y, tex);
-        bldg.setAngle(window.activeBuildRotation); bldg.body.setCircle(radius);
-        bldg.bType = type; bldg.hp = maxHp; bldg.maxHp = maxHp; bldg.level = 1; bldg.lastFireTime = 0;
+        bldg.setAngle(window.activeBuildRotation);
+        bldg.body.setCircle(radius);
+        bldg.buildRadius = radius;
+        bldg.bType = type;
+        bldg.hp = maxHp;
+        bldg.maxHp = maxHp;
+        bldg.level = 1;
+        bldg.lastFireTime = 0;
         if(type === 'Campfire') bldg.burnOutTime = this.time.now + 60000;
+        if(type === 'Crossbow') bldg.attackDmg = this.getCrossbowDamage();
+        if(type === 'Raft') { bldg.hasOar = false; bldg.setImmovable(true); }
+        if(supportingRaft) bldg.supportRaft = supportingRaft;
         this.createBuildingHealthUi(bldg);
 
+        addChatMessage(`<span style="color:#7CFF8A;">건설 완료: ${type}</span>`);
         updatePlayerHud(); window.activeBuildType = null; ui.buildModeText.style.display = 'none';
       }
 
@@ -1208,7 +1630,7 @@
         // [원본 복원] 빌드 프리뷰 수정
         if (window.activeBuildType) {
           let ptr = this.input.activePointer;
-          let tex = 'fence_tex'; if(window.activeBuildType === 'Armory') tex = 'armory_tex'; else if(window.activeBuildType === 'Crossbow') tex = 'crossbow_tex'; else if(window.activeBuildType === 'Campfire') tex = 'campfire_tex';
+          let tex = 'fence_tex'; if(window.activeBuildType === 'Armory') tex = 'armory_tex'; else if(window.activeBuildType === 'Crossbow') tex = 'crossbow_tex'; else if(window.activeBuildType === 'Campfire') tex = 'campfire_tex'; else if(window.activeBuildType === 'Raft') tex = 'raft_tex';
           this.buildPreview.setTexture(tex).setPosition(ptr.worldX, ptr.worldY).setAngle(window.activeBuildRotation).setVisible(true).setDepth(9999);
         } else {
           this.buildPreview.setVisible(false);
@@ -1220,7 +1642,26 @@
         if (this.wasd.up.isDown || vPad.up) { vel.y = -1; usingKeyboardOrPad = true; }
         else if (this.wasd.down.isDown || vPad.down) { vel.y = 1; usingKeyboardOrPad = true; }
 
-        if (usingKeyboardOrPad) {
+        if (gameState.raft.mounted && gameState.raft.current && gameState.raft.current.active) {
+          const raft = gameState.raft.current;
+          this.targetPosition = null;
+          this.player.body.setVelocity(0, 0);
+          if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = false;
+          if (usingKeyboardOrPad && raft.hasOar) {
+            vel.normalize().scale(Math.max(25, gameState.player.speed * 0.75));
+            const dt = Math.min(0.05, this.game.loop.delta / 1000);
+            const nx = raft.x + vel.x * dt;
+            const ny = raft.y + vel.y * dt;
+            if (this.isWaterPosition(nx, ny)) {
+              const dx = nx - raft.x;
+              const dy = ny - raft.y;
+              raft.setPosition(nx, ny).refreshBody();
+              this.moveRaftStructures(raft, dx, dy);
+            }
+          }
+          this.player.setPosition(raft.x, raft.y);
+        } else if (usingKeyboardOrPad) {
+          if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = true;
           this.targetPosition = null; vel.normalize().scale(gameState.player.speed);
           this.player.body.setVelocity(vel.x, vel.y);
         } else if (this.targetPosition) {
@@ -1244,7 +1685,7 @@
               let target = null; let minD = 300; 
               this.enemiesData.forEach(e => { let d = Phaser.Math.Distance.Between(b.x, b.y, e.sprite.x, e.sprite.y); if (d < minD) { minD = d; target = e; } });
               if (target) {
-                b.lastFireTime = time; target.hp -= (20 + b.level * 10); 
+                b.lastFireTime = time; target.hp -= (b.attackDmg || this.getCrossbowDamage()); 
                 this.updateEnemyHealthBar(target);
                 let line = this.add.line(0,0, b.x, b.y, target.sprite.x, target.sprite.y, 0xffd66b).setOrigin(0,0);
                 this.tweens.add({ targets: line, alpha: 0, duration: 150, onComplete: () => line.destroy() });
@@ -1305,6 +1746,7 @@
           const dot = document.createElement('div'); dot.className = 'mini-dot bldg';
           dot.style.left = `${(b.x / this.worldWidth) * 100}%`; dot.style.top = `${(b.y / this.worldHeight) * 100}%`;
           if (b.bType === 'Campfire') { dot.style.background = '#ff4500'; dot.style.boxShadow = '0 0 6px #ff4500'; }
+          if (b.bType === 'Raft') { dot.style.background = '#7fd4ff'; dot.style.boxShadow = '0 0 6px #7fd4ff'; }
           ui.minimapEntities.appendChild(dot);
         });
       }
