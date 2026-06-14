@@ -2,8 +2,8 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>STANCE: Lonely Island Prototype v0.0.03</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>STANCE: Lonely Island Prototype v0.0.05</title>
   <style>
     :root {
       --i0-color: #ffd86b; /* Legendary */
@@ -13,15 +13,19 @@
       --i4-color: #b56cff; /* Epic */
       --i5-color: #aaaaaa; /* Normal */
       --i6-color: #666666; /* Junk */
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --real-vh: 100dvh;
+      --touch-bottom-gap: 18px;
     }
 
     * { box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font-family: Arial, Helvetica, sans-serif; background: #0a1014; color: #f5f5f5; touch-action: none; user-select: none; -webkit-user-select: none; }
+    html, body { width: 100%; height: var(--real-vh, 100dvh); min-height: var(--real-vh, 100dvh); margin: 0; overflow: hidden; font-family: Arial, Helvetica, sans-serif; background: #0a1014; color: #f5f5f5; touch-action: none; user-select: none; -webkit-user-select: none; }
     button, input { font-family: inherit; }
     input { user-select: text; -webkit-user-select: text; touch-action: manipulation; }
     button { color: inherit; cursor: pointer; }
 
-    #app { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: #0a1014; }
+    #app { position: relative; width: 100vw; height: var(--real-vh, 100dvh); overflow: hidden; background: #0a1014; }
     #game-container { position: absolute; inset: 0; z-index: 1; }
 
     /* [로그인 / 시작 화면] */
@@ -142,39 +146,152 @@
 
     #build-mode-text { display:none; position: absolute; top: 80px; left: 50%; transform: translateX(-50%); font-size: 16px; color: #7fd4ff; font-weight: bold; z-index: 5; text-shadow: 0 2px 4px #000; pointer-events: none; padding: 10px 20px; background: rgba(0,0,0,0.6); border-radius: 8px; border: 1px solid #7fd4ff;}
 
-    /* 모바일 UI */
+    /* PC 제외 반응형 UI: 휴대폰/태블릿/터치 기기 공통 */
     .mobile-only { display: none; }
-    @media (max-width: 800px) {
+    @media (hover: none) and (pointer: coarse), (max-width: 1180px) {
+      :root { --safe-bottom: env(safe-area-inset-bottom, 0px); --safe-top: env(safe-area-inset-top, 0px); }
       .mobile-only { display: block; }
-      #mobile-toggles { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; z-index: 50; }
-      #mobile-toggles button { background: rgba(12, 18, 24, 0.8); border: 1px solid #7fd4ff; color: #7fd4ff; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; }
-      #mobile-toggles button.active { background: rgba(127, 212, 255, 0.3); }
-      .minimap-panel { display: none; top: 50px; right: 10px; width: 160px; z-index: 40;}
-      .quest-panel { display: none; top: 210px; right: 10px; width: 160px; z-index: 40; }
-      .chat-panel { display: none; bottom: 118px; left: 10px; right: 10px; width: auto; height: 260px; z-index: 80; }
-      .chat-panel .chat-body { font-size: 13px; }
+      #mobile-toggles { position: absolute; top: calc(8px + var(--safe-top)); right: 8px; display: flex; gap: 6px; z-index: 90; }
+      #mobile-toggles button { background: rgba(12, 18, 24, 0.88); border: 1px solid #7fd4ff; color: #7fd4ff; padding: 8px 10px; border-radius: 999px; font-weight: bold; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.28); }
+      #mobile-toggles button.active { background: rgba(127, 212, 255, 0.30); }
+      .top-left-panel { top: calc(8px + var(--safe-top)); left: 8px; width: min(46vw, 300px); padding: 10px; z-index: 44; }
+      .top-left-panel .panel-row { font-size: 11px; gap: 6px; }
+      .map-desc { font-size: 11px; line-height: 1.35; margin-top: 5px; color: #c9d8e7; }
+      .minimap-panel { display: none; top: calc(48px + var(--safe-top)); right: 8px; width: min(42vw, 240px); padding: 10px; z-index: 88;}
+      #minimap { height: clamp(108px, 20vw, 150px); }
+      .quest-panel { display: none; top: calc(210px + var(--safe-top)); right: 8px; width: min(42vw, 240px); padding: 10px; z-index: 88; }
+      .chat-panel { display: none; left: 8px; right: 8px; bottom: calc(112px + var(--safe-bottom)); width: auto; height: min(34dvh, 260px); z-index: 90; }
+      .chat-panel .chat-body { font-size: 12px; }
       .chat-input-row { padding: 8px; }
       .chat-input-row input { font-size: 16px; min-width: 0; }
       .chat-input-row button { min-width: 56px; padding: 0 10px; }
-      .top-left-panel { display: none; } 
-      .hud { top: 10px; left: 10px; bottom: auto; right: auto; width: 220px; grid-template-columns: 1fr; padding: 10px; min-height: auto; gap: 5px; z-index: 40;}
-      .portrait { display: none; } 
-      .stat-row { font-size: 10px; }
-      .menu-buttons { display: none; } 
-      .inventory-panel, .build-panel { width: 95%; max-width: 360px; }
-      #mobile-bottom-menu { display: flex; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); gap: 10px; z-index: 40; }
-      #mobile-bottom-menu button { background: rgba(12, 18, 24, 0.8); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 12px; }
-      #virtual-dpad { position: absolute; bottom: 60px; left: 20px; display: grid; grid-template-columns: 45px 45px 45px; grid-template-rows: 45px 45px 45px; gap: 5px; z-index: 45; }
-      .d-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: #fff; font-size: 18px; display: flex; justify-content: center; align-items: center; }
-      .d-btn:active { background: rgba(255,255,255,0.4); }
-      #btn-up { grid-column: 2; grid-row: 1; }
-      #btn-left { grid-column: 1; grid-row: 2; }
-      #btn-right { grid-column: 3; grid-row: 2; }
-      #btn-down { grid-column: 2; grid-row: 3; }
-      #virtual-attack { position: absolute; bottom: 60px; right: 20px; width: 70px; height: 70px; background: rgba(127, 212, 255, 0.3); border: 2px solid #7fd4ff; border-radius: 50%; color: #fff; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 14px; z-index: 45; box-shadow: 0 0 10px rgba(127, 212, 255, 0.5); }
-      #virtual-attack:active { background: rgba(127, 212, 255, 0.6); }
+      .hud { top: auto; left: 8px; right: 8px; bottom: calc(8px + var(--safe-bottom)); width: auto; min-height: 82px; grid-template-columns: 1fr; padding: 10px 12px; gap: 4px; z-index: 60;}
+      .portrait { display: none; }
+      .portrait-wrap { gap: 0; }
+      .name-line { margin-bottom: 5px; font-size: 13px; }
+      .stat-row { grid-template-columns: 30px 1fr 82px; gap: 6px; margin-top: 4px; font-size: 10px; }
+      .bar { height: 8px; }
+      .menu-buttons { display: none; }
+      .inventory-panel, .build-panel, .modal-box { width: calc(100vw - 18px); max-width: 520px; max-height: calc(100dvh - 140px - var(--safe-bottom)); overflow: auto; }
+      .inventory-grid { max-height: min(54dvh, 440px); }
+      #mobile-bottom-menu { display: flex; position: absolute; bottom: calc(96px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); gap: 8px; z-index: 75; padding: 5px; border-radius: 999px; background: rgba(9, 13, 18, 0.62); backdrop-filter: blur(4px); }
+      #mobile-bottom-menu button { background: rgba(12, 18, 24, 0.88); border: 1px solid rgba(255,255,255,0.28); color: #fff; min-width: 62px; padding: 9px 12px; border-radius: 999px; font-size: 12px; }
+      #virtual-dpad { position: absolute; bottom: calc(186px + var(--safe-bottom)); left: 18px; width: 132px; height: 132px; border-radius: 50%; z-index: 70; background: radial-gradient(circle, rgba(255,255,255,0.18), rgba(12,18,24,0.70)); border: 1px solid rgba(255,255,255,0.30); box-shadow: 0 8px 24px rgba(0,0,0,.38); touch-action: none; user-select: none; -webkit-user-select: none; }
+      #virtual-dpad::before { content: ''; position: absolute; inset: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.22); }
+      #stick-knob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; transform: translate(-50%, -50%); border-radius: 50%; background: rgba(127,212,255,0.38); border: 2px solid #7fd4ff; box-shadow: 0 0 14px rgba(127,212,255,.42); pointer-events: none; }
+      #virtual-attack { position: absolute; bottom: calc(200px + var(--safe-bottom)); right: 22px; width: 78px; height: 78px; background: rgba(127, 212, 255, 0.28); border: 2px solid #7fd4ff; border-radius: 50%; color: #fff; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 13px; z-index: 70; box-shadow: 0 0 14px rgba(127, 212, 255, 0.45); touch-action: none; }
+      #virtual-attack:active { background: rgba(127, 212, 255, 0.58); }
+      #build-mode-text { top: calc(64px + var(--safe-top)); width: calc(100vw - 24px); text-align: center; font-size: 13px; }
     }
+    @media (hover: none) and (pointer: coarse) and (min-width: 801px), (min-width: 801px) and (max-width: 1180px) {
+      .top-left-panel { width: 300px; }
+      .minimap-panel { width: 260px; }
+      .quest-panel { width: 260px; top: calc(232px + var(--safe-top)); }
+      .chat-panel { left: 12px; right: auto; width: 420px; height: 250px; bottom: calc(118px + var(--safe-bottom)); }
+      .hud { left: 12px; right: 12px; bottom: calc(10px + var(--safe-bottom)); min-height: 92px; }
+      #mobile-bottom-menu { bottom: calc(106px + var(--safe-bottom)); }
+      #virtual-dpad { bottom: calc(205px + var(--safe-bottom)); left: 24px; width: 150px; height: 150px; }
+      #virtual-attack { bottom: calc(220px + var(--safe-bottom)); right: 28px; width: 86px; height: 86px; }
+    }
+    @media (max-width: 430px) {
+      .top-left-panel { width: calc(100vw - 148px); }
+      .top-left-panel .panel-title { margin-bottom: 4px; }
+      .top-left-panel .panel-row { font-size: 10px; line-height: 1.35; }
+      .map-desc { display: none; }
+      #mobile-toggles button { padding: 7px 8px; font-size: 11px; }
+      #mobile-bottom-menu { bottom: calc(90px + var(--safe-bottom)); }
+      #mobile-bottom-menu button { min-width: 56px; padding: 8px 10px; }
+      #virtual-dpad { bottom: calc(174px + var(--safe-bottom)); width: 118px; height: 118px; left: 14px; }
+      #stick-knob { width: 48px; height: 48px; }
+      #virtual-attack { bottom: calc(184px + var(--safe-bottom)); right: 16px; width: 70px; height: 70px; font-size: 12px; }
+    }
+
+
+    /* JS 판별 기반 터치 UI: 태블릿처럼 화면이 넓은 터치 브라우저도 PC UI로 떨어지지 않게 강제합니다. */
+    body.touch-device .mobile-only { display: block; }
+    body.desktop-device .mobile-only { display: none !important; }
+    body.touch-device #mobile-toggles { position: absolute; top: calc(8px + var(--safe-top)); right: 8px; display: flex; gap: 6px; z-index: 90; }
+    body.touch-device #mobile-toggles button { background: rgba(12, 18, 24, 0.88); border: 1px solid #7fd4ff; color: #7fd4ff; padding: 8px 10px; border-radius: 999px; font-weight: bold; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.28); }
+    body.touch-device #mobile-toggles button.active { background: rgba(127, 212, 255, 0.30); }
+    body.touch-device .top-left-panel { top: calc(8px + var(--safe-top)); left: 8px; width: min(46vw, 300px); padding: 10px; z-index: 44; }
+    body.touch-device .top-left-panel .panel-row { font-size: 11px; gap: 6px; }
+    body.touch-device .map-desc { font-size: 11px; line-height: 1.35; margin-top: 5px; color: #c9d8e7; }
+    body.touch-device .minimap-panel { display: none; top: calc(48px + var(--safe-top)); right: 8px; width: min(42vw, 260px); padding: 10px; z-index: 88; }
+    body.touch-device #minimap { height: clamp(108px, 20vw, 150px); }
+    body.touch-device .quest-panel { display: none; top: calc(210px + var(--safe-top)); right: 8px; width: min(42vw, 260px); padding: 10px; z-index: 88; }
+    body.touch-device .chat-panel { display: none; left: 8px; right: 8px; bottom: calc(126px + var(--safe-bottom) + var(--touch-bottom-gap)); width: auto; height: min(34dvh, 260px); z-index: 90; }
+    body.touch-device .chat-panel .chat-body { font-size: 12px; }
+    body.touch-device .chat-input-row { padding: 8px; }
+    body.touch-device .chat-input-row input { font-size: 16px; min-width: 0; }
+    body.touch-device .chat-input-row button { min-width: 56px; padding: 0 10px; }
+    body.touch-device .hud { top: auto; left: 8px; right: 8px; bottom: calc(18px + var(--safe-bottom) + var(--touch-bottom-gap)); width: auto; min-height: 82px; grid-template-columns: 1fr; padding: 10px 12px; gap: 4px; z-index: 60; }
+    body.touch-device .portrait { display: none; }
+    body.touch-device .portrait-wrap { gap: 0; }
+    body.touch-device .name-line { margin-bottom: 5px; font-size: 13px; }
+    body.touch-device .stat-row { grid-template-columns: 30px 1fr 82px; gap: 6px; margin-top: 4px; font-size: 10px; }
+    body.touch-device .bar { height: 8px; }
+    body.touch-device .menu-buttons { display: none; }
+    body.touch-device .inventory-panel, body.touch-device .build-panel, body.touch-device .modal-box { width: calc(100vw - 18px); max-width: 520px; max-height: calc(var(--real-vh, 100dvh) - 150px - var(--safe-bottom)); overflow: auto; }
+    body.touch-device .inventory-grid { max-height: min(54dvh, 440px); }
+    body.touch-device #mobile-bottom-menu { display: flex; position: absolute; bottom: calc(110px + var(--safe-bottom) + var(--touch-bottom-gap)); left: 50%; transform: translateX(-50%); gap: 8px; z-index: 75; padding: 5px; border-radius: 999px; background: rgba(9, 13, 18, 0.62); backdrop-filter: blur(4px); }
+    body.touch-device #mobile-bottom-menu button { background: rgba(12, 18, 24, 0.88); border: 1px solid rgba(255,255,255,0.28); color: #fff; min-width: 62px; padding: 9px 12px; border-radius: 999px; font-size: 12px; }
+    body.touch-device #virtual-dpad { display: block; position: absolute; bottom: calc(204px + var(--safe-bottom) + var(--touch-bottom-gap)); left: 18px; width: 132px; height: 132px; border-radius: 50%; z-index: 70; background: radial-gradient(circle, rgba(255,255,255,0.18), rgba(12,18,24,0.70)); border: 1px solid rgba(255,255,255,0.30); box-shadow: 0 8px 24px rgba(0,0,0,.38); touch-action: none; user-select: none; -webkit-user-select: none; }
+    body.touch-device #virtual-dpad::before { content: ''; position: absolute; inset: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.22); }
+    body.touch-device #stick-knob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; transform: translate(-50%, -50%); border-radius: 50%; background: rgba(127,212,255,0.38); border: 2px solid #7fd4ff; box-shadow: 0 0 14px rgba(127,212,255,.42); pointer-events: none; }
+    body.touch-device #virtual-attack { display: flex; position: absolute; bottom: calc(218px + var(--safe-bottom) + var(--touch-bottom-gap)); right: 22px; width: 78px; height: 78px; background: rgba(127, 212, 255, 0.28); border: 2px solid #7fd4ff; border-radius: 50%; color: #fff; justify-content: center; align-items: center; font-weight: bold; font-size: 13px; z-index: 70; box-shadow: 0 0 14px rgba(127, 212, 255, 0.45); touch-action: none; }
+    body.touch-device #virtual-attack:active { background: rgba(127, 212, 255, 0.58); }
+    body.touch-device #build-mode-text { top: calc(64px + var(--safe-top)); width: calc(100vw - 24px); text-align: center; font-size: 13px; }
+
+    body.touch-device.tablet-device .top-left-panel { width: 300px; }
+    body.touch-device.tablet-device .minimap-panel { width: 260px; }
+    body.touch-device.tablet-device .quest-panel { width: 260px; top: calc(232px + var(--safe-top)); }
+    body.touch-device.tablet-device .chat-panel { left: 12px; right: auto; width: 420px; height: 250px; bottom: calc(132px + var(--safe-bottom) + var(--touch-bottom-gap)); }
+    body.touch-device.tablet-device .hud { left: 12px; right: 12px; bottom: calc(18px + var(--safe-bottom) + var(--touch-bottom-gap)); min-height: 92px; }
+    body.touch-device.tablet-device #mobile-bottom-menu { bottom: calc(116px + var(--safe-bottom) + var(--touch-bottom-gap)); }
+    body.touch-device.tablet-device #virtual-dpad { bottom: calc(224px + var(--safe-bottom) + var(--touch-bottom-gap)); left: 24px; width: 150px; height: 150px; }
+    body.touch-device.tablet-device #virtual-attack { bottom: calc(240px + var(--safe-bottom) + var(--touch-bottom-gap)); right: 28px; width: 86px; height: 86px; }
+
+    @media (max-width: 430px) {
+      body.touch-device .top-left-panel { width: calc(100vw - 148px); }
+      body.touch-device .top-left-panel .panel-title { margin-bottom: 4px; }
+      body.touch-device .top-left-panel .panel-row { font-size: 10px; line-height: 1.35; }
+      body.touch-device .map-desc { display: none; }
+      body.touch-device #mobile-toggles button { padding: 7px 8px; font-size: 11px; }
+      body.touch-device #mobile-bottom-menu { bottom: calc(104px + var(--safe-bottom) + var(--touch-bottom-gap)); }
+      body.touch-device #mobile-bottom-menu button { min-width: 56px; padding: 8px 10px; }
+      body.touch-device #virtual-dpad { bottom: calc(192px + var(--safe-bottom) + var(--touch-bottom-gap)); width: 118px; height: 118px; left: 14px; }
+      body.touch-device #stick-knob { width: 48px; height: 48px; }
+      body.touch-device #virtual-attack { bottom: calc(202px + var(--safe-bottom) + var(--touch-bottom-gap)); right: 16px; width: 70px; height: 70px; font-size: 12px; }
+    }
+
   </style>
+
+  <script>
+    (function () {
+      function getViewportHeight() {
+        return window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      }
+      function updateViewportVars() {
+        const h = Math.max(320, Math.floor(getViewportHeight()));
+        document.documentElement.style.setProperty('--real-vh', h + 'px');
+        const isTouch = navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
+        const tablet = isTouch && Math.min(window.innerWidth, window.innerHeight) >= 600;
+        document.body && document.body.classList.toggle('touch-device', isTouch);
+        document.body && document.body.classList.toggle('desktop-device', !isTouch);
+        document.body && document.body.classList.toggle('tablet-device', tablet);
+        document.body && document.body.classList.toggle('phone-device', isTouch && !tablet);
+      }
+      window.applyLonelyDeviceMode = updateViewportVars;
+      updateViewportVars();
+      window.addEventListener('resize', updateViewportVars, { passive: true });
+      window.addEventListener('orientationchange', function () { setTimeout(updateViewportVars, 250); }, { passive: true });
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', updateViewportVars, { passive: true });
+        window.visualViewport.addEventListener('scroll', updateViewportVars, { passive: true });
+      }
+      document.addEventListener('DOMContentLoaded', updateViewportVars);
+    })();
+  </script>
 </head>
 
 <body>
@@ -210,11 +327,8 @@
       <button id="m-inv-btn">가방</button>
     </div>
 
-    <div id="virtual-dpad" class="mobile-only">
-      <div class="d-btn" id="btn-up">▲</div>
-      <div class="d-btn" id="btn-left">◀</div>
-      <div class="d-btn" id="btn-right">▶</div>
-      <div class="d-btn" id="btn-down">▼</div>
+    <div id="virtual-dpad" class="mobile-only" aria-label="movement joystick">
+      <div id="stick-knob"></div>
     </div>
     <div id="virtual-attack" class="mobile-only">ACTION</div>
 
@@ -412,6 +526,7 @@
     gameState.buildLimit = gameState.player.level * 3;
 
     const vPad = { up: false, down: false, left: false, right: false };
+    const virtualStick = { active: false, x: 0, y: 0, max: 48 };
 
 
     // [월드 채팅] LocalFlow SSE/API 설정
@@ -1006,13 +1121,37 @@
       document.getElementById('m-build-btn').addEventListener('click', () => document.getElementById('build-button').click());
       document.getElementById('m-inv-btn').addEventListener('click', () => document.getElementById('inventory-button').click());
 
-      const bindVPad = (id, key) => {
-        const el = document.getElementById(id);
-        const press = (e) => { e.preventDefault(); vPad[key] = true; }; const release = (e) => { e.preventDefault(); vPad[key] = false; };
-        el.addEventListener('touchstart', press); el.addEventListener('touchend', release);
-        el.addEventListener('mousedown', press); el.addEventListener('mouseup', release); el.addEventListener('mouseleave', release);
+      const stickBase = document.getElementById('virtual-dpad');
+      const stickKnob = document.getElementById('stick-knob');
+      const resetVirtualStick = () => {
+        virtualStick.active = false;
+        virtualStick.x = 0; virtualStick.y = 0;
+        vPad.up = vPad.down = vPad.left = vPad.right = false;
+        if (stickKnob) stickKnob.style.transform = 'translate(-50%, -50%)';
       };
-      bindVPad('btn-up', 'up'); bindVPad('btn-down', 'down'); bindVPad('btn-left', 'left'); bindVPad('btn-right', 'right');
+      const updateVirtualStick = (clientX, clientY) => {
+        if (!stickBase || !stickKnob) return;
+        const rect = stickBase.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const max = Math.max(38, rect.width * 0.32);
+        let dx = clientX - cx; let dy = clientY - cy;
+        const dist = Math.hypot(dx, dy);
+        if (dist > max) { dx = dx / dist * max; dy = dy / dist * max; }
+        virtualStick.active = dist > 8;
+        virtualStick.x = virtualStick.active ? dx / max : 0;
+        virtualStick.y = virtualStick.active ? dy / max : 0;
+        vPad.left = virtualStick.x < -0.25; vPad.right = virtualStick.x > 0.25;
+        vPad.up = virtualStick.y < -0.25; vPad.down = virtualStick.y > 0.25;
+        stickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      };
+      if (stickBase) {
+        stickBase.addEventListener('pointerdown', (e) => { e.preventDefault(); stickBase.setPointerCapture(e.pointerId); updateVirtualStick(e.clientX, e.clientY); });
+        stickBase.addEventListener('pointermove', (e) => { if (!virtualStick.active && e.buttons !== 1) return; e.preventDefault(); updateVirtualStick(e.clientX, e.clientY); });
+        stickBase.addEventListener('pointerup', (e) => { e.preventDefault(); resetVirtualStick(); });
+        stickBase.addEventListener('pointercancel', resetVirtualStick);
+        stickBase.addEventListener('lostpointercapture', resetVirtualStick);
+      }
       
       const vAtk = document.getElementById('virtual-attack');
       const triggerAttack = (e) => { e.preventDefault(); if(window.currentScene) window.currentScene.handlePlayerAttack(); };
@@ -1759,10 +1898,14 @@
         }
 
         const vel = new Phaser.Math.Vector2(0, 0); let usingKeyboardOrPad = false;
-        if (this.wasd.left.isDown || vPad.left) { vel.x = -1; usingKeyboardOrPad = true; }
-        else if (this.wasd.right.isDown || vPad.right) { vel.x = 1; usingKeyboardOrPad = true; }
-        if (this.wasd.up.isDown || vPad.up) { vel.y = -1; usingKeyboardOrPad = true; }
-        else if (this.wasd.down.isDown || vPad.down) { vel.y = 1; usingKeyboardOrPad = true; }
+        if (virtualStick.active) {
+          vel.x = virtualStick.x; vel.y = virtualStick.y; usingKeyboardOrPad = true;
+        } else {
+          if (this.wasd.left.isDown || vPad.left) { vel.x = -1; usingKeyboardOrPad = true; }
+          else if (this.wasd.right.isDown || vPad.right) { vel.x = 1; usingKeyboardOrPad = true; }
+          if (this.wasd.up.isDown || vPad.up) { vel.y = -1; usingKeyboardOrPad = true; }
+          else if (this.wasd.down.isDown || vPad.down) { vel.y = 1; usingKeyboardOrPad = true; }
+        }
 
         if (gameState.raft.mounted && gameState.raft.current && gameState.raft.current.active) {
           const raft = gameState.raft.current;
@@ -1885,6 +2028,7 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
+      if (window.applyLonelyDeviceMode) window.applyLonelyDeviceMode();
       cacheUiElements(); bindUiEvents(); renderMinimapTerrain(); 
 
       ui.loginBtn.addEventListener('click', () => {
@@ -1898,12 +2042,19 @@
           }
         }, 1000);
 
-        new Phaser.Game({
-          type: Phaser.AUTO, parent: 'game-container', width: window.innerWidth, height: window.innerHeight,
+        window.lonelyGame = new Phaser.Game({
+          type: Phaser.AUTO, parent: 'game-container', width: window.innerWidth, height: (window.visualViewport ? window.visualViewport.height : window.innerHeight),
+          scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.NO_CENTER, width: window.innerWidth, height: (window.visualViewport ? window.visualViewport.height : window.innerHeight) },
           backgroundColor: '#0a1014', physics: { default: 'arcade', arcade: { debug: false } }, scene: MainScene
         });
         
-        window.addEventListener('resize', () => { document.querySelector('canvas').width = window.innerWidth; document.querySelector('canvas').height = window.innerHeight; });
+        const resizeGame = () => { if (window.applyLonelyDeviceMode) window.applyLonelyDeviceMode(); const h = window.visualViewport ? window.visualViewport.height : window.innerHeight; if (window.lonelyGame && window.lonelyGame.scale) window.lonelyGame.scale.resize(window.innerWidth, h); };
+        window.addEventListener('resize', resizeGame);
+        window.addEventListener('orientationchange', () => setTimeout(resizeGame, 250));
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', resizeGame);
+          window.visualViewport.addEventListener('scroll', resizeGame);
+        }
       });
       ui.loginName.addEventListener('keydown', (e) => { if(e.key === 'Enter') ui.loginBtn.click(); });
     });
