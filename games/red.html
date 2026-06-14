@@ -45,9 +45,13 @@
     .top-left-panel { top: 16px; left: 16px; width: 260px; padding: 12px; }
     .map-desc { margin-top: 6px; color: #d9e7ef; font-size: 11px; line-height: 1.45; }
     .minimap-panel { top: 16px; right: 16px; width: 220px; padding: 12px; transition: 0.2s; }
-    #minimap { position: relative; width: 100%; height: 135px; overflow: hidden; border-radius: 8px; background: #1a4b77; border: 1px solid rgba(255, 255, 255, 0.16); }
+    #minimap { position: relative; width: 100%; height: 135px; overflow: hidden; border-radius: 8px; background: #1a4b77; border: 1px solid rgba(255, 255, 255, 0.16); cursor: pointer; }
+    .minimap-panel.full-map { width: min(520px, calc(100vw - 32px)); }
+    .minimap-panel.full-map #minimap { height: min(340px, 46vh); }
+    .minimap-panel .panel-title::after { content: '근처'; font-size: 10px; color: #7fd4ff; font-weight: 700; }
+    .minimap-panel.full-map .panel-title::after { content: '전체'; color: #FFD66B; }
     #minimap-terrain { position: absolute; inset: 0; z-index: 1; }
-    .mini-island { position: absolute; background: #388047; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; transform: translate(-50%, -50%); }
+    .mini-island { position: absolute; background: #388047; border: 1px solid rgba(255,255,255,0.08); border-radius: 50%; transform: translate(-50%, -50%); }
     .mini-island.lvl2 { background: #92733d; }
     .mini-island.lvl3 { background: #315d37; }
     .mini-hill { position: absolute; background: rgba(78,107,69,0.9); border-radius: 8px; transform: translate(-50%, -50%); }
@@ -694,7 +698,7 @@
       ui.playerNameLine = document.getElementById('player-name-line'); ui.goldText = document.getElementById('gold-text');
       ui.coordLine = document.getElementById('coord-line'); ui.chatBody = document.getElementById('chat-body');
       ui.chatInput = document.getElementById('chat-input'); ui.chatSendButton = document.getElementById('chat-send-button');
-      ui.miniPlayer = document.getElementById('mini-player'); ui.minimapEntities = document.getElementById('minimap-entities'); ui.minimapTerrain = document.getElementById('minimap-terrain');
+      ui.miniPlayer = document.getElementById('mini-player'); ui.minimapEntities = document.getElementById('minimap-entities'); ui.minimapTerrain = document.getElementById('minimap-terrain'); ui.minimapPanel = document.getElementById('ui-map'); ui.minimapBox = document.getElementById('minimap');
       ui.biomeText = document.getElementById('biome-text'); ui.biomeDesc = document.getElementById('biome-desc'); ui.islandText = document.getElementById('island-text');
       
       ui.inventoryPanel = document.getElementById('inventory-panel'); ui.inventoryGrid = document.getElementById('inventory-grid');
@@ -958,10 +962,58 @@
       if (ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
     }
 
+    const MINIMAP_VIEW = { mode: 'local', localRange: 2600 };
+
+    function clamp01(n) { return Math.max(0, Math.min(1, n)); }
+
+    function setMinimapMode(mode) {
+      MINIMAP_VIEW.mode = mode === 'full' ? 'full' : 'local';
+      if (ui.minimapPanel) ui.minimapPanel.classList.toggle('full-map', MINIMAP_VIEW.mode === 'full');
+      renderMinimapTerrain();
+      if (window.currentScene && window.currentScene.updateRadar) window.currentScene.updateRadar();
+      if (gameState.player) updateMinimapPlayer(gameState.player.x, gameState.player.y);
+    }
+
+    function toggleMinimapMode() {
+      setMinimapMode(MINIMAP_VIEW.mode === 'full' ? 'local' : 'full');
+    }
+
+    function getMinimapBounds() {
+      if (MINIMAP_VIEW.mode === 'full' || !gameState.player) {
+        return { x1: 0, y1: 0, x2: gameState.worldWidth, y2: gameState.worldHeight };
+      }
+      const half = MINIMAP_VIEW.localRange;
+      let x1 = gameState.player.x - half, y1 = gameState.player.y - half;
+      let x2 = gameState.player.x + half, y2 = gameState.player.y + half;
+      if (x1 < 0) { x2 -= x1; x1 = 0; }
+      if (y1 < 0) { y2 -= y1; y1 = 0; }
+      if (x2 > gameState.worldWidth) { x1 -= x2 - gameState.worldWidth; x2 = gameState.worldWidth; }
+      if (y2 > gameState.worldHeight) { y1 -= y2 - gameState.worldHeight; y2 = gameState.worldHeight; }
+      x1 = Math.max(0, x1); y1 = Math.max(0, y1);
+      return { x1, y1, x2, y2 };
+    }
+
+    function worldToMinimapPercent(x, y) {
+      const b = getMinimapBounds();
+      return {
+        left: clamp01((x - b.x1) / Math.max(1, b.x2 - b.x1)) * 100,
+        top: clamp01((y - b.y1) / Math.max(1, b.y2 - b.y1)) * 100,
+        visible: x >= b.x1 && x <= b.x2 && y >= b.y1 && y <= b.y2
+      };
+    }
+
+    function updateMinimapPlayer(x, y) {
+      if (!ui.miniPlayer) return;
+      const pos = worldToMinimapPercent(x, y);
+      ui.miniPlayer.style.left = `${pos.left}%`;
+      ui.miniPlayer.style.top = `${pos.top}%`;
+      ui.miniPlayer.style.display = pos.visible ? 'block' : 'none';
+    }
+
     function updateCoordinates(x, y) {
       gameState.player.x = Math.floor(x); gameState.player.y = Math.floor(y);
       if (ui.coordLine) ui.coordLine.textContent = `X: ${gameState.player.x} / Y: ${gameState.player.y}`;
-      ui.miniPlayer.style.left = `${(x / gameState.worldWidth) * 100}%`; ui.miniPlayer.style.top = `${(y / gameState.worldHeight) * 100}%`;
+      updateMinimapPlayer(x, y);
 
       let info = { islandName: 'Ocean', biome: 'Ocean', desc: '섬 사이의 바다입니다. 이동하려면 뗏목이 필요합니다.' };
       if (window.currentScene && window.currentScene.getTerrainInfo) info = window.currentScene.getTerrainInfo(x, y);
@@ -973,20 +1025,26 @@
     function renderMinimapTerrain() {
       if (!ui.minimapTerrain) return;
       ui.minimapTerrain.innerHTML = '';
-      const addRect = (cls, cx, cy, w, h) => {
+      const bounds = getMinimapBounds();
+      const bw = Math.max(1, bounds.x2 - bounds.x1);
+      const bh = Math.max(1, bounds.y2 - bounds.y1);
+      const inBounds = (cx, cy, w, h) => !(cx + w / 2 < bounds.x1 || cx - w / 2 > bounds.x2 || cy + h / 2 < bounds.y1 || cy - h / 2 > bounds.y2);
+      const addRect = (cls, cx, cy, w, h, radius = '12px') => {
+        if (!inBounds(cx, cy, w, h)) return;
         const el = document.createElement('div'); el.className = cls;
-        el.style.left = `${((cx - w / 2) / gameState.worldWidth) * 100}%`;
-        el.style.top = `${((cy - h / 2) / gameState.worldHeight) * 100}%`;
-        el.style.width = `${(w / gameState.worldWidth) * 100}%`;
-        el.style.height = `${(h / gameState.worldHeight) * 100}%`;
+        el.style.left = `${((cx - bounds.x1) / bw) * 100}%`;
+        el.style.top = `${((cy - bounds.y1) / bh) * 100}%`;
+        el.style.width = `${(w / bw) * 100}%`;
+        el.style.height = `${(h / bh) * 100}%`;
+        el.style.borderRadius = radius;
         ui.minimapTerrain.appendChild(el);
       };
-      const addCircle = (cls, cx, cy, r) => addRect(cls, cx, cy, r * 2, r * 2);
-      MAP_ISLANDS.forEach(island => addRect(`mini-island lvl${island.level}`, island.x, island.y, island.w, island.h));
+      const addCircle = (cls, cx, cy, r) => addRect(cls, cx, cy, r * 2, r * 2, '50%');
+      MAP_ISLANDS.forEach(island => addRect(`mini-island lvl${island.level}`, island.x, island.y, island.w, island.h, '50%'));
       MAP_FEATURES.forEach(f => {
         if (f.type === 'lake') addCircle('mini-lake', f.x, f.y, f.r);
-        else if (f.type === 'hill') addRect('mini-hill', f.x, f.y, f.w, f.h);
-        else if (f.type === 'desert') addRect('mini-desert', f.x, f.y, f.w, f.h);
+        else if (f.type === 'hill') addRect('mini-hill', f.x, f.y, f.w, f.h, '50%');
+        else if (f.type === 'desert') addRect('mini-desert', f.x, f.y, f.w, f.h, '38%');
       });
     }
 
@@ -1199,6 +1257,7 @@
         });
       };
       togglePanel('toggle-map', 'ui-map'); togglePanel('toggle-quest', 'ui-quest'); togglePanel('toggle-chat', 'ui-chat');
+      if (ui.minimapBox) ui.minimapBox.addEventListener('click', (e) => { e.stopPropagation(); toggleMinimapMode(); });
       document.getElementById('m-build-btn').addEventListener('click', () => document.getElementById('build-button').click());
       document.getElementById('m-inv-btn').addEventListener('click', () => document.getElementById('inventory-button').click());
 
@@ -1518,27 +1577,27 @@
         this.createOceanSurfaceDetails();
 
         MAP_ISLANDS.forEach(island => {
-          this.add.tileSprite(island.x, island.y, island.w, island.h, 'bg_sand').setDepth(-24);
-          this.add.tileSprite(island.x, island.y, Math.max(1, island.w - 760), Math.max(1, island.h - 760), 'bg_grass').setDepth(-23);
+          this.add.ellipse(island.x, island.y, island.w, island.h, 0xd8bd7a, 1).setDepth(-24);
+          this.add.ellipse(island.x, island.y, Math.max(1, island.w - 760), Math.max(1, island.h - 760), 0x357f43, 1).setDepth(-23);
+          this.add.ellipse(island.x, island.y, Math.max(1, island.w - 380), Math.max(1, island.h - 380), 0x4f9b4f, 0.08).setDepth(-22);
         });
 
         MAP_FEATURES.forEach(f => {
           if (f.type === 'desert') {
-            this.add.tileSprite(f.x, f.y, f.w, f.h, 'bg_sand').setDepth(-21);
+            this.add.ellipse(f.x, f.y, f.w, f.h, 0xd8bd7a, 0.95).setDepth(-21);
+            this.add.ellipse(f.x, f.y, Math.max(1, f.w - 120), Math.max(1, f.h - 120), 0xe3c986, 0.22).setDepth(-20);
             this.scatterFeatureDetails(f, 'dirt_patch', Math.min(70, Math.floor((f.w * f.h) / 110000)));
           } else if (f.type === 'hill') {
-            this.add.tileSprite(f.x, f.y, f.w, f.h, 'bg_hill').setDepth(-21);
+            this.add.ellipse(f.x, f.y, f.w, f.h, 0x596b50, 0.98).setDepth(-21);
+            this.add.ellipse(f.x, f.y, Math.max(1, f.w - 180), Math.max(1, f.h - 180), 0x6a7860, 0.30).setDepth(-20);
             this.scatterFeatureDetails(f, 'rock_cluster', Math.min(80, Math.floor((f.w * f.h) / 90000)));
-            this.createCliffBorders(f.x - f.w / 2, f.y - f.h / 2, f.x + f.w / 2, f.y + f.h / 2, 300);
+            this.createHillRockRim(f);
           } else if (f.type === 'lake') {
             this.add.circle(f.x, f.y, f.r, 0x2f82c7, 1).setDepth(-20);
             this.add.circle(f.x, f.y, Math.max(1, f.r - 70), 0x3e99d9, 0.80).setDepth(-19);
             this.addLakeRipples(f);
-            let lakeCollider = this.environmentGroup.create(f.x, f.y, 'water_block');
-            lakeCollider.isWater = true;
-            lakeCollider.waterRadius = f.r;
-            lakeCollider.setScale(Math.max(1, f.r / 50)).refreshBody();
-            lakeCollider.setVisible(false);
+            // 호수 판정은 isWaterPosition()의 원형 계산으로 처리합니다.
+            // StaticBody 사각 충돌체를 만들면 보이는 원형 호수와 실제 충돌이 어긋나므로 생성하지 않습니다.
           }
         });
 
@@ -1565,24 +1624,56 @@
       }
 
       createShoreFoam(island) {
-        const x1 = island.x - island.w / 2, x2 = island.x + island.w / 2;
-        const y1 = island.y - island.h / 2, y2 = island.y + island.h / 2;
-        const step = 360;
-        for (let x = x1 + 120; x < x2 - 120; x += step) {
-          this.add.image(x, y1 + Phaser.Math.Between(18, 70), 'foam_patch').setDepth(-18).setAlpha(0.42).setAngle(Phaser.Math.Between(-8, 8));
-          this.add.image(x, y2 - Phaser.Math.Between(18, 70), 'foam_patch').setDepth(-18).setAlpha(0.34).setAngle(Phaser.Math.Between(172, 188));
+        const rx = island.w / 2;
+        const ry = island.h / 2;
+        const count = Math.max(24, Math.floor((island.w + island.h) / 520));
+        for (let i = 0; i < count; i++) {
+          const a = (Math.PI * 2 * i / count) + Phaser.Math.FloatBetween(-0.035, 0.035);
+          const x = island.x + Math.cos(a) * (rx - Phaser.Math.Between(24, 76));
+          const y = island.y + Math.sin(a) * (ry - Phaser.Math.Between(24, 76));
+          this.add.image(x, y, 'foam_patch')
+            .setDepth(-18)
+            .setAlpha(Phaser.Math.FloatBetween(0.24, 0.46))
+            .setAngle(Phaser.Math.RadToDeg(a) + 90 + Phaser.Math.Between(-12, 12))
+            .setScale(Phaser.Math.FloatBetween(0.75, 1.25));
         }
-        for (let y = y1 + 120; y < y2 - 120; y += step) {
-          this.add.image(x1 + Phaser.Math.Between(18, 70), y, 'foam_patch').setDepth(-18).setAlpha(0.34).setAngle(Phaser.Math.Between(78, 102));
-          this.add.image(x2 - Phaser.Math.Between(18, 70), y, 'foam_patch').setDepth(-18).setAlpha(0.34).setAngle(Phaser.Math.Between(258, 282));
+      }
+
+      pointInEllipse(x, y, cx, cy, w, h, margin = 0) {
+        const rx = Math.max(1, w / 2 - margin);
+        const ry = Math.max(1, h / 2 - margin);
+        const dx = (x - cx) / rx;
+        const dy = (y - cy) / ry;
+        return dx * dx + dy * dy <= 1;
+      }
+
+      createHillRockRim(f) {
+        const rx = f.w / 2;
+        const ry = f.h / 2;
+        const count = Math.max(18, Math.floor((f.w + f.h) / 260));
+        for (let i = 0; i < count; i++) {
+          const a = Math.PI * 2 * i / count;
+          const x = f.x + Math.cos(a) * (rx - 25);
+          const y = f.y + Math.sin(a) * (ry - 25);
+          const rock = this.environmentGroup.create(x, y, 'cliff_tex');
+          rock.isTerrain = true;
+          rock.setAngle(Phaser.Math.RadToDeg(a));
+          rock.setAlpha(0.82);
+          rock.setScale(Phaser.Math.FloatBetween(0.72, 1.08)).refreshBody();
+          rock.setDepth(-15);
         }
       }
 
       scatterIslandGroundDetails(island) {
         const count = Math.min(240, Math.max(80, Math.floor((island.w * island.h) / 430000)));
         for (let i = 0; i < count; i++) {
-          const x = Phaser.Math.Between(Math.ceil(island.x - island.w / 2 + 500), Math.floor(island.x + island.w / 2 - 500));
-          const y = Phaser.Math.Between(Math.ceil(island.y - island.h / 2 + 500), Math.floor(island.y + island.h / 2 - 500));
+          let x = island.x, y = island.y;
+          for (let tries = 0; tries < 12; tries++) {
+            x = Phaser.Math.Between(Math.ceil(island.x - island.w / 2 + 500), Math.floor(island.x + island.w / 2 - 500));
+            y = Phaser.Math.Between(Math.ceil(island.y - island.h / 2 + 500), Math.floor(island.y + island.h / 2 - 500));
+            if (this.pointInEllipse(x, y, island.x, island.y, island.w, island.h, 420)) break;
+          }
+          if (!this.pointInEllipse(x, y, island.x, island.y, island.w, island.h, 420)) continue;
           const feature = this.getFeatureAt(x, y);
           if (feature && feature.type === 'lake') continue;
           const key = feature && feature.type === 'hill' ? 'rock_cluster' : (feature && feature.type === 'desert' ? 'dirt_patch' : (Math.random() < 0.72 ? 'grass_clump' : 'dirt_patch'));
@@ -1593,8 +1684,13 @@
       scatterFeatureDetails(f, key, count) {
         if (f.type === 'lake') return;
         for (let i = 0; i < count; i++) {
-          const x = Phaser.Math.Between(Math.ceil(f.x - f.w / 2 + 80), Math.floor(f.x + f.w / 2 - 80));
-          const y = Phaser.Math.Between(Math.ceil(f.y - f.h / 2 + 80), Math.floor(f.y + f.h / 2 - 80));
+          let x = f.x, y = f.y;
+          for (let tries = 0; tries < 10; tries++) {
+            x = Phaser.Math.Between(Math.ceil(f.x - f.w / 2 + 80), Math.floor(f.x + f.w / 2 - 80));
+            y = Phaser.Math.Between(Math.ceil(f.y - f.h / 2 + 80), Math.floor(f.y + f.h / 2 - 80));
+            if (this.pointInEllipse(x, y, f.x, f.y, f.w, f.h, 80)) break;
+          }
+          if (!this.pointInEllipse(x, y, f.x, f.y, f.w, f.h, 80)) continue;
           this.add.image(x, y, key).setDepth(-16).setAlpha(Phaser.Math.FloatBetween(0.38, 0.82)).setAngle(Phaser.Math.Between(0, 359)).setScale(Phaser.Math.FloatBetween(0.85, 1.45));
         }
       }
@@ -1611,16 +1707,13 @@
       }
 
       getIslandAt(x, y) {
-        return MAP_ISLANDS.find(island =>
-          x >= island.x - island.w / 2 && x <= island.x + island.w / 2 &&
-          y >= island.y - island.h / 2 && y <= island.y + island.h / 2
-        ) || null;
+        return MAP_ISLANDS.find(island => this.pointInEllipse(x, y, island.x, island.y, island.w, island.h, 0)) || null;
       }
 
       getFeatureAt(x, y) {
         return MAP_FEATURES.find(f => {
           if (f.type === 'lake') return Phaser.Math.Distance.Between(x, y, f.x, f.y) <= f.r;
-          return x >= f.x - f.w / 2 && x <= f.x + f.w / 2 && y >= f.y - f.h / 2 && y <= f.y + f.h / 2;
+          return this.pointInEllipse(x, y, f.x, f.y, f.w, f.h, 0);
         }) || null;
       }
 
@@ -2193,19 +2286,24 @@
       }
 
       updateRadar() {
+        if (MINIMAP_VIEW.mode === 'local') renderMinimapTerrain();
         ui.minimapEntities.innerHTML = '';
         this.enemiesData.forEach(e => {
           if(e.hp <= 0) return;
           if(Phaser.Math.Distance.Between(this.player.x, this.player.y, e.sprite.x, e.sprite.y) < 2000) {
+            const pos = worldToMinimapPercent(e.sprite.x, e.sprite.y);
+            if (!pos.visible) return;
             const dot = document.createElement('div'); dot.className = 'mini-dot enemy';
-            dot.style.left = `${(e.sprite.x / this.worldWidth) * 100}%`; dot.style.top = `${(e.sprite.y / this.worldHeight) * 100}%`;
+            dot.style.left = `${pos.left}%`; dot.style.top = `${pos.top}%`;
             ui.minimapEntities.appendChild(dot);
           }
         });
         this.buildingsGroup.getChildren().forEach(b => {
           if(!b.active) return;
+          const pos = worldToMinimapPercent(b.x, b.y);
+          if (!pos.visible) return;
           const dot = document.createElement('div'); dot.className = 'mini-dot bldg';
-          dot.style.left = `${(b.x / this.worldWidth) * 100}%`; dot.style.top = `${(b.y / this.worldHeight) * 100}%`;
+          dot.style.left = `${pos.left}%`; dot.style.top = `${pos.top}%`;
           if (b.bType === 'Campfire') { dot.style.background = '#ff4500'; dot.style.boxShadow = '0 0 6px #ff4500'; }
           if (b.bType === 'Raft') { dot.style.background = '#7fd4ff'; dot.style.boxShadow = '0 0 6px #7fd4ff'; }
           ui.minimapEntities.appendChild(dot);
