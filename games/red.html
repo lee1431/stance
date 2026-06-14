@@ -1467,8 +1467,8 @@
         g.fillStyle(0x4a4a4a); g.fillRect(0,0,50,50); g.fillStyle(0x333333); g.fillRect(0,40,50,10); g.lineStyle(1, 0x777777, 0.35); g.lineBetween(4, 12, 42, 4); g.lineBetween(8, 34, 48, 22); g.generateTexture('cliff_tex', 50, 50); g.clear();
         g.fillStyle(0x1a4b77, 0.5); g.fillRect(0,0,100,100); g.generateTexture('water_block', 100, 100); g.clear();
 
-        g.fillStyle(0xffffff, 0.00); g.fillRect(0,0,64,24); g.lineStyle(2, 0xd9fbff, 0.55); g.beginPath(); g.moveTo(2, 14); g.quadraticCurveTo(18, 5, 34, 13); g.quadraticCurveTo(46, 20, 62, 10); g.strokePath(); g.generateTexture('wave_streak', 64, 24); g.clear();
-        g.fillStyle(0xffffff, 0.00); g.fillRect(0,0,72,26); g.lineStyle(2, 0xf3ffff, 0.50); g.beginPath(); g.moveTo(4, 13); g.quadraticCurveTo(20, 2, 36, 13); g.quadraticCurveTo(52, 24, 68, 12); g.strokePath(); g.generateTexture('foam_patch', 72, 26); g.clear();
+        g.fillStyle(0xffffff, 0.00); g.fillRect(0,0,64,24); g.lineStyle(2, 0xd9fbff, 0.55); g.beginPath(); g.moveTo(2, 14); g.lineTo(12, 10); g.lineTo(22, 8); g.lineTo(34, 13); g.lineTo(46, 18); g.lineTo(62, 10); g.strokePath(); g.generateTexture('wave_streak', 64, 24); g.clear();
+        g.fillStyle(0xffffff, 0.00); g.fillRect(0,0,72,26); g.lineStyle(2, 0xf3ffff, 0.50); g.beginPath(); g.moveTo(4, 13); g.lineTo(16, 7); g.lineTo(28, 6); g.lineTo(36, 13); g.lineTo(50, 20); g.lineTo(68, 12); g.strokePath(); g.generateTexture('foam_patch', 72, 26); g.clear();
         g.fillStyle(0x000000, 0.10); g.fillEllipse(38, 18, 70, 22); g.fillStyle(0x6f4a2e, 0.28); g.fillEllipse(38, 18, 64, 18); g.lineStyle(1, 0x4b321d, 0.22); g.lineBetween(10, 16, 64, 18); g.generateTexture('dirt_patch', 76, 36); g.clear();
         g.fillStyle(0x103b1d, 0.00); g.fillRect(0,0,44,32); g.lineStyle(2, 0x8fdc82, 0.58); for (let i = 0; i < 7; i++) { const x = 8 + i * 5; g.lineBetween(x, 25, x + Phaser.Math.Between(-4,4), Phaser.Math.Between(4,14)); } g.generateTexture('grass_clump', 44, 32); g.clear();
         g.fillStyle(0x000000, 0.18); g.fillEllipse(28, 27, 42, 12); g.fillStyle(0x7b7e78, 0.95); g.fillEllipse(24, 20, 30, 22); g.fillStyle(0xa0a39b, 0.82); g.fillEllipse(34, 16, 24, 16); g.lineStyle(1, 0x454743, 0.45); g.lineBetween(14, 18, 40, 13); g.generateTexture('rock_cluster', 56, 36); g.clear();
@@ -1558,7 +1558,7 @@
           waterLines.lineStyle(1, 0x9ddfff, alpha);
           waterLines.beginPath();
           waterLines.moveTo(x, y);
-          waterLines.quadraticCurveTo(x + len * 0.45, y - Phaser.Math.Between(5, 16), x + len, y + Phaser.Math.Between(-6, 6));
+          waterLines.lineTo(x + len * 0.45, y - Phaser.Math.Between(5, 16)); waterLines.lineTo(x + len, y + Phaser.Math.Between(-6, 6));
           waterLines.strokePath();
         }
         this.tweens.add({ targets: waterLines, alpha: 0.30, duration: 2400, yoyo: true, repeat: -1 });
