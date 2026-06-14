@@ -777,15 +777,15 @@
     function renderMinimapTerrain() {
       if (!ui.minimapTerrain) return;
       ui.minimapTerrain.innerHTML = '';
-      const addRect = (cls, x, y, w, h) => {
+      const addRect = (cls, cx, cy, w, h) => {
         const el = document.createElement('div'); el.className = cls;
-        el.style.left = `${(x / gameState.worldWidth) * 100}%`;
-        el.style.top = `${(y / gameState.worldHeight) * 100}%`;
+        el.style.left = `${((cx - w / 2) / gameState.worldWidth) * 100}%`;
+        el.style.top = `${((cy - h / 2) / gameState.worldHeight) * 100}%`;
         el.style.width = `${(w / gameState.worldWidth) * 100}%`;
         el.style.height = `${(h / gameState.worldHeight) * 100}%`;
         ui.minimapTerrain.appendChild(el);
       };
-      const addCircle = (cls, x, y, r) => addRect(cls, x, y, r * 2, r * 2);
+      const addCircle = (cls, cx, cy, r) => addRect(cls, cx, cy, r * 2, r * 2);
       MAP_ISLANDS.forEach(island => addRect(`mini-island lvl${island.level}`, island.x, island.y, island.w, island.h));
       MAP_FEATURES.forEach(f => {
         if (f.type === 'lake') addCircle('mini-lake', f.x, f.y, f.r);
@@ -1257,26 +1257,30 @@
       }
 
       generateMapBiomes() {
-        this.add.tileSprite(this.worldWidth / 2, this.worldHeight / 2, this.worldWidth, this.worldHeight, 'bg_lake');
+        // v0.0.03-hotfix: 큰 월드에서 38,000 x 26,000 TileSprite를 만들면
+        // 브라우저가 거대한 ImageData를 생성하려고 하면서 메모리 오류가 발생합니다.
+        // 월드 배경은 카메라 배경색으로 처리하고, 섬/지형은 벡터 사각형과 원으로 렌더링합니다.
         this.waterZones = [];
+        this.cameras.main.setBackgroundColor('#1a4b77');
 
         MAP_ISLANDS.forEach(island => {
-          this.add.tileSprite(island.x, island.y, island.w, island.h, 'bg_sand');
-          this.add.tileSprite(island.x, island.y, Math.max(1, island.w - 800), Math.max(1, island.h - 800), 'bg_grass');
+          this.add.rectangle(island.x, island.y, island.w, island.h, 0xd6ba7a, 1).setDepth(-20);
+          this.add.rectangle(island.x, island.y, Math.max(1, island.w - 800), Math.max(1, island.h - 800), 0x388047, 1).setDepth(-19);
         });
 
         MAP_FEATURES.forEach(f => {
           if (f.type === 'desert') {
-            this.add.tileSprite(f.x, f.y, f.w, f.h, 'bg_sand');
+            this.add.rectangle(f.x, f.y, f.w, f.h, 0xd6ba7a, 1).setDepth(-18);
           } else if (f.type === 'hill') {
-            this.add.tileSprite(f.x, f.y, f.w, f.h, 'bg_hill');
+            this.add.rectangle(f.x, f.y, f.w, f.h, 0x4e6b45, 1).setDepth(-18);
             this.createCliffBorders(f.x - f.w / 2, f.y - f.h / 2, f.x + f.w / 2, f.y + f.h / 2, 300);
           } else if (f.type === 'lake') {
-            this.add.tileSprite(f.x, f.y, f.r * 2, f.r * 2, 'bg_lake');
+            this.add.circle(f.x, f.y, f.r, 0x3a8cd1, 1).setDepth(-17);
             let lakeCollider = this.environmentGroup.create(f.x, f.y, 'water_block');
             lakeCollider.isWater = true;
             lakeCollider.waterRadius = f.r;
-            lakeCollider.setScale(Math.max(1, f.r / 50)).refreshBody(); lakeCollider.setVisible(false);
+            lakeCollider.setScale(Math.max(1, f.r / 50)).refreshBody();
+            lakeCollider.setVisible(false);
           }
         });
       }
