@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STANCE | Memo Archive</title>
+    <style>
+        /* Reset & Base Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #0a0a0a;
+            /* STANCE 특유의 은은한 우주/별빛 느낌을 주기 위한 미세한 배경 그리드 효과 */
+            background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 0),
+                              radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 0);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            color: #e0e0e0;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        /* Container Wrapper */
+        .stance-memo-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header Style (STANCE 로고 및 레이아웃 매칭) */
+        .stance-header {
+            margin-bottom: 50px;
+        }
+        .stance-logo {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: 5px;
+            color: #fff;
+            margin-bottom: 35px;
+            text-transform: uppercase;
+        }
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            color: #fff;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        /* Memo Input Section */
+        .memo-input-section {
+            background: rgba(22, 22, 22, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 50px;
+        }
+        #memoForm input, #memoForm textarea {
+            width: 100%;
+            background: rgba(10, 10, 10, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #fff;
+            padding: 16px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            font-size: 0.95rem;
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        #memoForm input:focus, #memoForm textarea:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+        }
+        #memoForm textarea {
+            min-height: 140px;
+            resize: vertical;
+        }
+        .btn-group {
+            text-align: right;
+        }
+        .submit-btn {
+            background: #3b82f6;
+            color: #fff;
+            border: none;
+            padding: 12px 32px;
+            font-size: 0.95rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s ease;
+        }
+        .submit-btn:hover {
+            background: #2563eb;
+        }
+
+        /* Memo Grid Feed Section */
+        .memo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+        }
+        .memo-card {
+            background: rgba(22, 22, 22, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-left: 3px solid #3b82f6; /* 오리지널 Memo 카드의 좌측 포인트 블루 바 구현 */
+            padding: 24px;
+            border-radius: 4px;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 200px;
+            transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+        .memo-card:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+            background: rgba(28, 28, 28, 0.5);
+            transform: translateY(-2px);
+        }
+        .memo-card h3 {
+            margin: 0 0 12px 0;
+            font-size: 1.1rem;
+            color: #fff;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+        .memo-card p {
+            margin: 0 0 20px 0;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #a5a5a5;
+            white-space: pre-wrap; /* 마크업 변환 대신 순수 텍스트 줄바꿈 유지 보장 */
+            word-break: break-all;
+        }
+        .memo-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: #555;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 16px;
+            margin-top: auto;
+        }
+        .delete-btn {
+            background: transparent;
+            color: #ff4d4f;
+            border: none;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 2px 6px;
+            border-radius: 2px;
+            transition: color 0.2s, background 0.2s;
+        }
+        .delete-btn:hover {
+            color: #ff7875;
+            background: rgba(255, 77, 79, 0.1);
+        }
+        .empty-message {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 80px 0;
+            color: #444;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="stance-memo-wrapper">
+    <!-- 상단 아이덴티티 영역 -->
+    <header class="stance-header">
+        <div class="stance-logo">STANCE</div>
+        <h1 class="section-title">Archive & Works / Memo</h1>
+    </header>
+
+    <!-- 메모 작성 영역 -->
+    <section class="memo-input-section">
+        <form id="memoForm">
+            <input type="text" id="memoTitle" placeholder="제목을 입력하세요 (선택)" autocomplete="off">
+            <textarea id="memoContent" placeholder="여기에 메모 내용을 기록하세요..." required></textarea>
+            <div class="btn-group">
+                <button type="submit" class="submit-btn">기록하기</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- 메모 피드 영역 -->
+    <section class="memo-feed-section">
+        <div id="memoFeed" class="memo-grid">
+            <!-- 바닐라 자바스크립트로 동적 카드 생성 -->
+        </div>
+    </section>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const memoForm = document.getElementById('memoForm');
+    const memoTitle = document.getElementById('memoTitle');
+    const memoContent = document.getElementById('memoContent');
+    const memoFeed = document.getElementById('memoFeed');
+
+    // 1. LocalStorage에서 JSON 파싱하여 데이터 로드 (초기값 빈 배열)
+    let memos = JSON.parse(localStorage.getItem('stance_memos')) || [];
+
+    // 2. 피드 화면 렌더링 함수 (XSS 방지를 위해 안전한 DOM API 기반 구조 생성)
+    function renderMemos() {
+        memoFeed.innerHTML = ''; // 피드 초기화
+        
+        if (memos.length === 0) {
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'empty-message';
+            emptyDiv.textContent = '등록된 메모가 없습니다. 새로운 생각을 기록해보세요.';
+            memoFeed.appendChild(emptyDiv);
+            return;
+        }
+
+        // 최신 글이 최상단에 올라오도록 역순 배열 처리
+        const displayMemos = [...memos].reverse();
+
+        displayMemos.forEach(memo => {
+            const card = document.createElement('div');
+            card.className = 'memo-card';
+            
+            // 상단 텍스트 컨테이너
+            const contentContainer = document.createElement('div');
+            
+            if (memo.title) {
+                const h3 = document.createElement('h3');
+                h3.textContent = memo.title;
+                contentContainer.appendChild(h3);
+            }
+            
+            const p = document.createElement('p');
+            p.textContent = memo.content; // textContent와 CSS pre-wrap의 조합으로 안전하고 확실한 개행 보장
+            contentContainer.appendChild(p);
+
+            // 하단 메타 정보 영역
+            const metaContainer = document.createElement('div');
+            metaContainer.className = 'memo-meta';
+            
+            const dateSpan = document.createElement('span');
+            dateSpan.textContent = memo.date;
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = '삭제';
+            deleteBtn.setAttribute('data-id', memo.id);
+
+            metaContainer.appendChild(dateSpan);
+            metaContainer.appendChild(deleteBtn);
+
+            // 카드 결합 후 피드에 삽입
+            card.appendChild(contentContainer);
+            card.appendChild(metaContainer);
+            memoFeed.appendChild(card);
+        });
+    }
+
+    // 3. 폼 제출 (데이터 추가 및 저장)
+    memoForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const titleVal = memoTitle.value.trim();
+        const contentVal = memoContent.value.trim();
+
+        if (!contentVal) return;
+
+        // 시간 포맷팅 (YYYY-MM-DD HH:MM)
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day} ${hours}:${minutes}`;
+
+        // 메모 객체 구조화
+        const newMemo = {
+            id: Date.now(), // 고유 식별값 생성용 타임스탬프
+            title: titleVal,
+            content: contentVal,
+            date: dateString
+        };
+
+        memos.push(newMemo);
+        
+        // JSON 문자열로 인코딩하여 LocalStorage 보관
+        localStorage.setItem('stance_memos', JSON.stringify(memos));
+        
+        renderMemos();
+        memoForm.reset();
+        memoContent.focus();
+    });
+
+    // 4. 이벤트 위임을 활용한 메모 삭제 기능
+    memoFeed.addEventListener('click', (e) => {
+        if (e.target.classList.contains('delete-btn')) {
+            const idToDelete = parseInt(e.target.getAttribute('data-id'), 10);
+            
+            // 해당 메모 제외 필터링 후 갱신
+            memos = memos.filter(memo => memo.id !== idToDelete);
+            localStorage.setItem('stance_memos', JSON.stringify(memos));
+            renderMemos();
+        }
+    });
+
+    // 최초 로드 시 실행
+    renderMemos();
+});
+</script>
+
+</body>
+</html>
