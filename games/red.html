@@ -148,6 +148,23 @@
     .menu-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
     .menu-buttons button { min-width: 90px; padding: 9px 10px; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 8px; background: rgba(255, 255, 255, 0.08); font-size: 12px; }
 
+    .quick-slot-panel { position: absolute; left: 50%; bottom: 138px; transform: translateX(-50%); z-index: 6; display: flex; align-items: stretch; gap: 8px; padding: 8px 10px; border-radius: 14px; background: rgba(9, 13, 18, 0.84); border: 1px solid rgba(255,255,255,0.16); box-shadow: 0 8px 24px rgba(0,0,0,0.40); backdrop-filter: blur(5px); pointer-events: auto; }
+    .quick-slot { position: relative; width: 78px; height: 64px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.22); background: rgba(0,0,0,0.34); display: grid; grid-template-rows: 18px 1fr 16px; place-items: center; overflow: hidden; cursor: pointer; }
+    .quick-slot.empty { opacity: 0.58; }
+    .quick-slot.auto-ready { border-color: #7CFF8A; box-shadow: 0 0 12px rgba(124,255,138,0.28); }
+    .quick-slot-key { position: absolute; top: 3px; left: 5px; font-size: 10px; color: #FFD66B; font-weight: 800; }
+    .quick-slot-kind { position: absolute; top: 3px; right: 5px; font-size: 10px; color: #7fd4ff; font-weight: 800; }
+    .quick-slot-icon { grid-row: 2; font-size: 20px; font-weight: 900; color: #fff; text-shadow: 0 2px 4px #000; }
+    .quick-slot-name { grid-row: 3; width: 100%; padding: 0 4px; font-size: 10px; color: #dfefff; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .quick-slot-count { position: absolute; right: 5px; bottom: 16px; font-size: 10px; color: #fff; font-weight: 800; text-shadow: 0 1px 3px #000; }
+    .quick-slot-help { position: absolute; left: 50%; bottom: 216px; transform: translateX(-50%); z-index: 6; font-size: 11px; color: #9fb1c5; text-shadow: 0 2px 4px #000; pointer-events: none; white-space: nowrap; }
+    .quick-slot-register { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.12); }
+    .quick-slot-register-title { font-size: 12px; color: #dfefff; margin-bottom: 6px; }
+    .quick-slot-register-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+    .quick-slot-register-buttons button { flex: 1; min-width: 36px; padding: 5px 6px; border-radius: 5px; border: 1px solid rgba(127,212,255,0.45); background: rgba(127,212,255,0.14); color: #7fd4ff; font-size: 12px; font-weight: 700; }
+    .quick-slot-register-buttons button.clear { border-color: rgba(255,88,88,0.45); background: rgba(255,88,88,0.12); color: #ff8a8a; }
+    .quick-slot-register-note { margin-top: 5px; font-size: 11px; color: #9fb1c5; line-height: 1.35; }
+
     #build-mode-text { display:none; position: absolute; top: 80px; left: 50%; transform: translateX(-50%); font-size: 16px; color: #7fd4ff; font-weight: bold; z-index: 5; text-shadow: 0 2px 4px #000; pointer-events: none; padding: 10px 20px; background: rgba(0,0,0,0.6); border-radius: 8px; border: 1px solid #7fd4ff;}
 
     /* PC 제외 반응형 UI: 휴대폰/태블릿/터치 기기 공통 */
@@ -180,6 +197,10 @@
       .inventory-grid { max-height: min(54dvh, 440px); }
       #mobile-bottom-menu { display: flex; position: absolute; bottom: calc(96px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); gap: 8px; z-index: 75; padding: 5px; border-radius: 999px; background: rgba(9, 13, 18, 0.62); backdrop-filter: blur(4px); }
       #mobile-bottom-menu button { background: rgba(12, 18, 24, 0.88); border: 1px solid rgba(255,255,255,0.28); color: #fff; min-width: 62px; padding: 9px 12px; border-radius: 999px; font-size: 12px; }
+      .quick-slot-panel { bottom: calc(150px + var(--safe-bottom)); gap: 5px; padding: 6px; z-index: 74; }
+      .quick-slot { width: 58px; height: 54px; border-radius: 9px; }
+      .quick-slot-help { display: none; }
+      .quick-slot-name { font-size: 9px; }
       #virtual-dpad { position: absolute; bottom: calc(186px + var(--safe-bottom)); left: 18px; width: 132px; height: 132px; border-radius: 50%; z-index: 70; background: radial-gradient(circle, rgba(255,255,255,0.18), rgba(12,18,24,0.70)); border: 1px solid rgba(255,255,255,0.30); box-shadow: 0 8px 24px rgba(0,0,0,.38); touch-action: none; user-select: none; -webkit-user-select: none; }
       #virtual-dpad::before { content: ''; position: absolute; inset: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.22); }
       #stick-knob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; transform: translate(-50%, -50%); border-radius: 50%; background: rgba(127,212,255,0.38); border: 2px solid #7fd4ff; box-shadow: 0 0 14px rgba(127,212,255,.42); pointer-events: none; }
@@ -208,6 +229,8 @@
       #virtual-dpad { bottom: calc(174px + var(--safe-bottom)); width: 118px; height: 118px; left: 14px; }
       #stick-knob { width: 48px; height: 48px; }
       #virtual-attack { bottom: calc(184px + var(--safe-bottom)); right: 16px; width: 70px; height: 70px; font-size: 12px; }
+      .quick-slot-panel { bottom: calc(146px + var(--safe-bottom)); }
+      .quick-slot { width: 52px; height: 50px; }
     }
 
 
@@ -239,6 +262,10 @@
     body.touch-device .inventory-grid { max-height: min(54dvh, 440px); }
     body.touch-device #mobile-bottom-menu { display: flex; position: absolute; bottom: calc(110px + var(--safe-bottom) + var(--touch-bottom-gap)); left: 50%; transform: translateX(-50%); gap: 8px; z-index: 75; padding: 5px; border-radius: 999px; background: rgba(9, 13, 18, 0.62); backdrop-filter: blur(4px); }
     body.touch-device #mobile-bottom-menu button { background: rgba(12, 18, 24, 0.88); border: 1px solid rgba(255,255,255,0.28); color: #fff; min-width: 62px; padding: 9px 12px; border-radius: 999px; font-size: 12px; }
+    body.touch-device .quick-slot-panel { bottom: calc(164px + var(--safe-bottom) + var(--touch-bottom-gap)); gap: 5px; padding: 6px; z-index: 74; }
+    body.touch-device .quick-slot { width: 58px; height: 54px; border-radius: 9px; }
+    body.touch-device .quick-slot-help { display: none; }
+    body.touch-device .quick-slot-name { font-size: 9px; }
     body.touch-device #virtual-dpad { display: block; position: absolute; bottom: calc(204px + var(--safe-bottom) + var(--touch-bottom-gap)); left: 18px; width: 132px; height: 132px; border-radius: 50%; z-index: 70; background: radial-gradient(circle, rgba(255,255,255,0.18), rgba(12,18,24,0.70)); border: 1px solid rgba(255,255,255,0.30); box-shadow: 0 8px 24px rgba(0,0,0,.38); touch-action: none; user-select: none; -webkit-user-select: none; }
     body.touch-device #virtual-dpad::before { content: ''; position: absolute; inset: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.22); }
     body.touch-device #stick-knob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; transform: translate(-50%, -50%); border-radius: 50%; background: rgba(127,212,255,0.38); border: 2px solid #7fd4ff; box-shadow: 0 0 14px rgba(127,212,255,.42); pointer-events: none; }
@@ -266,6 +293,8 @@
       body.touch-device #virtual-dpad { bottom: calc(192px + var(--safe-bottom) + var(--touch-bottom-gap)); width: 118px; height: 118px; left: 14px; }
       body.touch-device #stick-knob { width: 48px; height: 48px; }
       body.touch-device #virtual-attack { bottom: calc(202px + var(--safe-bottom) + var(--touch-bottom-gap)); right: 16px; width: 70px; height: 70px; font-size: 12px; }
+      body.touch-device .quick-slot-panel { bottom: calc(158px + var(--safe-bottom) + var(--touch-bottom-gap)); }
+      body.touch-device .quick-slot { width: 52px; height: 50px; }
     }
 
   </style>
@@ -401,6 +430,18 @@
       <div class="panel-title" id="sell-title" style="margin-bottom: 0;">Item Action</div>
       <div>수량: <input type="number" id="sell-qty" min="1" value="1" /> / <span id="sell-max">1</span></div>
       <div>수익: <span id="sell-profit" class="yellow">0 G</span></div>
+      <div class="quick-slot-register" id="quick-slot-register" style="display:none;">
+        <div class="quick-slot-register-title">자동 사용 퀵슬롯 등록</div>
+        <div class="quick-slot-register-buttons">
+          <button type="button" class="quick-slot-reg-btn" data-slot="1">1</button>
+          <button type="button" class="quick-slot-reg-btn" data-slot="2">2</button>
+          <button type="button" class="quick-slot-reg-btn" data-slot="3">3</button>
+          <button type="button" class="quick-slot-reg-btn" data-slot="4">4</button>
+          <button type="button" class="quick-slot-reg-btn" data-slot="5">5</button>
+          <button type="button" class="quick-slot-reg-btn clear" data-slot="clear">해제</button>
+        </div>
+        <div class="quick-slot-register-note" id="quick-slot-register-note">HP/MP가 50% 이하일 때 자동으로 사용됩니다.</div>
+      </div>
       <div class="modal-btns">
         <button id="sell-cancel">취소</button>
         <button id="sell-cook" class="cook" style="display:none;">굽기</button>
@@ -461,6 +502,15 @@
         <div class="build-info"><h4>Raft (뗏목)</h4><p>물 위에 띄우는 발판. 탑승 시 Wood 1개로 노 생성.</p></div>
         <div class="build-cost">200 Wood<br>200 G</div>
       </div>
+    </section>
+
+    <div class="quick-slot-help">아이템 퀵슬롯: 등록 아이템은 HP/MP 50% 이하에서 자동 사용됩니다. 키보드 1~5 수동 사용.</div>
+    <section class="quick-slot-panel" id="quick-slot-panel" aria-label="item quick slots">
+      <button type="button" class="quick-slot empty" data-slot="1"><span class="quick-slot-key">1</span><span class="quick-slot-kind">AUTO</span><span class="quick-slot-icon">＋</span><span class="quick-slot-count"></span><span class="quick-slot-name">비어있음</span></button>
+      <button type="button" class="quick-slot empty" data-slot="2"><span class="quick-slot-key">2</span><span class="quick-slot-kind">AUTO</span><span class="quick-slot-icon">＋</span><span class="quick-slot-count"></span><span class="quick-slot-name">비어있음</span></button>
+      <button type="button" class="quick-slot empty" data-slot="3"><span class="quick-slot-key">3</span><span class="quick-slot-kind">AUTO</span><span class="quick-slot-icon">＋</span><span class="quick-slot-count"></span><span class="quick-slot-name">비어있음</span></button>
+      <button type="button" class="quick-slot empty" data-slot="4"><span class="quick-slot-key">4</span><span class="quick-slot-kind">AUTO</span><span class="quick-slot-icon">＋</span><span class="quick-slot-count"></span><span class="quick-slot-name">비어있음</span></button>
+      <button type="button" class="quick-slot empty" data-slot="5"><span class="quick-slot-key">5</span><span class="quick-slot-kind">AUTO</span><span class="quick-slot-icon">＋</span><span class="quick-slot-count"></span><span class="quick-slot-name">비어있음</span></button>
     </section>
 
     <section class="hud">
@@ -530,8 +580,13 @@
     gameState.buildLimit = gameState.player.level * 3;
 
 
-    // [v0.0.06] 회복 아이템용 퀵슬롯: UI보다 먼저 데이터 구조만 1~5번 슬롯으로 확정합니다.
+    // [v0.0.07] HP/MP 자동 사용 아이템 퀵슬롯 5칸.
+    // 화면에 등록 아이템과 전체 보유 수량을 표시하고, HP/MP가 50% 이하일 때 자동 사용합니다.
     const ITEM_QUICK_SLOT_COUNT = 5;
+    const ITEM_QUICK_SLOT_AUTO_THRESHOLD = 0.5;
+    const ITEM_QUICK_SLOT_AUTO_COOLDOWN_MS = 850;
+    let lastAutoQuickSlotUseAt = 0;
+    let isQuickSlotUsing = false;
 
     function initItemQuickSlots() {
       if (!Array.isArray(gameState.player.itemQuickSlots)) {
@@ -542,17 +597,34 @@
       while (gameState.player.itemQuickSlots.length < ITEM_QUICK_SLOT_COUNT) gameState.player.itemQuickSlots.push(null);
     }
 
-    function isQuickSlotHealingItem(itemName) {
-      // 현재는 모닥불에 구운 고기류만 허용합니다. 베리/물고기는 이후 이 함수에만 추가하면 됩니다.
-      return typeof itemName === 'string' && itemName.startsWith('구운') && itemName.endsWith('고기');
+    function getQuickSlotItemEffect(itemName) {
+      const name = String(itemName || '');
+      // HP 회복: 현재 게임 내에서 확실한 소비 아이템인 구운 고기류.
+      if (name.startsWith('구운') && name.endsWith('고기')) return { stat: 'hp', amount: 50, label: 'HP' };
+      // 확장용: 이후 드랍/API에서 물약류 이름이 들어오면 바로 MP/HP 자동 사용 가능.
+      if (/마나|마력|MP|Mana|blue potion|푸른 물약/i.test(name)) return { stat: 'mp', amount: 40, label: 'MP' };
+      if (/회복|체력|HP|Health|potion|빨간 물약/i.test(name)) return { stat: 'hp', amount: 50, label: 'HP' };
+      return null;
+    }
+
+    function isQuickSlotConsumableItem(itemName) {
+      return !!getQuickSlotItemEffect(itemName);
+    }
+
+    function getQuickSlotItemIcon(itemName) {
+      const effect = getQuickSlotItemEffect(itemName);
+      if (!effect) return '＋';
+      if (effect.stat === 'mp') return '◆';
+      if (String(itemName || '').includes('고기')) return '🍖';
+      return '✚';
     }
 
     function setItemQuickSlot(slotNumber, itemName) {
       initItemQuickSlots();
       const index = Number(slotNumber) - 1;
       if (index < 0 || index >= ITEM_QUICK_SLOT_COUNT) return false;
-      if (itemName !== null && !isQuickSlotHealingItem(itemName)) {
-        addChatMessage('<span style="color:#FFD66B;">회복 퀵슬롯에는 현재 구운 고기류만 등록할 수 있습니다.</span>');
+      if (itemName !== null && !isQuickSlotConsumableItem(itemName)) {
+        addChatMessage('<span style="color:#FFD66B;">퀵슬롯에는 HP/MP 회복 아이템만 등록할 수 있습니다. 현재는 구운 고기류, HP/MP 물약 이름을 지원합니다.</span>');
         return false;
       }
       if (itemName !== null && (!gameState.inventory[itemName] || gameState.inventory[itemName].count <= 0)) {
@@ -560,7 +632,8 @@
         return false;
       }
       gameState.player.itemQuickSlots[index] = itemName;
-      addChatMessage(`<span style="color:#7fd4ff;">아이템 퀵슬롯 ${slotNumber}번: ${itemName || '비움'}</span>`);
+      addChatMessage(`<span style="color:#7fd4ff;">아이템 퀵슬롯 ${slotNumber}번: ${itemName || '비움'}${itemName ? ' / 50% 이하 자동 사용' : ''}</span>`);
+      updateQuickSlotUi();
       return true;
     }
 
@@ -568,41 +641,134 @@
       return setItemQuickSlot(slotNumber, null);
     }
 
-    function useItemQuickSlot(slotNumber) {
+    function clearQuickSlotByItem(itemName) {
+      initItemQuickSlots();
+      let changed = false;
+      gameState.player.itemQuickSlots = gameState.player.itemQuickSlots.map(slot => {
+        if (slot === itemName) { changed = true; return null; }
+        return slot;
+      });
+      if (changed) updateQuickSlotUi();
+    }
+
+    function consumeQuickSlotItem(slotNumber, options = {}) {
       initItemQuickSlots();
       const index = Number(slotNumber) - 1;
       if (index < 0 || index >= ITEM_QUICK_SLOT_COUNT) return false;
       const itemName = gameState.player.itemQuickSlots[index];
+      const silent = options.silent === true;
       if (!itemName) {
-        addChatMessage(`<span style="color:#9fb1c5;">아이템 퀵슬롯 ${slotNumber}번이 비어 있습니다.</span>`);
+        if (!silent) addChatMessage(`<span style="color:#9fb1c5;">아이템 퀵슬롯 ${slotNumber}번이 비어 있습니다.</span>`);
         return false;
       }
       const itemObj = gameState.inventory[itemName];
       if (!itemObj || itemObj.count <= 0) {
         gameState.player.itemQuickSlots[index] = null;
-        addChatMessage(`<span style="color:#FFD66B;">${itemName}이 없어 ${slotNumber}번 슬롯을 비웠습니다.</span>`);
+        if (!silent) addChatMessage(`<span style="color:#FFD66B;">${itemName}이 없어 ${slotNumber}번 슬롯을 비웠습니다.</span>`);
+        updateQuickSlotUi();
         return false;
       }
-      if (!isQuickSlotHealingItem(itemName)) {
-        addChatMessage('<span style="color:#FFD66B;">이 슬롯의 아이템은 아직 사용할 수 없는 종류입니다.</span>');
-        return false;
-      }
-      if (gameState.player.hp >= gameState.player.maxHp) {
-        addChatMessage('<span style="color:#9fb1c5;">이미 체력이 가득 찼습니다.</span>');
+      const effect = getQuickSlotItemEffect(itemName);
+      if (!effect) {
+        if (!silent) addChatMessage('<span style="color:#FFD66B;">이 슬롯의 아이템은 아직 사용할 수 없는 종류입니다.</span>');
         return false;
       }
 
-      const healAmount = 50;
-      gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + healAmount);
+      const p = gameState.player;
+      if (effect.stat === 'hp') {
+        if (p.hp >= p.maxHp) {
+          if (!silent) addChatMessage('<span style="color:#9fb1c5;">이미 체력이 가득 찼습니다.</span>');
+          return false;
+        }
+        p.hp = Math.min(p.maxHp, p.hp + effect.amount);
+      } else if (effect.stat === 'mp') {
+        if (p.mp >= p.maxMp) {
+          if (!silent) addChatMessage('<span style="color:#9fb1c5;">이미 마력이 가득 찼습니다.</span>');
+          return false;
+        }
+        p.mp = Math.min(p.maxMp, p.mp + effect.amount);
+      }
+
       itemObj.count -= 1;
       if (itemObj.count <= 0) {
         delete gameState.inventory[itemName];
-        gameState.player.itemQuickSlots[index] = null;
+        clearQuickSlotByItem(itemName);
       }
-      updatePlayerHud();
+
+      if (!isQuickSlotUsing) {
+        isQuickSlotUsing = true;
+        updatePlayerHud();
+        isQuickSlotUsing = false;
+      }
       if (ui.inventoryPanel && ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
-      addChatMessage(`<span style="color:#7CFF8A;">${slotNumber}번 퀵슬롯 사용: ${itemName} / HP +${healAmount}</span>`);
+      updateQuickSlotUi();
+      addChatMessage(`<span style="color:#7CFF8A;">${options.auto ? '자동 사용' : slotNumber + '번 퀵슬롯 사용'}: ${itemName} / ${effect.label} +${effect.amount}</span>`);
       return true;
+    }
+
+    function useItemQuickSlot(slotNumber) {
+      return consumeQuickSlotItem(slotNumber, { auto: false, silent: false });
+    }
+
+    function autoUseItemQuickSlots() {
+      if (gameState.isDead || isQuickSlotUsing) return false;
+      const now = Date.now();
+      if (now - lastAutoQuickSlotUseAt < ITEM_QUICK_SLOT_AUTO_COOLDOWN_MS) return false;
+
+      const p = gameState.player;
+      const hpRatio = p.maxHp > 0 ? p.hp / p.maxHp : 1;
+      const mpRatio = p.maxMp > 0 ? p.mp / p.maxMp : 1;
+      if (hpRatio > ITEM_QUICK_SLOT_AUTO_THRESHOLD && mpRatio > ITEM_QUICK_SLOT_AUTO_THRESHOLD) return false;
+
+      initItemQuickSlots();
+      for (let i = 0; i < ITEM_QUICK_SLOT_COUNT; i++) {
+        const itemName = gameState.player.itemQuickSlots[i];
+        if (!itemName) continue;
+        const itemObj = gameState.inventory[itemName];
+        if (!itemObj || itemObj.count <= 0) { gameState.player.itemQuickSlots[i] = null; continue; }
+        const effect = getQuickSlotItemEffect(itemName);
+        if (!effect) continue;
+        if ((effect.stat === 'hp' && hpRatio <= ITEM_QUICK_SLOT_AUTO_THRESHOLD && p.hp < p.maxHp) ||
+            (effect.stat === 'mp' && mpRatio <= ITEM_QUICK_SLOT_AUTO_THRESHOLD && p.mp < p.maxMp)) {
+          lastAutoQuickSlotUseAt = now;
+          return consumeQuickSlotItem(i + 1, { auto: true, silent: true });
+        }
+      }
+      updateQuickSlotUi();
+      return false;
+    }
+
+    function updateQuickSlotUi() {
+      initItemQuickSlots();
+      if (!ui.quickSlotPanel) return;
+      const p = gameState.player;
+      const hpReady = p.maxHp > 0 && p.hp / p.maxHp <= ITEM_QUICK_SLOT_AUTO_THRESHOLD;
+      const mpReady = p.maxMp > 0 && p.mp / p.maxMp <= ITEM_QUICK_SLOT_AUTO_THRESHOLD;
+      ui.quickSlots.forEach((slotEl, i) => {
+        const itemName = gameState.player.itemQuickSlots[i];
+        const itemObj = itemName ? gameState.inventory[itemName] : null;
+        const effect = itemName ? getQuickSlotItemEffect(itemName) : null;
+        const hasItem = !!(itemName && itemObj && itemObj.count > 0 && effect);
+        slotEl.classList.toggle('empty', !hasItem);
+        slotEl.classList.toggle('auto-ready', !!(hasItem && ((effect.stat === 'hp' && hpReady) || (effect.stat === 'mp' && mpReady))));
+        const icon = slotEl.querySelector('.quick-slot-icon');
+        const count = slotEl.querySelector('.quick-slot-count');
+        const name = slotEl.querySelector('.quick-slot-name');
+        const kind = slotEl.querySelector('.quick-slot-kind');
+        if (hasItem) {
+          icon.textContent = getQuickSlotItemIcon(itemName);
+          count.textContent = `x${itemObj.count}`;
+          name.textContent = itemName;
+          kind.textContent = effect.label;
+          slotEl.title = `${i + 1}번: ${itemName} / 보유 ${itemObj.count}개 / ${effect.label} 50% 이하 자동 사용`;
+        } else {
+          icon.textContent = '＋';
+          count.textContent = '';
+          name.textContent = itemName ? '수량 없음' : '비어있음';
+          kind.textContent = 'AUTO';
+          slotEl.title = `${i + 1}번 슬롯 비어있음`;
+        }
+      });
     }
 
     window.setItemQuickSlot = setItemQuickSlot;
@@ -714,6 +880,8 @@
       ui.sellModal = document.getElementById('sell-modal'); ui.sellTitle = document.getElementById('sell-title');
       ui.sellQty = document.getElementById('sell-qty'); ui.sellMax = document.getElementById('sell-max'); ui.sellProfit = document.getElementById('sell-profit');
       ui.sellCookBtn = document.getElementById('sell-cook'); ui.sellEatBtn = document.getElementById('sell-eat');
+      ui.quickSlotPanel = document.getElementById('quick-slot-panel'); ui.quickSlots = Array.from(document.querySelectorAll('.quick-slot'));
+      ui.quickSlotRegister = document.getElementById('quick-slot-register'); ui.quickSlotRegisterNote = document.getElementById('quick-slot-register-note');
       
       ui.upgModal = document.getElementById('upgrade-modal'); ui.upgTitle = document.getElementById('upg-title');
       ui.upgDesc = document.getElementById('upg-desc'); ui.upgCurrent = document.getElementById('upg-current'); ui.upgCost = document.getElementById('upg-cost'); ui.upgArmoryOptions = document.getElementById('upg-armory-options'); ui.upgDemolish = document.getElementById('upg-demolish'); ui.upgRaftAction = document.getElementById('upg-raft-action');
@@ -740,6 +908,8 @@
       if (p.statPoints > 0) { ui.statBadge.style.display = 'inline'; ui.statBadge.textContent = `(${p.statPoints})`; } 
       else { ui.statBadge.style.display = 'none'; }
       ui.statPoints.textContent = p.statPoints; ui.statStr.textContent = p.str; ui.statAgi.textContent = p.agi; ui.statVit.textContent = p.vit;
+      updateQuickSlotUi();
+      autoUseItemQuickSlots();
     }
 
     function escapeHtml(s) {
@@ -968,6 +1138,7 @@
         addChatMessage(`획득: <span class="log-rarity-${rarityCode}">[${displayRarity}]</span> <span class="log-name-${rarityCode}">${itemName}</span> x${qty}`);
       }
       if (ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
+      updateQuickSlotUi();
     }
 
     const MINIMAP_VIEW = { mode: 'local', localRange: 2600 };
@@ -1089,6 +1260,16 @@
       ui.sellCookBtn.style.display = (isRawMeat && nearCampfire) ? 'inline-block' : 'none';
       let isCookedMeat = itemName.startsWith("구운") && itemName.endsWith("고기");
       ui.sellEatBtn.style.display = isCookedMeat ? 'inline-block' : 'none';
+
+      const quickEffect = getQuickSlotItemEffect(itemName);
+      if (ui.quickSlotRegister) {
+        ui.quickSlotRegister.style.display = quickEffect ? 'block' : 'none';
+        if (ui.quickSlotRegisterNote) {
+          ui.quickSlotRegisterNote.textContent = quickEffect
+            ? `${quickEffect.label}가 50% 이하일 때 자동 사용됩니다. 화면 퀵슬롯에는 전체 보유 수량이 표시됩니다.`
+            : 'HP/MP 회복 아이템만 퀵슬롯에 등록할 수 있습니다.';
+        }
+      }
     }
 
     function showGlobalTooltip(html, e) {
@@ -1305,6 +1486,26 @@
       const triggerAttack = (e) => { e.preventDefault(); if(window.currentScene) window.currentScene.handlePlayerAttack(); };
       vAtk.addEventListener('touchstart', triggerAttack); vAtk.addEventListener('mousedown', triggerAttack);
 
+      ui.quickSlots.forEach(slot => {
+        slot.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          useItemQuickSlot(Number(slot.dataset.slot));
+        });
+      });
+      document.querySelectorAll('.quick-slot-reg-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (btn.dataset.slot === 'clear') {
+            clearQuickSlotByItem(currentSellItem);
+            addChatMessage(`<span style="color:#7fd4ff;">${currentSellItem} 퀵슬롯 등록을 해제했습니다.</span>`);
+            return;
+          }
+          if (currentSellItem) setItemQuickSlot(Number(btn.dataset.slot), currentSellItem);
+        });
+      });
+
       ui.chatSendButton.addEventListener('click', sendWorldChat);
       ui.chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendWorldChat(); } });
       ui.chatInput.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -1366,10 +1567,10 @@
         let qty = parseInt(ui.sellQty.value) || 1;
         if (qty > 0 && currentSellItem && gameState.inventory[currentSellItem]) {
           gameState.inventory[currentSellItem].count -= qty;
-          if (gameState.inventory[currentSellItem].count <= 0) delete gameState.inventory[currentSellItem];
+          if (gameState.inventory[currentSellItem].count <= 0) { delete gameState.inventory[currentSellItem]; clearQuickSlotByItem(currentSellItem); }
           const cookedName = `구운 ${currentSellItem}`;
           addInventoryItem(cookedName, qty, 'Magic');
-          updateInventoryUi();
+          updateInventoryUi(); updateQuickSlotUi();
         }
         ui.sellModal.style.display = 'none';
       });
@@ -1379,8 +1580,8 @@
         if (qty > 0 && currentSellItem && gameState.inventory[currentSellItem]) {
           let healAmount = 50 * qty; gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + healAmount);
           gameState.inventory[currentSellItem].count -= qty;
-          if (gameState.inventory[currentSellItem].count <= 0) delete gameState.inventory[currentSellItem];
-          updatePlayerHud(); updateInventoryUi();
+          if (gameState.inventory[currentSellItem].count <= 0) { delete gameState.inventory[currentSellItem]; clearQuickSlotByItem(currentSellItem); }
+          updatePlayerHud(); updateInventoryUi(); updateQuickSlotUi();
         }
         ui.sellModal.style.display = 'none';
       });
@@ -1390,8 +1591,8 @@
         if (qty > 0 && currentSellItem && gameState.inventory[currentSellItem]) {
           gameState.player.gold += qty * currentSellPrice;
           gameState.inventory[currentSellItem].count -= qty;
-          if (gameState.inventory[currentSellItem].count <= 0) delete gameState.inventory[currentSellItem];
-          updatePlayerHud(); updateInventoryUi();
+          if (gameState.inventory[currentSellItem].count <= 0) { delete gameState.inventory[currentSellItem]; clearQuickSlotByItem(currentSellItem); }
+          updatePlayerHud(); updateInventoryUi(); updateQuickSlotUi();
         }
         ui.sellModal.style.display = 'none';
       });
@@ -1507,6 +1708,7 @@
 
         window.addEventListener('player-respawn', () => { this.player.setPosition(6000, 4000); this.lastLandPosition.set(6000, 4000); this.player.body.setVelocity(0,0); this.targetPosition = null; });
         setInterval(() => this.updateRadar(), 500);
+        setInterval(() => { autoUseItemQuickSlots(); updateQuickSlotUi(); }, 500);
       }
 
       createCustomTextures() {
