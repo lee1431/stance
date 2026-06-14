@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>STANCE: Lonely Island Prototype v0.0.06</title>
+  <title>STANCE: Lonely Island</title>
   <style>
     :root {
       --i0-color: #ffd86b; /* Legendary */
@@ -1578,17 +1578,21 @@
 
         MAP_ISLANDS.forEach(island => {
           this.add.ellipse(island.x, island.y, island.w, island.h, 0xd8bd7a, 1).setDepth(-24);
+          this.createCheckeredEllipse(island.x, island.y, island.w, island.h, 420, 0xe0c985, 0xcfad65, 0.42, -23.7, 0);
           this.add.ellipse(island.x, island.y, Math.max(1, island.w - 760), Math.max(1, island.h - 760), 0x357f43, 1).setDepth(-23);
+          this.createCheckeredEllipse(island.x, island.y, Math.max(1, island.w - 820), Math.max(1, island.h - 820), 360, 0x2f773d, 0x3f914c, 0.34, -22.6, 0);
           this.add.ellipse(island.x, island.y, Math.max(1, island.w - 380), Math.max(1, island.h - 380), 0x4f9b4f, 0.08).setDepth(-22);
         });
 
         MAP_FEATURES.forEach(f => {
           if (f.type === 'desert') {
             this.add.ellipse(f.x, f.y, f.w, f.h, 0xd8bd7a, 0.95).setDepth(-21);
+            this.createCheckeredEllipse(f.x, f.y, f.w, f.h, 300, 0xe5ca86, 0xcba75f, 0.34, -20.7, 0);
             this.add.ellipse(f.x, f.y, Math.max(1, f.w - 120), Math.max(1, f.h - 120), 0xe3c986, 0.22).setDepth(-20);
             this.scatterFeatureDetails(f, 'dirt_patch', Math.min(70, Math.floor((f.w * f.h) / 110000)));
           } else if (f.type === 'hill') {
             this.add.ellipse(f.x, f.y, f.w, f.h, 0x596b50, 0.98).setDepth(-21);
+            this.createCheckeredEllipse(f.x, f.y, f.w, f.h, 260, 0x4f5f49, 0x6a7660, 0.36, -20.7, 0);
             this.add.ellipse(f.x, f.y, Math.max(1, f.w - 180), Math.max(1, f.h - 180), 0x6a7860, 0.30).setDepth(-20);
             this.scatterFeatureDetails(f, 'rock_cluster', Math.min(80, Math.floor((f.w * f.h) / 90000)));
             this.createHillRockRim(f);
@@ -1605,6 +1609,24 @@
           this.createShoreFoam(island);
           this.scatterIslandGroundDetails(island);
         });
+      }
+
+      createCheckeredEllipse(cx, cy, w, h, cellSize, colorA, colorB, alpha = 0.22, depth = -22, margin = 0) {
+        // [v0.0.08] 단색 바닥을 피하기 위한 체크무늬 지형 레이어입니다.
+        // 큰 비트맵을 만들지 않고 작은 사각형 오브젝트만 타원 내부에 배치합니다.
+        const startX = cx - w / 2 + cellSize / 2;
+        const endX = cx + w / 2 - cellSize / 2;
+        const startY = cy - h / 2 + cellSize / 2;
+        const endY = cy + h / 2 - cellSize / 2;
+        let row = 0;
+        for (let y = startY; y <= endY; y += cellSize, row++) {
+          let col = 0;
+          for (let x = startX; x <= endX; x += cellSize, col++) {
+            if (!this.pointInEllipse(x, y, cx, cy, w, h, margin)) continue;
+            const color = ((row + col) % 2 === 0) ? colorA : colorB;
+            this.add.rectangle(x, y, cellSize + 2, cellSize + 2, color, alpha).setDepth(depth);
+          }
+        }
       }
 
       createOceanSurfaceDetails() {
@@ -1774,6 +1796,34 @@
         }
       }
 
+      keepEnemyOnLand(enemy) {
+        if (!enemy || !enemy.sprite || !enemy.sprite.active) return false;
+        if (!enemy.lastLandPosition) enemy.lastLandPosition = new Phaser.Math.Vector2(enemy.sprite.x, enemy.sprite.y);
+
+        if (this.isWaterPosition(enemy.sprite.x, enemy.sprite.y)) {
+          enemy.sprite.setPosition(enemy.lastLandPosition.x, enemy.lastLandPosition.y);
+          if (enemy.sprite.body) enemy.sprite.body.setVelocity(0, 0);
+          enemy.state = 'wander';
+          return false;
+        }
+
+        enemy.lastLandPosition.set(enemy.sprite.x, enemy.sprite.y);
+        return true;
+      }
+
+      stopEnemyBeforeWater(enemy) {
+        if (!enemy || !enemy.sprite || !enemy.sprite.body) return false;
+        const dt = Math.min(0.08, this.game.loop.delta / 1000 || 0.016);
+        const nx = enemy.sprite.x + enemy.sprite.body.velocity.x * dt;
+        const ny = enemy.sprite.y + enemy.sprite.body.velocity.y * dt;
+        if (this.isWaterPosition(nx, ny)) {
+          enemy.sprite.body.setVelocity(0, 0);
+          enemy.state = 'wander';
+          return true;
+        }
+        return false;
+      }
+
       spawnRandomMonster(level = null) {
         const p = this.getRandomLandPoint(level, 700);
         const types = MONSTER_TYPES_BY_LEVEL[p.island.level] || MONSTER_TYPES_BY_LEVEL[1];
@@ -1790,7 +1840,7 @@
         let hpBarFill = this.add.rectangle(x - type.barWidth / 2, y - type.labelOffset + 7, type.barWidth, 3, 0x37d85b, 1).setOrigin(0, 0.5);
         let hpText = this.add.text(x, y - type.labelOffset + 15, `${type.hp}/${type.hp}`, { fontSize: '9px', color: '#eaffea', stroke: '#000', strokeThickness: 2 }).setOrigin(0.5, 0.5);
 
-        this.enemiesData.push({ sprite, label, hpBarBg, hpBarFill, hpText, type, islandId: p.island.id, hp: type.hp, maxHp: type.hp, state: 'wander', lastAttackTime: 0 });
+        this.enemiesData.push({ sprite, label, hpBarBg, hpBarFill, hpText, type, islandId: p.island.id, hp: type.hp, maxHp: type.hp, state: 'wander', lastAttackTime: 0, lastLandPosition: new Phaser.Math.Vector2(x, y) });
       }
 
       updateEnemyHealthBar(enemy) {
@@ -2255,6 +2305,7 @@
 
         this.enemiesData.forEach(e => {
           if (e.hp <= 0) return;
+          this.keepEnemyOnLand(e);
           e.sprite.setDepth(e.sprite.y);
           this.updateEnemyHealthBar(e);
 
@@ -2268,8 +2319,10 @@
 
           if (e.state === 'wander' && Math.random() < 0.01) {
             this.physics.velocityFromAngle(Phaser.Math.Between(0, 360), e.type.speed * 0.5, e.sprite.body.velocity);
+            this.stopEnemyBeforeWater(e);
           } else if (e.state === 'chase') {
             this.physics.moveToObject(e.sprite, target, e.type.speed);
+            this.stopEnemyBeforeWater(e);
             if (dist < 45 && time > e.lastAttackTime + 1500) {
               e.lastAttackTime = time; 
               if (isTargetBldg) {
