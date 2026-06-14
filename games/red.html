@@ -678,6 +678,14 @@
     };
     const MONSTER_TYPES = Object.values(MONSTER_TYPES_BY_LEVEL).flat();
 
+    // [v0.0.07] 저레벨 필드 몬스터 물량 조정
+    // 월드가 넓어진 만큼 Lv.1 구간은 더 많은 몬스터와 빠른 리스폰으로 초반 사냥 루프가 끊기지 않게 합니다.
+    const MONSTER_SPAWN_POLICY = {
+      initialByLevel: { 1: 420, 2: 180, 3: 90 },
+      respawnDelayByLevel: { 1: 6500, 2: 10000, 3: 14000 },
+      minSpawnDistanceFromPlayer: 700
+    };
+
     const ui = {};
     window.currentScene = null; 
 
@@ -1445,7 +1453,9 @@
         
         this.spawnForest();
         this.spawnGiantTrees();
-        for(let i=0; i<300; i++) this.spawnRandomMonster();
+        Object.entries(MONSTER_SPAWN_POLICY.initialByLevel).forEach(([level, count]) => {
+          for (let i = 0; i < count; i++) this.spawnRandomMonster(Number(level));
+        });
 
         this.player = this.physics.add.sprite(gameState.player.x, gameState.player.y, 'player_tex');
         this.player.body.setCircle(15); this.player.body.setCollideWorldBounds(true);
@@ -1824,10 +1834,29 @@
         return false;
       }
 
+      pickMonsterTypeForLevel(level) {
+        const types = MONSTER_TYPES_BY_LEVEL[level] || MONSTER_TYPES_BY_LEVEL[1];
+        if (level !== 1) return Phaser.Utils.Array.GetRandom(types);
+
+        // Lv.1은 닭/돼지/소/늑대 비중을 높이고, 곰/호랑이는 희소하게 유지합니다.
+        const weights = { '닭': 7, '돼지': 5, '소': 5, '늑대': 3, '곰': 1, '호랑이': 1 };
+        const pool = [];
+        types.forEach(type => {
+          const weight = weights[type.name] || 1;
+          for (let i = 0; i < weight; i++) pool.push(type);
+        });
+        return Phaser.Utils.Array.GetRandom(pool);
+      }
+
+      getMonsterRespawnDelay(enemy) {
+        const level = enemy && enemy.islandLevel ? enemy.islandLevel : 1;
+        return MONSTER_SPAWN_POLICY.respawnDelayByLevel[level] || 10000;
+      }
+
       spawnRandomMonster(level = null) {
-        const p = this.getRandomLandPoint(level, 700);
-        const types = MONSTER_TYPES_BY_LEVEL[p.island.level] || MONSTER_TYPES_BY_LEVEL[1];
-        const type = Phaser.Utils.Array.GetRandom(types);
+        const p = this.getRandomLandPoint(level, MONSTER_SPAWN_POLICY.minSpawnDistanceFromPlayer);
+        const islandLevel = p.island.level;
+        const type = this.pickMonsterTypeForLevel(islandLevel);
         let x = p.x; let y = p.y;
 
         let sprite = this.physics.add.sprite(x, y, type.texture);
@@ -1840,7 +1869,7 @@
         let hpBarFill = this.add.rectangle(x - type.barWidth / 2, y - type.labelOffset + 7, type.barWidth, 3, 0x37d85b, 1).setOrigin(0, 0.5);
         let hpText = this.add.text(x, y - type.labelOffset + 15, `${type.hp}/${type.hp}`, { fontSize: '9px', color: '#eaffea', stroke: '#000', strokeThickness: 2 }).setOrigin(0.5, 0.5);
 
-        this.enemiesData.push({ sprite, label, hpBarBg, hpBarFill, hpText, type, islandId: p.island.id, hp: type.hp, maxHp: type.hp, state: 'wander', lastAttackTime: 0, lastLandPosition: new Phaser.Math.Vector2(x, y) });
+        this.enemiesData.push({ sprite, label, hpBarBg, hpBarFill, hpText, type, islandId: p.island.id, islandLevel, hp: type.hp, maxHp: type.hp, state: 'wander', lastAttackTime: 0, lastLandPosition: new Phaser.Math.Vector2(x, y) });
       }
 
       updateEnemyHealthBar(enemy) {
@@ -2211,7 +2240,8 @@
         }
 
         this.enemiesData = this.enemiesData.filter(e => e !== enemy);
-        setTimeout(() => this.spawnRandomMonster(), 10000);
+        const respawnLevel = enemy.islandLevel || 1;
+        setTimeout(() => this.spawnRandomMonster(respawnLevel), this.getMonsterRespawnDelay(enemy));
       }
 
       update(time) {
