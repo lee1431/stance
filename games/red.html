@@ -167,8 +167,6 @@
 
     #build-mode-text { display:none; position: absolute; top: 80px; left: 50%; transform: translateX(-50%); font-size: 16px; color: #7fd4ff; font-weight: bold; z-index: 5; text-shadow: 0 2px 4px #000; pointer-events: none; padding: 10px 20px; background: rgba(0,0,0,0.6); border-radius: 8px; border: 1px solid #7fd4ff;}
 
-
-
     /* [v0.0.0.3] Desktop HUD cleanup: 하단 푸터형 바 제거 + 퀵슬롯 중앙 하단 고정 */
     @media (hover: hover) and (pointer: fine) and (min-width: 1181px) {
       .hud {
@@ -2249,6 +2247,18 @@
         return !!(feature && feature.type === 'lake');
       }
 
+      getNearestLandPosition(x, y, maxRadius = 160) {
+        if (!this.isWaterPosition(x, y)) return { x, y };
+        for (let r = 20; r <= maxRadius; r += 20) {
+          for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+            let tx = x + Math.cos(angle) * r;
+            let ty = y + Math.sin(angle) * r;
+            if (!this.isWaterPosition(tx, ty)) return { x: tx, y: ty };
+          }
+        }
+        return null;
+      }
+
       findSupportingRaft(x, y, radius = 20) {
         let raft = null;
         this.buildingsGroup.getChildren().forEach(b => {
@@ -2374,10 +2384,18 @@
           if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = false;
           addChatMessage('<span style="color:#7fd4ff;">뗏목에 탑승했습니다. WASD/방향키로 물 위를 이동합니다.</span>');
         } else if (gameState.raft.current === raft) {
-          gameState.raft.mounted = false;
-          gameState.raft.current = null;
-          if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = true;
-          addChatMessage('<span style="color:#7fd4ff;">뗏목에서 내렸습니다.</span>');
+          const landPos = this.getNearestLandPosition(raft.x, raft.y, 160);
+          
+          if (landPos) {
+            gameState.raft.mounted = false;
+            gameState.raft.current = null;
+            this.player.setPosition(landPos.x, landPos.y);
+            this.lastLandPosition.set(landPos.x, landPos.y);
+            if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = true;
+            addChatMessage('<span style="color:#7fd4ff;">뗏목에서 내려 육지에 발을 딛었습니다.</span>');
+          } else {
+            addChatMessage('<span style="color:#FFD66B;">육지가 너무 멉니다. 해변으로 더 가까이 이동한 후 하선해주세요.</span>');
+          }
         }
       }
 
