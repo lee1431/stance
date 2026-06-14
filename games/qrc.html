@@ -232,7 +232,6 @@
       <div class="inventory-grid" id="inventory-grid"></div>
     </section>
 
-    <!-- 스탯 패널 -->
     <section class="panel modal-box" id="stat-modal" style="width: 300px;">
       <div class="panel-title">Character Stats <button class="close-btn" id="close-stat">✕</button></div>
       <div style="font-size: 13px; color: #ccc; margin-bottom: 8px;">잔여 포인트: <span id="stat-points" class="yellow">0</span></div>
@@ -347,8 +346,21 @@
     const BUILD_COSTS = { 'Campfire': { wood: 30, gold: 0 }, 'Fence': { wood: 50, gold: 50 }, 'Crossbow': { wood: 1000, gold: 1000 }, 'Armory': { wood: 5000, gold: 5000 } };
     const PRICE_MAP = { "Normal": 10, "Magic": 40, "Rare": 100, "Epic": 500, "Legendary": 2000 };
     
-    // 아이템 등급과 CSS 클래스(색상) 매핑
-    const RARITY_MAP = { "Legendary": "i0", "Epic": "i4", "Rare": "i2", "Magic": "i3", "Normal": "i5" };
+    // [수정됨] API에서 넘어오는 i0, i2 등의 원본 코드와 영문 이름을 모두 매핑
+    const RARITY_MAP = { 
+      "Legendary": "i0", "i0": "i0", 
+      "Mythic": "i1", "i1": "i1", 
+      "Rare": "i2", "i2": "i2", 
+      "Magic": "i3", "i3": "i3", 
+      "Epic": "i4", "i4": "i4", 
+      "Normal": "i5", "i5": "i5", 
+      "Junk": "i6", "i6": "i6" 
+    };
+
+    // [추가됨] 코드값에 따라 실제 화면에 보여줄 예쁜 이름
+    const RARITY_DISPLAY_NAME = {
+      "i0": "Legendary", "i1": "Mythic", "i2": "Rare", "i3": "Magic", "i4": "Epic", "i5": "Normal", "i6": "Junk"
+    };
 
     const MONSTER_TYPES = [
       { name: '닭', hp: 50, speed: 60, texture: 'chicken_tex', bodyRadius: 10, labelOffset: 28, barWidth: 38, dmg: 5, exp: 10 },
@@ -419,25 +431,27 @@
       ui.statVit.textContent = p.vit;
     }
 
+    // [수정됨] HTML 태그가 적용되도록 innerHTML 사용
     function addChatMessage(msg, className = '') {
       const div = document.createElement('div'); if (className) div.className = className; div.innerHTML = msg; 
       ui.chatBody.appendChild(div); ui.chatBody.scrollTop = ui.chatBody.scrollHeight;
     }
 
+    // [수정됨] 아이템 획득 시 등급 이름 변환 및 채팅창 색상 적용
     function addInventoryItem(itemName, count = 1, rarity = 'Normal', options = {}) {
       const qty = Math.max(1, Number(count) || 1);
-      const itemRarity = rarity || 'Normal';
+      
+      const rarityCode = RARITY_MAP[rarity] || 'i5';
+      const displayRarity = RARITY_DISPLAY_NAME[rarityCode] || 'Normal';
 
       if (!gameState.inventory[itemName]) {
-        gameState.inventory[itemName] = { count: 0, rarity: itemRarity };
+        gameState.inventory[itemName] = { count: 0, rarity: displayRarity };
       }
 
       gameState.inventory[itemName].count += qty;
 
       if (options.log !== false) {
-        const rarityCode = RARITY_MAP[itemRarity] || 'i5';
-        // 채팅 로그에 신규 적용된 색상 클래스 활용
-        addChatMessage(`획득: <span class="log-rarity-${rarityCode}">[${itemRarity}]</span> <span class="log-name-${rarityCode}">${itemName}</span> x${qty}`);
+        addChatMessage(`획득: <span class="log-rarity-${rarityCode}">[${displayRarity}]</span> <span class="log-name-${rarityCode}">${itemName}</span> x${qty}`);
       }
 
       if (ui.inventoryPanel && ui.inventoryPanel.style.display === 'flex') {
@@ -496,6 +510,7 @@
       }
     }
 
+    // [수정됨] 인벤토리 슬롯 그라데이션 및 CSS 클래스 적용 로직 연동
     function updateInventoryUi() {
       ui.inventoryGrid.innerHTML = ''; 
       const items = Object.keys(gameState.inventory);
@@ -505,9 +520,8 @@
         const slot = document.createElement('div');
         if (i < items.length) {
           const name = items[i], obj = gameState.inventory[name], price = PRICE_MAP[obj.rarity] || 10;
-          const rarityCode = RARITY_MAP[obj.rarity] || 'i5'; // CSS 등급 코드 매핑
+          const rarityCode = RARITY_MAP[obj.rarity] || 'i5';
 
-          // 해당 등급의 배경/테두리 클래스 적용
           slot.className = `inv-slot r-${rarityCode}`;
           slot.innerHTML = `<span class="item-icon">${name.charAt(0)}</span><span class="item-count">x${obj.count}</span>`;
           
