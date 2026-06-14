@@ -405,7 +405,8 @@
     const BUILD_COSTS = { 'Campfire': { wood: 30, gold: 0 }, 'Fence': { wood: 50, gold: 50 }, 'Crossbow': { wood: 1000, gold: 1000 }, 'Armory': { wood: 5000, gold: 5000 }, 'Raft': { wood: 200, gold: 200 } };
     const ARMORY_UPGRADE_COSTS = { fenceHp: 1200, crossbowHp: 1500, crossbowDmg: 2000 };
     const BUILDING_BASE_STATS = { Fence: { hp: 300, radius: 20 }, Crossbow: { hp: 500, radius: 20, dmg: 30 }, Armory: { hp: 2000, radius: 40 }, Campfire: { hp: 100, radius: 15 }, Raft: { hp: 600, radius: 55 } };
-    const PRICE_MAP = { "Normal": 10, "Magic": 40, "Rare": 100, "Epic": 500, "Legendary": 2000 };
+    // v0.0.02 price hotfix: Mythic items now have an explicit sell price instead of falling back to Normal price.
+    const PRICE_MAP = { "Junk": 1, "Normal": 10, "Magic": 40, "Rare": 100, "Epic": 500, "Mythic": 1000, "Legendary": 2000 };
     const PLAYER_BLOCK_SIZE = 40;
     const CAMPFIRE_COOK_RANGE = PLAYER_BLOCK_SIZE; // 캐릭터 1블럭 기준: 모닥불 중심에서 1블럭 이내에서만 굽기 가능
     
