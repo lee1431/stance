@@ -167,6 +167,71 @@
 
     #build-mode-text { display:none; position: absolute; top: 80px; left: 50%; transform: translateX(-50%); font-size: 16px; color: #7fd4ff; font-weight: bold; z-index: 5; text-shadow: 0 2px 4px #000; pointer-events: none; padding: 10px 20px; background: rgba(0,0,0,0.6); border-radius: 8px; border: 1px solid #7fd4ff;}
 
+
+
+    /* [v0.0.0.3] Desktop HUD cleanup: 하단 푸터형 바 제거 + 퀵슬롯 중앙 하단 고정 */
+    @media (hover: hover) and (pointer: fine) and (min-width: 1181px) {
+      .hud {
+        left: 16px;
+        right: 16px;
+        bottom: 16px;
+        min-height: 0;
+        padding: 0;
+        display: block;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        backdrop-filter: none;
+        pointer-events: none;
+      }
+
+      .portrait-wrap {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 360px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(9, 13, 18, 0.86);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.38);
+        backdrop-filter: blur(5px);
+        pointer-events: auto;
+      }
+
+      .menu-buttons {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        pointer-events: auto;
+      }
+
+      .menu-buttons button {
+        width: 72px;
+        height: 58px;
+        min-width: 72px;
+        padding: 0;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        line-height: 1.15;
+      }
+
+      .quick-slot-panel {
+        bottom: 16px;
+        z-index: 7;
+      }
+
+      .quick-slot-help {
+        bottom: 94px;
+        z-index: 7;
+      }
+    }
+
     /* PC 제외 반응형 UI: 휴대폰/태블릿/터치 기기 공통 */
     .mobile-only { display: none; }
     @media (hover: none) and (pointer: coarse), (max-width: 1180px) {
