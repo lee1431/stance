@@ -5,6 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>STANCE MMORPG Prototype</title>
   <style>
+    :root {
+      --i0-color: #ffd86b; /* Legendary */
+      --i1-color: #ff8b31; /* Mythic (Reserved) */
+      --i2-color: #7fd4ff; /* Rare */
+      --i3-color: #6ad66a; /* Magic */
+      --i4-color: #b56cff; /* Epic */
+      --i5-color: #aaaaaa; /* Normal */
+      --i6-color: #666666; /* Junk */
+    }
+
     * { box-sizing: border-box; }
     html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font-family: Arial, Helvetica, sans-serif; background: #101820; color: #f5f5f5; touch-action: none; user-select: none; -webkit-user-select: none; }
     button, input { font-family: inherit; }
@@ -42,9 +52,18 @@
     .close-btn { background: transparent; border: none; font-size: 16px; color: #aaa; } .close-btn:hover { color: #fff; }
     .inventory-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; overflow-y: auto; max-height: 300px; padding-right: 4px; }
     .inv-slot { aspect-ratio: 1; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; transition: 0.1s; cursor: pointer;}
-    .inv-slot:hover { border-color: #FFD66B; background: rgba(255,214,107,0.1); }
+    .inv-slot:hover { filter: brightness(1.2); }
     .item-icon { font-size: 20px; font-weight: bold; color: #fff; }
-    .item-count { position: absolute; bottom: 2px; right: 4px; font-size: 10px; color: #fff; }
+    .item-count { position: absolute; bottom: 2px; right: 4px; font-size: 10px; color: #fff; text-shadow: 1px 1px 2px #000; }
+
+    /* [아이템 등급별 CSS 적용] */
+    .r-i0{border-color:var(--i0-color);background:linear-gradient(90deg,rgba(255,216,107,.16),rgba(0,0,0,.22));box-shadow:inset 0 0 15px rgba(0,0,0,.55),0 0 18px rgba(255,216,107,.22)}.r-i0 .item-icon,.r-i0 .inv-name,.log-rarity-i0,.log-name-i0,.reward-i0{color:var(--i0-color)}
+    .r-i1{border-color:var(--i1-color);background:linear-gradient(90deg,rgba(255,139,49,.15),rgba(0,0,0,.22))}.r-i1 .item-icon,.r-i1 .inv-name,.log-rarity-i1,.log-name-i1,.reward-i1{color:var(--i1-color)}
+    .r-i2{border-color:var(--i2-color);background:linear-gradient(90deg,rgba(127,212,255,.14),rgba(0,0,0,.22))}.r-i2 .item-icon,.r-i2 .inv-name,.log-rarity-i2,.log-name-i2,.reward-i2{color:var(--i2-color)}
+    .r-i3{border-color:var(--i3-color);background:linear-gradient(90deg,rgba(106,214,106,.14),rgba(0,0,0,.22))}.r-i3 .item-icon,.r-i3 .inv-name,.log-rarity-i3,.log-name-i3,.reward-i3{color:var(--i3-color)}
+    .r-i4{border-color:var(--i4-color);background:linear-gradient(90deg,rgba(181,108,255,.15),rgba(0,0,0,.22))}.r-i4 .item-icon,.r-i4 .inv-name,.log-rarity-i4,.log-name-i4,.reward-i4{color:var(--i4-color)}
+    .r-i5{border-color:var(--i5-color);background:linear-gradient(90deg,rgba(170,170,170,.12),rgba(0,0,0,.22))}.r-i5 .item-icon,.r-i5 .inv-name,.log-rarity-i5,.log-name-i5,.reward-i5{color:var(--i5-color)}
+    .r-i6{border-color:rgba(68,68,68,.85);background:linear-gradient(90deg,rgba(102,102,102,.10),rgba(0,0,0,.22))}.r-i6 .item-icon,.r-i6 .inv-name,.log-rarity-i6,.log-name-i6,.reward-i6{color:var(--i6-color)}
 
     .build-item { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.4); padding: 10px; margin-bottom: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); }
     .build-item:hover { border-color: #7CFF8A; background: rgba(124,255,138,0.1); }
@@ -53,7 +72,7 @@
     .build-cost { font-size: 12px; color: #FFD66B; font-weight: bold; text-align: right;}
 
     /* 모달 */
-    #global-tooltip { position: absolute; background: #000; color: #FFD66B; padding: 6px 10px; font-size: 12px; border-radius: 4px; pointer-events: none; z-index: 9999; display: none; white-space: nowrap; border: 1px solid #333; }
+    #global-tooltip { position: absolute; background: #000; color: #fff; padding: 6px 10px; font-size: 12px; border-radius: 4px; pointer-events: none; z-index: 9999; display: none; white-space: nowrap; border: 1px solid #333; }
     .modal-box { display: none; flex-direction: column; gap: 12px; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; padding: 20px; z-index: 30; }
     .modal-box input { width: 60px; padding: 4px; background: rgba(0,0,0,0.5); border: 1px solid #555; color: #fff; text-align: center; border-radius: 4px; }
     .modal-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
@@ -327,6 +346,9 @@
 
     const BUILD_COSTS = { 'Campfire': { wood: 30, gold: 0 }, 'Fence': { wood: 50, gold: 50 }, 'Crossbow': { wood: 1000, gold: 1000 }, 'Armory': { wood: 5000, gold: 5000 } };
     const PRICE_MAP = { "Normal": 10, "Magic": 40, "Rare": 100, "Epic": 500, "Legendary": 2000 };
+    
+    // 아이템 등급과 CSS 클래스(색상) 매핑
+    const RARITY_MAP = { "Legendary": "i0", "Epic": "i4", "Rare": "i2", "Magic": "i3", "Normal": "i5" };
 
     const MONSTER_TYPES = [
       { name: '닭', hp: 50, speed: 60, texture: 'chicken_tex', bodyRadius: 10, labelOffset: 28, barWidth: 38, dmg: 5, exp: 10 },
@@ -398,7 +420,7 @@
     }
 
     function addChatMessage(msg, className = '') {
-      const div = document.createElement('div'); if (className) div.className = className; div.textContent = msg; 
+      const div = document.createElement('div'); if (className) div.className = className; div.innerHTML = msg; 
       ui.chatBody.appendChild(div); ui.chatBody.scrollTop = ui.chatBody.scrollHeight;
     }
 
@@ -413,7 +435,9 @@
       gameState.inventory[itemName].count += qty;
 
       if (options.log !== false) {
-        addChatMessage(`획득: [${itemRarity}] ${itemName} x${qty}`, 'green');
+        const rarityCode = RARITY_MAP[itemRarity] || 'i5';
+        // 채팅 로그에 신규 적용된 색상 클래스 활용
+        addChatMessage(`획득: <span class="log-rarity-${rarityCode}">[${itemRarity}]</span> <span class="log-name-${rarityCode}">${itemName}</span> x${qty}`);
       }
 
       if (ui.inventoryPanel && ui.inventoryPanel.style.display === 'flex') {
@@ -478,17 +502,22 @@
       const totalSlots = Math.max(16, items.length + (4 - items.length % 4)); 
 
       for (let i = 0; i < totalSlots; i++) {
-        const slot = document.createElement('div'); slot.className = 'inv-slot';
+        const slot = document.createElement('div');
         if (i < items.length) {
           const name = items[i], obj = gameState.inventory[name], price = PRICE_MAP[obj.rarity] || 10;
-          let color = "#fff";
-          if(obj.rarity === 'Legendary') color = "#ff5555"; else if(obj.rarity === 'Epic') color = "#d255ff"; else if(obj.rarity === 'Rare') color = "#55aaff"; else if(obj.rarity === 'Magic') color = "#7CFF8A";
+          const rarityCode = RARITY_MAP[obj.rarity] || 'i5'; // CSS 등급 코드 매핑
+
+          // 해당 등급의 배경/테두리 클래스 적용
+          slot.className = `inv-slot r-${rarityCode}`;
+          slot.innerHTML = `<span class="item-icon">${name.charAt(0)}</span><span class="item-count">x${obj.count}</span>`;
           
-          slot.style.borderColor = color;
-          slot.title = `${name} / ${obj.rarity} / x${obj.count}`;
-          slot.innerHTML = `<span class="item-icon" style="color:${color}">${name.charAt(0)}</span><span class="item-count">x${obj.count}</span>`;
           slot.onmouseenter = (e) => {
-            ui.tooltip.innerHTML = `${name}<br><span style="color:${color}">등급: ${obj.rarity}</span><br>수량: ${obj.count}<br>판매가: ${price.toLocaleString()} G`;
+            ui.tooltip.innerHTML = `
+              <span style="color:var(--${rarityCode}-color); font-weight:bold;">${name}</span><br>
+              <span style="color:var(--${rarityCode}-color);">등급: ${obj.rarity}</span><br>
+              수량: ${obj.count}<br>
+              판매가: ${price.toLocaleString()} G
+            `;
             ui.tooltip.style.display = 'block';
             ui.tooltip.style.left = `${e.pageX + 12}px`;
             ui.tooltip.style.top = `${e.pageY + 12}px`;
@@ -499,6 +528,8 @@
           };
           slot.onmouseleave = () => { ui.tooltip.style.display = 'none'; };
           slot.onclick = () => openSellModal(name, obj, price);
+        } else {
+          slot.className = 'inv-slot'; // 빈 슬롯
         }
         ui.inventoryGrid.appendChild(slot);
       }
@@ -565,13 +596,13 @@
         el.addEventListener('click', () => {
           const type = el.dataset.buildType; const cost = BUILD_COSTS[type];
           const woodCount = gameState.inventory['Wood'] ? gameState.inventory['Wood'].count : 0;
-          if (woodCount < cost.wood || gameState.player.gold < cost.gold) { addChatMessage(`자원 부족 (필요: Wood ${cost.wood}, Gold ${cost.gold})`, 'yellow'); return; }
-          if (type !== 'Campfire' && gameState.builtCount >= gameState.buildLimit) { addChatMessage(`최대 건설 수량 도달`, 'yellow'); return; }
+          if (woodCount < cost.wood || gameState.player.gold < cost.gold) { addChatMessage(`<span style="color:#FFD66B;">자원 부족 (필요: Wood ${cost.wood}, Gold ${cost.gold})</span>`); return; }
+          if (type !== 'Campfire' && gameState.builtCount >= gameState.buildLimit) { addChatMessage(`<span style="color:#FFD66B;">최대 건설 수량 도달</span>`); return; }
           window.activeBuildType = type; window.activeBuildRotation = 0; ui.buildPanel.style.display = 'none'; ui.buildModeText.style.display = 'block';
         });
       });
 
-      window.addEventListener('contextmenu', (e) => { e.preventDefault(); if (window.activeBuildType) { window.activeBuildRotation += 90; addChatMessage('건물 회전됨', 'yellow'); } });
+      window.addEventListener('contextmenu', (e) => { e.preventDefault(); if (window.activeBuildType) { window.activeBuildRotation += 90; addChatMessage('<span style="color:#FFD66B;">건물 회전됨</span>'); } });
       window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { window.activeBuildType = null; ui.buildModeText.style.display = 'none'; ui.upgModal.style.display = 'none'; ui.sellModal.style.display = 'none'; ui.statModal.style.display = 'none'; } });
 
       ui.sellQty.addEventListener('input', (e) => { let val = parseInt(e.target.value) || 1; if (val < 1) val = 1; if (val > currentSellMax) val = currentSellMax; e.target.value = val; ui.sellProfit.textContent = `${(val * currentSellPrice).toLocaleString()} G`; });
@@ -831,7 +862,7 @@
             gameState.player.maxHp += 30; 
             gameState.player.hp = gameState.player.maxHp;
             gameState.buildLimit = gameState.player.level * 3; 
-            addChatMessage(`레벨 업! 스탯 포인트가 1 지급되었습니다.`, 'yellow');
+            addChatMessage(`<span style="color:#FFD66B;">레벨 업! 스탯 포인트가 1 지급되었습니다.</span>`);
           } else {
             gameState.player.exp = gameState.player.nextExp; 
           }
