@@ -429,8 +429,17 @@
       if (!gameState.inventory[itemName]) gameState.inventory[itemName] = { count: 0, rarity: displayRarity };
       gameState.inventory[itemName].count += qty;
       
-      if (itemName !== 'Wood' || gameState.inventory['Wood'].count % 10 === 0) {
-        addChatMessage(`획득: <span class="log-rarity-${rarityCode}">[${displayRarity}]</span> <span class="log-name-${rarityCode}">${itemName}</span> x${qty}`);
+      if (itemName === 'Wood') {
+        addChatMessage(
+          `획득: <span class="log-rarity-${rarityCode}">[${displayRarity}]</span> ` +
+          `<span class="log-name-${rarityCode}">${itemName}</span> x${qty} ` +
+          `<span style="color:#aaa;">(현재 보유: ${gameState.inventory[itemName].count})</span>`
+        );
+      } else {
+        addChatMessage(
+          `획득: <span class="log-rarity-${rarityCode}">[${displayRarity}]</span> ` +
+          `<span class="log-name-${rarityCode}">${itemName}</span> x${qty}`
+        );
       }
       if (ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
     }
