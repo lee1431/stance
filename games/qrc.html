@@ -2,8 +2,8 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>STANCE: Lonely Island Prototype</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>STANCE: Lonely Island</title>
   <style>
     :root {
       --i0-color: #ffd86b; /* Legendary */
@@ -13,14 +13,19 @@
       --i4-color: #b56cff; /* Epic */
       --i5-color: #aaaaaa; /* Normal */
       --i6-color: #666666; /* Junk */
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --real-vh: 100dvh;
+      --touch-bottom-gap: 18px;
     }
 
     * { box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font-family: Arial, Helvetica, sans-serif; background: #0a1014; color: #f5f5f5; touch-action: none; user-select: none; -webkit-user-select: none; }
+    html, body { width: 100%; height: var(--real-vh, 100dvh); min-height: var(--real-vh, 100dvh); margin: 0; overflow: hidden; font-family: Arial, Helvetica, sans-serif; background: #0a1014; color: #f5f5f5; touch-action: none; user-select: none; -webkit-user-select: none; }
     button, input { font-family: inherit; }
+    input { user-select: text; -webkit-user-select: text; touch-action: manipulation; }
     button { color: inherit; cursor: pointer; }
 
-    #app { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: #0a1014; }
+    #app { position: relative; width: 100vw; height: var(--real-vh, 100dvh); overflow: hidden; background: #0a1014; }
     #game-container { position: absolute; inset: 0; z-index: 1; }
 
     /* [로그인 / 시작 화면] */
@@ -37,12 +42,23 @@
     .panel-row { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; line-height: 1.6; }
     .green { color: #7CFF8A; } .yellow { color: #FFD66B; } .blue { color: #7fd4ff; }
 
-    .top-left-panel { top: 16px; left: 16px; width: 220px; padding: 12px; }
+    .top-left-panel { top: 16px; left: 16px; width: 260px; padding: 12px; }
+    .map-desc { margin-top: 6px; color: #d9e7ef; font-size: 11px; line-height: 1.45; }
     .minimap-panel { top: 16px; right: 16px; width: 220px; padding: 12px; transition: 0.2s; }
-    #minimap { position: relative; width: 100%; height: 135px; overflow: hidden; border-radius: 8px; background: #1a4b77; border: 1px solid rgba(255, 255, 255, 0.16); }
-    #minimap-island { position: absolute; left: 5%; top: 5%; width: 90%; height: 90%; background: #388047; border-radius: 10px; }
-    #minimap-lake { position: absolute; left: 60%; top: 30%; width: 15%; height: 20%; background: #3a8cd1; border-radius: 50%; }
+    #minimap { position: relative; width: 100%; height: 135px; overflow: hidden; border-radius: 8px; background: #1a4b77; border: 1px solid rgba(255, 255, 255, 0.16); cursor: pointer; }
+    .minimap-panel.full-map { width: min(520px, calc(100vw - 32px)); }
+    .minimap-panel.full-map #minimap { height: min(340px, 46vh); }
+    .minimap-panel .panel-title::after { content: '근처'; font-size: 10px; color: #7fd4ff; font-weight: 700; }
+    .minimap-panel.full-map .panel-title::after { content: '전체'; color: #FFD66B; }
+    #minimap-terrain { position: absolute; inset: 0; z-index: 1; }
+    .mini-island { position: absolute; background: #388047; border: 1px solid rgba(255,255,255,0.08); border-radius: 50%; transform: translate(-50%, -50%); }
+    .mini-island.lvl2 { background: #92733d; }
+    .mini-island.lvl3 { background: #315d37; }
+    .mini-hill { position: absolute; background: rgba(78,107,69,0.9); border-radius: 8px; transform: translate(-50%, -50%); }
+    .mini-desert { position: absolute; background: rgba(214,186,122,0.9); border-radius: 8px; transform: translate(-50%, -50%); }
+    .mini-lake { position: absolute; background: #3a8cd1; border-radius: 50%; transform: translate(-50%, -50%); }
     #mini-player { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px #fff; transform: translate(-50%, -50%); z-index: 10; }
+    #minimap-entities { position: absolute; inset: 0; z-index: 5; }
     .mini-dot.enemy { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #ff5858; transform: translate(-50%, -50%); }
     .mini-dot.bldg { position: absolute; width: 4px; height: 4px; border-radius: 2px; background: #ffd66b; transform: translate(-50%, -50%); }
 
@@ -80,8 +96,28 @@
     .modal-btns button { padding: 6px 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; background: rgba(255,255,255,0.1); }
     .modal-btns button.confirm { background: rgba(124, 255, 138, 0.2); border-color: #7CFF8A; color: #7CFF8A; }
     .modal-btns button.upgrade { background: rgba(255, 214, 107, 0.2); border-color: #FFD66B; color: #FFD66B; }
+    .modal-btns button.demolish { background: rgba(255, 88, 88, 0.18); border-color: #ff5858; color: #ff8a8a; }
+    .modal-btns button.raft-action { background: rgba(127, 212, 255, 0.18); border-color: #7fd4ff; color: #7fd4ff; }
     .modal-btns button.cook { background: rgba(255, 69, 0, 0.2); border-color: #ff4500; color: #ff6347; } 
     .modal-btns button.eat { background: rgba(85, 170, 255, 0.2); border-color: #55aaff; color: #55aaff; }
+    .armory-card {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid rgba(255,214,107,0.35);
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(255,214,107,0.14), rgba(255,255,255,0.045));
+      color: #f6fbff;
+      text-align: left;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px 10px;
+      align-items: center;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.22);
+    }
+    .armory-card:hover { border-color: #FFD66B; background: linear-gradient(135deg, rgba(255,214,107,0.24), rgba(127,212,255,0.08)); }
+    .armory-card-title { font-size: 13px; font-weight: 800; color: #fff; }
+    .armory-card-level { font-size: 11px; color: #7CFF8A; white-space: nowrap; }
+    .armory-card-cost { grid-column: 1 / -1; font-size: 12px; color: #FFD66B; }
 
     #death-screen { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; }
     #death-screen h1 { color: #ff5858; font-size: 48px; letter-spacing: 4px; margin-bottom: 20px; text-shadow: 0 0 20px rgba(255,88,88,0.5); }
@@ -91,7 +127,8 @@
     .chat-panel { left: 16px; bottom: 142px; width: 390px; height: 210px; display: flex; flex-direction: column; overflow: hidden; transition: 0.2s; }
     .chat-body { flex: 1; padding: 10px; overflow-y: auto; font-size: 12px; line-height: 1.5; color: #dfefff; pointer-events: auto; }
     .chat-input-row { display: flex; gap: 6px; padding: 8px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-    .chat-input-row input { flex: 1; padding: 8px; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 6px; background: rgba(0, 0, 0, 0.25); color: #fff; outline: none; }
+    .chat-input-row input { flex: 1; padding: 8px; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 6px; background: rgba(0, 0, 0, 0.25); color: #fff; outline: none; user-select: text; -webkit-user-select: text; touch-action: manipulation; }
+    .chat-panel, .chat-panel * { pointer-events: auto; }
     .chat-input-row button { padding: 0 12px; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 6px; background: rgba(80, 145, 255, 0.35); }
 
     .hud { position: absolute; left: 16px; right: 16px; bottom: 16px; z-index: 5; min-height: 108px; display: grid; grid-template-columns: 360px 1fr 380px; gap: 16px; align-items: center; padding: 14px; border-radius: 14px; background: rgba(9, 13, 18, 0.86); border: 1px solid rgba(255, 255, 255, 0.16); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.46); backdrop-filter: blur(5px); }
@@ -111,37 +148,246 @@
     .menu-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
     .menu-buttons button { min-width: 90px; padding: 9px 10px; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 8px; background: rgba(255, 255, 255, 0.08); font-size: 12px; }
 
+    .quick-slot-panel { position: absolute; left: 50%; bottom: 138px; transform: translateX(-50%); z-index: 6; display: flex; align-items: stretch; gap: 8px; padding: 8px 10px; border-radius: 14px; background: rgba(9, 13, 18, 0.84); border: 1px solid rgba(255,255,255,0.16); box-shadow: 0 8px 24px rgba(0,0,0,0.40); backdrop-filter: blur(5px); pointer-events: auto; }
+    .quick-slot { position: relative; width: 78px; height: 64px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.22); background: rgba(0,0,0,0.34); display: grid; grid-template-rows: 18px 1fr 16px; place-items: center; overflow: hidden; cursor: pointer; }
+    .quick-slot.empty { opacity: 0.58; }
+    .quick-slot.auto-ready { border-color: #7CFF8A; box-shadow: 0 0 12px rgba(124,255,138,0.28); }
+    .quick-slot-key { position: absolute; top: 3px; left: 5px; font-size: 10px; color: #FFD66B; font-weight: 800; }
+    .quick-slot-kind { position: absolute; top: 3px; right: 5px; font-size: 10px; color: #7fd4ff; font-weight: 800; }
+    .quick-slot-icon { grid-row: 2; font-size: 20px; font-weight: 900; color: #fff; text-shadow: 0 2px 4px #000; }
+    .quick-slot-name { grid-row: 3; width: 100%; padding: 0 4px; font-size: 10px; color: #dfefff; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .quick-slot-count { position: absolute; right: 5px; bottom: 16px; font-size: 10px; color: #fff; font-weight: 800; text-shadow: 0 1px 3px #000; }
+    .quick-slot-help { position: absolute; left: 50%; bottom: 216px; transform: translateX(-50%); z-index: 6; font-size: 11px; color: #9fb1c5; text-shadow: 0 2px 4px #000; pointer-events: none; white-space: nowrap; }
+    .quick-slot-register { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.12); }
+    .quick-slot-register-title { font-size: 12px; color: #dfefff; margin-bottom: 6px; }
+    .quick-slot-register-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+    .quick-slot-register-buttons button { flex: 1; min-width: 36px; padding: 5px 6px; border-radius: 5px; border: 1px solid rgba(127,212,255,0.45); background: rgba(127,212,255,0.14); color: #7fd4ff; font-size: 12px; font-weight: 700; }
+    .quick-slot-register-buttons button.clear { border-color: rgba(255,88,88,0.45); background: rgba(255,88,88,0.12); color: #ff8a8a; }
+    .quick-slot-register-note { margin-top: 5px; font-size: 11px; color: #9fb1c5; line-height: 1.35; }
+
     #build-mode-text { display:none; position: absolute; top: 80px; left: 50%; transform: translateX(-50%); font-size: 16px; color: #7fd4ff; font-weight: bold; z-index: 5; text-shadow: 0 2px 4px #000; pointer-events: none; padding: 10px 20px; background: rgba(0,0,0,0.6); border-radius: 8px; border: 1px solid #7fd4ff;}
 
-    /* 모바일 UI */
-    .mobile-only { display: none; }
-    @media (max-width: 800px) {
-      .mobile-only { display: block; }
-      #mobile-toggles { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; z-index: 50; }
-      #mobile-toggles button { background: rgba(12, 18, 24, 0.8); border: 1px solid #7fd4ff; color: #7fd4ff; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; }
-      #mobile-toggles button.active { background: rgba(127, 212, 255, 0.3); }
-      .minimap-panel { display: none; top: 50px; right: 10px; width: 160px; z-index: 40;}
-      .quest-panel { display: none; top: 210px; right: 10px; width: 160px; z-index: 40; }
-      .chat-panel { display: none; bottom: 150px; left: 10px; right: 10px; width: auto; height: 140px; z-index: 40; }
-      .top-left-panel { display: none; } 
-      .hud { top: 10px; left: 10px; bottom: auto; right: auto; width: 220px; grid-template-columns: 1fr; padding: 10px; min-height: auto; gap: 5px; z-index: 40;}
-      .portrait { display: none; } 
-      .stat-row { font-size: 10px; }
-      .menu-buttons { display: none; } 
-      .inventory-panel, .build-panel { width: 95%; max-width: 360px; }
-      #mobile-bottom-menu { display: flex; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); gap: 10px; z-index: 40; }
-      #mobile-bottom-menu button { background: rgba(12, 18, 24, 0.8); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 12px; }
-      #virtual-dpad { position: absolute; bottom: 60px; left: 20px; display: grid; grid-template-columns: 45px 45px 45px; grid-template-rows: 45px 45px 45px; gap: 5px; z-index: 45; }
-      .d-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: #fff; font-size: 18px; display: flex; justify-content: center; align-items: center; }
-      .d-btn:active { background: rgba(255,255,255,0.4); }
-      #btn-up { grid-column: 2; grid-row: 1; }
-      #btn-left { grid-column: 1; grid-row: 2; }
-      #btn-right { grid-column: 3; grid-row: 2; }
-      #btn-down { grid-column: 2; grid-row: 3; }
-      #virtual-attack { position: absolute; bottom: 60px; right: 20px; width: 70px; height: 70px; background: rgba(127, 212, 255, 0.3); border: 2px solid #7fd4ff; border-radius: 50%; color: #fff; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 14px; z-index: 45; box-shadow: 0 0 10px rgba(127, 212, 255, 0.5); }
-      #virtual-attack:active { background: rgba(127, 212, 255, 0.6); }
+    /* [v0.0.0.3] Desktop HUD cleanup: 하단 푸터형 바 제거 + 퀵슬롯 중앙 하단 고정 */
+    @media (hover: hover) and (pointer: fine) and (min-width: 1181px) {
+      .hud {
+        left: 16px;
+        right: 16px;
+        bottom: 16px;
+        min-height: 0;
+        padding: 0;
+        display: block;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        backdrop-filter: none;
+        pointer-events: none;
+      }
+
+      .portrait-wrap {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 360px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(9, 13, 18, 0.86);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.38);
+        backdrop-filter: blur(5px);
+        pointer-events: auto;
+      }
+
+      .menu-buttons {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        pointer-events: auto;
+      }
+
+      .menu-buttons button {
+        width: 72px;
+        height: 58px;
+        min-width: 72px;
+        padding: 0;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        line-height: 1.15;
+      }
+
+      .quick-slot-panel {
+        bottom: 16px;
+        z-index: 7;
+      }
+
+      .quick-slot-help {
+        bottom: 94px;
+        z-index: 7;
+      }
     }
+
+    /* PC 제외 반응형 UI: 휴대폰/태블릿/터치 기기 공통 */
+    .mobile-only { display: none; }
+    @media (hover: none) and (pointer: coarse), (max-width: 1180px) {
+      :root { --safe-bottom: env(safe-area-inset-bottom, 0px); --safe-top: env(safe-area-inset-top, 0px); }
+      .mobile-only { display: block; }
+      #mobile-toggles { position: absolute; top: calc(8px + var(--safe-top)); right: 8px; display: flex; gap: 6px; z-index: 90; }
+      #mobile-toggles button { background: rgba(12, 18, 24, 0.88); border: 1px solid #7fd4ff; color: #7fd4ff; padding: 8px 10px; border-radius: 999px; font-weight: bold; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.28); }
+      #mobile-toggles button.active { background: rgba(127, 212, 255, 0.30); }
+      .top-left-panel { top: calc(8px + var(--safe-top)); left: 8px; width: min(46vw, 300px); padding: 10px; z-index: 44; }
+      .top-left-panel .panel-row { font-size: 11px; gap: 6px; }
+      .map-desc { font-size: 11px; line-height: 1.35; margin-top: 5px; color: #c9d8e7; }
+      .minimap-panel { display: none; top: calc(48px + var(--safe-top)); right: 8px; width: min(42vw, 240px); padding: 10px; z-index: 88;}
+      #minimap { height: clamp(108px, 20vw, 150px); }
+      .quest-panel { display: none; top: calc(210px + var(--safe-top)); right: 8px; width: min(42vw, 240px); padding: 10px; z-index: 88; }
+      .chat-panel { display: none; left: 8px; right: 8px; bottom: calc(112px + var(--safe-bottom)); width: auto; height: min(34dvh, 260px); z-index: 90; }
+      .chat-panel .chat-body { font-size: 12px; }
+      .chat-input-row { padding: 8px; }
+      .chat-input-row input { font-size: 16px; min-width: 0; }
+      .chat-input-row button { min-width: 56px; padding: 0 10px; }
+      .hud { top: auto; left: 8px; right: 8px; bottom: calc(8px + var(--safe-bottom)); width: auto; min-height: 82px; grid-template-columns: 1fr; padding: 10px 12px; gap: 4px; z-index: 60;}
+      .portrait { display: none; }
+      .portrait-wrap { gap: 0; }
+      .name-line { margin-bottom: 5px; font-size: 13px; }
+      .stat-row { grid-template-columns: 30px 1fr 82px; gap: 6px; margin-top: 4px; font-size: 10px; }
+      .bar { height: 8px; }
+      .menu-buttons { display: none; }
+      .inventory-panel, .build-panel, .modal-box { width: calc(100vw - 18px); max-width: 520px; max-height: calc(100dvh - 140px - var(--safe-bottom)); overflow: auto; }
+      .inventory-grid { max-height: min(54dvh, 440px); }
+      #mobile-bottom-menu { display: flex; position: absolute; bottom: calc(96px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); gap: 8px; z-index: 75; padding: 5px; border-radius: 999px; background: rgba(9, 13, 18, 0.62); backdrop-filter: blur(4px); }
+      #mobile-bottom-menu button { background: rgba(12, 18, 24, 0.88); border: 1px solid rgba(255,255,255,0.28); color: #fff; min-width: 62px; padding: 9px 12px; border-radius: 999px; font-size: 12px; }
+      .quick-slot-panel { bottom: calc(150px + var(--safe-bottom)); gap: 5px; padding: 6px; z-index: 74; }
+      .quick-slot { width: 58px; height: 54px; border-radius: 9px; }
+      .quick-slot-help { display: none; }
+      .quick-slot-name { font-size: 9px; }
+      #virtual-dpad { position: absolute; bottom: calc(186px + var(--safe-bottom)); left: 18px; width: 132px; height: 132px; border-radius: 50%; z-index: 70; background: radial-gradient(circle, rgba(255,255,255,0.18), rgba(12,18,24,0.70)); border: 1px solid rgba(255,255,255,0.30); box-shadow: 0 8px 24px rgba(0,0,0,.38); touch-action: none; user-select: none; -webkit-user-select: none; }
+      #virtual-dpad::before { content: ''; position: absolute; inset: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.22); }
+      #stick-knob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; transform: translate(-50%, -50%); border-radius: 50%; background: rgba(127,212,255,0.38); border: 2px solid #7fd4ff; box-shadow: 0 0 14px rgba(127,212,255,.42); pointer-events: none; }
+      #virtual-attack { position: absolute; bottom: calc(200px + var(--safe-bottom)); right: 22px; width: 78px; height: 78px; background: rgba(127, 212, 255, 0.28); border: 2px solid #7fd4ff; border-radius: 50%; color: #fff; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 13px; z-index: 70; box-shadow: 0 0 14px rgba(127, 212, 255, 0.45); touch-action: none; }
+      #virtual-attack:active { background: rgba(127, 212, 255, 0.58); }
+      #build-mode-text { top: calc(64px + var(--safe-top)); width: calc(100vw - 24px); text-align: center; font-size: 13px; }
+    }
+    @media (hover: none) and (pointer: coarse) and (min-width: 801px), (min-width: 801px) and (max-width: 1180px) {
+      .top-left-panel { width: 300px; }
+      .minimap-panel { width: 260px; }
+      .quest-panel { width: 260px; top: calc(232px + var(--safe-top)); }
+      .chat-panel { left: 12px; right: auto; width: 420px; height: 250px; bottom: calc(118px + var(--safe-bottom)); }
+      .hud { left: 12px; right: 12px; bottom: calc(10px + var(--safe-bottom)); min-height: 92px; }
+      #mobile-bottom-menu { bottom: calc(106px + var(--safe-bottom)); }
+      #virtual-dpad { bottom: calc(205px + var(--safe-bottom)); left: 24px; width: 150px; height: 150px; }
+      #virtual-attack { bottom: calc(220px + var(--safe-bottom)); right: 28px; width: 86px; height: 86px; }
+    }
+    @media (max-width: 430px) {
+      .top-left-panel { width: calc(100vw - 148px); }
+      .top-left-panel .panel-title { margin-bottom: 4px; }
+      .top-left-panel .panel-row { font-size: 10px; line-height: 1.35; }
+      .map-desc { display: none; }
+      #mobile-toggles button { padding: 7px 8px; font-size: 11px; }
+      #mobile-bottom-menu { bottom: calc(90px + var(--safe-bottom)); }
+      #mobile-bottom-menu button { min-width: 56px; padding: 8px 10px; }
+      #virtual-dpad { bottom: calc(174px + var(--safe-bottom)); width: 118px; height: 118px; left: 14px; }
+      #stick-knob { width: 48px; height: 48px; }
+      #virtual-attack { bottom: calc(184px + var(--safe-bottom)); right: 16px; width: 70px; height: 70px; font-size: 12px; }
+      .quick-slot-panel { bottom: calc(146px + var(--safe-bottom)); }
+      .quick-slot { width: 52px; height: 50px; }
+    }
+
+
+    /* JS 판별 기반 터치 UI: 태블릿처럼 화면이 넓은 터치 브라우저도 PC UI로 떨어지지 않게 강제합니다. */
+    body.touch-device .mobile-only { display: block; }
+    body.desktop-device .mobile-only { display: none !important; }
+    body.touch-device #mobile-toggles { position: absolute; top: calc(8px + var(--safe-top)); right: 8px; display: flex; gap: 6px; z-index: 90; }
+    body.touch-device #mobile-toggles button { background: rgba(12, 18, 24, 0.88); border: 1px solid #7fd4ff; color: #7fd4ff; padding: 8px 10px; border-radius: 999px; font-weight: bold; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.28); }
+    body.touch-device #mobile-toggles button.active { background: rgba(127, 212, 255, 0.30); }
+    body.touch-device .top-left-panel { top: calc(8px + var(--safe-top)); left: 8px; width: min(46vw, 300px); padding: 10px; z-index: 44; }
+    body.touch-device .top-left-panel .panel-row { font-size: 11px; gap: 6px; }
+    body.touch-device .map-desc { font-size: 11px; line-height: 1.35; margin-top: 5px; color: #c9d8e7; }
+    body.touch-device .minimap-panel { display: none; top: calc(48px + var(--safe-top)); right: 8px; width: min(42vw, 260px); padding: 10px; z-index: 88; }
+    body.touch-device #minimap { height: clamp(108px, 20vw, 150px); }
+    body.touch-device .quest-panel { display: none; top: calc(210px + var(--safe-top)); right: 8px; width: min(42vw, 260px); padding: 10px; z-index: 88; }
+    body.touch-device .chat-panel { display: none; left: 8px; right: 8px; bottom: calc(126px + var(--safe-bottom) + var(--touch-bottom-gap)); width: auto; height: min(34dvh, 260px); z-index: 90; }
+    body.touch-device .chat-panel .chat-body { font-size: 12px; }
+    body.touch-device .chat-input-row { padding: 8px; }
+    body.touch-device .chat-input-row input { font-size: 16px; min-width: 0; }
+    body.touch-device .chat-input-row button { min-width: 56px; padding: 0 10px; }
+    body.touch-device .hud { top: auto; left: 8px; right: 8px; bottom: calc(18px + var(--safe-bottom) + var(--touch-bottom-gap)); width: auto; min-height: 82px; grid-template-columns: 1fr; padding: 10px 12px; gap: 4px; z-index: 60; }
+    body.touch-device .portrait { display: none; }
+    body.touch-device .portrait-wrap { gap: 0; }
+    body.touch-device .name-line { margin-bottom: 5px; font-size: 13px; }
+    body.touch-device .stat-row { grid-template-columns: 30px 1fr 82px; gap: 6px; margin-top: 4px; font-size: 10px; }
+    body.touch-device .bar { height: 8px; }
+    body.touch-device .menu-buttons { display: none; }
+    body.touch-device .inventory-panel, body.touch-device .build-panel, body.touch-device .modal-box { width: calc(100vw - 18px); max-width: 520px; max-height: calc(var(--real-vh, 100dvh) - 150px - var(--safe-bottom)); overflow: auto; }
+    body.touch-device .inventory-grid { max-height: min(54dvh, 440px); }
+    body.touch-device #mobile-bottom-menu { display: flex; position: absolute; bottom: calc(110px + var(--safe-bottom) + var(--touch-bottom-gap)); left: 50%; transform: translateX(-50%); gap: 8px; z-index: 75; padding: 5px; border-radius: 999px; background: rgba(9, 13, 18, 0.62); backdrop-filter: blur(4px); }
+    body.touch-device #mobile-bottom-menu button { background: rgba(12, 18, 24, 0.88); border: 1px solid rgba(255,255,255,0.28); color: #fff; min-width: 62px; padding: 9px 12px; border-radius: 999px; font-size: 12px; }
+    body.touch-device .quick-slot-panel { bottom: calc(164px + var(--safe-bottom) + var(--touch-bottom-gap)); gap: 5px; padding: 6px; z-index: 74; }
+    body.touch-device .quick-slot { width: 58px; height: 54px; border-radius: 9px; }
+    body.touch-device .quick-slot-help { display: none; }
+    body.touch-device .quick-slot-name { font-size: 9px; }
+    body.touch-device #virtual-dpad { display: block; position: absolute; bottom: calc(204px + var(--safe-bottom) + var(--touch-bottom-gap)); left: 18px; width: 132px; height: 132px; border-radius: 50%; z-index: 70; background: radial-gradient(circle, rgba(255,255,255,0.18), rgba(12,18,24,0.70)); border: 1px solid rgba(255,255,255,0.30); box-shadow: 0 8px 24px rgba(0,0,0,.38); touch-action: none; user-select: none; -webkit-user-select: none; }
+    body.touch-device #virtual-dpad::before { content: ''; position: absolute; inset: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.22); }
+    body.touch-device #stick-knob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; transform: translate(-50%, -50%); border-radius: 50%; background: rgba(127,212,255,0.38); border: 2px solid #7fd4ff; box-shadow: 0 0 14px rgba(127,212,255,.42); pointer-events: none; }
+    body.touch-device #virtual-attack { display: flex; position: absolute; bottom: calc(218px + var(--safe-bottom) + var(--touch-bottom-gap)); right: 22px; width: 78px; height: 78px; background: rgba(127, 212, 255, 0.28); border: 2px solid #7fd4ff; border-radius: 50%; color: #fff; justify-content: center; align-items: center; font-weight: bold; font-size: 13px; z-index: 70; box-shadow: 0 0 14px rgba(127, 212, 255, 0.45); touch-action: none; }
+    body.touch-device #virtual-attack:active { background: rgba(127, 212, 255, 0.58); }
+    body.touch-device #build-mode-text { top: calc(64px + var(--safe-top)); width: calc(100vw - 24px); text-align: center; font-size: 13px; }
+
+    body.touch-device.tablet-device .top-left-panel { width: 300px; }
+    body.touch-device.tablet-device .minimap-panel { width: 260px; }
+    body.touch-device.tablet-device .quest-panel { width: 260px; top: calc(232px + var(--safe-top)); }
+    body.touch-device.tablet-device .chat-panel { left: 12px; right: auto; width: 420px; height: 250px; bottom: calc(132px + var(--safe-bottom) + var(--touch-bottom-gap)); }
+    body.touch-device.tablet-device .hud { left: 12px; right: 12px; bottom: calc(18px + var(--safe-bottom) + var(--touch-bottom-gap)); min-height: 92px; }
+    body.touch-device.tablet-device #mobile-bottom-menu { bottom: calc(116px + var(--safe-bottom) + var(--touch-bottom-gap)); }
+    body.touch-device.tablet-device #virtual-dpad { bottom: calc(224px + var(--safe-bottom) + var(--touch-bottom-gap)); left: 24px; width: 150px; height: 150px; }
+    body.touch-device.tablet-device #virtual-attack { bottom: calc(240px + var(--safe-bottom) + var(--touch-bottom-gap)); right: 28px; width: 86px; height: 86px; }
+
+    @media (max-width: 430px) {
+      body.touch-device .top-left-panel { width: calc(100vw - 148px); }
+      body.touch-device .top-left-panel .panel-title { margin-bottom: 4px; }
+      body.touch-device .top-left-panel .panel-row { font-size: 10px; line-height: 1.35; }
+      body.touch-device .map-desc { display: none; }
+      body.touch-device #mobile-toggles button { padding: 7px 8px; font-size: 11px; }
+      body.touch-device #mobile-bottom-menu { bottom: calc(104px + var(--safe-bottom) + var(--touch-bottom-gap)); }
+      body.touch-device #mobile-bottom-menu button { min-width: 56px; padding: 8px 10px; }
+      body.touch-device #virtual-dpad { bottom: calc(192px + var(--safe-bottom) + var(--touch-bottom-gap)); width: 118px; height: 118px; left: 14px; }
+      body.touch-device #stick-knob { width: 48px; height: 48px; }
+      body.touch-device #virtual-attack { bottom: calc(202px + var(--safe-bottom) + var(--touch-bottom-gap)); right: 16px; width: 70px; height: 70px; font-size: 12px; }
+      body.touch-device .quick-slot-panel { bottom: calc(158px + var(--safe-bottom) + var(--touch-bottom-gap)); }
+      body.touch-device .quick-slot { width: 52px; height: 50px; }
+    }
+
   </style>
+
+  <script>
+    (function () {
+      function getViewportHeight() {
+        return window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      }
+      function updateViewportVars() {
+        const h = Math.max(320, Math.floor(getViewportHeight()));
+        document.documentElement.style.setProperty('--real-vh', h + 'px');
+        const isTouch = navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
+        const tablet = isTouch && Math.min(window.innerWidth, window.innerHeight) >= 600;
+        document.body && document.body.classList.toggle('touch-device', isTouch);
+        document.body && document.body.classList.toggle('desktop-device', !isTouch);
+        document.body && document.body.classList.toggle('tablet-device', tablet);
+        document.body && document.body.classList.toggle('phone-device', isTouch && !tablet);
+      }
+      window.applyLonelyDeviceMode = updateViewportVars;
+      updateViewportVars();
+      window.addEventListener('resize', updateViewportVars, { passive: true });
+      window.addEventListener('orientationchange', function () { setTimeout(updateViewportVars, 250); }, { passive: true });
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', updateViewportVars, { passive: true });
+        window.visualViewport.addEventListener('scroll', updateViewportVars, { passive: true });
+      }
+      document.addEventListener('DOMContentLoaded', updateViewportVars);
+    })();
+  </script>
 </head>
 
 <body>
@@ -177,25 +423,24 @@
       <button id="m-inv-btn">가방</button>
     </div>
 
-    <div id="virtual-dpad" class="mobile-only">
-      <div class="d-btn" id="btn-up">▲</div>
-      <div class="d-btn" id="btn-left">◀</div>
-      <div class="d-btn" id="btn-right">▶</div>
-      <div class="d-btn" id="btn-down">▼</div>
+    <div id="virtual-dpad" class="mobile-only" aria-label="movement joystick">
+      <div id="stick-knob"></div>
     </div>
     <div id="virtual-attack" class="mobile-only">ACTION</div>
 
     <section class="panel top-left-panel">
-      <div class="panel-title" id="field-name">Lonely Island</div>
-      <div class="panel-row"> <span class="blue">Channel 1</span> <span id="server-time">10:00</span> </div>
-      <div class="panel-row"> <span id="biome-text">Biome: Grassland</span> </div>
+      <div class="panel-title" id="field-name">Map Info</div>
+      <div class="panel-row"><span class="blue">Channel 1</span><span id="server-time">10:00</span></div>
+      <div class="panel-row"><span>좌표</span><span id="coord-line">X: 0 / Y: 0</span></div>
+      <div class="panel-row"><span>섬</span><span id="island-text" class="yellow">Lv.1 시작 섬</span></div>
+      <div class="panel-row"><span>지형</span><span id="biome-text">Grassland</span></div>
+      <div class="map-desc" id="biome-desc">초원 지형입니다. 기본 자원과 낮은 등급 몬스터가 등장합니다.</div>
     </section>
 
     <section class="panel minimap-panel" id="ui-map">
       <div class="panel-title">Minimap</div>
       <div id="minimap">
-        <div id="minimap-island"></div>
-        <div id="minimap-lake"></div>
+        <div id="minimap-terrain"></div>
         <div id="minimap-entities"></div>
         <div id="mini-player"></div>
       </div>
@@ -214,7 +459,6 @@
         <div class="blue">System: 론리아일랜드에 오신 것을 환영합니다.</div>
         <div class="yellow">System: 바다 밖으로는 나갈 수 없으며, 언덕 위는 방어에 유리합니다.</div>
         <div class="green">System: 가끔 등장하는 거대수에서는 많은 나무를 얻을 수 있습니다.</div>
-        <div id="coord-line">X: 0 / Y: 0</div>
       </div>
       <div class="chat-input-row">
         <input id="chat-input" type="text" placeholder="Enter message..." autocomplete="off" />
@@ -249,6 +493,18 @@
       <div class="panel-title" id="sell-title" style="margin-bottom: 0;">Item Action</div>
       <div>수량: <input type="number" id="sell-qty" min="1" value="1" /> / <span id="sell-max">1</span></div>
       <div>수익: <span id="sell-profit" class="yellow">0 G</span></div>
+      <div class="quick-slot-register" id="quick-slot-register" style="display:none;">
+        <div class="quick-slot-register-title">자동 사용 퀵슬롯 등록</div>
+        <div class="quick-slot-register-buttons">
+          <button type="button" class="quick-slot-reg-btn" data-slot="1">1</button>
+          <button type="button" class="quick-slot-reg-btn" data-slot="2">2</button>
+          <button type="button" class="quick-slot-reg-btn" data-slot="3">3</button>
+          <button type="button" class="quick-slot-reg-btn" data-slot="4">4</button>
+          <button type="button" class="quick-slot-reg-btn" data-slot="5">5</button>
+          <button type="button" class="quick-slot-reg-btn clear" data-slot="clear">해제</button>
+        </div>
+        <div class="quick-slot-register-note" id="quick-slot-register-note">HP/MP가 50% 이하일 때 자동으로 사용됩니다.</div>
+      </div>
       <div class="modal-btns">
         <button id="sell-cancel">취소</button>
         <button id="sell-cook" class="cook" style="display:none;">굽기</button>
@@ -262,8 +518,27 @@
       <div id="upg-desc" style="font-size: 13px; color: #ccc;">건물을 강화합니다.</div>
       <div style="margin-top: 10px;">현재: <span id="upg-current" class="green">Lv. 1</span></div>
       <div>비용: <span id="upg-cost" class="yellow">1000 G</span></div>
+      <div id="upg-armory-options" style="display:none; flex-direction:column; gap:8px; margin-top:8px;">
+        <button class="armory-card armory-upg-btn" data-armory-upg="fenceHp">
+          <span class="armory-card-title">울타리 체력 증가</span>
+          <span class="armory-card-level">Lv.1 → 2</span>
+          <span class="armory-card-cost">비용: 1,200 G</span>
+        </button>
+        <button class="armory-card armory-upg-btn" data-armory-upg="crossbowHp">
+          <span class="armory-card-title">크로스보우 체력 증가</span>
+          <span class="armory-card-level">Lv.1 → 2</span>
+          <span class="armory-card-cost">비용: 1,500 G</span>
+        </button>
+        <button class="armory-card armory-upg-btn" data-armory-upg="crossbowDmg">
+          <span class="armory-card-title">크로스보우 공격력 증가</span>
+          <span class="armory-card-level">Lv.1 → 2</span>
+          <span class="armory-card-cost">비용: 2,000 G</span>
+        </button>
+      </div>
       <div class="modal-btns">
         <button id="upg-cancel">취소</button>
+        <button id="upg-raft-action" class="raft-action" style="display:none;">탑승/하선</button>
+        <button id="upg-demolish" class="demolish" style="display:none;">철거</button>
         <button id="upg-confirm" class="upgrade">업그레이드</button>
       </div>
     </section>
@@ -283,9 +558,22 @@
         <div class="build-cost">1,000 Wood<br>1,000 G</div>
       </div>
       <div class="build-item" data-build-type="Armory">
-        <div class="build-info"><h4>Armory (무기고)</h4><p>클릭하여 기본 공격력 업그레이드.</p></div>
+        <div class="build-info"><h4>Armory (무기고)</h4><p>울타리/크로스보우 방어 시설을 강화합니다.</p></div>
         <div class="build-cost">5,000 Wood<br>5,000 G</div>
       </div>
+      <div class="build-item" data-build-type="Raft">
+        <div class="build-info"><h4>Raft (뗏목)</h4><p>물 위에 띄우는 발판. 탑승 시 Wood 1개로 노 생성.</p></div>
+        <div class="build-cost">200 Wood<br>200 G</div>
+      </div>
+    </section>
+
+    <div class="quick-slot-help">아이템 퀵슬롯: 등록 아이템은 HP/MP 50% 이하에서 자동 사용됩니다. 키보드 1~5 수동 사용.</div>
+    <section class="quick-slot-panel" id="quick-slot-panel" aria-label="item quick slots">
+      <button type="button" class="quick-slot empty" data-slot="1"><span class="quick-slot-key">1</span><span class="quick-slot-kind">AUTO</span><span class="quick-slot-icon">＋</span><span class="quick-slot-count"></span><span class="quick-slot-name">비어있음</span></button>
+      <button type="button" class="quick-slot empty" data-slot="2"><span class="quick-slot-key">2</span><span class="quick-slot-kind">AUTO</span><span class="quick-slot-icon">＋</span><span class="quick-slot-count"></span><span class="quick-slot-name">비어있음</span></button>
+      <button type="button" class="quick-slot empty" data-slot="3"><span class="quick-slot-key">3</span><span class="quick-slot-kind">AUTO</span><span class="quick-slot-icon">＋</span><span class="quick-slot-count"></span><span class="quick-slot-name">비어있음</span></button>
+      <button type="button" class="quick-slot empty" data-slot="4"><span class="quick-slot-key">4</span><span class="quick-slot-kind">AUTO</span><span class="quick-slot-icon">＋</span><span class="quick-slot-count"></span><span class="quick-slot-name">비어있음</span></button>
+      <button type="button" class="quick-slot empty" data-slot="5"><span class="quick-slot-key">5</span><span class="quick-slot-kind">AUTO</span><span class="quick-slot-icon">＋</span><span class="quick-slot-count"></span><span class="quick-slot-name">비어있음</span></button>
     </section>
 
     <section class="hud">
@@ -324,19 +612,260 @@
 
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
   <script>
+    // [v0.0.03] 전체 면적은 기존 12,000 x 8,000 섬의 약 10배입니다.
+    // 여러 섬 사이가 전부 바다이므로, 다른 섬으로 이동하려면 뗏목이 필요합니다.
+    const MAP_ISLANDS = [
+      { id: 'lv1_start', level: 1, name: 'Lv.1 시작 섬', x: 6000, y: 4000, w: 12000, h: 8000, desc: '초보 생존 구역입니다. 닭, 돼지, 소, 늑대, 곰, 호랑이가 등장합니다.' },
+      { id: 'lv1_east', level: 1, name: 'Lv.1 동쪽 섬', x: 19000, y: 5200, w: 9000, h: 6200, desc: '시작 섬과 비슷하지만 자원이 더 분산되어 있습니다.' },
+      { id: 'lv2_south', level: 2, name: 'Lv.2 남쪽 섬', x: 11000, y: 16500, w: 11000, h: 7600, desc: '늪지와 사막이 섞인 중급 구역입니다. 악어, 하마, 코끼리, 아나콘다, 전갈, 캥거루가 등장합니다.' },
+      { id: 'lv2_east', level: 2, name: 'Lv.2 동쪽 섬', x: 28000, y: 15000, w: 9000, h: 7000, desc: '중급 몬스터 밀도가 높은 섬입니다.' },
+      { id: 'lv3_north', level: 3, name: 'Lv.3 북동 섬', x: 31500, y: 4800, w: 9000, h: 6500, desc: '고위험 구역입니다. 고릴라, 사자, 코뿔소, 순록, 블랙맘바가 등장합니다.' }
+    ];
+    const MAP_FEATURES = [
+      { island: 'lv1_start', type: 'hill', x: 3250, y: 3250, w: 2500, h: 2500, desc: '언덕 지형입니다. 방어에 유리하지만 절벽과 겹쳐 건설할 수 없습니다.' },
+      { island: 'lv1_start', type: 'desert', x: 9500, y: 6000, w: 3000, h: 2000, desc: '사막 지형입니다. 시야가 트이고 나무가 적습니다.' },
+      { island: 'lv1_start', type: 'lake', x: 7500, y: 3000, r: 600, desc: '담수 호수입니다. 물 위 건설은 뗏목 위에서만 가능합니다.' },
+      { island: 'lv1_east', type: 'hill', x: 18000, y: 4200, w: 2200, h: 1800, desc: '작은 언덕입니다. 방어 거점으로 활용할 수 있습니다.' },
+      { island: 'lv2_south', type: 'desert', x: 13200, y: 17100, w: 4200, h: 2500, desc: '건조 지대입니다. 전갈과 캥거루가 자주 출몰합니다.' },
+      { island: 'lv2_south', type: 'lake', x: 8800, y: 15700, r: 750, desc: '늪지성 물가입니다. 악어와 하마가 등장하는 구역입니다.' },
+      { island: 'lv2_east', type: 'lake', x: 28600, y: 15400, r: 650, desc: '동쪽 섬의 호수입니다.' },
+      { island: 'lv3_north', type: 'hill', x: 31400, y: 4700, w: 3200, h: 2100, desc: '고난도 언덕 지형입니다. 강한 몬스터가 접근합니다.' }
+    ];
+
     const gameState = {
-      worldWidth: 12000, worldHeight: 8000, 
-      player: { name: 'Survivor', level: 1, hp: 120, maxHp: 120, mp: 60, maxMp: 60, exp: 20, nextExp: 100, x: 6000, y: 4000, speed: 40, gold: 0, baseDmg: 25, dmgLevel: 1, statPoints: 0, str: 0, agi: 0, vit: 0 },
+      worldWidth: 38000, worldHeight: 26000, 
+      player: { name: 'Survivor', level: 1, hp: 120, maxHp: 120, mp: 60, maxMp: 60, exp: 20, nextExp: 100, x: 6000, y: 4000, speed: 40, gold: 0, baseDmg: 25, dmgLevel: 1, statPoints: 0, str: 0, agi: 0, vit: 0, itemQuickSlots: Array(5).fill(null) },
       quest: { current: 0, required: 10 },
-      inventory: {}, isDead: false, buildLimit: 0, builtCount: 0
+      inventory: {}, isDead: false, buildLimit: 0, builtCount: 0,
+      buildingUpgrades: { fenceHpLevel: 1, crossbowHpLevel: 1, crossbowDmgLevel: 1 },
+      raft: { mounted: false, current: null }
     };
     gameState.buildLimit = gameState.player.level * 3;
 
+
+    // [v0.0.07] HP/MP 자동 사용 아이템 퀵슬롯 5칸.
+    // 화면에 등록 아이템과 전체 보유 수량을 표시하고, HP/MP가 50% 이하일 때 자동 사용합니다.
+    const ITEM_QUICK_SLOT_COUNT = 5;
+    const ITEM_QUICK_SLOT_AUTO_THRESHOLD = 0.5;
+    const ITEM_QUICK_SLOT_AUTO_COOLDOWN_MS = 850;
+    let lastAutoQuickSlotUseAt = 0;
+    let isQuickSlotUsing = false;
+
+    function initItemQuickSlots() {
+      if (!Array.isArray(gameState.player.itemQuickSlots)) {
+        gameState.player.itemQuickSlots = Array(ITEM_QUICK_SLOT_COUNT).fill(null);
+        return;
+      }
+      gameState.player.itemQuickSlots = gameState.player.itemQuickSlots.slice(0, ITEM_QUICK_SLOT_COUNT);
+      while (gameState.player.itemQuickSlots.length < ITEM_QUICK_SLOT_COUNT) gameState.player.itemQuickSlots.push(null);
+    }
+
+    function getQuickSlotItemEffect(itemName) {
+      const name = String(itemName || '');
+      // HP 회복: 현재 게임 내에서 확실한 소비 아이템인 구운 고기류.
+      if (name.startsWith('구운') && name.endsWith('고기')) return { stat: 'hp', amount: 50, label: 'HP' };
+      // 확장용: 이후 드랍/API에서 물약류 이름이 들어오면 바로 MP/HP 자동 사용 가능.
+      if (/마나|마력|MP|Mana|blue potion|푸른 물약/i.test(name)) return { stat: 'mp', amount: 40, label: 'MP' };
+      if (/회복|체력|HP|Health|potion|빨간 물약/i.test(name)) return { stat: 'hp', amount: 50, label: 'HP' };
+      return null;
+    }
+
+    function isQuickSlotConsumableItem(itemName) {
+      return !!getQuickSlotItemEffect(itemName);
+    }
+
+    function getQuickSlotItemIcon(itemName) {
+      const effect = getQuickSlotItemEffect(itemName);
+      if (!effect) return '＋';
+      if (effect.stat === 'mp') return '◆';
+      if (String(itemName || '').includes('고기')) return '🍖';
+      return '✚';
+    }
+
+    function setItemQuickSlot(slotNumber, itemName) {
+      initItemQuickSlots();
+      const index = Number(slotNumber) - 1;
+      if (index < 0 || index >= ITEM_QUICK_SLOT_COUNT) return false;
+      if (itemName !== null && !isQuickSlotConsumableItem(itemName)) {
+        addChatMessage('<span style="color:#FFD66B;">퀵슬롯에는 HP/MP 회복 아이템만 등록할 수 있습니다. 현재는 구운 고기류, HP/MP 물약 이름을 지원합니다.</span>');
+        return false;
+      }
+      if (itemName !== null && (!gameState.inventory[itemName] || gameState.inventory[itemName].count <= 0)) {
+        addChatMessage('<span style="color:#FFD66B;">보유 중인 아이템만 퀵슬롯에 등록할 수 있습니다.</span>');
+        return false;
+      }
+      gameState.player.itemQuickSlots[index] = itemName;
+      addChatMessage(`<span style="color:#7fd4ff;">아이템 퀵슬롯 ${slotNumber}번: ${itemName || '비움'}${itemName ? ' / 50% 이하 자동 사용' : ''}</span>`);
+      updateQuickSlotUi();
+      return true;
+    }
+
+    function clearItemQuickSlot(slotNumber) {
+      return setItemQuickSlot(slotNumber, null);
+    }
+
+    function clearQuickSlotByItem(itemName) {
+      initItemQuickSlots();
+      let changed = false;
+      gameState.player.itemQuickSlots = gameState.player.itemQuickSlots.map(slot => {
+        if (slot === itemName) { changed = true; return null; }
+        return slot;
+      });
+      if (changed) updateQuickSlotUi();
+    }
+
+    function consumeQuickSlotItem(slotNumber, options = {}) {
+      initItemQuickSlots();
+      const index = Number(slotNumber) - 1;
+      if (index < 0 || index >= ITEM_QUICK_SLOT_COUNT) return false;
+      const itemName = gameState.player.itemQuickSlots[index];
+      const silent = options.silent === true;
+      if (!itemName) {
+        if (!silent) addChatMessage(`<span style="color:#9fb1c5;">아이템 퀵슬롯 ${slotNumber}번이 비어 있습니다.</span>`);
+        return false;
+      }
+      const itemObj = gameState.inventory[itemName];
+      if (!itemObj || itemObj.count <= 0) {
+        gameState.player.itemQuickSlots[index] = null;
+        if (!silent) addChatMessage(`<span style="color:#FFD66B;">${itemName}이 없어 ${slotNumber}번 슬롯을 비웠습니다.</span>`);
+        updateQuickSlotUi();
+        return false;
+      }
+      const effect = getQuickSlotItemEffect(itemName);
+      if (!effect) {
+        if (!silent) addChatMessage('<span style="color:#FFD66B;">이 슬롯의 아이템은 아직 사용할 수 없는 종류입니다.</span>');
+        return false;
+      }
+
+      const p = gameState.player;
+      if (effect.stat === 'hp') {
+        if (p.hp >= p.maxHp) {
+          if (!silent) addChatMessage('<span style="color:#9fb1c5;">이미 체력이 가득 찼습니다.</span>');
+          return false;
+        }
+        p.hp = Math.min(p.maxHp, p.hp + effect.amount);
+      } else if (effect.stat === 'mp') {
+        if (p.mp >= p.maxMp) {
+          if (!silent) addChatMessage('<span style="color:#9fb1c5;">이미 마력이 가득 찼습니다.</span>');
+          return false;
+        }
+        p.mp = Math.min(p.maxMp, p.mp + effect.amount);
+      }
+
+      itemObj.count -= 1;
+      if (itemObj.count <= 0) {
+        delete gameState.inventory[itemName];
+        clearQuickSlotByItem(itemName);
+      }
+
+      if (!isQuickSlotUsing) {
+        isQuickSlotUsing = true;
+        updatePlayerHud();
+        isQuickSlotUsing = false;
+      }
+      if (ui.inventoryPanel && ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
+      updateQuickSlotUi();
+      addChatMessage(`<span style="color:#7CFF8A;">${options.auto ? '자동 사용' : slotNumber + '번 퀵슬롯 사용'}: ${itemName} / ${effect.label} +${effect.amount}</span>`);
+      return true;
+    }
+
+    function useItemQuickSlot(slotNumber) {
+      return consumeQuickSlotItem(slotNumber, { auto: false, silent: false });
+    }
+
+    function autoUseItemQuickSlots() {
+      if (gameState.isDead || isQuickSlotUsing) return false;
+      const now = Date.now();
+      if (now - lastAutoQuickSlotUseAt < ITEM_QUICK_SLOT_AUTO_COOLDOWN_MS) return false;
+
+      const p = gameState.player;
+      const hpRatio = p.maxHp > 0 ? p.hp / p.maxHp : 1;
+      const mpRatio = p.maxMp > 0 ? p.mp / p.maxMp : 1;
+      if (hpRatio > ITEM_QUICK_SLOT_AUTO_THRESHOLD && mpRatio > ITEM_QUICK_SLOT_AUTO_THRESHOLD) return false;
+
+      initItemQuickSlots();
+      for (let i = 0; i < ITEM_QUICK_SLOT_COUNT; i++) {
+        const itemName = gameState.player.itemQuickSlots[i];
+        if (!itemName) continue;
+        const itemObj = gameState.inventory[itemName];
+        if (!itemObj || itemObj.count <= 0) { gameState.player.itemQuickSlots[i] = null; continue; }
+        const effect = getQuickSlotItemEffect(itemName);
+        if (!effect) continue;
+        if ((effect.stat === 'hp' && hpRatio <= ITEM_QUICK_SLOT_AUTO_THRESHOLD && p.hp < p.maxHp) ||
+            (effect.stat === 'mp' && mpRatio <= ITEM_QUICK_SLOT_AUTO_THRESHOLD && p.mp < p.maxMp)) {
+          lastAutoQuickSlotUseAt = now;
+          return consumeQuickSlotItem(i + 1, { auto: true, silent: true });
+        }
+      }
+      updateQuickSlotUi();
+      return false;
+    }
+
+    function updateQuickSlotUi() {
+      initItemQuickSlots();
+      if (!ui.quickSlotPanel) return;
+      const p = gameState.player;
+      const hpReady = p.maxHp > 0 && p.hp / p.maxHp <= ITEM_QUICK_SLOT_AUTO_THRESHOLD;
+      const mpReady = p.maxMp > 0 && p.mp / p.maxMp <= ITEM_QUICK_SLOT_AUTO_THRESHOLD;
+      ui.quickSlots.forEach((slotEl, i) => {
+        const itemName = gameState.player.itemQuickSlots[i];
+        const itemObj = itemName ? gameState.inventory[itemName] : null;
+        const effect = itemName ? getQuickSlotItemEffect(itemName) : null;
+        const hasItem = !!(itemName && itemObj && itemObj.count > 0 && effect);
+        slotEl.classList.toggle('empty', !hasItem);
+        slotEl.classList.toggle('auto-ready', !!(hasItem && ((effect.stat === 'hp' && hpReady) || (effect.stat === 'mp' && mpReady))));
+        const icon = slotEl.querySelector('.quick-slot-icon');
+        const count = slotEl.querySelector('.quick-slot-count');
+        const name = slotEl.querySelector('.quick-slot-name');
+        const kind = slotEl.querySelector('.quick-slot-kind');
+        if (hasItem) {
+          icon.textContent = getQuickSlotItemIcon(itemName);
+          count.textContent = `x${itemObj.count}`;
+          name.textContent = itemName;
+          kind.textContent = effect.label;
+          slotEl.title = `${i + 1}번: ${itemName} / 보유 ${itemObj.count}개 / ${effect.label} 50% 이하 자동 사용`;
+        } else {
+          icon.textContent = '＋';
+          count.textContent = '';
+          name.textContent = itemName ? '수량 없음' : '비어있음';
+          kind.textContent = 'AUTO';
+          slotEl.title = `${i + 1}번 슬롯 비어있음`;
+        }
+      });
+    }
+
+    window.setItemQuickSlot = setItemQuickSlot;
+    window.clearItemQuickSlot = clearItemQuickSlot;
+    window.useItemQuickSlot = useItemQuickSlot;
+    initItemQuickSlots();
+
     const vPad = { up: false, down: false, left: false, right: false };
+    const virtualStick = { active: false, x: 0, y: 0, max: 48 };
+
+
+    // [월드 채팅] LocalFlow SSE/API 설정
+    const WORLD_CHAT = {
+      room: 'lonely-island-world',
+      apiBase: 'https://localflow.ddns.net/cdn/api',
+      stream: null,
+      connected: false,
+      initialized: false,
+      reconnectTimer: null,
+      pollTimer: null,
+      seenKeys: new Set(),
+      recentLocal: [],
+      sessionStartTs: 0,
+      maxVisibleMessages: 10
+    };
     
     // [원본 복원] 빌드 코스트
-    const BUILD_COSTS = { 'Campfire': { wood: 30, gold: 0 }, 'Fence': { wood: 50, gold: 50 }, 'Crossbow': { wood: 1000, gold: 1000 }, 'Armory': { wood: 5000, gold: 5000 } };
-    const PRICE_MAP = { "Normal": 10, "Magic": 40, "Rare": 100, "Epic": 500, "Legendary": 2000 };
+    const BUILD_COSTS = { 'Campfire': { wood: 30, gold: 0 }, 'Fence': { wood: 50, gold: 50 }, 'Crossbow': { wood: 1000, gold: 1000 }, 'Armory': { wood: 5000, gold: 5000 }, 'Raft': { wood: 200, gold: 200 } };
+    const ARMORY_UPGRADE_COSTS = { fenceHp: 1200, crossbowHp: 1500, crossbowDmg: 2000 };
+    const BUILDING_BASE_STATS = { Fence: { hp: 300, radius: 20 }, Crossbow: { hp: 500, radius: 20, dmg: 30 }, Armory: { hp: 2000, radius: 40 }, Campfire: { hp: 100, radius: 15 }, Raft: { hp: 600, radius: 55 } };
+    // v0.0.02 price hotfix: Mythic items now have an explicit sell price instead of falling back to Normal price.
+    const PRICE_MAP = { "Junk": 1, "Normal": 10, "Magic": 40, "Rare": 100, "Epic": 500, "Mythic": 1000, "Legendary": 2000 };
+    const PLAYER_BLOCK_SIZE = 40;
+    const CAMPFIRE_COOK_RANGE = PLAYER_BLOCK_SIZE; // 캐릭터 1블럭 기준: 모닥불 중심에서 1블럭 이내에서만 굽기 가능
     
     // [원본 복원] 레어도 맵핑
     const RARITY_MAP = { 
@@ -350,13 +879,41 @@
     };
     const RARITY_DISPLAY_NAME = { "i0": "Legendary", "i1": "Mythic", "i2": "Rare", "i3": "Magic", "i4": "Epic", "i5": "Normal", "i6": "Junk" };
 
-    // [원본 복원] 몬스터 4종
-    const MONSTER_TYPES = [
-      { name: '닭', hp: 50, speed: 60, texture: 'chicken_tex', bodyRadius: 10, labelOffset: 28, barWidth: 38, dmg: 5, exp: 10 },
-      { name: '돼지', hp: 200, speed: 50, texture: 'pig_tex', bodyRadius: 15, labelOffset: 34, barWidth: 46, dmg: 20, exp: 40 },
-      { name: '늑대', hp: 300, speed: 110, texture: 'wolf_tex', bodyRadius: 16, labelOffset: 36, barWidth: 52, dmg: 35, exp: 60 },
-      { name: '곰', hp: 1000, speed: 70, texture: 'bear_tex', bodyRadius: 25, labelOffset: 48, barWidth: 68, dmg: 60, exp: 150 }
-    ];
+    // [v0.0.03] 섬 레벨별 몬스터 테이블
+    const MONSTER_TYPES_BY_LEVEL = {
+      1: [
+        { name: '닭', hp: 50, speed: 60, texture: 'chicken_tex', bodyRadius: 10, labelOffset: 28, barWidth: 38, dmg: 5, exp: 10 },
+        { name: '돼지', hp: 200, speed: 50, texture: 'pig_tex', bodyRadius: 15, labelOffset: 34, barWidth: 46, dmg: 20, exp: 40 },
+        { name: '소', hp: 260, speed: 45, texture: 'cow_tex', bodyRadius: 17, labelOffset: 38, barWidth: 50, dmg: 18, exp: 45 },
+        { name: '늑대', hp: 300, speed: 110, texture: 'wolf_tex', bodyRadius: 16, labelOffset: 36, barWidth: 52, dmg: 35, exp: 60 },
+        { name: '곰', hp: 1000, speed: 70, texture: 'bear_tex', bodyRadius: 25, labelOffset: 48, barWidth: 68, dmg: 60, exp: 150 },
+        { name: '호랑이', hp: 850, speed: 125, texture: 'tiger_tex', bodyRadius: 22, labelOffset: 46, barWidth: 64, dmg: 75, exp: 180 }
+      ],
+      2: [
+        { name: '악어', hp: 900, speed: 75, texture: 'croc_tex', bodyRadius: 24, labelOffset: 46, barWidth: 66, dmg: 70, exp: 180 },
+        { name: '하마', hp: 1600, speed: 55, texture: 'hippo_tex', bodyRadius: 28, labelOffset: 52, barWidth: 76, dmg: 85, exp: 260 },
+        { name: '코끼리', hp: 2500, speed: 45, texture: 'elephant_tex', bodyRadius: 32, labelOffset: 58, barWidth: 86, dmg: 110, exp: 360 },
+        { name: '아나콘다', hp: 700, speed: 95, texture: 'anaconda_tex', bodyRadius: 19, labelOffset: 40, barWidth: 60, dmg: 80, exp: 190 },
+        { name: '전갈', hp: 520, speed: 100, texture: 'scorpion_tex', bodyRadius: 16, labelOffset: 36, barWidth: 54, dmg: 65, exp: 160 },
+        { name: '캥거루', hp: 780, speed: 115, texture: 'kangaroo_tex', bodyRadius: 20, labelOffset: 42, barWidth: 60, dmg: 70, exp: 190 }
+      ],
+      3: [
+        { name: '고릴라', hp: 2200, speed: 75, texture: 'gorilla_tex', bodyRadius: 28, labelOffset: 54, barWidth: 82, dmg: 120, exp: 420 },
+        { name: '사자', hp: 1700, speed: 120, texture: 'lion_tex', bodyRadius: 24, labelOffset: 48, barWidth: 74, dmg: 135, exp: 460 },
+        { name: '코뿔소', hp: 3200, speed: 70, texture: 'rhino_tex', bodyRadius: 32, labelOffset: 58, barWidth: 90, dmg: 150, exp: 560 },
+        { name: '순록', hp: 1200, speed: 105, texture: 'reindeer_tex', bodyRadius: 22, labelOffset: 46, barWidth: 68, dmg: 95, exp: 320 },
+        { name: '블랙맘바', hp: 950, speed: 135, texture: 'mamba_tex', bodyRadius: 17, labelOffset: 38, barWidth: 62, dmg: 160, exp: 500 }
+      ]
+    };
+    const MONSTER_TYPES = Object.values(MONSTER_TYPES_BY_LEVEL).flat();
+
+    // [v0.0.07] 저레벨 필드 몬스터 물량 조정
+    // 월드가 넓어진 만큼 Lv.1 구간은 더 많은 몬스터와 빠른 리스폰으로 초반 사냥 루프가 끊기지 않게 합니다.
+    const MONSTER_SPAWN_POLICY = {
+      initialByLevel: { 1: 420, 2: 180, 3: 90 },
+      respawnDelayByLevel: { 1: 6500, 2: 10000, 3: 14000 },
+      minSpawnDistanceFromPlayer: 700
+    };
 
     const ui = {};
     window.currentScene = null; 
@@ -378,17 +935,19 @@
       ui.playerNameLine = document.getElementById('player-name-line'); ui.goldText = document.getElementById('gold-text');
       ui.coordLine = document.getElementById('coord-line'); ui.chatBody = document.getElementById('chat-body');
       ui.chatInput = document.getElementById('chat-input'); ui.chatSendButton = document.getElementById('chat-send-button');
-      ui.miniPlayer = document.getElementById('mini-player'); ui.minimapEntities = document.getElementById('minimap-entities');
-      ui.biomeText = document.getElementById('biome-text');
+      ui.miniPlayer = document.getElementById('mini-player'); ui.minimapEntities = document.getElementById('minimap-entities'); ui.minimapTerrain = document.getElementById('minimap-terrain'); ui.minimapPanel = document.getElementById('ui-map'); ui.minimapBox = document.getElementById('minimap');
+      ui.biomeText = document.getElementById('biome-text'); ui.biomeDesc = document.getElementById('biome-desc'); ui.islandText = document.getElementById('island-text');
       
       ui.inventoryPanel = document.getElementById('inventory-panel'); ui.inventoryGrid = document.getElementById('inventory-grid');
       ui.tooltip = document.getElementById('global-tooltip');
       ui.sellModal = document.getElementById('sell-modal'); ui.sellTitle = document.getElementById('sell-title');
       ui.sellQty = document.getElementById('sell-qty'); ui.sellMax = document.getElementById('sell-max'); ui.sellProfit = document.getElementById('sell-profit');
       ui.sellCookBtn = document.getElementById('sell-cook'); ui.sellEatBtn = document.getElementById('sell-eat');
+      ui.quickSlotPanel = document.getElementById('quick-slot-panel'); ui.quickSlots = Array.from(document.querySelectorAll('.quick-slot'));
+      ui.quickSlotRegister = document.getElementById('quick-slot-register'); ui.quickSlotRegisterNote = document.getElementById('quick-slot-register-note');
       
       ui.upgModal = document.getElementById('upgrade-modal'); ui.upgTitle = document.getElementById('upg-title');
-      ui.upgDesc = document.getElementById('upg-desc'); ui.upgCurrent = document.getElementById('upg-current'); ui.upgCost = document.getElementById('upg-cost');
+      ui.upgDesc = document.getElementById('upg-desc'); ui.upgCurrent = document.getElementById('upg-current'); ui.upgCost = document.getElementById('upg-cost'); ui.upgArmoryOptions = document.getElementById('upg-armory-options'); ui.upgDemolish = document.getElementById('upg-demolish'); ui.upgRaftAction = document.getElementById('upg-raft-action');
       
       ui.buildPanel = document.getElementById('build-panel'); ui.buildLimitText = document.getElementById('build-limit-text');
       ui.buildModeText = document.getElementById('build-mode-text');
@@ -412,6 +971,211 @@
       if (p.statPoints > 0) { ui.statBadge.style.display = 'inline'; ui.statBadge.textContent = `(${p.statPoints})`; } 
       else { ui.statBadge.style.display = 'none'; }
       ui.statPoints.textContent = p.statPoints; ui.statStr.textContent = p.str; ui.statAgi.textContent = p.agi; ui.statVit.textContent = p.vit;
+      updateQuickSlotUi();
+      autoUseItemQuickSlots();
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[c]));
+    }
+
+    function fmtChatTime(ts) {
+      const d = new Date(ts || Date.now());
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      return `${hh}:${mm}`;
+    }
+
+    function normalizeChatText(s) {
+      return String(s || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function getWorldChatKey(m) {
+      if (m.id) return `id:${m.id}`;
+      if (m.clientId) return `client:${m.clientId}`;
+      const ts = Number(m.ts || Date.now());
+      const bucket = Math.floor(ts / 5000); // 같은 메시지의 SSE/폴링/로컬 중복 방지용 5초 버킷
+      return [m.room || WORLD_CHAT.room, m.name || '익명', m.type || 'text', normalizeChatText(m.text), m.url || '', bucket].join('|');
+    }
+
+    function rememberLocalMessage(m) {
+      WORLD_CHAT.recentLocal.push({
+        name: m.name || '익명',
+        text: normalizeChatText(m.text),
+        type: m.type || 'text',
+        url: m.url || '',
+        ts: Number(m.ts || Date.now())
+      });
+      const now = Date.now();
+      WORLD_CHAT.recentLocal = WORLD_CHAT.recentLocal.filter(x => now - x.ts < 8000);
+    }
+
+    function isDuplicateOfRecentLocal(m) {
+      const now = Date.now();
+      const text = normalizeChatText(m.text);
+      return WORLD_CHAT.recentLocal.some(x =>
+        now - x.ts < 8000 &&
+        x.name === (m.name || '익명') &&
+        x.type === (m.type || 'text') &&
+        x.text === text &&
+        x.url === (m.url || '')
+      );
+    }
+
+    function addWorldChatMessage(m, options = {}) {
+      const dedupe = options.dedupe !== false;
+      const fromLocal = options.local === true;
+      const key = getWorldChatKey(m);
+
+      if (dedupe) {
+        if (WORLD_CHAT.seenKeys.has(key)) return;
+        if (!fromLocal && isDuplicateOfRecentLocal(m)) {
+          WORLD_CHAT.seenKeys.add(key);
+          return;
+        }
+        WORLD_CHAT.seenKeys.add(key);
+      }
+      if (WORLD_CHAT.seenKeys.size > 1000) {
+        WORLD_CHAT.seenKeys = new Set(Array.from(WORLD_CHAT.seenKeys).slice(-500));
+      }
+      if (fromLocal) rememberLocalMessage(m);
+
+      const name = escapeHtml(m.name || '익명');
+      const room = escapeHtml(m.room || WORLD_CHAT.room);
+      const time = fmtChatTime(m.ts);
+      const text = escapeHtml(m.text || '');
+      const isMine = (m.name || '') === gameState.player.name;
+      const nameColor = isMine ? '#7CFF8A' : '#B57CFF';
+
+      if (m.type === 'image' && m.url) {
+        const caption = text ? `<div style="margin-top:4px; white-space:pre-wrap;">${text}</div>` : '';
+        addChatMessage(
+          `<span style="color:${nameColor}; font-weight:bold;">${name}</span> ` +
+          `<span style="color:#9fb1c5; font-size:11px;">${time} #${room}</span>` +
+          caption +
+          `<div style="margin-top:6px;"><a href="${escapeHtml(m.url)}" target="_blank" rel="noopener" style="color:#7fd4ff;">이미지 열기</a></div>`,
+          'world-chat-msg'
+        );
+        trimWorldChatMessages();
+        return;
+      }
+
+      addChatMessage(
+        `<span style="color:${nameColor}; font-weight:bold;">${name}</span> ` +
+        `<span style="color:#9fb1c5; font-size:11px;">${time} #${room}</span>` +
+        `<div style="margin-top:4px; white-space:pre-wrap;">${text}</div>`,
+        'world-chat-msg'
+      );
+      trimWorldChatMessages();
+    }
+
+    function trimWorldChatMessages() {
+      if (!ui.chatBody) return;
+      const rows = Array.from(ui.chatBody.querySelectorAll('.world-chat-msg'));
+      const overflow = rows.length - WORLD_CHAT.maxVisibleMessages;
+      if (overflow > 0) rows.slice(0, overflow).forEach(el => el.remove());
+    }
+
+    async function loadWorldChatHistory(options = {}) {
+      const announce = options.announce === true;
+      const sinceSession = options.sinceSession === true;
+      try {
+        const res = await fetch(`${WORLD_CHAT.apiBase}/history?room=${encodeURIComponent(WORLD_CHAT.room)}&t=${Date.now()}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`history_${res.status}`);
+        const list = await res.json();
+        const filtered = sinceSession
+          ? list.filter(m => !Number.isFinite(Number(m.ts)) || Number(m.ts) >= WORLD_CHAT.sessionStartTs)
+          : list;
+        if (announce) addChatMessage(`<span class="blue">WorldChat: 최근 대화 ${filtered.length}개를 불러왔습니다.</span>`);
+        filtered.forEach(m => addWorldChatMessage(m, { dedupe: true }));
+      } catch (err) {
+        if (announce) addChatMessage(`<span style="color:#ff8a8a;">WorldChat: 기록 불러오기 실패 (${escapeHtml(err.message || err)})</span>`);
+      }
+    }
+
+    function scheduleWorldChatReconnect() {
+      if (WORLD_CHAT.reconnectTimer) return;
+      WORLD_CHAT.reconnectTimer = setTimeout(() => {
+        WORLD_CHAT.reconnectTimer = null;
+        connectWorldChat();
+      }, 1200);
+    }
+
+    function connectWorldChat() {
+      if (WORLD_CHAT.stream) {
+        try { WORLD_CHAT.stream.close(); } catch {}
+      }
+
+      const url = `${WORLD_CHAT.apiBase}/stream?room=${encodeURIComponent(WORLD_CHAT.room)}&t=${Date.now()}`;
+      const es = new EventSource(url);
+      WORLD_CHAT.stream = es;
+
+      const handleIncoming = (e) => {
+        try {
+          addWorldChatMessage(JSON.parse(e.data), { dedupe: true });
+        } catch (err) {
+          addChatMessage(`<span style="color:#ff8a8a;">WorldChat: 메시지 파싱 실패</span>`);
+        }
+      };
+
+      es.addEventListener('hello', () => {
+        WORLD_CHAT.connected = true;
+        addChatMessage(`<span class="green">WorldChat: 연결됨 (#${WORLD_CHAT.room})</span>`);
+      });
+
+      es.addEventListener('ping', () => {});
+      es.addEventListener('msg', handleIncoming);
+      es.onmessage = handleIncoming; // 서버가 기본 message 이벤트로 보낼 때도 수신
+
+      es.onerror = () => {
+        if (WORLD_CHAT.stream !== es) return;
+        WORLD_CHAT.connected = false;
+        try { es.close(); } catch {}
+        scheduleWorldChatReconnect();
+      };
+    }
+
+    async function initWorldChat() {
+      if (WORLD_CHAT.initialized) return;
+      WORLD_CHAT.initialized = true;
+      WORLD_CHAT.sessionStartTs = Date.now();
+      addChatMessage(`<span class="blue">WorldChat: #${WORLD_CHAT.room} 입장 중...</span>`);
+      connectWorldChat();
+
+      // 최초 접속 시 이전 대화는 불러오지 않습니다.
+      // SSE 누락 보정용 폴링도 접속 이후 메시지만 반영하고, 화면에는 최대 10줄만 유지합니다.
+      if (WORLD_CHAT.pollTimer) clearInterval(WORLD_CHAT.pollTimer);
+      WORLD_CHAT.pollTimer = setInterval(() => loadWorldChatHistory({ announce: false, sinceSession: true }), 1500);
+    }
+
+    async function sendWorldChat() {
+      const text = (ui.chatInput.value || '').trim();
+      if (!text) return;
+
+      ui.chatInput.value = '';
+      const localMessage = {
+        room: WORLD_CHAT.room,
+        name: gameState.player.name || '익명',
+        type: 'text',
+        text,
+        ts: Date.now(),
+        clientId: `${Date.now()}-${Math.random().toString(16).slice(2)}`
+      };
+
+      try {
+        const res = await fetch(`${WORLD_CHAT.apiBase}/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(localMessage)
+        });
+        if (!res.ok) throw new Error(`send_${res.status}`);
+        addWorldChatMessage(localMessage, { local: true, dedupe: true });
+      } catch (err) {
+        addChatMessage(`<span style="color:#ff8a8a;">WorldChat: 전송 실패 (${escapeHtml(err.message || err)})</span>`);
+        ui.chatInput.value = text;
+      }
     }
 
     function addChatMessage(msg, className = '') {
@@ -427,24 +1191,103 @@
       if (!gameState.inventory[itemName]) gameState.inventory[itemName] = { count: 0, rarity: displayRarity };
       gameState.inventory[itemName].count += qty;
       
-      if (itemName !== 'Wood' || gameState.inventory['Wood'].count % 10 === 0) {
+      if (itemName === 'Wood') {
+        addChatMessage(
+          `획득: <span class="log-rarity-${rarityCode}">[${displayRarity}]</span> ` +
+          `<span class="log-name-${rarityCode}">${itemName}</span> x${qty} ` +
+          `<span style="color:#aaa;">(현재 보유: ${gameState.inventory[itemName].count})</span>`
+        );
+      } else {
         addChatMessage(`획득: <span class="log-rarity-${rarityCode}">[${displayRarity}]</span> <span class="log-name-${rarityCode}">${itemName}</span> x${qty}`);
       }
       if (ui.inventoryPanel.style.display === 'flex') updateInventoryUi();
+      updateQuickSlotUi();
+    }
+
+    const MINIMAP_VIEW = { mode: 'local', localRange: 2600 };
+
+    function clamp01(n) { return Math.max(0, Math.min(1, n)); }
+
+    function setMinimapMode(mode) {
+      MINIMAP_VIEW.mode = mode === 'full' ? 'full' : 'local';
+      if (ui.minimapPanel) ui.minimapPanel.classList.toggle('full-map', MINIMAP_VIEW.mode === 'full');
+      renderMinimapTerrain();
+      if (window.currentScene && window.currentScene.updateRadar) window.currentScene.updateRadar();
+      if (gameState.player) updateMinimapPlayer(gameState.player.x, gameState.player.y);
+    }
+
+    function toggleMinimapMode() {
+      setMinimapMode(MINIMAP_VIEW.mode === 'full' ? 'local' : 'full');
+    }
+
+    function getMinimapBounds() {
+      if (MINIMAP_VIEW.mode === 'full' || !gameState.player) {
+        return { x1: 0, y1: 0, x2: gameState.worldWidth, y2: gameState.worldHeight };
+      }
+      const half = MINIMAP_VIEW.localRange;
+      let x1 = gameState.player.x - half, y1 = gameState.player.y - half;
+      let x2 = gameState.player.x + half, y2 = gameState.player.y + half;
+      if (x1 < 0) { x2 -= x1; x1 = 0; }
+      if (y1 < 0) { y2 -= y1; y1 = 0; }
+      if (x2 > gameState.worldWidth) { x1 -= x2 - gameState.worldWidth; x2 = gameState.worldWidth; }
+      if (y2 > gameState.worldHeight) { y1 -= y2 - gameState.worldHeight; y2 = gameState.worldHeight; }
+      x1 = Math.max(0, x1); y1 = Math.max(0, y1);
+      return { x1, y1, x2, y2 };
+    }
+
+    function worldToMinimapPercent(x, y) {
+      const b = getMinimapBounds();
+      return {
+        left: clamp01((x - b.x1) / Math.max(1, b.x2 - b.x1)) * 100,
+        top: clamp01((y - b.y1) / Math.max(1, b.y2 - b.y1)) * 100,
+        visible: x >= b.x1 && x <= b.x2 && y >= b.y1 && y <= b.y2
+      };
+    }
+
+    function updateMinimapPlayer(x, y) {
+      if (!ui.miniPlayer) return;
+      const pos = worldToMinimapPercent(x, y);
+      ui.miniPlayer.style.left = `${pos.left}%`;
+      ui.miniPlayer.style.top = `${pos.top}%`;
+      ui.miniPlayer.style.display = pos.visible ? 'block' : 'none';
     }
 
     function updateCoordinates(x, y) {
       gameState.player.x = Math.floor(x); gameState.player.y = Math.floor(y);
-      ui.coordLine.textContent = `X: ${gameState.player.x} / Y: ${gameState.player.y}`;
-      ui.miniPlayer.style.left = `${(x / gameState.worldWidth) * 100}%`; ui.miniPlayer.style.top = `${(y / gameState.worldHeight) * 100}%`;
-      
-      let biome = "Grassland";
-      if (x < 600 || x > gameState.worldWidth - 600 || y < 600 || y > gameState.worldHeight - 600) biome = "Ocean Shore";
-      else if (x > 8000 && x < 11000 && y > 5000 && y < 7000) biome = "Desert";
-      else if (Phaser.Math.Distance.Between(x, y, 7500, 3000) < 600) biome = "Freshwater Lake"; 
-      else if (x > 2000 && x < 4500 && y > 2000 && y < 4500) biome = "Highlands (언덕)";
-      
-      ui.biomeText.textContent = `Biome: ${biome}`;
+      if (ui.coordLine) ui.coordLine.textContent = `X: ${gameState.player.x} / Y: ${gameState.player.y}`;
+      updateMinimapPlayer(x, y);
+
+      let info = { islandName: 'Ocean', biome: 'Ocean', desc: '섬 사이의 바다입니다. 이동하려면 뗏목이 필요합니다.' };
+      if (window.currentScene && window.currentScene.getTerrainInfo) info = window.currentScene.getTerrainInfo(x, y);
+      if (ui.islandText) ui.islandText.textContent = info.islandName;
+      if (ui.biomeText) ui.biomeText.textContent = info.biome;
+      if (ui.biomeDesc) ui.biomeDesc.textContent = info.desc;
+    }
+
+    function renderMinimapTerrain() {
+      if (!ui.minimapTerrain) return;
+      ui.minimapTerrain.innerHTML = '';
+      const bounds = getMinimapBounds();
+      const bw = Math.max(1, bounds.x2 - bounds.x1);
+      const bh = Math.max(1, bounds.y2 - bounds.y1);
+      const inBounds = (cx, cy, w, h) => !(cx + w / 2 < bounds.x1 || cx - w / 2 > bounds.x2 || cy + h / 2 < bounds.y1 || cy - h / 2 > bounds.y2);
+      const addRect = (cls, cx, cy, w, h, radius = '12px') => {
+        if (!inBounds(cx, cy, w, h)) return;
+        const el = document.createElement('div'); el.className = cls;
+        el.style.left = `${((cx - bounds.x1) / bw) * 100}%`;
+        el.style.top = `${((cy - bounds.y1) / bh) * 100}%`;
+        el.style.width = `${(w / bw) * 100}%`;
+        el.style.height = `${(h / bh) * 100}%`;
+        el.style.borderRadius = radius;
+        ui.minimapTerrain.appendChild(el);
+      };
+      const addCircle = (cls, cx, cy, r) => addRect(cls, cx, cy, r * 2, r * 2, '50%');
+      MAP_ISLANDS.forEach(island => addRect(`mini-island lvl${island.level}`, island.x, island.y, island.w, island.h, '50%'));
+      MAP_FEATURES.forEach(f => {
+        if (f.type === 'lake') addCircle('mini-lake', f.x, f.y, f.r);
+        else if (f.type === 'hill') addRect('mini-hill', f.x, f.y, f.w, f.h, '50%');
+        else if (f.type === 'desert') addRect('mini-desert', f.x, f.y, f.w, f.h, '38%');
+      });
     }
 
     function handlePlayerDeath() {
@@ -470,26 +1313,164 @@
 
       let isRawMeat = itemName.endsWith("고기") && !itemName.startsWith("구운");
       let nearCampfire = false;
-      if (window.currentScene) {
+      if (window.currentScene && window.currentScene.player && window.currentScene.buildingsGroup) {
         window.currentScene.buildingsGroup.getChildren().forEach(b => {
-          if (b.active && b.bType === 'Campfire' && Phaser.Math.Distance.Between(window.currentScene.player.x, window.currentScene.player.y, b.x, b.y) < 150) nearCampfire = true;
+          if (!b.active || b.bType !== 'Campfire') return;
+          const dist = Phaser.Math.Distance.Between(window.currentScene.player.x, window.currentScene.player.y, b.x, b.y);
+          if (dist <= CAMPFIRE_COOK_RANGE) nearCampfire = true;
         });
       }
       ui.sellCookBtn.style.display = (isRawMeat && nearCampfire) ? 'inline-block' : 'none';
       let isCookedMeat = itemName.startsWith("구운") && itemName.endsWith("고기");
       ui.sellEatBtn.style.display = isCookedMeat ? 'inline-block' : 'none';
+
+      const quickEffect = getQuickSlotItemEffect(itemName);
+      if (ui.quickSlotRegister) {
+        ui.quickSlotRegister.style.display = quickEffect ? 'block' : 'none';
+        if (ui.quickSlotRegisterNote) {
+          ui.quickSlotRegisterNote.textContent = quickEffect
+            ? `${quickEffect.label}가 50% 이하일 때 자동 사용됩니다. 화면 퀵슬롯에는 전체 보유 수량이 표시됩니다.`
+            : 'HP/MP 회복 아이템만 퀵슬롯에 등록할 수 있습니다.';
+        }
+      }
     }
 
-    // [원본 복원] 건물 업그레이드 모달 부활
+    function showGlobalTooltip(html, e) {
+      if (!ui.tooltip) return;
+      ui.tooltip.innerHTML = html;
+      ui.tooltip.style.display = 'block';
+      moveGlobalTooltip(e);
+    }
+
+    function moveGlobalTooltip(e) {
+      if (!ui.tooltip || ui.tooltip.style.display === 'none') return;
+      ui.tooltip.style.left = `${e.pageX + 12}px`;
+      ui.tooltip.style.top = `${e.pageY + 12}px`;
+    }
+
+    function hideGlobalTooltip() {
+      if (ui.tooltip) ui.tooltip.style.display = 'none';
+    }
+
+    // [방어 시설 강화] 무기고는 캐릭터가 아니라 설치된 방어 건물을 강화합니다.
     window.currentUpgradeBldg = null;
+
+    function getArmoryUpgradeCost(type) {
+      const levelMap = {
+        fenceHp: gameState.buildingUpgrades.fenceHpLevel,
+        crossbowHp: gameState.buildingUpgrades.crossbowHpLevel,
+        crossbowDmg: gameState.buildingUpgrades.crossbowDmgLevel
+      };
+      return (ARMORY_UPGRADE_COSTS[type] || 1000) * (levelMap[type] || 1);
+    }
+
+    function refreshArmoryUpgradeButtons() {
+      if (!ui.upgArmoryOptions) return;
+      const u = gameState.buildingUpgrades;
+      const data = {
+        fenceHp: {
+          title: '울타리 체력 증가',
+          level: `Lv.${u.fenceHpLevel} → ${u.fenceHpLevel + 1}`,
+          cost: getArmoryUpgradeCost('fenceHp'),
+          tip: '새로 설치하는 울타리와 이미 설치된 울타리의 최대 체력을 증가시킵니다. 기존 울타리는 현재 체력 비율을 유지합니다.'
+        },
+        crossbowHp: {
+          title: '크로스보우 체력 증가',
+          level: `Lv.${u.crossbowHpLevel} → ${u.crossbowHpLevel + 1}`,
+          cost: getArmoryUpgradeCost('crossbowHp'),
+          tip: '새로 설치하는 크로스보우와 이미 설치된 크로스보우의 최대 체력을 증가시킵니다. 기존 크로스보우는 현재 체력 비율을 유지합니다.'
+        },
+        crossbowDmg: {
+          title: '크로스보우 공격력 증가',
+          level: `Lv.${u.crossbowDmgLevel} → ${u.crossbowDmgLevel + 1}`,
+          cost: getArmoryUpgradeCost('crossbowDmg'),
+          tip: '크로스보우가 몬스터에게 주는 공격력을 증가시킵니다. 연사력은 크로스보우를 직접 클릭해서 따로 강화합니다.'
+        }
+      };
+      ui.upgArmoryOptions.querySelectorAll('.armory-upg-btn').forEach(btn => {
+        const item = data[btn.dataset.armoryUpg];
+        if (!item) return;
+        btn.innerHTML = `<span class="armory-card-title">${item.title}</span><span class="armory-card-level">${item.level}</span><span class="armory-card-cost">비용: ${item.cost.toLocaleString()} G</span>`;
+        btn.dataset.tooltip = item.tip;
+      });
+    }
+
+    function applyArmoryUpgrade(type) {
+      const cost = getArmoryUpgradeCost(type);
+      if (gameState.player.gold < cost) {
+        addChatMessage(`<span style="color:#FFD66B;">골드 부족 (필요: ${cost.toLocaleString()} G)</span>`);
+        return;
+      }
+      gameState.player.gold -= cost;
+
+      if (type === 'fenceHp') {
+        gameState.buildingUpgrades.fenceHpLevel++;
+        if (window.currentScene) window.currentScene.applyBuildingUpgradeToExisting('Fence');
+        addChatMessage(`<span style="color:#7CFF8A;">무기고 강화: 울타리 체력 Lv.${gameState.buildingUpgrades.fenceHpLevel}</span>`);
+      } else if (type === 'crossbowHp') {
+        gameState.buildingUpgrades.crossbowHpLevel++;
+        if (window.currentScene) window.currentScene.applyBuildingUpgradeToExisting('Crossbow');
+        addChatMessage(`<span style="color:#7CFF8A;">무기고 강화: 크로스보우 체력 Lv.${gameState.buildingUpgrades.crossbowHpLevel}</span>`);
+      } else if (type === 'crossbowDmg') {
+        gameState.buildingUpgrades.crossbowDmgLevel++;
+        if (window.currentScene) window.currentScene.applyBuildingUpgradeToExisting('Crossbow');
+        addChatMessage(`<span style="color:#7CFF8A;">무기고 강화: 크로스보우 공격력 Lv.${gameState.buildingUpgrades.crossbowDmgLevel}</span>`);
+      }
+      updatePlayerHud();
+      refreshArmoryUpgradeButtons();
+      openUpgradeModal(window.currentUpgradeBldg);
+    }
+
+    function getBuildingDisplayName(type) {
+      return ({ Campfire: 'Campfire (모닥불)', Fence: 'Fence (울타리)', Crossbow: 'Auto Crossbow', Armory: 'Armory (무기고)', Raft: 'Raft (뗏목)' })[type] || type;
+    }
+
+    function getDemolishRefundPreview(bldg) {
+      if (!bldg || !BUILD_COSTS[bldg.bType]) return 0;
+      const healthRatio = Math.max(0, Math.min(1, (bldg.hp || 0) / (bldg.maxHp || 1)));
+      return Math.floor((BUILD_COSTS[bldg.bType].wood || 0) * 0.3 * healthRatio);
+    }
+
+    function refreshDemolishButton(bldg) {
+      if (!ui.upgDemolish) return;
+      const refund = getDemolishRefundPreview(bldg);
+      ui.upgDemolish.style.display = 'inline-block';
+      ui.upgDemolish.textContent = `철거 (+${refund} Wood)`;
+    }
+
     function openUpgradeModal(bldg) {
-      window.currentUpgradeBldg = bldg; ui.upgModal.style.display = 'flex';
+      window.currentUpgradeBldg = bldg;
+      ui.upgModal.style.display = 'flex';
+      ui.upgArmoryOptions.style.display = 'none';
+      ui.upgRaftAction.style.display = 'none';
+      document.getElementById('upg-confirm').style.display = 'none';
+      refreshDemolishButton(bldg);
+
       if (bldg.bType === 'Armory') {
-        ui.upgTitle.textContent = "Armory"; ui.upgDesc.textContent = "기본 물리 공격력 대폭 증가";
-        ui.upgCurrent.textContent = `Dmg: ${gameState.player.baseDmg}`; ui.upgCost.textContent = `${(gameState.player.dmgLevel * 5000).toLocaleString()} G`;
+        const u = gameState.buildingUpgrades;
+        ui.upgTitle.textContent = 'Armory';
+        ui.upgDesc.textContent = '캐릭터 능력치가 아니라 방어 시설을 강화합니다.';
+        ui.upgCurrent.innerHTML = `Fence HP Lv.${u.fenceHpLevel} / Crossbow HP Lv.${u.crossbowHpLevel} / Crossbow DMG Lv.${u.crossbowDmgLevel}`;
+        ui.upgCost.textContent = '아래 항목 선택';
+        ui.upgArmoryOptions.style.display = 'flex';
+        refreshArmoryUpgradeButtons();
       } else if (bldg.bType === 'Crossbow') {
-        ui.upgTitle.textContent = "Auto Crossbow"; ui.upgDesc.textContent = "데미지/연사력 강화";
-        ui.upgCurrent.textContent = `Lv. ${bldg.level}`; ui.upgCost.textContent = `${(bldg.level * 1000).toLocaleString()} G`;
+        ui.upgTitle.textContent = 'Auto Crossbow';
+        ui.upgDesc.textContent = '이 크로스보우의 연사력을 강화합니다. 공격력은 무기고에서 강화됩니다.';
+        ui.upgCurrent.textContent = `연사 Lv. ${bldg.level} / 공격력 ${bldg.attackDmg || 30} / HP ${Math.ceil(bldg.hp)}/${bldg.maxHp}`;
+        ui.upgCost.textContent = `${(bldg.level * 1000).toLocaleString()} G`;
+        document.getElementById('upg-confirm').style.display = 'inline-block';
+      } else if (bldg.bType === 'Raft') {
+        ui.upgTitle.textContent = 'Raft';
+        ui.upgDesc.textContent = bldg.hasOar ? '노가 장착되어 있습니다. 탑승/하선 또는 철거할 수 있습니다.' : '탑승 시 Wood 1개를 소비하여 노를 생성합니다.';
+        ui.upgCurrent.textContent = `HP ${Math.ceil(bldg.hp)}/${bldg.maxHp} / ${bldg.hasOar ? 'Oar: Ready' : 'Oar: 없음'}`;
+        ui.upgCost.textContent = bldg.hasOar ? '탑승/하선 가능' : '탑승 시 Wood 1 필요';
+        ui.upgRaftAction.style.display = 'inline-block';
+      } else {
+        ui.upgTitle.textContent = getBuildingDisplayName(bldg.bType);
+        ui.upgDesc.textContent = '이 건축물을 철거하고 현재 체력에 비례한 목재 일부를 회수합니다. 골드는 반환되지 않습니다.';
+        ui.upgCurrent.textContent = `HP ${Math.ceil(bldg.hp)}/${bldg.maxHp}`;
+        ui.upgCost.textContent = `예상 회수: ${getDemolishRefundPreview(bldg)} Wood`;
       }
     }
 
@@ -521,27 +1502,78 @@
       const togglePanel = (btnId, panelId) => {
         document.getElementById(btnId).addEventListener('click', (e) => {
           const panel = document.getElementById(panelId);
-          if(panel.style.display === 'block') { panel.style.display = ''; e.target.classList.remove('active'); }
-          else { panel.style.display = 'block'; e.target.classList.add('active'); }
+          const openDisplay = panelId === 'ui-chat' ? 'flex' : 'block';
+          const isOpen = panel.style.display === openDisplay || panel.style.display === 'block' || panel.style.display === 'flex';
+          if(isOpen) { panel.style.display = ''; e.target.classList.remove('active'); }
+          else { panel.style.display = openDisplay; e.target.classList.add('active'); if (panelId === 'ui-chat') setTimeout(() => ui.chatInput.focus(), 50); }
         });
       };
       togglePanel('toggle-map', 'ui-map'); togglePanel('toggle-quest', 'ui-quest'); togglePanel('toggle-chat', 'ui-chat');
+      if (ui.minimapBox) ui.minimapBox.addEventListener('click', (e) => { e.stopPropagation(); toggleMinimapMode(); });
       document.getElementById('m-build-btn').addEventListener('click', () => document.getElementById('build-button').click());
       document.getElementById('m-inv-btn').addEventListener('click', () => document.getElementById('inventory-button').click());
 
-      const bindVPad = (id, key) => {
-        const el = document.getElementById(id);
-        const press = (e) => { e.preventDefault(); vPad[key] = true; }; const release = (e) => { e.preventDefault(); vPad[key] = false; };
-        el.addEventListener('touchstart', press); el.addEventListener('touchend', release);
-        el.addEventListener('mousedown', press); el.addEventListener('mouseup', release); el.addEventListener('mouseleave', release);
+      const stickBase = document.getElementById('virtual-dpad');
+      const stickKnob = document.getElementById('stick-knob');
+      const resetVirtualStick = () => {
+        virtualStick.active = false;
+        virtualStick.x = 0; virtualStick.y = 0;
+        vPad.up = vPad.down = vPad.left = vPad.right = false;
+        if (stickKnob) stickKnob.style.transform = 'translate(-50%, -50%)';
       };
-      bindVPad('btn-up', 'up'); bindVPad('btn-down', 'down'); bindVPad('btn-left', 'left'); bindVPad('btn-right', 'right');
+      const updateVirtualStick = (clientX, clientY) => {
+        if (!stickBase || !stickKnob) return;
+        const rect = stickBase.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const max = Math.max(38, rect.width * 0.32);
+        let dx = clientX - cx; let dy = clientY - cy;
+        const dist = Math.hypot(dx, dy);
+        if (dist > max) { dx = dx / dist * max; dy = dy / dist * max; }
+        virtualStick.active = dist > 8;
+        virtualStick.x = virtualStick.active ? dx / max : 0;
+        virtualStick.y = virtualStick.active ? dy / max : 0;
+        vPad.left = virtualStick.x < -0.25; vPad.right = virtualStick.x > 0.25;
+        vPad.up = virtualStick.y < -0.25; vPad.down = virtualStick.y > 0.25;
+        stickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      };
+      if (stickBase) {
+        stickBase.addEventListener('pointerdown', (e) => { e.preventDefault(); stickBase.setPointerCapture(e.pointerId); updateVirtualStick(e.clientX, e.clientY); });
+        stickBase.addEventListener('pointermove', (e) => { if (!virtualStick.active && e.buttons !== 1) return; e.preventDefault(); updateVirtualStick(e.clientX, e.clientY); });
+        stickBase.addEventListener('pointerup', (e) => { e.preventDefault(); resetVirtualStick(); });
+        stickBase.addEventListener('pointercancel', resetVirtualStick);
+        stickBase.addEventListener('lostpointercapture', resetVirtualStick);
+      }
       
       const vAtk = document.getElementById('virtual-attack');
       const triggerAttack = (e) => { e.preventDefault(); if(window.currentScene) window.currentScene.handlePlayerAttack(); };
       vAtk.addEventListener('touchstart', triggerAttack); vAtk.addEventListener('mousedown', triggerAttack);
 
-      ui.chatSendButton.addEventListener('click', () => { if(!ui.chatInput.value) return; addChatMessage(`You: ${ui.chatInput.value}`); ui.chatInput.value = ''; });
+      ui.quickSlots.forEach(slot => {
+        slot.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          useItemQuickSlot(Number(slot.dataset.slot));
+        });
+      });
+      document.querySelectorAll('.quick-slot-reg-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (btn.dataset.slot === 'clear') {
+            clearQuickSlotByItem(currentSellItem);
+            addChatMessage(`<span style="color:#7fd4ff;">${currentSellItem} 퀵슬롯 등록을 해제했습니다.</span>`);
+            return;
+          }
+          if (currentSellItem) setItemQuickSlot(Number(btn.dataset.slot), currentSellItem);
+        });
+      });
+
+      ui.chatSendButton.addEventListener('click', sendWorldChat);
+      ui.chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendWorldChat(); } });
+      ui.chatInput.addEventListener('pointerdown', (e) => e.stopPropagation());
+      ui.chatInput.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+      ui.chatSendButton.addEventListener('pointerdown', (e) => e.stopPropagation());
       
       document.getElementById('inventory-button').addEventListener('click', () => { ui.inventoryPanel.style.display = ui.inventoryPanel.style.display === 'flex' ? 'none' : 'flex'; ui.buildPanel.style.display = 'none'; ui.statModal.style.display = 'none'; updateInventoryUi(); });
       document.getElementById('close-inventory').addEventListener('click', () => ui.inventoryPanel.style.display = 'none');
@@ -572,13 +1604,23 @@
           const type = el.dataset.buildType; const cost = BUILD_COSTS[type];
           const woodCount = gameState.inventory['Wood'] ? gameState.inventory['Wood'].count : 0;
           if (woodCount < cost.wood || gameState.player.gold < cost.gold) { addChatMessage(`<span style="color:#FFD66B;">자원 부족 (필요: Wood ${cost.wood}, Gold ${cost.gold})</span>`); return; }
-          if (type !== 'Campfire' && gameState.builtCount >= gameState.buildLimit) { addChatMessage(`<span style="color:#FFD66B;">최대 건설 수량 도달</span>`); return; }
+          if (!['Campfire', 'Fence'].includes(type) && gameState.builtCount >= gameState.buildLimit) { addChatMessage(`<span style="color:#FFD66B;">최대 건설 수량 도달</span>`); return; }
           window.activeBuildType = type; window.activeBuildRotation = 0; ui.buildPanel.style.display = 'none'; ui.buildModeText.style.display = 'block';
         });
       });
 
       window.addEventListener('contextmenu', (e) => { e.preventDefault(); if (window.activeBuildType) { window.activeBuildRotation += 90; addChatMessage('<span style="color:#FFD66B;">건물 회전됨</span>'); } });
-      window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { window.activeBuildType = null; ui.buildModeText.style.display = 'none'; ui.upgModal.style.display = 'none'; ui.sellModal.style.display = 'none'; ui.statModal.style.display = 'none'; } });
+      window.addEventListener('keydown', (e) => {
+        const activeTag = document.activeElement && document.activeElement.tagName ? document.activeElement.tagName.toLowerCase() : '';
+        const isTyping = activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select';
+        if (e.key === 'Escape') {
+          window.activeBuildType = null; ui.buildModeText.style.display = 'none'; ui.upgModal.style.display = 'none'; ui.sellModal.style.display = 'none'; ui.statModal.style.display = 'none';
+          return;
+        }
+        if (!isTyping && !e.repeat && e.key >= '1' && e.key <= '5') {
+          useItemQuickSlot(Number(e.key));
+        }
+      });
 
       ui.sellQty.addEventListener('input', (e) => { let val = parseInt(e.target.value) || 1; if (val < 1) val = 1; if (val > currentSellMax) val = currentSellMax; e.target.value = val; ui.sellProfit.textContent = `${(val * currentSellPrice).toLocaleString()} G`; });
       document.getElementById('sell-cancel').addEventListener('click', () => ui.sellModal.style.display = 'none');
@@ -588,10 +1630,10 @@
         let qty = parseInt(ui.sellQty.value) || 1;
         if (qty > 0 && currentSellItem && gameState.inventory[currentSellItem]) {
           gameState.inventory[currentSellItem].count -= qty;
-          if (gameState.inventory[currentSellItem].count <= 0) delete gameState.inventory[currentSellItem];
+          if (gameState.inventory[currentSellItem].count <= 0) { delete gameState.inventory[currentSellItem]; clearQuickSlotByItem(currentSellItem); }
           const cookedName = `구운 ${currentSellItem}`;
           addInventoryItem(cookedName, qty, 'Magic');
-          updateInventoryUi();
+          updateInventoryUi(); updateQuickSlotUi();
         }
         ui.sellModal.style.display = 'none';
       });
@@ -601,8 +1643,8 @@
         if (qty > 0 && currentSellItem && gameState.inventory[currentSellItem]) {
           let healAmount = 50 * qty; gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + healAmount);
           gameState.inventory[currentSellItem].count -= qty;
-          if (gameState.inventory[currentSellItem].count <= 0) delete gameState.inventory[currentSellItem];
-          updatePlayerHud(); updateInventoryUi();
+          if (gameState.inventory[currentSellItem].count <= 0) { delete gameState.inventory[currentSellItem]; clearQuickSlotByItem(currentSellItem); }
+          updatePlayerHud(); updateInventoryUi(); updateQuickSlotUi();
         }
         ui.sellModal.style.display = 'none';
       });
@@ -612,22 +1654,40 @@
         if (qty > 0 && currentSellItem && gameState.inventory[currentSellItem]) {
           gameState.player.gold += qty * currentSellPrice;
           gameState.inventory[currentSellItem].count -= qty;
-          if (gameState.inventory[currentSellItem].count <= 0) delete gameState.inventory[currentSellItem];
-          updatePlayerHud(); updateInventoryUi();
+          if (gameState.inventory[currentSellItem].count <= 0) { delete gameState.inventory[currentSellItem]; clearQuickSlotByItem(currentSellItem); }
+          updatePlayerHud(); updateInventoryUi(); updateQuickSlotUi();
         }
         ui.sellModal.style.display = 'none';
       });
 
-      // [원본 복원] 업그레이드 모달 로직 부활
+      // [방어 시설 강화] 업그레이드 모달 로직
       document.getElementById('upg-cancel').addEventListener('click', () => ui.upgModal.style.display = 'none');
+      ui.upgDemolish.addEventListener('click', () => {
+        if (window.currentScene && window.currentUpgradeBldg) window.currentScene.demolishBuilding(window.currentUpgradeBldg);
+      });
+      ui.upgRaftAction.addEventListener('click', () => {
+        if (window.currentScene && window.currentUpgradeBldg && window.currentUpgradeBldg.bType === 'Raft') {
+          window.currentScene.toggleRaft(window.currentUpgradeBldg);
+          openUpgradeModal(window.currentUpgradeBldg);
+        }
+      });
+      document.querySelectorAll('.armory-upg-btn').forEach(btn => {
+        btn.addEventListener('click', () => applyArmoryUpgrade(btn.dataset.armoryUpg));
+        btn.addEventListener('mouseenter', (e) => { if (btn.dataset.tooltip) showGlobalTooltip(btn.dataset.tooltip, e); });
+        btn.addEventListener('mousemove', moveGlobalTooltip);
+        btn.addEventListener('mouseleave', hideGlobalTooltip);
+      });
       document.getElementById('upg-confirm').addEventListener('click', () => {
         const bldg = window.currentUpgradeBldg; if(!bldg) return;
-        if (bldg.bType === 'Armory') {
-          const cost = gameState.player.dmgLevel * 5000;
-          if (gameState.player.gold >= cost) { gameState.player.gold -= cost; gameState.player.dmgLevel++; gameState.player.baseDmg += 15; }
-        } else if (bldg.bType === 'Crossbow') {
+        if (bldg.bType === 'Crossbow') {
           const cost = bldg.level * 1000;
-          if (gameState.player.gold >= cost) { gameState.player.gold -= cost; bldg.level++; }
+          if (gameState.player.gold >= cost) {
+            gameState.player.gold -= cost;
+            bldg.level++;
+            addChatMessage(`<span style="color:#7CFF8A;">크로스보우 연사 강화 Lv.${bldg.level}</span>`);
+          } else {
+            addChatMessage(`<span style="color:#FFD66B;">골드 부족 (필요: ${cost.toLocaleString()} G)</span>`);
+          }
         }
         updatePlayerHud(); ui.upgModal.style.display = 'none';
       });
@@ -657,14 +1717,17 @@
         
         this.spawnForest();
         this.spawnGiantTrees();
-        for(let i=0; i<300; i++) this.spawnRandomMonster();
+        Object.entries(MONSTER_SPAWN_POLICY.initialByLevel).forEach(([level, count]) => {
+          for (let i = 0; i < count; i++) this.spawnRandomMonster(Number(level));
+        });
 
-        this.player = this.physics.add.sprite(6000, 4000, 'player_tex');
+        this.player = this.physics.add.sprite(gameState.player.x, gameState.player.y, 'player_tex');
         this.player.body.setCircle(15); this.player.body.setCollideWorldBounds(true);
+        this.lastLandPosition = new Phaser.Math.Vector2(this.player.x, this.player.y);
         this.playerNameText = this.add.text(0, 0, gameState.player.name, { fontSize: '14px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
-        this.physics.add.collider(this.player, this.environmentGroup);
+        this.playerEnvironmentCollider = this.physics.add.collider(this.player, this.environmentGroup);
         this.physics.add.collider(this.player, this.buildingsGroup);
 
         this.wasd = this.input.keyboard.addKeys({ up: 'W', left: 'A', down: 'S', right: 'D' });
@@ -679,10 +1742,15 @@
             // [원본 복원] 건물 업그레이드 클릭 로직 부활
             let clickedBldg = null;
             this.buildingsGroup.getChildren().forEach(b => {
-              if (b.active && Phaser.Math.Distance.Between(pointer.worldX, pointer.worldY, b.x, b.y) < b.body.radius + 15) clickedBldg = b;
+              const clickRadius = (b.body && b.body.radius) ? b.body.radius : Math.max(b.displayWidth, b.displayHeight) / 2;
+              if (b.active && Phaser.Math.Distance.Between(pointer.worldX, pointer.worldY, b.x, b.y) < clickRadius + 15) clickedBldg = b;
             });
-            if (clickedBldg && (clickedBldg.bType === 'Armory' || clickedBldg.bType === 'Crossbow')) {
-              if (Phaser.Math.Distance.Between(this.player.x, this.player.y, clickedBldg.x, clickedBldg.y) < 200) { openUpgradeModal(clickedBldg); return; } 
+            if (clickedBldg) {
+              const interactRange = clickedBldg.bType === 'Raft' ? 160 : 200;
+              if (Phaser.Math.Distance.Between(this.player.x, this.player.y, clickedBldg.x, clickedBldg.y) < interactRange) {
+                openUpgradeModal(clickedBldg);
+                return;
+              }
             }
 
             let clickedEntity = false;
@@ -701,18 +1769,43 @@
 
         this.buildPreview = this.add.sprite(0, 0, 'fence_tex').setAlpha(0.5).setVisible(false);
 
-        window.addEventListener('player-respawn', () => { this.player.setPosition(6000, 4000); this.player.body.setVelocity(0,0); this.targetPosition = null; });
+        window.addEventListener('player-respawn', () => { this.player.setPosition(6000, 4000); this.lastLandPosition.set(6000, 4000); this.player.body.setVelocity(0,0); this.targetPosition = null; });
         setInterval(() => this.updateRadar(), 500);
+        setInterval(() => { autoUseItemQuickSlots(); updateQuickSlotUi(); }, 500);
       }
 
       createCustomTextures() {
         let g = this.make.graphics({ add: false });
-        g.fillStyle(0x388047); g.fillRect(0,0,200,200); g.fillStyle(0x3d8a4d); g.fillCircle(40,40,8); g.generateTexture('bg_grass', 200, 200); g.clear();
-        g.fillStyle(0xd6ba7a); g.fillRect(0,0,200,200); g.fillStyle(0xcca860); g.fillCircle(30,50,5); g.generateTexture('bg_sand', 200, 200); g.clear();
-        g.fillStyle(0x3a8cd1); g.fillRect(0,0,200,200); g.fillStyle(0x4ca1e6); g.fillEllipse(100,100,80,40); g.generateTexture('bg_lake', 200, 200); g.clear();
-        g.fillStyle(0x4e6b45); g.fillRect(0,0,200,200); g.generateTexture('bg_hill', 200, 200); g.clear();
-        g.fillStyle(0x4a4a4a); g.fillRect(0,0,50,50); g.fillStyle(0x333333); g.fillRect(0,40,50,10); g.generateTexture('cliff_tex', 50, 50); g.clear();
+
+        // [v0.0.06] 작은 반복 텍스처 기반 지형 업그레이드.
+        // 거대한 월드 크기의 비트맵은 만들지 않고, 256px 패턴을 TileSprite/소형 장식으로 재사용합니다.
+        const makeGroundTile = (key, baseColor, speckColor, accentColor, lineColor) => {
+          g.fillStyle(baseColor, 1); g.fillRect(0, 0, 256, 256);
+          for (let i = 0; i < 95; i++) {
+            g.fillStyle(i % 3 === 0 ? accentColor : speckColor, i % 4 === 0 ? 0.28 : 0.18);
+            g.fillCircle(Phaser.Math.Between(0, 256), Phaser.Math.Between(0, 256), Phaser.Math.Between(1, 4));
+          }
+          g.lineStyle(1, lineColor, 0.18);
+          for (let i = 0; i < 12; i++) {
+            const x = Phaser.Math.Between(-30, 230), y = Phaser.Math.Between(0, 256);
+            g.beginPath(); g.moveTo(x, y); g.lineTo(x + Phaser.Math.Between(24, 70), y + Phaser.Math.Between(-12, 12)); g.strokePath();
+          }
+          g.generateTexture(key, 256, 256); g.clear();
+        };
+        makeGroundTile('bg_grass', 0x357f43, 0x52a65e, 0x2f6f39, 0x8fdc82);
+        makeGroundTile('bg_sand', 0xd8bd7a, 0xcda85e, 0xe7d297, 0x9f8244);
+        makeGroundTile('bg_dirt', 0x8f673d, 0x76502d, 0xad7a47, 0x5b3b20);
+        makeGroundTile('bg_hill', 0x596b50, 0x6f7d63, 0x3f463c, 0xc7d1b4);
+        makeGroundTile('bg_lake', 0x2f82c7, 0x56afe8, 0x1d5f9a, 0xb7ebff);
+
+        g.fillStyle(0x4a4a4a); g.fillRect(0,0,50,50); g.fillStyle(0x333333); g.fillRect(0,40,50,10); g.lineStyle(1, 0x777777, 0.35); g.lineBetween(4, 12, 42, 4); g.lineBetween(8, 34, 48, 22); g.generateTexture('cliff_tex', 50, 50); g.clear();
         g.fillStyle(0x1a4b77, 0.5); g.fillRect(0,0,100,100); g.generateTexture('water_block', 100, 100); g.clear();
+
+        g.fillStyle(0xffffff, 0.00); g.fillRect(0,0,64,24); g.lineStyle(2, 0xd9fbff, 0.55); g.beginPath(); g.moveTo(2, 14); g.lineTo(12, 10); g.lineTo(22, 8); g.lineTo(34, 13); g.lineTo(46, 18); g.lineTo(62, 10); g.strokePath(); g.generateTexture('wave_streak', 64, 24); g.clear();
+        g.fillStyle(0xffffff, 0.00); g.fillRect(0,0,72,26); g.lineStyle(2, 0xf3ffff, 0.50); g.beginPath(); g.moveTo(4, 13); g.lineTo(16, 7); g.lineTo(28, 6); g.lineTo(36, 13); g.lineTo(50, 20); g.lineTo(68, 12); g.strokePath(); g.generateTexture('foam_patch', 72, 26); g.clear();
+        g.fillStyle(0x000000, 0.10); g.fillEllipse(38, 18, 70, 22); g.fillStyle(0x6f4a2e, 0.28); g.fillEllipse(38, 18, 64, 18); g.lineStyle(1, 0x4b321d, 0.22); g.lineBetween(10, 16, 64, 18); g.generateTexture('dirt_patch', 76, 36); g.clear();
+        g.fillStyle(0x103b1d, 0.00); g.fillRect(0,0,44,32); g.lineStyle(2, 0x8fdc82, 0.58); for (let i = 0; i < 7; i++) { const x = 8 + i * 5; g.lineBetween(x, 25, x + Phaser.Math.Between(-4,4), Phaser.Math.Between(4,14)); } g.generateTexture('grass_clump', 44, 32); g.clear();
+        g.fillStyle(0x000000, 0.18); g.fillEllipse(28, 27, 42, 12); g.fillStyle(0x7b7e78, 0.95); g.fillEllipse(24, 20, 30, 22); g.fillStyle(0xa0a39b, 0.82); g.fillEllipse(34, 16, 24, 16); g.lineStyle(1, 0x454743, 0.45); g.lineBetween(14, 18, 40, 13); g.generateTexture('rock_cluster', 56, 36); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(30, 55, 36, 16); g.fillStyle(0x5c3a21); g.fillRoundedRect(24, 30, 12, 25, 4); g.fillStyle(0x276336); g.fillCircle(30, 25, 24); g.fillStyle(0x388c4c); g.fillCircle(30, 15, 18); g.generateTexture('tree_tex', 60, 60); g.clear();
         g.fillStyle(0x000000, 0.4); g.fillEllipse(60, 110, 70, 30); g.fillStyle(0x4a2a18); g.fillRoundedRect(45, 60, 30, 50, 6); g.fillStyle(0x1c4a25); g.fillCircle(60, 50, 50); g.fillStyle(0x276b35); g.fillCircle(60, 30, 35); g.fillStyle(0x2a753a); g.fillCircle(40, 45, 30); g.fillCircle(80, 45, 30); g.generateTexture('giant_tree_tex', 120, 120); g.clear();
 
@@ -722,32 +1815,225 @@
         g.fillStyle(0x000000, 0.3); g.fillEllipse(24, 38, 38, 12); g.fillStyle(0xffa8bc); g.fillEllipse(24, 24, 34, 24); g.fillStyle(0xffcad6); g.fillCircle(38, 23, 10); g.fillStyle(0x222222); g.fillCircle(40, 20, 2); g.fillStyle(0xd96d86); g.fillCircle(44, 24, 2); g.fillCircle(38, 25, 2); g.generateTexture('pig_tex', 52, 48); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(25, 39, 40, 12); g.fillStyle(0x737373); g.fillEllipse(25, 25, 36, 24); g.fillStyle(0x555555); g.fillTriangle(11, 13, 16, 2, 21, 14); g.fillTriangle(30, 14, 36, 2, 39, 16); g.fillStyle(0x111111); g.fillCircle(20, 22, 2); g.fillCircle(32, 22, 2); g.fillStyle(0xffffff); g.fillTriangle(24, 30, 27, 35, 30, 30); g.generateTexture('wolf_tex', 56, 52); g.clear();
         g.fillStyle(0x000000, 0.35); g.fillEllipse(35, 60, 58, 18); g.fillStyle(0x4b3621); g.fillEllipse(35, 34, 52, 46); g.fillStyle(0x3a2919); g.fillCircle(18, 15, 10); g.fillCircle(52, 15, 10); g.fillStyle(0x7a5430); g.fillEllipse(35, 40, 30, 22); g.fillStyle(0x111111); g.fillCircle(27, 30, 3); g.fillCircle(43, 30, 3); g.fillCircle(35, 39, 4); g.generateTexture('bear_tex', 76, 76); g.clear();
+
+        const makeAnimalTexture = (key, color, accent = 0xffffff, w = 64, h = 54) => {
+          g.fillStyle(0x000000, 0.32); g.fillEllipse(w / 2, h - 8, w * 0.72, 13);
+          g.fillStyle(color); g.fillEllipse(w / 2, h / 2, w * 0.62, h * 0.48);
+          g.fillStyle(accent); g.fillCircle(w * 0.66, h * 0.45, Math.max(7, h * 0.16));
+          g.fillStyle(0x111111); g.fillCircle(w * 0.62, h * 0.42, 2); g.fillCircle(w * 0.71, h * 0.42, 2);
+          g.generateTexture(key, w, h); g.clear();
+        };
+        makeAnimalTexture('cow_tex', 0xeeeeee, 0x333333, 62, 50);
+        makeAnimalTexture('tiger_tex', 0xe8902f, 0xffd08a, 70, 56);
+        makeAnimalTexture('croc_tex', 0x2f6b35, 0x7fb56a, 82, 42);
+        makeAnimalTexture('hippo_tex', 0x7d7180, 0xb3a6b7, 82, 58);
+        makeAnimalTexture('elephant_tex', 0x8e9297, 0xc1c5c9, 92, 66);
+        makeAnimalTexture('anaconda_tex', 0x2f5d28, 0xc2d977, 86, 34);
+        makeAnimalTexture('scorpion_tex', 0x6f4b2c, 0xd09250, 62, 44);
+        makeAnimalTexture('kangaroo_tex', 0xb47a3a, 0xe2b57a, 66, 58);
+        makeAnimalTexture('gorilla_tex', 0x313131, 0x777777, 76, 64);
+        makeAnimalTexture('lion_tex', 0xc28c3d, 0xe3bd6d, 76, 58);
+        makeAnimalTexture('rhino_tex', 0x71787c, 0xb5bdc2, 88, 62);
+        makeAnimalTexture('reindeer_tex', 0x8b5a2b, 0xd0a36a, 74, 60);
+        makeAnimalTexture('mamba_tex', 0x111111, 0x444444, 78, 32);
         
         g.fillStyle(0x6b4423); g.fillRect(0, 15, 40, 10); g.fillRect(5, 5, 8, 30); g.fillRect(25, 5, 8, 30); g.generateTexture('fence_tex', 40, 40); g.clear();
         g.fillStyle(0x3a2311); g.fillRect(5, 10, 30, 20); g.fillStyle(0x888888); g.fillRect(18, 5, 4, 30); g.fillRect(5, 20, 30, 4); g.generateTexture('crossbow_tex', 40, 40); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(40, 75, 70, 20); g.fillStyle(0x4a2e15); g.fillRect(10, 20, 60, 50); g.fillStyle(0x5c3a21); g.fillRect(5, 10, 70, 15); g.fillStyle(0x222222); g.fillRect(30, 40, 20, 30); g.generateTexture('armory_tex', 80, 80); g.clear();
         g.fillStyle(0x000000, 0.3); g.fillEllipse(20, 35, 30, 10); g.fillStyle(0x5c3a21); g.fillRect(5, 25, 30, 6); g.fillRect(15, 15, 10, 20); g.fillStyle(0xff4500); g.fillTriangle(20, 5, 10, 25, 30, 25); g.fillStyle(0xffd700); g.fillTriangle(20, 15, 15, 25, 25, 25); g.generateTexture('campfire_tex', 40, 40); g.clear();
+        g.fillStyle(0x000000, 0.28); g.fillEllipse(60, 64, 110, 36); g.fillStyle(0x8b5a2b); g.fillRoundedRect(10, 20, 100, 45, 8); g.fillStyle(0x5c3a21); g.fillRect(18, 28, 84, 6); g.fillRect(18, 43, 84, 6); g.fillRect(25, 16, 8, 56); g.fillRect(55, 16, 8, 56); g.fillRect(85, 16, 8, 56); g.fillStyle(0xd7b076); g.fillRect(95, 8, 8, 55); g.generateTexture('raft_tex', 120, 80); g.clear();
       }
 
       generateMapBiomes() {
-        this.add.tileSprite(this.worldWidth/2, this.worldHeight/2, this.worldWidth - 1000, this.worldHeight - 1000, 'bg_sand');
-        this.add.tileSprite(this.worldWidth/2, this.worldHeight/2, this.worldWidth - 1400, this.worldHeight - 1400, 'bg_grass');
-        this.add.tileSprite(9500, 6000, 3000, 2000, 'bg_sand');
-        this.add.tileSprite(3250, 3250, 2500, 2500, 'bg_hill');
-        this.createCliffBorders(2000, 2000, 4500, 4500, 300);
+        // [v0.0.06] 단색 사각형 대신 반복 패턴/장식 레이어로 이동감을 강화합니다.
+        // 전체 월드 크기의 TileSprite는 만들지 않고, 섬/지형 단위로만 작은 패턴을 반복합니다.
+        this.waterZones = [];
+        this.cameras.main.setBackgroundColor('#174b78');
+        this.createOceanSurfaceDetails();
 
-        let lake = this.add.tileSprite(7500, 3000, 1200, 1200, 'bg_lake');
-        let lakeCollider = this.environmentGroup.create(7500, 3000, 'water_block');
-        lakeCollider.setScale(12).refreshBody(); lakeCollider.setVisible(false);
+        MAP_ISLANDS.forEach(island => {
+          this.add.ellipse(island.x, island.y, island.w, island.h, 0xd8bd7a, 1).setDepth(-24);
+          this.createCheckeredEllipse(island.x, island.y, island.w, island.h, 420, 0xe0c985, 0xcfad65, 0.42, -23.7, 0);
+          this.add.ellipse(island.x, island.y, Math.max(1, island.w - 760), Math.max(1, island.h - 760), 0x357f43, 1).setDepth(-23);
+          this.createCheckeredEllipse(island.x, island.y, Math.max(1, island.w - 820), Math.max(1, island.h - 820), 360, 0x2f773d, 0x3f914c, 0.34, -22.6, 0);
+          this.add.ellipse(island.x, island.y, Math.max(1, island.w - 380), Math.max(1, island.h - 380), 0x4f9b4f, 0.08).setDepth(-22);
+        });
 
-        for(let x=0; x<this.worldWidth; x+=500) {
-          let top = this.environmentGroup.create(x, 250, 'water_block').setScale(5).refreshBody().setVisible(false);
-          let bottom = this.environmentGroup.create(x, this.worldHeight - 250, 'water_block').setScale(5).refreshBody().setVisible(false);
+        MAP_FEATURES.forEach(f => {
+          if (f.type === 'desert') {
+            this.add.ellipse(f.x, f.y, f.w, f.h, 0xd8bd7a, 0.95).setDepth(-21);
+            this.createCheckeredEllipse(f.x, f.y, f.w, f.h, 300, 0xe5ca86, 0xcba75f, 0.34, -20.7, 0);
+            this.add.ellipse(f.x, f.y, Math.max(1, f.w - 120), Math.max(1, f.h - 120), 0xe3c986, 0.22).setDepth(-20);
+            this.scatterFeatureDetails(f, 'dirt_patch', Math.min(70, Math.floor((f.w * f.h) / 110000)));
+          } else if (f.type === 'hill') {
+            this.add.ellipse(f.x, f.y, f.w, f.h, 0x596b50, 0.98).setDepth(-21);
+            this.createCheckeredEllipse(f.x, f.y, f.w, f.h, 260, 0x4f5f49, 0x6a7660, 0.36, -20.7, 0);
+            this.add.ellipse(f.x, f.y, Math.max(1, f.w - 180), Math.max(1, f.h - 180), 0x6a7860, 0.30).setDepth(-20);
+            this.scatterFeatureDetails(f, 'rock_cluster', Math.min(80, Math.floor((f.w * f.h) / 90000)));
+            this.createHillRockRim(f);
+          } else if (f.type === 'lake') {
+            this.add.circle(f.x, f.y, f.r, 0x2f82c7, 1).setDepth(-20);
+            this.add.circle(f.x, f.y, Math.max(1, f.r - 70), 0x3e99d9, 0.80).setDepth(-19);
+            this.addLakeRipples(f);
+            // 호수 판정은 isWaterPosition()의 원형 계산으로 처리합니다.
+            // StaticBody 사각 충돌체를 만들면 보이는 원형 호수와 실제 충돌이 어긋나므로 생성하지 않습니다.
+          }
+        });
+
+        MAP_ISLANDS.forEach(island => {
+          this.createShoreFoam(island);
+          this.scatterIslandGroundDetails(island);
+        });
+      }
+
+      createCheckeredEllipse(cx, cy, w, h, cellSize, colorA, colorB, alpha = 0.22, depth = -22, margin = 0) {
+        // [v0.0.08] 단색 바닥을 피하기 위한 체크무늬 지형 레이어입니다.
+        // 큰 비트맵을 만들지 않고 작은 사각형 오브젝트만 타원 내부에 배치합니다.
+        const startX = cx - w / 2 + cellSize / 2;
+        const endX = cx + w / 2 - cellSize / 2;
+        const startY = cy - h / 2 + cellSize / 2;
+        const endY = cy + h / 2 - cellSize / 2;
+        let row = 0;
+        for (let y = startY; y <= endY; y += cellSize, row++) {
+          let col = 0;
+          for (let x = startX; x <= endX; x += cellSize, col++) {
+            if (!this.pointInEllipse(x, y, cx, cy, w, h, margin)) continue;
+            const color = ((row + col) % 2 === 0) ? colorA : colorB;
+            this.add.rectangle(x, y, cellSize + 2, cellSize + 2, color, alpha).setDepth(depth);
+          }
         }
-        for(let y=0; y<this.worldHeight; y+=500) {
-          let left = this.environmentGroup.create(250, y, 'water_block').setScale(5).refreshBody().setVisible(false);
-          let right = this.environmentGroup.create(this.worldWidth - 250, y, 'water_block').setScale(5).refreshBody().setVisible(false);
+      }
+
+      createOceanSurfaceDetails() {
+        const waterLines = this.add.graphics().setDepth(-35).setAlpha(0.52);
+        for (let i = 0; i < 1200; i++) {
+          const x = Phaser.Math.Between(0, this.worldWidth);
+          const y = Phaser.Math.Between(0, this.worldHeight);
+          const len = Phaser.Math.Between(26, 92);
+          const alpha = Phaser.Math.FloatBetween(0.10, 0.30);
+          waterLines.lineStyle(1, 0x9ddfff, alpha);
+          waterLines.beginPath();
+          waterLines.moveTo(x, y);
+          waterLines.lineTo(x + len * 0.45, y - Phaser.Math.Between(5, 16)); waterLines.lineTo(x + len, y + Phaser.Math.Between(-6, 6));
+          waterLines.strokePath();
         }
+        this.tweens.add({ targets: waterLines, alpha: 0.30, duration: 2400, yoyo: true, repeat: -1 });
+      }
+
+      createShoreFoam(island) {
+        const rx = island.w / 2;
+        const ry = island.h / 2;
+        const count = Math.max(24, Math.floor((island.w + island.h) / 520));
+        for (let i = 0; i < count; i++) {
+          const a = (Math.PI * 2 * i / count) + Phaser.Math.FloatBetween(-0.035, 0.035);
+          const x = island.x + Math.cos(a) * (rx - Phaser.Math.Between(24, 76));
+          const y = island.y + Math.sin(a) * (ry - Phaser.Math.Between(24, 76));
+          this.add.image(x, y, 'foam_patch')
+            .setDepth(-18)
+            .setAlpha(Phaser.Math.FloatBetween(0.24, 0.46))
+            .setAngle(Phaser.Math.RadToDeg(a) + 90 + Phaser.Math.Between(-12, 12))
+            .setScale(Phaser.Math.FloatBetween(0.75, 1.25));
+        }
+      }
+
+      pointInEllipse(x, y, cx, cy, w, h, margin = 0) {
+        const rx = Math.max(1, w / 2 - margin);
+        const ry = Math.max(1, h / 2 - margin);
+        const dx = (x - cx) / rx;
+        const dy = (y - cy) / ry;
+        return dx * dx + dy * dy <= 1;
+      }
+
+      createHillRockRim(f) {
+        const rx = f.w / 2;
+        const ry = f.h / 2;
+        const count = Math.max(18, Math.floor((f.w + f.h) / 260));
+        for (let i = 0; i < count; i++) {
+          const a = Math.PI * 2 * i / count;
+          const x = f.x + Math.cos(a) * (rx - 25);
+          const y = f.y + Math.sin(a) * (ry - 25);
+          const rock = this.environmentGroup.create(x, y, 'cliff_tex');
+          rock.isTerrain = true;
+          rock.setAngle(Phaser.Math.RadToDeg(a));
+          rock.setAlpha(0.82);
+          rock.setScale(Phaser.Math.FloatBetween(0.72, 1.08)).refreshBody();
+          rock.setDepth(-15);
+        }
+      }
+
+      scatterIslandGroundDetails(island) {
+        const count = Math.min(240, Math.max(80, Math.floor((island.w * island.h) / 430000)));
+        for (let i = 0; i < count; i++) {
+          let x = island.x, y = island.y;
+          for (let tries = 0; tries < 12; tries++) {
+            x = Phaser.Math.Between(Math.ceil(island.x - island.w / 2 + 500), Math.floor(island.x + island.w / 2 - 500));
+            y = Phaser.Math.Between(Math.ceil(island.y - island.h / 2 + 500), Math.floor(island.y + island.h / 2 - 500));
+            if (this.pointInEllipse(x, y, island.x, island.y, island.w, island.h, 420)) break;
+          }
+          if (!this.pointInEllipse(x, y, island.x, island.y, island.w, island.h, 420)) continue;
+          const feature = this.getFeatureAt(x, y);
+          if (feature && feature.type === 'lake') continue;
+          const key = feature && feature.type === 'hill' ? 'rock_cluster' : (feature && feature.type === 'desert' ? 'dirt_patch' : (Math.random() < 0.72 ? 'grass_clump' : 'dirt_patch'));
+          this.add.image(x, y, key).setDepth(-16).setAlpha(Phaser.Math.FloatBetween(0.32, 0.72)).setAngle(Phaser.Math.Between(0, 359)).setScale(Phaser.Math.FloatBetween(0.75, 1.35));
+        }
+      }
+
+      scatterFeatureDetails(f, key, count) {
+        if (f.type === 'lake') return;
+        for (let i = 0; i < count; i++) {
+          let x = f.x, y = f.y;
+          for (let tries = 0; tries < 10; tries++) {
+            x = Phaser.Math.Between(Math.ceil(f.x - f.w / 2 + 80), Math.floor(f.x + f.w / 2 - 80));
+            y = Phaser.Math.Between(Math.ceil(f.y - f.h / 2 + 80), Math.floor(f.y + f.h / 2 - 80));
+            if (this.pointInEllipse(x, y, f.x, f.y, f.w, f.h, 80)) break;
+          }
+          if (!this.pointInEllipse(x, y, f.x, f.y, f.w, f.h, 80)) continue;
+          this.add.image(x, y, key).setDepth(-16).setAlpha(Phaser.Math.FloatBetween(0.38, 0.82)).setAngle(Phaser.Math.Between(0, 359)).setScale(Phaser.Math.FloatBetween(0.85, 1.45));
+        }
+      }
+
+      addLakeRipples(f) {
+        const count = Math.min(80, Math.max(20, Math.floor(f.r / 12)));
+        for (let i = 0; i < count; i++) {
+          const a = Phaser.Math.FloatBetween(0, Math.PI * 2);
+          const d = Math.sqrt(Math.random()) * Math.max(1, f.r - 40);
+          const x = f.x + Math.cos(a) * d;
+          const y = f.y + Math.sin(a) * d;
+          this.add.image(x, y, 'wave_streak').setDepth(-18).setAlpha(Phaser.Math.FloatBetween(0.20, 0.44)).setAngle(Phaser.Math.Between(-8, 8)).setScale(Phaser.Math.FloatBetween(0.8, 1.5));
+        }
+      }
+
+      getIslandAt(x, y) {
+        return MAP_ISLANDS.find(island => this.pointInEllipse(x, y, island.x, island.y, island.w, island.h, 0)) || null;
+      }
+
+      getFeatureAt(x, y) {
+        return MAP_FEATURES.find(f => {
+          if (f.type === 'lake') return Phaser.Math.Distance.Between(x, y, f.x, f.y) <= f.r;
+          return this.pointInEllipse(x, y, f.x, f.y, f.w, f.h, 0);
+        }) || null;
+      }
+
+      getTerrainInfo(x, y) {
+        const island = this.getIslandAt(x, y);
+        if (!island) return { islandName: 'Ocean', biome: 'Ocean', desc: '섬 사이의 바다입니다. 이동하려면 뗏목이 필요합니다.' };
+        const feature = this.getFeatureAt(x, y);
+        if (feature && feature.type === 'lake') return { islandName: island.name, biome: 'Freshwater Lake', desc: feature.desc };
+        if (feature && feature.type === 'hill') return { islandName: island.name, biome: 'Highlands (언덕)', desc: feature.desc };
+        if (feature && feature.type === 'desert') return { islandName: island.name, biome: 'Desert', desc: feature.desc };
+        return { islandName: island.name, biome: `Grassland Lv.${island.level}`, desc: island.desc };
+      }
+
+      getRandomLandPoint(level = null, margin = 600) {
+        const pool = level ? MAP_ISLANDS.filter(i => i.level === level) : MAP_ISLANDS;
+        for (let i = 0; i < 80; i++) {
+          const island = Phaser.Utils.Array.GetRandom(pool.length ? pool : MAP_ISLANDS);
+          const x = Phaser.Math.Between(Math.ceil(island.x - island.w / 2 + margin), Math.floor(island.x + island.w / 2 - margin));
+          const y = Phaser.Math.Between(Math.ceil(island.y - island.h / 2 + margin), Math.floor(island.y + island.h / 2 - margin));
+          if (!this.isWaterPosition(x, y)) return { x, y, island };
+        }
+        const fallback = pool[0] || MAP_ISLANDS[0];
+        return { x: fallback.x, y: fallback.y, island: fallback };
       }
 
       createCliffBorders(x1, y1, x2, y2, rampSize) {
@@ -755,41 +2041,88 @@
         const rampEnd = rampStart + rampSize;
 
         for (let x = x1; x <= x2; x += 50) {
-          this.environmentGroup.create(x, y1, 'cliff_tex');
-          if (x < rampStart || x > rampEnd) this.environmentGroup.create(x, y2, 'cliff_tex');
+          let topCliff = this.environmentGroup.create(x, y1, 'cliff_tex'); topCliff.isTerrain = true;
+          if (x < rampStart || x > rampEnd) { let bottomCliff = this.environmentGroup.create(x, y2, 'cliff_tex'); bottomCliff.isTerrain = true; }
         }
         for (let y = y1; y <= y2; y += 50) {
-          this.environmentGroup.create(x1, y, 'cliff_tex'); this.environmentGroup.create(x2, y, 'cliff_tex');
+          let leftCliff = this.environmentGroup.create(x1, y, 'cliff_tex'); leftCliff.isTerrain = true; let rightCliff = this.environmentGroup.create(x2, y, 'cliff_tex'); rightCliff.isTerrain = true;
         }
       }
 
       spawnForest() {
-        for(let i=0; i<800; i++) {
-          let x = Phaser.Math.Between(800, this.worldWidth - 800); 
-          let y = Phaser.Math.Between(800, this.worldHeight - 800);
-          if (Phaser.Math.Distance.Between(x, y, 7500, 3000) < 650) continue;
-
-          let tree = this.treesGroup.create(x, y, 'tree_tex'); 
+        const treeCount = 1600;
+        for(let i=0; i<treeCount; i++) {
+          const p = this.getRandomLandPoint(null, 500);
+          const feature = this.getFeatureAt(p.x, p.y);
+          if (feature && feature.type === 'desert') continue;
+          let tree = this.treesGroup.create(p.x, p.y, 'tree_tex'); 
           tree.body.setCircle(15, 15, 30); tree.hp = 30; tree.isGiant = false;
         }
       }
 
       spawnGiantTrees() {
-        for(let i=0; i<15; i++) {
-          let x = Phaser.Math.Between(1500, this.worldWidth - 1500); 
-          let y = Phaser.Math.Between(1500, this.worldHeight - 1500);
-          if (Phaser.Math.Distance.Between(x, y, 7500, 3000) < 700) continue;
-
-          let giantTree = this.treesGroup.create(x, y, 'giant_tree_tex');
+        for(let i=0; i<35; i++) {
+          const p = this.getRandomLandPoint(null, 900);
+          const feature = this.getFeatureAt(p.x, p.y);
+          if (feature && feature.type === 'lake') continue;
+          let giantTree = this.treesGroup.create(p.x, p.y, 'giant_tree_tex');
           giantTree.body.setCircle(30, 30, 60); 
-          giantTree.hp = 100; giantTree.isGiant = true; giantTree.setDepth(y);
+          giantTree.hp = 100; giantTree.isGiant = true; giantTree.setDepth(p.y);
         }
       }
 
-      spawnRandomMonster() {
-        const type = Phaser.Utils.Array.GetRandom(MONSTER_TYPES);
-        let x = Phaser.Math.Between(1000, this.worldWidth - 1000); let y = Phaser.Math.Between(1000, this.worldHeight - 1000);
-        if (Phaser.Math.Distance.Between(x, y, 7500, 3000) < 600) return; 
+      keepEnemyOnLand(enemy) {
+        if (!enemy || !enemy.sprite || !enemy.sprite.active) return false;
+        if (!enemy.lastLandPosition) enemy.lastLandPosition = new Phaser.Math.Vector2(enemy.sprite.x, enemy.sprite.y);
+
+        if (this.isWaterPosition(enemy.sprite.x, enemy.sprite.y)) {
+          enemy.sprite.setPosition(enemy.lastLandPosition.x, enemy.lastLandPosition.y);
+          if (enemy.sprite.body) enemy.sprite.body.setVelocity(0, 0);
+          enemy.state = 'wander';
+          return false;
+        }
+
+        enemy.lastLandPosition.set(enemy.sprite.x, enemy.sprite.y);
+        return true;
+      }
+
+      stopEnemyBeforeWater(enemy) {
+        if (!enemy || !enemy.sprite || !enemy.sprite.body) return false;
+        const dt = Math.min(0.08, this.game.loop.delta / 1000 || 0.016);
+        const nx = enemy.sprite.x + enemy.sprite.body.velocity.x * dt;
+        const ny = enemy.sprite.y + enemy.sprite.body.velocity.y * dt;
+        if (this.isWaterPosition(nx, ny)) {
+          enemy.sprite.body.setVelocity(0, 0);
+          enemy.state = 'wander';
+          return true;
+        }
+        return false;
+      }
+
+      pickMonsterTypeForLevel(level) {
+        const types = MONSTER_TYPES_BY_LEVEL[level] || MONSTER_TYPES_BY_LEVEL[1];
+        if (level !== 1) return Phaser.Utils.Array.GetRandom(types);
+
+        // Lv.1은 닭/돼지/소/늑대 비중을 높이고, 곰/호랑이는 희소하게 유지합니다.
+        const weights = { '닭': 7, '돼지': 5, '소': 5, '늑대': 3, '곰': 1, '호랑이': 1 };
+        const pool = [];
+        types.forEach(type => {
+          const weight = weights[type.name] || 1;
+          for (let i = 0; i < weight; i++) pool.push(type);
+        });
+        return Phaser.Utils.Array.GetRandom(pool);
+      }
+
+      getMonsterRespawnDelay(enemy) {
+        const level = enemy && enemy.islandLevel ? enemy.islandLevel : 1;
+        return MONSTER_SPAWN_POLICY.respawnDelayByLevel[level] || 10000;
+      }
+
+      spawnRandomMonster(level = null) {
+        const p = this.getRandomLandPoint(level, MONSTER_SPAWN_POLICY.minSpawnDistanceFromPlayer);
+        const islandLevel = p.island.level;
+        const type = this.pickMonsterTypeForLevel(islandLevel);
+        let x = p.x; let y = p.y;
 
         let sprite = this.physics.add.sprite(x, y, type.texture);
         sprite.body.setCircle(type.bodyRadius); sprite.body.setCollideWorldBounds(true); sprite.body.setBounce(0.5);
@@ -801,7 +2134,7 @@
         let hpBarFill = this.add.rectangle(x - type.barWidth / 2, y - type.labelOffset + 7, type.barWidth, 3, 0x37d85b, 1).setOrigin(0, 0.5);
         let hpText = this.add.text(x, y - type.labelOffset + 15, `${type.hp}/${type.hp}`, { fontSize: '9px', color: '#eaffea', stroke: '#000', strokeThickness: 2 }).setOrigin(0.5, 0.5);
 
-        this.enemiesData.push({ sprite, label, hpBarBg, hpBarFill, hpText, type, hp: type.hp, maxHp: type.hp, state: 'wander', lastAttackTime: 0 });
+        this.enemiesData.push({ sprite, label, hpBarBg, hpBarFill, hpText, type, islandId: p.island.id, islandLevel, hp: type.hp, maxHp: type.hp, state: 'wander', lastAttackTime: 0, lastLandPosition: new Phaser.Math.Vector2(x, y) });
       }
 
       updateEnemyHealthBar(enemy) {
@@ -822,23 +2155,289 @@
 
       destroyEnemyUi(enemy) { enemy.sprite.destroy(); enemy.label.destroy(); enemy.hpBarBg.destroy(); enemy.hpBarFill.destroy(); enemy.hpText.destroy(); }
 
+      createBuildingHealthUi(bldg) {
+        if (!bldg || bldg.bType === 'Campfire') return;
+
+        const barWidth = bldg.bType === 'Armory' ? 72 : (bldg.bType === 'Raft' ? 80 : 54);
+        const offsetY = bldg.bType === 'Armory' ? 58 : (bldg.bType === 'Raft' ? 48 : 36);
+        const labelName = bldg.bType === 'Crossbow' ? 'Crossbow' : (bldg.bType === 'Fence' ? 'Fence' : bldg.bType);
+
+        bldg.hpBarWidth = barWidth;
+        bldg.hpBarOffsetY = offsetY;
+        bldg.hpLabel = this.add.text(bldg.x, bldg.y - offsetY - 10, labelName, { fontSize: '11px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1);
+        bldg.hpBarBg = this.add.rectangle(bldg.x, bldg.y - offsetY, barWidth, 5, 0x000000, 0.72).setOrigin(0.5, 0.5);
+        bldg.hpBarFill = this.add.rectangle(bldg.x - barWidth / 2, bldg.y - offsetY, barWidth, 3, 0x37d85b, 1).setOrigin(0, 0.5);
+        bldg.hpText = this.add.text(bldg.x, bldg.y - offsetY + 9, `${bldg.hp}/${bldg.maxHp}`, { fontSize: '9px', color: '#eaffea', stroke: '#000', strokeThickness: 2 }).setOrigin(0.5, 0.5);
+        this.updateBuildingHealthBar(bldg);
+      }
+
+      updateBuildingHealthBar(bldg) {
+        if (!bldg || !bldg.active || !bldg.hpBarFill) return;
+
+        const ratio = Math.max(0, Math.min(1, bldg.hp / bldg.maxHp));
+        const barWidth = bldg.hpBarWidth || 54;
+        const offsetY = bldg.hpBarOffsetY || 36;
+        const barY = bldg.y - offsetY;
+        const hpColor = ratio > 0.6 ? 0x37d85b : (ratio > 0.3 ? 0xffd66b : 0xff5858);
+        const uiDepth = bldg.y + 100;
+
+        bldg.hpLabel.setPosition(bldg.x, bldg.y - offsetY - 10).setDepth(uiDepth);
+        bldg.hpBarBg.setPosition(bldg.x, barY).setDepth(uiDepth);
+        bldg.hpBarFill.setPosition(bldg.x - barWidth / 2, barY).setDepth(uiDepth + 1);
+        bldg.hpBarFill.width = barWidth * ratio;
+        bldg.hpBarFill.fillColor = hpColor;
+        bldg.hpText.setText(`${Math.max(0, Math.ceil(bldg.hp))}/${bldg.maxHp}`);
+        bldg.hpText.setPosition(bldg.x, bldg.y - offsetY + 9).setDepth(uiDepth + 2);
+      }
+
+      destroyBuilding(bldg, countAsBuilt = true) {
+        if (!bldg || !bldg.active) return;
+        if (bldg.hpLabel) bldg.hpLabel.destroy();
+        if (bldg.hpBarBg) bldg.hpBarBg.destroy();
+        if (bldg.hpBarFill) bldg.hpBarFill.destroy();
+        if (bldg.hpText) bldg.hpText.destroy();
+        if (bldg.bType === 'Raft' && gameState.raft.current === bldg) { gameState.raft.mounted = false; gameState.raft.current = null; if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = true; }
+        if (countAsBuilt && !['Campfire', 'Fence'].includes(bldg.bType)) {
+          gameState.builtCount = Math.max(0, gameState.builtCount - 1);
+          updatePlayerHud();
+        }
+        bldg.destroy();
+      }
+
+
+      getDemolishRefund(bldg) {
+        if (!bldg || !BUILD_COSTS[bldg.bType]) return 0;
+        const healthRatio = Math.max(0, Math.min(1, (bldg.hp || 0) / (bldg.maxHp || 1)));
+        return Math.floor((BUILD_COSTS[bldg.bType].wood || 0) * 0.3 * healthRatio);
+      }
+
+      hasRaftStructures(raft) {
+        let found = false;
+        this.buildingsGroup.getChildren().forEach(b => {
+          if (!b.active || b === raft) return;
+          if (b.supportRaft === raft) found = true;
+        });
+        return found;
+      }
+
+      demolishBuilding(bldg) {
+        if (!bldg || !bldg.active) return;
+        if (bldg.bType === 'Raft' && this.hasRaftStructures(bldg)) {
+          addChatMessage('<span style="color:#FFD66B;">뗏목 위 건축물을 먼저 철거해야 합니다.</span>');
+          return;
+        }
+        const refund = this.getDemolishRefund(bldg);
+        const name = getBuildingDisplayName(bldg.bType);
+        if (refund > 0) addInventoryItem('Wood', refund, 'Normal');
+        this.destroyBuilding(bldg, true);
+        ui.upgModal.style.display = 'none';
+        updateInventoryUi();
+        updatePlayerHud();
+        addChatMessage(`<span style="color:#ff8a8a;">철거 완료: ${name} / 회수 Wood ${refund}</span>`);
+      }
+
+      getBuildingRadius(type) {
+        return (BUILDING_BASE_STATS[type] && BUILDING_BASE_STATS[type].radius) || 22;
+      }
+
+      isWaterPosition(x, y) {
+        const island = this.getIslandAt(x, y);
+        if (!island) return true;
+        const feature = this.getFeatureAt(x, y);
+        return !!(feature && feature.type === 'lake');
+      }
+
+      getNearestLandPosition(x, y, maxRadius = 160) {
+        if (!this.isWaterPosition(x, y)) return { x, y };
+        for (let r = 20; r <= maxRadius; r += 20) {
+          for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+            let tx = x + Math.cos(angle) * r;
+            let ty = y + Math.sin(angle) * r;
+            if (!this.isWaterPosition(tx, ty)) return { x: tx, y: ty };
+          }
+        }
+        return null;
+      }
+
+      findSupportingRaft(x, y, radius = 20) {
+        let raft = null;
+        this.buildingsGroup.getChildren().forEach(b => {
+          if (!b.active || b.bType !== 'Raft') return;
+          const raftRadius = b.buildRadius || 55;
+          if (Phaser.Math.Distance.Between(x, y, b.x, b.y) <= Math.max(18, raftRadius - radius * 0.55)) raft = b;
+        });
+        return raft;
+      }
+
+      canPlaceBuilding(type, x, y) {
+        const radius = this.getBuildingRadius(type);
+        const onWater = this.isWaterPosition(x, y);
+        const supportingRaft = this.findSupportingRaft(x, y, radius);
+
+        if (Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) > 250) {
+          addChatMessage('<span style="color:#FFD66B;">너무 멀어서 건설할 수 없습니다.</span>');
+          return false;
+        }
+        if (type === 'Raft' && !onWater) {
+          addChatMessage('<span style="color:#FFD66B;">뗏목은 물 위에만 건설할 수 있습니다.</span>');
+          return false;
+        }
+        if (type !== 'Raft' && onWater && !supportingRaft) {
+          addChatMessage('<span style="color:#FFD66B;">물 위에는 뗏목 위에서만 건축할 수 있습니다.</span>');
+          return false;
+        }
+
+        let blocked = false;
+        this.environmentGroup.getChildren().forEach(o => {
+          if (blocked || !o.active || !o.isTerrain) return;
+          const blockRadius = Math.max(o.displayWidth || 50, o.displayHeight || 50) * 0.5;
+          if (Phaser.Math.Distance.Between(x, y, o.x, o.y) < radius + blockRadius) blocked = true;
+        });
+        if (blocked) {
+          addChatMessage('<span style="color:#FFD66B;">언덕/지형과 겹쳐서 건설할 수 없습니다.</span>');
+          return false;
+        }
+
+        this.treesGroup.getChildren().forEach(t => {
+          if (blocked || !t.active) return;
+          const treeRadius = t.isGiant ? 55 : 28;
+          if (Phaser.Math.Distance.Between(x, y, t.x, t.y) < radius + treeRadius) blocked = true;
+        });
+        if (blocked) {
+          addChatMessage('<span style="color:#FFD66B;">나무와 겹쳐서 건설할 수 없습니다.</span>');
+          return false;
+        }
+
+        this.enemiesData.forEach(e => {
+          if (blocked || e.hp <= 0) return;
+          if (Phaser.Math.Distance.Between(x, y, e.sprite.x, e.sprite.y) < radius + e.type.bodyRadius + 8) blocked = true;
+        });
+        if (blocked) {
+          addChatMessage('<span style="color:#FFD66B;">몬스터와 겹쳐서 건설할 수 없습니다.</span>');
+          return false;
+        }
+
+        this.buildingsGroup.getChildren().forEach(b => {
+          if (blocked || !b.active || b === supportingRaft) return;
+          const bRadius = b.buildRadius || ((b.body && b.body.radius) ? b.body.radius : 25);
+          if (Phaser.Math.Distance.Between(x, y, b.x, b.y) < radius + bRadius + 6) blocked = true;
+        });
+        if (blocked) {
+          addChatMessage('<span style="color:#FFD66B;">다른 건축물과 겹쳐서 건설할 수 없습니다.</span>');
+          return false;
+        }
+
+        return true;
+      }
+
+      getBuildingMaxHp(type) {
+        if (type === 'Fence') return BUILDING_BASE_STATS.Fence.hp + (gameState.buildingUpgrades.fenceHpLevel - 1) * 120;
+        if (type === 'Crossbow') return BUILDING_BASE_STATS.Crossbow.hp + (gameState.buildingUpgrades.crossbowHpLevel - 1) * 180;
+        return (BUILDING_BASE_STATS[type] && BUILDING_BASE_STATS[type].hp) || 300;
+      }
+
+      getCrossbowDamage() {
+        return BUILDING_BASE_STATS.Crossbow.dmg + (gameState.buildingUpgrades.crossbowDmgLevel - 1) * 15;
+      }
+
+      applyBuildingUpgradeToExisting(type) {
+        this.buildingsGroup.getChildren().forEach(b => {
+          if (!b.active || b.bType !== type) return;
+          const oldMax = b.maxHp || 1;
+          const ratio = Math.max(0, Math.min(1, b.hp / oldMax));
+          b.maxHp = this.getBuildingMaxHp(type);
+          b.hp = Math.max(1, Math.ceil(b.maxHp * ratio));
+          if (type === 'Crossbow') b.attackDmg = this.getCrossbowDamage();
+          this.updateBuildingHealthBar(b);
+        });
+      }
+
+      moveRaftStructures(raft, dx, dy) {
+        if (!raft || (!dx && !dy)) return;
+        this.buildingsGroup.getChildren().forEach(b => {
+          if (!b.active || b.supportRaft !== raft) return;
+          b.setPosition(b.x + dx, b.y + dy);
+          if (b.body) b.refreshBody();
+          this.updateBuildingHealthBar(b);
+        });
+      }
+
+      toggleRaft(raft) {
+        if (!raft || !raft.active) return;
+        if (!gameState.raft.mounted) {
+          if (!raft.hasOar) {
+            const wood = gameState.inventory.Wood ? gameState.inventory.Wood.count : 0;
+            if (wood < 1) {
+              addChatMessage('<span style="color:#FFD66B;">노를 만들 Wood 1개가 필요합니다.</span>');
+              return;
+            }
+            gameState.inventory.Wood.count -= 1;
+            if (gameState.inventory.Wood.count <= 0) delete gameState.inventory.Wood;
+            raft.hasOar = true;
+            addChatMessage('<span style="color:#7fd4ff;">Wood 1개를 소비하여 뗏목 노를 만들었습니다.</span>');
+            updateInventoryUi();
+          }
+          gameState.raft.mounted = true;
+          gameState.raft.current = raft;
+          this.targetPosition = null;
+          this.player.setPosition(raft.x, raft.y);
+          if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = false;
+          addChatMessage('<span style="color:#7fd4ff;">뗏목에 탑승했습니다. WASD/방향키로 물 위를 이동합니다.</span>');
+        } else if (gameState.raft.current === raft) {
+          const landPos = this.getNearestLandPosition(raft.x, raft.y, 160);
+          
+          if (landPos) {
+            gameState.raft.mounted = false;
+            gameState.raft.current = null;
+            this.player.setPosition(landPos.x, landPos.y);
+            this.lastLandPosition.set(landPos.x, landPos.y);
+            if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = true;
+            addChatMessage('<span style="color:#7fd4ff;">뗏목에서 내려 육지에 발을 딛었습니다.</span>');
+          } else {
+            addChatMessage('<span style="color:#FFD66B;">육지가 너무 멉니다. 해변으로 더 가까이 이동한 후 하선해주세요.</span>');
+          }
+        }
+      }
+
       placeBuilding(x, y) {
         const type = window.activeBuildType; const cost = BUILD_COSTS[type];
-        if (!gameState.inventory['Wood'] || gameState.inventory['Wood'].count < cost.wood || gameState.player.gold < cost.gold) return;
-        if (Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) > 250) return;
+        if (!cost) return;
+        if (!gameState.inventory['Wood'] || gameState.inventory['Wood'].count < cost.wood || gameState.player.gold < cost.gold) {
+          addChatMessage(`<span style="color:#FFD66B;">자원 부족 (필요: Wood ${cost.wood}, Gold ${cost.gold})</span>`);
+          return;
+        }
+        if (!this.canPlaceBuilding(type, x, y)) return;
+        const supportingRaft = type !== 'Raft' ? this.findSupportingRaft(x, y, this.getBuildingRadius(type)) : null;
 
-        gameState.inventory['Wood'].count -= cost.wood; if(gameState.inventory['Wood'].count <= 0) delete gameState.inventory['Wood'];
-        gameState.player.gold -= cost.gold; if(type !== 'Campfire') gameState.builtCount++;
+        gameState.inventory['Wood'].count -= cost.wood;
+        if(gameState.inventory['Wood'].count <= 0) delete gameState.inventory['Wood'];
+        gameState.player.gold -= cost.gold;
+        if(!['Campfire', 'Fence'].includes(type)) gameState.builtCount++;
 
-        // [원본 복원] Armory, Campfire 텍스처 및 스펙 부활
-        let tex = 'fence_tex'; let maxHp = 300; let radius = 20;
-        if(type === 'Crossbow') { tex = 'crossbow_tex'; maxHp = 500; } else if(type === 'Armory') { tex = 'armory_tex'; maxHp = 2000; radius = 40; } else if(type === 'Campfire') { tex = 'campfire_tex'; maxHp = 100; radius = 15; }
+        let tex = 'fence_tex';
+        let radius = this.getBuildingRadius(type);
+        let maxHp = this.getBuildingMaxHp(type);
+        if(type === 'Crossbow') tex = 'crossbow_tex';
+        else if(type === 'Armory') tex = 'armory_tex';
+        else if(type === 'Campfire') tex = 'campfire_tex';
+        else if(type === 'Raft') tex = 'raft_tex';
 
         let bldg = this.buildingsGroup.create(x, y, tex);
-        bldg.setAngle(window.activeBuildRotation); bldg.body.setCircle(radius);
-        bldg.bType = type; bldg.hp = maxHp; bldg.maxHp = maxHp; bldg.level = 1; bldg.lastFireTime = 0;
+        bldg.setAngle(window.activeBuildRotation);
+        bldg.body.setCircle(radius);
+        bldg.buildRadius = radius;
+        bldg.bType = type;
+        bldg.hp = maxHp;
+        bldg.maxHp = maxHp;
+        bldg.level = 1;
+        bldg.lastFireTime = 0;
         if(type === 'Campfire') bldg.burnOutTime = this.time.now + 60000;
+        if(type === 'Crossbow') bldg.attackDmg = this.getCrossbowDamage();
+        if(type === 'Raft') { bldg.hasOar = false; bldg.setImmovable(true); }
+        if(supportingRaft) bldg.supportRaft = supportingRaft;
+        this.createBuildingHealthUi(bldg);
 
+        addChatMessage(`<span style="color:#7CFF8A;">건설 완료: ${type}</span>`);
         updatePlayerHud(); window.activeBuildType = null; ui.buildModeText.style.display = 'none';
       }
 
@@ -926,7 +2525,8 @@
         }
 
         this.enemiesData = this.enemiesData.filter(e => e !== enemy);
-        setTimeout(() => this.spawnRandomMonster(), 10000);
+        const respawnLevel = enemy.islandLevel || 1;
+        setTimeout(() => this.spawnRandomMonster(respawnLevel), this.getMonsterRespawnDelay(enemy));
       }
 
       update(time) {
@@ -935,19 +2535,42 @@
         // [원본 복원] 빌드 프리뷰 수정
         if (window.activeBuildType) {
           let ptr = this.input.activePointer;
-          let tex = 'fence_tex'; if(window.activeBuildType === 'Armory') tex = 'armory_tex'; else if(window.activeBuildType === 'Crossbow') tex = 'crossbow_tex'; else if(window.activeBuildType === 'Campfire') tex = 'campfire_tex';
+          let tex = 'fence_tex'; if(window.activeBuildType === 'Armory') tex = 'armory_tex'; else if(window.activeBuildType === 'Crossbow') tex = 'crossbow_tex'; else if(window.activeBuildType === 'Campfire') tex = 'campfire_tex'; else if(window.activeBuildType === 'Raft') tex = 'raft_tex';
           this.buildPreview.setTexture(tex).setPosition(ptr.worldX, ptr.worldY).setAngle(window.activeBuildRotation).setVisible(true).setDepth(9999);
         } else {
           this.buildPreview.setVisible(false);
         }
 
         const vel = new Phaser.Math.Vector2(0, 0); let usingKeyboardOrPad = false;
-        if (this.wasd.left.isDown || vPad.left) { vel.x = -1; usingKeyboardOrPad = true; }
-        else if (this.wasd.right.isDown || vPad.right) { vel.x = 1; usingKeyboardOrPad = true; }
-        if (this.wasd.up.isDown || vPad.up) { vel.y = -1; usingKeyboardOrPad = true; }
-        else if (this.wasd.down.isDown || vPad.down) { vel.y = 1; usingKeyboardOrPad = true; }
+        if (virtualStick.active) {
+          vel.x = virtualStick.x; vel.y = virtualStick.y; usingKeyboardOrPad = true;
+        } else {
+          if (this.wasd.left.isDown || vPad.left) { vel.x = -1; usingKeyboardOrPad = true; }
+          else if (this.wasd.right.isDown || vPad.right) { vel.x = 1; usingKeyboardOrPad = true; }
+          if (this.wasd.up.isDown || vPad.up) { vel.y = -1; usingKeyboardOrPad = true; }
+          else if (this.wasd.down.isDown || vPad.down) { vel.y = 1; usingKeyboardOrPad = true; }
+        }
 
-        if (usingKeyboardOrPad) {
+        if (gameState.raft.mounted && gameState.raft.current && gameState.raft.current.active) {
+          const raft = gameState.raft.current;
+          this.targetPosition = null;
+          this.player.body.setVelocity(0, 0);
+          if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = false;
+          if (usingKeyboardOrPad && raft.hasOar) {
+            vel.normalize().scale(Math.max(25, gameState.player.speed * 0.75));
+            const dt = Math.min(0.05, this.game.loop.delta / 1000);
+            const nx = raft.x + vel.x * dt;
+            const ny = raft.y + vel.y * dt;
+            if (this.isWaterPosition(nx, ny)) {
+              const dx = nx - raft.x;
+              const dy = ny - raft.y;
+              raft.setPosition(nx, ny).refreshBody();
+              this.moveRaftStructures(raft, dx, dy);
+            }
+          }
+          this.player.setPosition(raft.x, raft.y);
+        } else if (usingKeyboardOrPad) {
+          if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = true;
           this.targetPosition = null; vel.normalize().scale(gameState.player.speed);
           this.player.body.setVelocity(vel.x, vel.y);
         } else if (this.targetPosition) {
@@ -955,6 +2578,16 @@
           if (dist > 5) { this.physics.moveToObject(this.player, this.targetPosition, gameState.player.speed); } 
           else { this.player.body.setVelocity(0, 0); this.targetPosition = null; }
         } else { this.player.body.setVelocity(0, 0); }
+
+        if (!gameState.raft.mounted) {
+          if (this.isWaterPosition(this.player.x, this.player.y)) {
+            this.player.setPosition(this.lastLandPosition.x, this.lastLandPosition.y);
+            this.player.body.setVelocity(0, 0);
+            this.targetPosition = null;
+          } else {
+            this.lastLandPosition.set(this.player.x, this.player.y);
+          }
+        }
         
         this.player.setDepth(this.player.y);
         this.treesGroup.getChildren().forEach(t => t.setDepth(t.y));
@@ -963,14 +2596,15 @@
         this.buildingsGroup.getChildren().forEach(b => {
           if (!b.active) return;
           b.setDepth(b.y);
-          if (b.bType === 'Campfire' && time > b.burnOutTime) { b.destroy(); } 
+          this.updateBuildingHealthBar(b);
+          if (b.bType === 'Campfire' && time > b.burnOutTime) { this.destroyBuilding(b, false); } 
           else if (b.bType === 'Crossbow') {
             let fireDelay = Math.max(300, 1000 - (b.level * 100)); 
             if (time > b.lastFireTime + fireDelay) {
               let target = null; let minD = 300; 
               this.enemiesData.forEach(e => { let d = Phaser.Math.Distance.Between(b.x, b.y, e.sprite.x, e.sprite.y); if (d < minD) { minD = d; target = e; } });
               if (target) {
-                b.lastFireTime = time; target.hp -= (20 + b.level * 10); 
+                b.lastFireTime = time; target.hp -= (b.attackDmg || this.getCrossbowDamage()); 
                 this.updateEnemyHealthBar(target);
                 let line = this.add.line(0,0, b.x, b.y, target.sprite.x, target.sprite.y, 0xffd66b).setOrigin(0,0);
                 this.tweens.add({ targets: line, alpha: 0, duration: 150, onComplete: () => line.destroy() });
@@ -986,6 +2620,7 @@
 
         this.enemiesData.forEach(e => {
           if (e.hp <= 0) return;
+          this.keepEnemyOnLand(e);
           e.sprite.setDepth(e.sprite.y);
           this.updateEnemyHealthBar(e);
 
@@ -995,17 +2630,20 @@
             if (d < dist && d < 200) { dist = d; target = b; isTargetBldg = true; }
           });
           
-          if (dist < 200 && !['닭', '돼지', '소', '말', '염소'].includes(e.type.name)) e.state = 'chase'; else if (dist > 400) e.state = 'wander';
+          if (dist < 200 && !['닭', '돼지', '소'].includes(e.type.name)) e.state = 'chase'; else if (dist > 400) e.state = 'wander';
 
           if (e.state === 'wander' && Math.random() < 0.01) {
             this.physics.velocityFromAngle(Phaser.Math.Between(0, 360), e.type.speed * 0.5, e.sprite.body.velocity);
+            this.stopEnemyBeforeWater(e);
           } else if (e.state === 'chase') {
             this.physics.moveToObject(e.sprite, target, e.type.speed);
+            this.stopEnemyBeforeWater(e);
             if (dist < 45 && time > e.lastAttackTime + 1500) {
               e.lastAttackTime = time; 
               if (isTargetBldg) {
-                target.hp -= e.type.dmg;
-                if (target.hp <= 0) { target.destroy(); if(target.bType !== 'Campfire') { gameState.builtCount--; updatePlayerHud(); } }
+                target.hp = Math.max(0, target.hp - e.type.dmg);
+                this.updateBuildingHealthBar(target);
+                if (target.hp <= 0) this.destroyBuilding(target, true);
               } else {
                 gameState.player.hp = Math.max(0, gameState.player.hp - e.type.dmg); updatePlayerHud();
                 if (gameState.player.hp <= 0) handlePlayerDeath();
@@ -1016,31 +2654,39 @@
       }
 
       updateRadar() {
+        if (MINIMAP_VIEW.mode === 'local') renderMinimapTerrain();
         ui.minimapEntities.innerHTML = '';
         this.enemiesData.forEach(e => {
           if(e.hp <= 0) return;
           if(Phaser.Math.Distance.Between(this.player.x, this.player.y, e.sprite.x, e.sprite.y) < 2000) {
+            const pos = worldToMinimapPercent(e.sprite.x, e.sprite.y);
+            if (!pos.visible) return;
             const dot = document.createElement('div'); dot.className = 'mini-dot enemy';
-            dot.style.left = `${(e.sprite.x / this.worldWidth) * 100}%`; dot.style.top = `${(e.sprite.y / this.worldHeight) * 100}%`;
+            dot.style.left = `${pos.left}%`; dot.style.top = `${pos.top}%`;
             ui.minimapEntities.appendChild(dot);
           }
         });
         this.buildingsGroup.getChildren().forEach(b => {
           if(!b.active) return;
+          const pos = worldToMinimapPercent(b.x, b.y);
+          if (!pos.visible) return;
           const dot = document.createElement('div'); dot.className = 'mini-dot bldg';
-          dot.style.left = `${(b.x / this.worldWidth) * 100}%`; dot.style.top = `${(b.y / this.worldHeight) * 100}%`;
+          dot.style.left = `${pos.left}%`; dot.style.top = `${pos.top}%`;
           if (b.bType === 'Campfire') { dot.style.background = '#ff4500'; dot.style.boxShadow = '0 0 6px #ff4500'; }
+          if (b.bType === 'Raft') { dot.style.background = '#7fd4ff'; dot.style.boxShadow = '0 0 6px #7fd4ff'; }
           ui.minimapEntities.appendChild(dot);
         });
       }
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      cacheUiElements(); bindUiEvents(); 
+      if (window.applyLonelyDeviceMode) window.applyLonelyDeviceMode();
+      cacheUiElements(); bindUiEvents(); renderMinimapTerrain(); 
 
       ui.loginBtn.addEventListener('click', () => {
         let enteredName = ui.loginName.value.trim(); if(enteredName) gameState.player.name = enteredName;
         ui.loginScreen.style.display = 'none'; updatePlayerHud();
+        initWorldChat();
 
         setInterval(() => {
           if (!gameState.isDead && gameState.player.hp > 0 && gameState.player.hp < gameState.player.maxHp) {
@@ -1048,12 +2694,19 @@
           }
         }, 1000);
 
-        new Phaser.Game({
-          type: Phaser.AUTO, parent: 'game-container', width: window.innerWidth, height: window.innerHeight,
+        window.lonelyGame = new Phaser.Game({
+          type: Phaser.AUTO, parent: 'game-container', width: window.innerWidth, height: (window.visualViewport ? window.visualViewport.height : window.innerHeight),
+          scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.NO_CENTER, width: window.innerWidth, height: (window.visualViewport ? window.visualViewport.height : window.innerHeight) },
           backgroundColor: '#0a1014', physics: { default: 'arcade', arcade: { debug: false } }, scene: MainScene
         });
         
-        window.addEventListener('resize', () => { document.querySelector('canvas').width = window.innerWidth; document.querySelector('canvas').height = window.innerHeight; });
+        const resizeGame = () => { if (window.applyLonelyDeviceMode) window.applyLonelyDeviceMode(); const h = window.visualViewport ? window.visualViewport.height : window.innerHeight; if (window.lonelyGame && window.lonelyGame.scale) window.lonelyGame.scale.resize(window.innerWidth, h); };
+        window.addEventListener('resize', resizeGame);
+        window.addEventListener('orientationchange', () => setTimeout(resizeGame, 250));
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', resizeGame);
+          window.visualViewport.addEventListener('scroll', resizeGame);
+        }
       });
       ui.loginName.addEventListener('keydown', (e) => { if(e.key === 'Enter') ui.loginBtn.click(); });
     });
