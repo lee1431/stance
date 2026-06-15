@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>오늘뭐타?</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #0f0f10;
+      --panel: #171719;
+      --panel-2: #1f1f22;
+      --line: #2d2d31;
+      --text: #f4f4f5;
+      --muted: #8f8f98;
+      --accent: #ffffff;
+      --accent-text: #111111;
+      --red: #ff5b5b;
+      --blue: #4f8cff;
+      --green: #62d26f;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .wrap {
+      width: min(560px, 100%);
+      margin: 0 auto;
+      padding: 28px 16px 48px;
+    }
+
+    .top {
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 38px;
+      line-height: 1;
+      letter-spacing: -1.5px;
+    }
+
+    .desc {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .section {
+      margin-top: 22px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: -0.4px;
+    }
+
+    .sub-action {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 4px;
+    }
+
+    .sub-action:hover {
+      color: var(--text);
+    }
+
+    .input {
+      width: 100%;
+      height: 48px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      outline: none;
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    .input:focus {
+      border-color: #666671;
+    }
+
+    .coin-list,
+    .ranking-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .coin-list {
+      max-height: 360px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .coin-item,
+    .rank-item,
+    .register-box {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--panel);
+    }
+
+    .coin-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px;
+    }
+
+    .coin-item.is-selected {
+      border-color: #f0f0f0;
+      background: #222226;
+    }
+
+    .coin-main {
+      min-width: 0;
+    }
+
+    .coin-name {
+      font-weight: 800;
+      letter-spacing: -0.2px;
+    }
+
+    .coin-symbol {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .select-button,
+    .main-button {
+      border: 0;
+      border-radius: 10px;
+      background: var(--accent);
+      color: var(--accent-text);
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .select-button {
+      flex: 0 0 auto;
+      padding: 8px 11px;
+      font-size: 13px;
+    }
+
+    .select-button.is-selected {
+      background: var(--green);
+      color: #071008;
+    }
+
+    .register-box {
+      padding: 12px;
+    }
+
+    .selected-line {
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .selected-line strong {
+      color: var(--text);
+    }
+
+    .main-button {
+      width: 100%;
+      height: 48px;
+      margin-top: 10px;
+      font-size: 16px;
+    }
+
+    .main-button:disabled,
+    .select-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .message {
+      min-height: 20px;
+      margin: 10px 2px 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .message.ok {
+      color: var(--green);
+    }
+
+    .message.error {
+      color: var(--red);
+    }
+
+    .rank-item {
+      display: grid;
+      grid-template-columns: 34px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+    }
+
+    .rank-no {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .rank-user {
+      min-width: 0;
+      font-weight: 800;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .rank-coin {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .rank-rate {
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .plus {
+      color: var(--red);
+    }
+
+    .minus {
+      color: var(--blue);
+    }
+
+    .zero {
+      color: var(--muted);
+    }
+
+    .empty,
+    .loading {
+      padding: 16px 4px;
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .footer-note {
+      margin-top: 22px;
+      color: #696973;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 420px) {
+      h1 {
+        font-size: 34px;
+      }
+
+      .coin-item,
+      .rank-item,
+      .register-box {
+        border-radius: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <h1>오늘뭐타?</h1>
+      <p class="desc">돈 없이 코인 하나 골라서 오늘 수익률로 대결.</p>
+    </header>
+
+    <section class="section" aria-labelledby="coin-search-title">
+      <div class="section-title">
+        <h2 id="coin-search-title">코인 검색</h2>
+        <button id="reloadCoinsBtn" class="sub-action" type="button">목록 새로고침</button>
+      </div>
+
+      <input
+        id="coinSearchInput"
+        class="input"
+        autocomplete="off"
+        placeholder="BTC, ETH, SOL 검색"
+      />
+
+      <div id="coinList" class="coin-list" aria-live="polite"></div>
+    </section>
+
+    <section class="section" aria-labelledby="register-title">
+      <div class="section-title">
+        <h2 id="register-title">랭킹 등록</h2>
+      </div>
+
+      <div class="register-box">
+        <div class="selected-line">
+          선택한 코인: <strong id="selectedCoinText">없음</strong>
+        </div>
+
+        <input
+          id="nicknameInput"
+          class="input"
+          maxlength="20"
+          autocomplete="nickname"
+          placeholder="닉네임"
+        />
+
+        <button id="registerBtn" class="main-button" type="button">등록하기</button>
+        <p id="message" class="message"></p>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="ranking-title">
+      <div class="section-title">
+        <h2 id="ranking-title">오늘 랭킹</h2>
+        <button id="reloadRankingsBtn" class="sub-action" type="button">랭킹 새로고침</button>
+      </div>
+
+      <div id="rankingList" class="ranking-list" aria-live="polite"></div>
+    </section>
+
+    <p class="footer-note">
+      실제 투자, 매수, 매도, 배팅 기능 없음. Binance 공개 시세 기반 가상 수익률 랭킹입니다.
+    </p>
+  </main>
+
+  <script>
+    const API_BASE = "https://mrdindoin.ddns.net/omt";
+    const MAX_COIN_RENDER_COUNT = 40;
+
+    const state = {
+      coins: [],
+      selectedCoin: null,
+      rankings: [],
+      loadingCoins: false,
+      loadingRankings: false,
+      registering: false
+    };
+
+    const coinSearchInput = document.querySelector("#coinSearchInput");
+    const coinList = document.querySelector("#coinList");
+    const selectedCoinText = document.querySelector("#selectedCoinText");
+    const nicknameInput = document.querySelector("#nicknameInput");
+    const registerBtn = document.querySelector("#registerBtn");
+    const message = document.querySelector("#message");
+    const rankingList = document.querySelector("#rankingList");
+    const reloadCoinsBtn = document.querySelector("#reloadCoinsBtn");
+    const reloadRankingsBtn = document.querySelector("#reloadRankingsBtn");
+
+    nicknameInput.value = localStorage.getItem("omt_nickname") || "";
+
+    function apiUrl(path) {
+      return `${API_BASE}${path}`;
+    }
+
+    function setMessage(text, type = "") {
+      message.textContent = text;
+      message.className = `message ${type}`.trim();
+    }
+
+    function formatPercent(value) {
+      const number = Number(value || 0);
+      const sign = number > 0 ? "+" : "";
+      return `${sign}${number.toFixed(2)}%`;
+    }
+
+    function rateClass(value) {
+      const number = Number(value || 0);
+      if (number > 0) return "plus";
+      if (number < 0) return "minus";
+      return "zero";
+    }
+
+    function normalizeCoin(raw) {
+      return {
+        symbol: raw.symbol || raw.market || "",
+        baseAsset: raw.baseAsset || raw.symbol || "",
+        quoteAsset: raw.quoteAsset || "USDT",
+        displayName: raw.displayName || `${raw.baseAsset || raw.symbol}/${raw.quoteAsset || "USDT"}`
+      };
+    }
+
+    async function requestJson(path, options = {}) {
+      const res = await fetch(apiUrl(path), {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        }
+      });
+
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (_) {
+        data = {};
+      }
+
+      if (!res.ok) {
+        const error = new Error(data.message || `요청 실패: ${res.status}`);
+        error.status = res.status;
+        error.data = data;
+        throw error;
+      }
+
+      return data;
+    }
+
+    async function fetchCoins() {
+      state.loadingCoins = true;
+      renderCoins();
+
+      try {
+        const data = await requestJson("/api/coins");
+        state.coins = (data.coins || []).map(normalizeCoin);
+        renderCoins();
+      } catch (error) {
+        coinList.innerHTML = `<div class="empty">코인 목록을 못 가져왔습니다: ${escapeHtml(error.message)}</div>`;
+      } finally {
+        state.loadingCoins = false;
+      }
+    }
+
+    async function syncCoins() {
+      reloadCoinsBtn.disabled = true;
+      coinList.innerHTML = `<div class="loading">바이낸스 목록 동기화 중...</div>`;
+
+      try {
+        const data = await requestJson("/api/coins/sync", {
+          method: "POST"
+        });
+        state.coins = (data.coins || []).map(normalizeCoin);
+        renderCoins();
+        setMessage(`코인 목록 동기화 완료: ${state.coins.length}개`, "ok");
+      } catch (error) {
+        setMessage(`코인 동기화 실패: ${error.message}`, "error");
+        await fetchCoins();
+      } finally {
+        reloadCoinsBtn.disabled = false;
+      }
+    }
+
+    async function fetchRankings() {
+      state.loadingRankings = true;
+      renderRankings();
+
+      try {
+        const data = await requestJson("/api/picks");
+        state.rankings = data.picks || [];
+        renderRankings();
+      } catch (error) {
+        rankingList.innerHTML = `<div class="empty">랭킹을 못 가져왔습니다: ${escapeHtml(error.message)}</div>`;
+      } finally {
+        state.loadingRankings = false;
+      }
+    }
+
+    async function registerPick() {
+      const nickname = nicknameInput.value.trim();
+
+      if (!nickname) {
+        setMessage("닉네임을 입력해줘.", "error");
+        nicknameInput.focus();
+        return;
+      }
+
+      if (!state.selectedCoin) {
+        setMessage("코인을 먼저 선택해줘.", "error");
+        coinSearchInput.focus();
+        return;
+      }
+
+      localStorage.setItem("omt_nickname", nickname);
+
+      state.registering = true;
+      registerBtn.disabled = true;
+      registerBtn.textContent = "등록 중...";
+      setMessage("현재가 확인 후 등록 중...", "");
+
+      try {
+        await requestJson("/api/picks", {
+          method: "POST",
+          body: JSON.stringify({
+            nickname,
+            market: state.selectedCoin.symbol
+          })
+        });
+
+        setMessage("등록 완료.", "ok");
+        await fetchRankings();
+      } catch (error) {
+        setMessage(error.message || "등록 실패", "error");
+      } finally {
+        state.registering = false;
+        registerBtn.disabled = false;
+        registerBtn.textContent = "등록하기";
+      }
+    }
+
+    function renderCoins() {
+      if (state.loadingCoins) {
+        coinList.innerHTML = `<div class="loading">코인 목록 불러오는 중...</div>`;
+        return;
+      }
+
+      const keyword = coinSearchInput.value.trim().toUpperCase();
+      const coins = state.coins
+        .filter(coin => {
+          if (!keyword) return true;
+
+          return (
+            coin.symbol.toUpperCase().includes(keyword) ||
+            coin.baseAsset.toUpperCase().includes(keyword) ||
+            coin.quoteAsset.toUpperCase().includes(keyword) ||
+            coin.displayName.toUpperCase().includes(keyword)
+          );
+        })
+        .slice(0, MAX_COIN_RENDER_COUNT);
+
+      if (coins.length === 0) {
+        coinList.innerHTML = `<div class="empty">검색 결과 없음</div>`;
+        return;
+      }
+
+      coinList.innerHTML = coins.map(coin => {
+        const isSelected = state.selectedCoin && state.selectedCoin.symbol === coin.symbol;
+        const selectedClass = isSelected ? "is-selected" : "";
+        const buttonText = isSelected ? "선택됨" : "선택";
+
+        return `
+          <div class="coin-item ${selectedClass}">
+            <div class="coin-main">
+              <div class="coin-name">${escapeHtml(coin.displayName)}</div>
+              <div class="coin-symbol">${escapeHtml(coin.symbol)}</div>
+            </div>
+            <button
+              class="select-button ${selectedClass}"
+              type="button"
+              data-symbol="${escapeHtml(coin.symbol)}"
+            >${buttonText}</button>
+          </div>
+        `;
+      }).join("");
+
+      document.querySelectorAll(".select-button").forEach(button => {
+        button.addEventListener("click", () => {
+          const symbol = button.dataset.symbol;
+          state.selectedCoin = state.coins.find(coin => coin.symbol === symbol) || null;
+          selectedCoinText.textContent = state.selectedCoin ? state.selectedCoin.displayName : "없음";
+          setMessage("", "");
+          renderCoins();
+        });
+      });
+    }
+
+    function renderRankings() {
+      if (state.loadingRankings) {
+        rankingList.innerHTML = `<div class="loading">랭킹 불러오는 중...</div>`;
+        return;
+      }
+
+      if (!state.rankings.length) {
+        rankingList.innerHTML = `<div class="empty">아직 랭킹이 없습니다.</div>`;
+        return;
+      }
+
+      const sorted = [...state.rankings].sort((a, b) => Number(b.returnRate || 0) - Number(a.returnRate || 0));
+
+      rankingList.innerHTML = sorted.map((item, index) => {
+        const displayName = item.displayName || item.koreanName || item.market || item.symbol || "-";
+        const cls = rateClass(item.returnRate);
+
+        return `
+          <div class="rank-item">
+            <div class="rank-no">${index + 1}</div>
+            <div>
+              <div class="rank-user">${escapeHtml(item.nickname || "익명")}</div>
+              <div class="rank-coin">${escapeHtml(displayName)}</div>
+            </div>
+            <div class="rank-rate ${cls}">${formatPercent(item.returnRate)}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    coinSearchInput.addEventListener("input", renderCoins);
+    registerBtn.addEventListener("click", registerPick);
+    reloadCoinsBtn.addEventListener("click", syncCoins);
+    reloadRankingsBtn.addEventListener("click", fetchRankings);
+
+    nicknameInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        registerPick();
+      }
+    });
+
+    coinSearchInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        const firstButton = document.querySelector(".select-button");
+        if (firstButton) firstButton.click();
+      }
+    });
+
+    fetchCoins();
+    fetchRankings();
+  </script>
+</body>
+</html>
