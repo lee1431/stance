@@ -24,10 +24,67 @@
       --yellow: #ffd166;
     }
     body {
+      min-height: 100vh;
       margin: 0;
-      background: var(--bg);
+      background:
+        radial-gradient(circle at 50% 45%, rgba(78, 140, 255, 0.12), transparent 34%),
+        radial-gradient(circle at 20% 12%, rgba(255, 209, 102, 0.08), transparent 22%),
+        #05050a;
       color: var(--text);
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow-x: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: -50vmax;
+      pointer-events: none;
+      z-index: 0;
+      transform-origin: 50% 50%;
+    }
+
+    body::before {
+      background:
+        radial-gradient(circle, rgba(255, 255, 255, 0.95) 0 1px, transparent 1.7px) 12% 16% / 180px 180px,
+        radial-gradient(circle, rgba(255, 255, 255, 0.75) 0 1px, transparent 1.6px) 42% 74% / 240px 240px,
+        radial-gradient(circle, rgba(79, 140, 255, 0.75) 0 1px, transparent 1.9px) 70% 24% / 210px 210px,
+        radial-gradient(circle, rgba(255, 209, 102, 0.65) 0 1px, transparent 1.9px) 88% 68% / 260px 260px;
+      animation: star-flight 18s linear infinite;
+      opacity: 0.42;
+    }
+
+    body::after {
+      background:
+        repeating-radial-gradient(circle at 50% 50%, transparent 0 38px, rgba(255, 255, 255, 0.045) 39px 40px),
+        conic-gradient(from 0deg at 50% 50%, transparent 0 12deg, rgba(255, 255, 255, 0.13) 13deg 14deg, transparent 15deg 45deg, rgba(79, 140, 255, 0.1) 46deg 47deg, transparent 48deg 90deg);
+      animation: warp-tunnel 11s linear infinite;
+      opacity: 0.22;
+      mix-blend-mode: screen;
+    }
+
+    @keyframes star-flight {
+      0% {
+        transform: scale(0.56) rotate(0deg);
+        opacity: 0.18;
+      }
+      50% {
+        opacity: 0.48;
+      }
+      100% {
+        transform: scale(1.18) rotate(0.01deg);
+        opacity: 0.08;
+      }
+    }
+
+    @keyframes warp-tunnel {
+      0% {
+        transform: scale(0.72) rotate(0deg);
+      }
+      100% {
+        transform: scale(1.24) rotate(18deg);
+      }
     }
     button,
     input {
@@ -37,6 +94,8 @@
       -webkit-tap-highlight-color: transparent;
     }
     .wrap {
+      position: relative;
+      z-index: 1;
       width: min(560px, 100%);
       margin: 0 auto;
       padding: 28px 16px 48px;
@@ -118,9 +177,11 @@
     .coin-item,
     .rank-item,
     .register-box {
-      border: 1px solid var(--line);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 14px;
-      background: var(--panel);
+      background: rgba(23, 23, 25, 0.82);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     }
     .coin-item {
       display: flex;
@@ -337,6 +398,8 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
+      body::before,
+      body::after,
       .rank-item.rank-1,
       .rank-item.rank-1::before {
         animation: none;
@@ -422,7 +485,7 @@
     </section>
 
     <p class="footer-note">
-      실제 투자, 매수, 매도, 배팅 기능 없음. Binance 공개 시세 기반 가상 수익률 랭킹입니다.
+      참가 등록은 매일 저녁 8시 30분에 마감되며, 저녁 9시 기준 수익률로 랭킹이 발표됩니다. 실제 투자, 매수, 매도, 배팅 기능 없음.
     </p>
   </main>
 
