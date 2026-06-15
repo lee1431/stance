@@ -12,15 +12,16 @@
     :root {
       --bg: #0f0f10;
       --panel: #171719;
-      --panel-2: #1f1f22;
+      --panel-2: #202024;
       --line: #2d2d31;
       --text: #f4f4f5;
       --muted: #8f8f98;
-      --accent: #ffffff;
-      --accent-text: #111111;
+      --white: #ffffff;
+      --black: #111111;
       --red: #ff5b5b;
       --blue: #4f8cff;
       --green: #62d26f;
+      --yellow: #ffd166;
     }
 
     body {
@@ -33,6 +34,10 @@
     button,
     input {
       font: inherit;
+    }
+
+    button {
+      -webkit-tap-highlight-color: transparent;
     }
 
     .wrap {
@@ -71,6 +76,12 @@
       margin-bottom: 10px;
     }
 
+    .section-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
     h2 {
       margin: 0;
       font-size: 18px;
@@ -88,6 +99,11 @@
 
     .sub-action:hover {
       color: var(--text);
+    }
+
+    .sub-action:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
     }
 
     .input {
@@ -158,8 +174,8 @@
     .main-button {
       border: 0;
       border-radius: 10px;
-      background: var(--accent);
-      color: var(--accent-text);
+      background: var(--white);
+      color: var(--black);
       cursor: pointer;
       font-weight: 800;
     }
@@ -218,6 +234,10 @@
       color: var(--red);
     }
 
+    .message.warn {
+      color: var(--yellow);
+    }
+
     .rank-item {
       display: grid;
       grid-template-columns: 34px 1fr auto;
@@ -245,9 +265,16 @@
       font-size: 13px;
     }
 
+    .rank-meta {
+      margin-top: 3px;
+      color: #676771;
+      font-size: 12px;
+    }
+
     .rank-rate {
       font-weight: 900;
       white-space: nowrap;
+      text-align: right;
     }
 
     .plus {
@@ -268,6 +295,7 @@
       color: var(--muted);
       font-size: 14px;
       text-align: center;
+      line-height: 1.5;
     }
 
     .footer-note {
@@ -280,6 +308,16 @@
     @media (max-width: 420px) {
       h1 {
         font-size: 34px;
+      }
+
+      .section-title {
+        align-items: flex-start;
+      }
+
+      .section-actions {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 2px;
       }
 
       .coin-item,
@@ -339,7 +377,10 @@
     <section class="section" aria-labelledby="ranking-title">
       <div class="section-title">
         <h2 id="ranking-title">오늘 랭킹</h2>
-        <button id="reloadRankingsBtn" class="sub-action" type="button">랭킹 새로고침</button>
+        <div class="section-actions">
+          <button id="refreshRankingsBtn" class="sub-action" type="button">가격 갱신</button>
+          <button id="reloadRankingsBtn" class="sub-action" type="button">랭킹 새로고침</button>
+        </div>
       </div>
 
       <div id="rankingList" class="ranking-list" aria-live="polite"></div>
@@ -360,6 +401,7 @@
       rankings: [],
       loadingCoins: false,
       loadingRankings: false,
+      refreshingRankings: false,
       registering: false
     };
 
@@ -372,6 +414,7 @@
     const rankingList = document.querySelector("#rankingList");
     const reloadCoinsBtn = document.querySelector("#reloadCoinsBtn");
     const reloadRankingsBtn = document.querySelector("#reloadRankingsBtn");
+    const refreshRankingsBtn = document.querySelector("#refreshRankingsBtn");
 
     nicknameInput.value = localStorage.getItem("omt_nickname") || "";
 
@@ -384,46 +427,96 @@
       message.className = `message ${type}`.trim();
     }
 
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
     function formatPercent(value) {
       const number = Number(value || 0);
       const sign = number > 0 ? "+" : "";
       return `${sign}${number.toFixed(2)}%`;
     }
 
+    function formatPrice(value) {
+      const number = Number(value || 0);
+
+      if (!Number.isFinite(number) || number === 0) {
+        return "-";
+      }
+
+      if (number >= 1000) {
+        return number.toLocaleString("en-US", {
+          maximumFractionDigits: 2
+        });
+      }
+
+      if (number >= 1) {
+        return number.toLocaleString("en-US", {
+          maximumFractionDigits: 4
+        });
+      }
+
+      return number.toLocaleString("en-US", {
+        maximumFractionDigits: 8
+      });
+    }
+
     function rateClass(value) {
       const number = Number(value || 0);
+
       if (number > 0) return "plus";
       if (number < 0) return "minus";
       return "zero";
     }
 
     function normalizeCoin(raw) {
+      const symbol = raw.symbol || raw.market || "";
+      const baseAsset = raw.baseAsset || raw.base || raw.symbol || "";
+      const quoteAsset = raw.quoteAsset || raw.quote || "USDT";
+
       return {
-        symbol: raw.symbol || raw.market || "",
-        baseAsset: raw.baseAsset || raw.symbol || "",
-        quoteAsset: raw.quoteAsset || "USDT",
-        displayName: raw.displayName || `${raw.baseAsset || raw.symbol}/${raw.quoteAsset || "USDT"}`
+        symbol,
+        baseAsset,
+        quoteAsset,
+        displayName: raw.displayName || `${baseAsset}/${quoteAsset}`
       };
     }
 
     async function requestJson(path, options = {}) {
-      const res = await fetch(apiUrl(path), {
-        ...options,
+      const fetchOptions = {
+        method: options.method || "GET",
         headers: {
           "Content-Type": "application/json",
           ...(options.headers || {})
         }
-      });
+      };
 
-      let data = null;
-      try {
-        data = await res.json();
-      } catch (_) {
-        data = {};
+      if (options.body) {
+        fetchOptions.body = options.body;
+      }
+
+      const res = await fetch(apiUrl(path), fetchOptions);
+
+      let data = {};
+      const text = await res.text();
+
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch (_) {
+          data = {
+            message: text
+          };
+        }
       }
 
       if (!res.ok) {
-        const error = new Error(data.message || `요청 실패: ${res.status}`);
+        const error = new Error(data.message || `요청 실패: HTTP ${res.status}`);
         error.status = res.status;
         error.data = data;
         throw error;
@@ -436,15 +529,28 @@
       state.loadingCoins = true;
       renderCoins();
 
+      let error = null;
+
       try {
         const data = await requestJson("/api/coins");
         state.coins = (data.coins || []).map(normalizeCoin);
-        renderCoins();
-      } catch (error) {
-        coinList.innerHTML = `<div class="empty">코인 목록을 못 가져왔습니다: ${escapeHtml(error.message)}</div>`;
-      } finally {
-        state.loadingCoins = false;
+      } catch (err) {
+        error = err;
       }
+
+      state.loadingCoins = false;
+
+      if (error) {
+        coinList.innerHTML = `
+          <div class="empty">
+            코인 목록을 못 가져왔습니다.<br />
+            ${escapeHtml(error.message)}
+          </div>
+        `;
+        return;
+      }
+
+      renderCoins();
     }
 
     async function syncCoins() {
@@ -455,6 +561,7 @@
         const data = await requestJson("/api/coins/sync", {
           method: "POST"
         });
+
         state.coins = (data.coins || []).map(normalizeCoin);
         renderCoins();
         setMessage(`코인 목록 동기화 완료: ${state.coins.length}개`, "ok");
@@ -468,17 +575,68 @@
 
     async function fetchRankings() {
       state.loadingRankings = true;
+      state.refreshingRankings = false;
       renderRankings();
+
+      let error = null;
 
       try {
         const data = await requestJson("/api/picks");
         state.rankings = data.picks || [];
-        renderRankings();
-      } catch (error) {
-        rankingList.innerHTML = `<div class="empty">랭킹을 못 가져왔습니다: ${escapeHtml(error.message)}</div>`;
-      } finally {
-        state.loadingRankings = false;
+      } catch (err) {
+        error = err;
       }
+
+      state.loadingRankings = false;
+
+      if (error) {
+        rankingList.innerHTML = `
+          <div class="empty">
+            랭킹을 못 가져왔습니다.<br />
+            ${escapeHtml(error.message)}
+          </div>
+        `;
+        return;
+      }
+
+      renderRankings();
+    }
+
+    async function refreshRankings() {
+      state.refreshingRankings = true;
+      state.loadingRankings = false;
+      renderRankings();
+
+      refreshRankingsBtn.disabled = true;
+      reloadRankingsBtn.disabled = true;
+
+      let error = null;
+
+      try {
+        const data = await requestJson("/api/picks/refresh", {
+          method: "POST"
+        });
+
+        state.rankings = data.picks || [];
+      } catch (err) {
+        error = err;
+      }
+
+      state.refreshingRankings = false;
+      refreshRankingsBtn.disabled = false;
+      reloadRankingsBtn.disabled = false;
+
+      if (error) {
+        rankingList.innerHTML = `
+          <div class="empty">
+            가격 갱신 실패.<br />
+            ${escapeHtml(error.message)}
+          </div>
+        `;
+        return;
+      }
+
+      renderRankings();
     }
 
     async function registerPick() {
@@ -515,7 +673,11 @@
         setMessage("등록 완료.", "ok");
         await fetchRankings();
       } catch (error) {
-        setMessage(error.message || "등록 실패", "error");
+        if (error.status === 409) {
+          setMessage(error.message || "오늘은 이미 랭킹에 등록했습니다.", "error");
+        } else {
+          setMessage(error.message || "등록 실패", "error");
+        }
       } finally {
         state.registering = false;
         registerBtn.disabled = false;
@@ -530,6 +692,7 @@
       }
 
       const keyword = coinSearchInput.value.trim().toUpperCase();
+
       const coins = state.coins
         .filter(coin => {
           if (!keyword) return true;
@@ -580,6 +743,11 @@
     }
 
     function renderRankings() {
+      if (state.refreshingRankings) {
+        rankingList.innerHTML = `<div class="loading">현재가 기준으로 랭킹 갱신 중...</div>`;
+        return;
+      }
+
       if (state.loadingRankings) {
         rankingList.innerHTML = `<div class="loading">랭킹 불러오는 중...</div>`;
         return;
@@ -590,11 +758,15 @@
         return;
       }
 
-      const sorted = [...state.rankings].sort((a, b) => Number(b.returnRate || 0) - Number(a.returnRate || 0));
+      const sorted = [...state.rankings].sort((a, b) => {
+        return Number(b.returnRate || 0) - Number(a.returnRate || 0);
+      });
 
       rankingList.innerHTML = sorted.map((item, index) => {
         const displayName = item.displayName || item.koreanName || item.market || item.symbol || "-";
         const cls = rateClass(item.returnRate);
+        const startPrice = formatPrice(item.startPrice);
+        const currentPrice = formatPrice(item.currentPrice);
 
         return `
           <div class="rank-item">
@@ -602,6 +774,7 @@
             <div>
               <div class="rank-user">${escapeHtml(item.nickname || "익명")}</div>
               <div class="rank-coin">${escapeHtml(displayName)}</div>
+              <div class="rank-meta">${startPrice} → ${currentPrice}</div>
             </div>
             <div class="rank-rate ${cls}">${formatPercent(item.returnRate)}</div>
           </div>
@@ -609,19 +782,15 @@
       }).join("");
     }
 
-    function escapeHtml(value) {
-      return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
-
     coinSearchInput.addEventListener("input", renderCoins);
+
     registerBtn.addEventListener("click", registerPick);
+
     reloadCoinsBtn.addEventListener("click", syncCoins);
+
     reloadRankingsBtn.addEventListener("click", fetchRankings);
+
+    refreshRankingsBtn.addEventListener("click", refreshRankings);
 
     nicknameInput.addEventListener("keydown", event => {
       if (event.key === "Enter") {
@@ -632,7 +801,9 @@
     coinSearchInput.addEventListener("keydown", event => {
       if (event.key === "Enter") {
         const firstButton = document.querySelector(".select-button");
-        if (firstButton) firstButton.click();
+        if (firstButton) {
+          firstButton.click();
+        }
       }
     });
 
