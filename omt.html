@@ -531,7 +531,7 @@
     const rankingList = document.querySelector("#rankingList");
     const reloadCoinsBtn = document.querySelector("#reloadCoinsBtn");
     const reloadRankingsBtn = document.querySelector("#reloadRankingsBtn");
-    const refreshRankingsBtn = document.querySelector("#refreshRankingsBtn");
+    
 
     nicknameInput.value = localStorage.getItem("omt_nickname") || "";
 
@@ -921,8 +921,6 @@
     reloadCoinsBtn.addEventListener("click", syncCoins);
 
     reloadRankingsBtn.addEventListener("click", fetchRankings);
-
-    refreshRankingsBtn.addEventListener("click", refreshRankings);
 
     nicknameInput.addEventListener("keydown", event => {
       if (event.key === "Enter") {
