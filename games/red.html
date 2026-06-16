@@ -563,7 +563,7 @@
         <div class="build-cost">5,000 Wood<br>5,000 G</div>
       </div>
       <div class="build-item" data-build-type="Raft">
-        <div class="build-info"><h4>Raft (뗏목)</h4><p>물 위에 띄우는 발판. 탑승 시 Wood 1개로 노 생성.</p></div>
+        <div class="build-info"><h4>Raft (뗏목)</h4><p>물 위에 띄우는 발판. 탑승/이동속도 업그레이드 가능.</p></div>
         <div class="build-cost">200 Wood<br>200 G</div>
       </div>
     </section>
@@ -863,6 +863,10 @@
     const BUILD_COSTS = { 'Campfire': { wood: 30, gold: 0 }, 'Fence': { wood: 50, gold: 50 }, 'Crossbow': { wood: 1000, gold: 1000 }, 'Armory': { wood: 5000, gold: 5000 }, 'Raft': { wood: 200, gold: 200 } };
     const ARMORY_UPGRADE_COSTS = { fenceHp: 1200, crossbowHp: 1500, crossbowDmg: 2000 };
     const BUILDING_BASE_STATS = { Fence: { hp: 300, radius: 20 }, Crossbow: { hp: 500, radius: 20, dmg: 30 }, Armory: { hp: 2000, radius: 40 }, Campfire: { hp: 100, radius: 15 }, Raft: { hp: 600, radius: 55 } };
+    const RAFT_UPGRADE_MAX_LEVEL = 10;
+    const RAFT_UPGRADE_BASE_COST = 2000;
+    const RAFT_BASE_SPEED_RATE = 0.75;
+    const RAFT_SPEED_BONUS_PER_LEVEL = 0.10;
     // v0.0.02 price hotfix: Mythic items now have an explicit sell price instead of falling back to Normal price.
     const PRICE_MAP = { "Junk": 1, "Normal": 10, "Magic": 40, "Rare": 100, "Epic": 500, "Mythic": 1000, "Legendary": 2000 };
     const PLAYER_BLOCK_SIZE = 40;
@@ -1353,6 +1357,13 @@
       if (ui.tooltip) ui.tooltip.style.display = 'none';
     }
 
+    function isTextInputFocused() {
+      const el = document.activeElement;
+      if (!el) return false;
+      const tag = el.tagName ? el.tagName.toLowerCase() : '';
+      return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable === true;
+    }
+
     // [방어 시설 강화] 무기고는 캐릭터가 아니라 설치된 방어 건물을 강화합니다.
     window.currentUpgradeBldg = null;
 
@@ -1439,12 +1450,56 @@
       ui.upgDemolish.textContent = `철거 (+${refund} Wood)`;
     }
 
+    function getRaftMoveLevel(raft) {
+      return Math.max(0, Math.min(RAFT_UPGRADE_MAX_LEVEL, Number(raft && raft.raftMoveLevel) || 0));
+    }
+
+    function getRaftUpgradeCost(raft) {
+      const nextLevel = getRaftMoveLevel(raft) + 1;
+      if (nextLevel > RAFT_UPGRADE_MAX_LEVEL) return 0;
+      return nextLevel * RAFT_UPGRADE_BASE_COST;
+    }
+
+    function getRaftSpeed(raft) {
+      const level = getRaftMoveLevel(raft);
+      return Math.max(25, gameState.player.speed * (RAFT_BASE_SPEED_RATE + level * RAFT_SPEED_BONUS_PER_LEVEL));
+    }
+
+    function formatRaftUpgradeText(raft) {
+      const level = getRaftMoveLevel(raft);
+      if (level >= RAFT_UPGRADE_MAX_LEVEL) return '최대 레벨';
+      return `${getRaftUpgradeCost(raft).toLocaleString()} G`;
+    }
+
+    function upgradeRaftMoveSpeed(raft) {
+      if (!raft || !raft.active || raft.bType !== 'Raft') return;
+      const level = getRaftMoveLevel(raft);
+      if (level >= RAFT_UPGRADE_MAX_LEVEL) {
+        addChatMessage('<span style="color:#FFD66B;">뗏목 이동속도는 이미 최대 레벨입니다.</span>');
+        openUpgradeModal(raft);
+        return;
+      }
+      const cost = getRaftUpgradeCost(raft);
+      if (gameState.player.gold < cost) {
+        addChatMessage(`<span style="color:#FFD66B;">골드 부족 (필요: ${cost.toLocaleString()} G)</span>`);
+        return;
+      }
+      gameState.player.gold -= cost;
+      raft.raftMoveLevel = level + 1;
+      addChatMessage(`<span style="color:#7CFF8A;">뗏목 이동속도 업그레이드 Lv.${raft.raftMoveLevel}/${RAFT_UPGRADE_MAX_LEVEL} 완료</span>`);
+      updatePlayerHud();
+      openUpgradeModal(raft);
+    }
+
     function openUpgradeModal(bldg) {
       window.currentUpgradeBldg = bldg;
       ui.upgModal.style.display = 'flex';
       ui.upgArmoryOptions.style.display = 'none';
       ui.upgRaftAction.style.display = 'none';
-      document.getElementById('upg-confirm').style.display = 'none';
+      const upgConfirmBtn = document.getElementById('upg-confirm');
+      upgConfirmBtn.style.display = 'none';
+      upgConfirmBtn.disabled = false;
+      upgConfirmBtn.textContent = '업그레이드';
       refreshDemolishButton(bldg);
 
       if (bldg.bType === 'Armory') {
@@ -1462,11 +1517,16 @@
         ui.upgCost.textContent = `${(bldg.level * 1000).toLocaleString()} G`;
         document.getElementById('upg-confirm').style.display = 'inline-block';
       } else if (bldg.bType === 'Raft') {
+        const raftLevel = getRaftMoveLevel(bldg);
         ui.upgTitle.textContent = 'Raft';
-        ui.upgDesc.textContent = bldg.hasOar ? '노가 장착되어 있습니다. 탑승/하선 또는 철거할 수 있습니다.' : '탑승 시 Wood 1개를 소비하여 노를 생성합니다.';
-        ui.upgCurrent.textContent = `HP ${Math.ceil(bldg.hp)}/${bldg.maxHp} / ${bldg.hasOar ? 'Oar: Ready' : 'Oar: 없음'}`;
-        ui.upgCost.textContent = bldg.hasOar ? '탑승/하선 가능' : '탑승 시 Wood 1 필요';
+        ui.upgDesc.textContent = bldg.hasOar ? '노가 장착되어 있습니다. 탑승/하선하거나 이동속도를 업그레이드할 수 있습니다.' : '탑승 시 Wood 1개를 소비하여 노를 생성합니다. 이동속도 업그레이드는 골드를 사용합니다.';
+        ui.upgCurrent.textContent = `HP ${Math.ceil(bldg.hp)}/${bldg.maxHp} / Oar: ${bldg.hasOar ? 'Ready' : '없음'} / 이동속도 Lv.${raftLevel}/${RAFT_UPGRADE_MAX_LEVEL}`;
+        ui.upgCost.textContent = `이동속도 업그레이드 비용: ${formatRaftUpgradeText(bldg)}${raftLevel < RAFT_UPGRADE_MAX_LEVEL ? ' / 다음 속도 ' + Math.round(getRaftSpeed({ raftMoveLevel: raftLevel + 1 }) * 10) / 10 : ''}`;
         ui.upgRaftAction.style.display = 'inline-block';
+        const confirmBtn = document.getElementById('upg-confirm');
+        confirmBtn.style.display = 'inline-block';
+        confirmBtn.textContent = raftLevel >= RAFT_UPGRADE_MAX_LEVEL ? '최대 레벨' : `업그레이드 (${getRaftUpgradeCost(bldg).toLocaleString()} G)`;
+        confirmBtn.disabled = raftLevel >= RAFT_UPGRADE_MAX_LEVEL;
       } else {
         ui.upgTitle.textContent = getBuildingDisplayName(bldg.bType);
         ui.upgDesc.textContent = '이 건축물을 철거하고 현재 체력에 비례한 목재 일부를 회수합니다. 골드는 반환되지 않습니다.';
@@ -1571,7 +1631,12 @@
       });
 
       ui.chatSendButton.addEventListener('click', sendWorldChat);
-      ui.chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendWorldChat(); } });
+      ui.chatInput.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') { e.preventDefault(); sendWorldChat(); }
+      });
+      ui.chatInput.addEventListener('keyup', (e) => e.stopPropagation());
+      ui.chatInput.addEventListener('keypress', (e) => e.stopPropagation());
       ui.chatInput.addEventListener('pointerdown', (e) => e.stopPropagation());
       ui.chatInput.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
       ui.chatSendButton.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -1612,8 +1677,7 @@
 
       window.addEventListener('contextmenu', (e) => { e.preventDefault(); if (window.activeBuildType) { window.activeBuildRotation += 90; addChatMessage('<span style="color:#FFD66B;">건물 회전됨</span>'); } });
       window.addEventListener('keydown', (e) => {
-        const activeTag = document.activeElement && document.activeElement.tagName ? document.activeElement.tagName.toLowerCase() : '';
-        const isTyping = activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select';
+        const isTyping = isTextInputFocused();
         if (e.key === 'Escape') {
           window.activeBuildType = null; ui.buildModeText.style.display = 'none'; ui.upgModal.style.display = 'none'; ui.sellModal.style.display = 'none'; ui.statModal.style.display = 'none';
           return;
@@ -1689,8 +1753,10 @@
           } else {
             addChatMessage(`<span style="color:#FFD66B;">골드 부족 (필요: ${cost.toLocaleString()} G)</span>`);
           }
+          updatePlayerHud(); ui.upgModal.style.display = 'none';
+        } else if (bldg.bType === 'Raft') {
+          upgradeRaftMoveSpeed(bldg);
         }
-        updatePlayerHud(); ui.upgModal.style.display = 'none';
       });
     }
 
@@ -2434,7 +2500,7 @@
         bldg.lastFireTime = 0;
         if(type === 'Campfire') bldg.burnOutTime = this.time.now + 60000;
         if(type === 'Crossbow') bldg.attackDmg = this.getCrossbowDamage();
-        if(type === 'Raft') { bldg.hasOar = false; bldg.setImmovable(true); }
+        if(type === 'Raft') { bldg.hasOar = false; bldg.raftMoveLevel = 0; bldg.setImmovable(true); }
         if(supportingRaft) bldg.supportRaft = supportingRaft;
         this.createBuildingHealthUi(bldg);
 
@@ -2543,7 +2609,11 @@
         }
 
         const vel = new Phaser.Math.Vector2(0, 0); let usingKeyboardOrPad = false;
-        if (virtualStick.active) {
+        const typingInTextField = isTextInputFocused();
+        if (typingInTextField) {
+          this.targetPosition = null;
+          if (!gameState.raft.mounted) this.player.body.setVelocity(0, 0);
+        } else if (virtualStick.active) {
           vel.x = virtualStick.x; vel.y = virtualStick.y; usingKeyboardOrPad = true;
         } else {
           if (this.wasd.left.isDown || vPad.left) { vel.x = -1; usingKeyboardOrPad = true; }
@@ -2558,7 +2628,7 @@
           this.player.body.setVelocity(0, 0);
           if (this.playerEnvironmentCollider) this.playerEnvironmentCollider.active = false;
           if (usingKeyboardOrPad && raft.hasOar) {
-            vel.normalize().scale(Math.max(25, gameState.player.speed * 0.75));
+            vel.normalize().scale(getRaftSpeed(raft));
             const dt = Math.min(0.05, this.game.loop.delta / 1000);
             const nx = raft.x + vel.x * dt;
             const ny = raft.y + vel.y * dt;
@@ -2709,7 +2779,9 @@
           window.visualViewport.addEventListener('scroll', resizeGame);
         }
       });
-      ui.loginName.addEventListener('keydown', (e) => { if(e.key === 'Enter') ui.loginBtn.click(); });
+      ui.loginName.addEventListener('keydown', (e) => { e.stopPropagation(); if(e.key === 'Enter') ui.loginBtn.click(); });
+      ui.loginName.addEventListener('keyup', (e) => e.stopPropagation());
+      ui.loginName.addEventListener('keypress', (e) => e.stopPropagation());
     });
   </script>
 </body>
