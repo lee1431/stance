@@ -1,0 +1,963 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Aegis Line Defense</title>
+    <meta name="description" content="Phaser.js로 만든 실시간 라인 디펜스 게임">
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      :root {
+        --bg: #151511;
+        --panel: #202018;
+        --panel-deep: #171713;
+        --line: #3d3b2d;
+        --text: #f6f0dc;
+        --muted: #bdb18e;
+        --gold: #f2c14e;
+        --teal: #45c4d8;
+        --coral: #ff715b;
+        --green: #84a35a;
+      }
+
+      html {
+        min-width: 320px;
+      }
+
+      body {
+        background: linear-gradient(180deg, rgba(132, 163, 90, 0.08), transparent 34%), var(--bg);
+        color: var(--text);
+        font-family: Arial, Helvetica, sans-serif;
+        margin: 0;
+        min-height: 100vh;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .page {
+        margin: 0 auto;
+        max-width: 1240px;
+        padding: 28px;
+      }
+
+      .site-header {
+        align-items: end;
+        display: flex;
+        gap: 24px;
+        justify-content: space-between;
+        margin-bottom: 20px;
+      }
+
+      .kicker {
+        color: var(--gold);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        margin: 0 0 8px;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        font-size: clamp(2.1rem, 4vw, 4.4rem);
+        line-height: 0.95;
+        margin: 0;
+      }
+
+      .site-summary {
+        color: #cfc5a8;
+        line-height: 1.7;
+        margin: 0 0 8px;
+        max-width: 420px;
+        text-align: right;
+      }
+
+      .defense-layout {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, 1fr) 310px;
+      }
+
+      .arena-panel,
+      .hud-panel {
+        background: var(--panel);
+        border: 1px solid #3c3a2c;
+        border-radius: 8px;
+        box-shadow: 0 20px 70px rgba(0, 0, 0, 0.26);
+      }
+
+      .arena-panel {
+        min-width: 0;
+        overflow: hidden;
+        position: relative;
+      }
+
+      #game {
+        aspect-ratio: 16 / 9;
+        background: #151a18;
+        display: grid;
+        min-height: 320px;
+        overflow: hidden;
+        place-items: center;
+        width: 100%;
+      }
+
+      #game canvas {
+        display: block;
+        max-width: 100%;
+      }
+
+      .notice {
+        background: rgba(21, 21, 17, 0.86);
+        border: 1px solid rgba(242, 193, 78, 0.34);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 0.95rem;
+        font-weight: 800;
+        left: 16px;
+        opacity: 0;
+        padding: 10px 12px;
+        pointer-events: none;
+        position: absolute;
+        top: 16px;
+        transform: translateY(-6px);
+        transition: opacity 160ms ease, transform 160ms ease;
+      }
+
+      .notice.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .hud-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 14px;
+      }
+
+      .stat-grid {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .stat-card {
+        background: var(--panel-deep);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        min-height: 74px;
+        padding: 12px;
+      }
+
+      .stat-card span,
+      .tower-button small,
+      .loadout {
+        color: var(--muted);
+      }
+
+      .stat-card span {
+        display: block;
+        font-size: 0.78rem;
+        font-weight: 800;
+        margin-bottom: 9px;
+      }
+
+      .stat-card strong {
+        color: #fff7dd;
+        display: block;
+        font-size: 1.7rem;
+        line-height: 1;
+      }
+
+      .status-strip {
+        align-items: center;
+        background: #26251c;
+        border: 1px solid #4d4933;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        min-height: 48px;
+        padding: 0 12px;
+      }
+
+      .status-strip span {
+        color: var(--gold);
+        font-weight: 900;
+      }
+
+      .status-strip strong {
+        background: var(--teal);
+        border-radius: 999px;
+        color: #102125;
+        min-width: 34px;
+        padding: 4px 8px;
+        text-align: center;
+      }
+
+      .tower-panel {
+        display: grid;
+        gap: 10px;
+      }
+
+      .tower-button {
+        align-items: center;
+        background: var(--panel-deep);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--text);
+        cursor: pointer;
+        display: flex;
+        gap: 11px;
+        min-height: 58px;
+        padding: 10px;
+        text-align: left;
+      }
+
+      .tower-button:hover:not(:disabled),
+      .tower-button.active {
+        border-color: var(--gold);
+        box-shadow: inset 0 0 0 1px rgba(242, 193, 78, 0.38);
+      }
+
+      .tower-button:disabled,
+      .action-row button:disabled {
+        cursor: not-allowed;
+        opacity: 0.46;
+      }
+
+      .tower-swatch {
+        border: 2px solid rgba(255, 255, 255, 0.48);
+        border-radius: 5px;
+        display: block;
+        flex: 0 0 28px;
+        height: 28px;
+      }
+
+      .tower-button strong,
+      .tower-button small {
+        display: block;
+      }
+
+      .tower-button small {
+        font-size: 0.78rem;
+        margin-top: 3px;
+      }
+
+      .action-row {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .action-row button {
+        background: var(--green);
+        border: 0;
+        border-radius: 8px;
+        color: #10140d;
+        cursor: pointer;
+        font-weight: 900;
+        min-height: 46px;
+        padding: 0 8px;
+      }
+
+      .action-row button:nth-child(2) {
+        background: var(--teal);
+        color: #102125;
+      }
+
+      .action-row button:nth-child(3) {
+        background: var(--coral);
+        color: #2a100c;
+      }
+
+      .loadout {
+        align-items: center;
+        border-top: 1px solid var(--line);
+        display: flex;
+        font-size: 0.82rem;
+        font-weight: 900;
+        gap: 9px;
+        margin-top: auto;
+        min-height: 38px;
+        padding-top: 12px;
+      }
+
+      .loadout-mark {
+        background: var(--gold);
+        border-radius: 999px;
+        display: block;
+        height: 9px;
+        width: 9px;
+      }
+
+      .fallback {
+        align-items: center;
+        color: #cfc5a8;
+        display: none;
+        font-weight: 800;
+        inset: 0;
+        justify-content: center;
+        padding: 24px;
+        position: absolute;
+        text-align: center;
+      }
+
+      .fallback.visible {
+        display: flex;
+      }
+
+      @media (max-width: 980px) {
+        .page {
+          padding: 18px;
+        }
+
+        .site-header,
+        .defense-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .site-header {
+          align-items: start;
+          display: grid;
+        }
+
+        .site-summary {
+          max-width: none;
+          text-align: left;
+        }
+
+        .hud-panel {
+          order: -1;
+        }
+
+        .tower-panel {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 640px) {
+        .page {
+          padding: 12px;
+        }
+
+        #game {
+          min-height: 210px;
+        }
+
+        .stat-grid,
+        .tower-panel,
+        .action-row {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 2.4rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="site-header">
+        <div>
+          <p class="kicker">Phaser.js Defense</p>
+          <h1>Aegis Line</h1>
+        </div>
+        <p class="site-summary">몰려오는 러너를 막고 기지 라인을 지키는 실시간 타워 디펜스</p>
+      </header>
+
+      <section class="defense-layout" aria-label="Aegis Line defense game">
+        <div class="arena-panel">
+          <div id="game"></div>
+          <div class="notice visible" id="notice">전투 준비 완료</div>
+          <div class="fallback" id="fallback">Phaser.js를 불러오지 못했습니다.</div>
+        </div>
+
+        <aside class="hud-panel" aria-label="game controls">
+          <div class="stat-grid">
+            <div class="stat-card"><span>기지</span><strong id="base">20</strong></div>
+            <div class="stat-card"><span>골드</span><strong id="gold">120</strong></div>
+            <div class="stat-card"><span>웨이브</span><strong id="wave">0</strong></div>
+            <div class="stat-card"><span>점수</span><strong id="score">0</strong></div>
+          </div>
+
+          <div class="status-strip">
+            <span id="status">정비 중</span>
+            <strong id="enemies">0</strong>
+          </div>
+
+          <div class="tower-panel">
+            <button class="tower-button active" data-tower="bolt" type="button">
+              <span class="tower-swatch" style="background:#f2c14e"></span>
+              <span><strong>Bolt</strong><small>45G</small></span>
+            </button>
+            <button class="tower-button" data-tower="frost" type="button">
+              <span class="tower-swatch" style="background:#45c4d8"></span>
+              <span><strong>Frost</strong><small>60G</small></span>
+            </button>
+            <button class="tower-button" data-tower="mortar" type="button">
+              <span class="tower-swatch" style="background:#ff715b"></span>
+              <span><strong>Mortar</strong><small>85G</small></span>
+            </button>
+          </div>
+
+          <div class="action-row">
+            <button id="waveButton" type="button">Wave</button>
+            <button id="pauseButton" type="button">Pause</button>
+            <button id="resetButton" type="button">Reset</button>
+          </div>
+
+          <div class="loadout">
+            <span class="loadout-mark"></span>
+            <span id="selected">BOLT</span>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/phaser@4.1.0/dist/phaser.min.js"></script>
+    <script type="module">
+      const Phaser = window.Phaser;
+      const fallback = document.getElementById("fallback");
+      const notice = document.getElementById("notice");
+      const ui = {
+        base: document.getElementById("base"),
+        gold: document.getElementById("gold"),
+        wave: document.getElementById("wave"),
+        score: document.getElementById("score"),
+        status: document.getElementById("status"),
+        enemies: document.getElementById("enemies"),
+        selected: document.getElementById("selected"),
+        waveButton: document.getElementById("waveButton"),
+        pauseButton: document.getElementById("pauseButton"),
+        resetButton: document.getElementById("resetButton"),
+        towerButtons: [...document.querySelectorAll("[data-tower]")]
+      };
+
+      if (!Phaser) {
+        fallback.classList.add("visible");
+      } else {
+        boot();
+      }
+
+      function showNotice(message) {
+        notice.textContent = message;
+        notice.classList.add("visible");
+        window.clearTimeout(showNotice.timer);
+        showNotice.timer = window.setTimeout(() => notice.classList.remove("visible"), 2400);
+      }
+
+      function paintHud(state) {
+        ui.base.textContent = state.base;
+        ui.gold.textContent = state.gold;
+        ui.wave.textContent = state.wave;
+        ui.score.textContent = state.score;
+        ui.status.textContent = state.paused ? "일시정지" : state.status;
+        ui.enemies.textContent = state.enemies;
+        ui.selected.textContent = state.selected.toUpperCase();
+        ui.waveButton.disabled = state.status === "교전 중";
+        ui.pauseButton.disabled = state.status === "기지 함락";
+        ui.pauseButton.textContent = state.paused ? "Resume" : "Pause";
+
+        for (const button of ui.towerButtons) {
+          button.classList.toggle("active", button.dataset.tower === state.selected);
+        }
+      }
+
+      function boot() {
+        const towerTypes = {
+          bolt: { name: "Bolt", cost: 45, range: 132, damage: 24, cooldown: 520, color: 0xf2c14e, flash: 0xfff1a6 },
+          frost: { name: "Frost", cost: 60, range: 114, damage: 12, cooldown: 820, color: 0x45c4d8, flash: 0xbdf7ff, slow: 950 },
+          mortar: { name: "Mortar", cost: 85, range: 154, damage: 38, cooldown: 1160, color: 0xff715b, flash: 0xffc0a8, splash: 54 }
+        };
+
+        const cols = 12;
+        const rows = 7;
+        const tile = 64;
+        const originX = 96;
+        const originY = 46;
+        const pathNodes = [[0, 3], [2, 3], [2, 1], [5, 1], [5, 5], [8, 5], [8, 2], [11, 2]];
+        const pathCells = expandPath(pathNodes);
+        const pathPoints = pathNodes.map(([col, row]) => cellCenter(col, row));
+        let sceneRef = null;
+
+        function cellKey(col, row) {
+          return `${col}:${row}`;
+        }
+
+        function cellCenter(col, row) {
+          return { x: originX + col * tile + tile / 2, y: originY + row * tile + tile / 2 };
+        }
+
+        function expandPath(nodes) {
+          const cells = new Set();
+
+          for (let index = 0; index < nodes.length - 1; index += 1) {
+            const [fromCol, fromRow] = nodes[index];
+            const [toCol, toRow] = nodes[index + 1];
+            const colStep = Math.sign(toCol - fromCol);
+            const rowStep = Math.sign(toRow - fromRow);
+            let col = fromCol;
+            let row = fromRow;
+            cells.add(cellKey(col, row));
+
+            while (col !== toCol || row !== toRow) {
+              col += colStep;
+              row += rowStep;
+              cells.add(cellKey(col, row));
+            }
+          }
+
+          return cells;
+        }
+
+        class DefenseScene extends Phaser.Scene {
+          constructor() {
+            super("DefenseScene");
+            this.base = 20;
+            this.gold = 120;
+            this.wave = 0;
+            this.score = 0;
+            this.selected = "bolt";
+            this.waveActive = false;
+            this.paused = false;
+            this.gameOver = false;
+            this.toSpawn = 0;
+            this.nextSpawnAt = 0;
+            this.spawnDelay = 820;
+            this.enemies = [];
+            this.towers = [];
+            this.lastPublishedAt = 0;
+          }
+
+          create() {
+            sceneRef = this;
+            this.cameras.main.setBackgroundColor("#151a18");
+            this.drawArena();
+            this.hover = this.add.rectangle(0, 0, tile - 8, tile - 8, 0xffffff, 0.04).setStrokeStyle(2, 0xf2c14e, 0.9).setVisible(false).setDepth(30);
+            const lastPoint = pathPoints[pathPoints.length - 1];
+            this.add.rectangle(lastPoint.x + 48, lastPoint.y, 28, 84, 0x84a35a).setStrokeStyle(3, 0xd9f6a0).setDepth(6);
+            this.input.on("pointermove", this.handlePointerMove, this);
+            this.input.on("pointerdown", this.handlePointerDown, this);
+            this.publish(true);
+          }
+
+          update(time, delta) {
+            if (this.paused || this.gameOver) {
+              this.publish(false, time);
+              return;
+            }
+
+            if (this.waveActive && this.toSpawn > 0 && time >= this.nextSpawnAt) {
+              this.spawnEnemy();
+              this.toSpawn -= 1;
+              this.nextSpawnAt = time + this.spawnDelay;
+            }
+
+            this.moveEnemies(time, delta);
+            this.fireTowers(time);
+
+            if (this.waveActive && this.toSpawn === 0 && this.enemies.length === 0) {
+              this.finishWave();
+            }
+
+            this.publish(false, time);
+          }
+
+          drawArena() {
+            const board = this.add.graphics();
+            board.fillStyle(0x20251f, 1);
+            board.fillRoundedRect(originX - 12, originY - 12, cols * tile + 24, rows * tile + 24, 8);
+            board.lineStyle(2, 0x394033, 1);
+            board.strokeRoundedRect(originX - 12, originY - 12, cols * tile + 24, rows * tile + 24, 8);
+
+            for (let row = 0; row < rows; row += 1) {
+              for (let col = 0; col < cols; col += 1) {
+                const x = originX + col * tile;
+                const y = originY + row * tile;
+                const isPath = pathCells.has(cellKey(col, row));
+                const fill = isPath ? 0x5a5140 : (row + col) % 2 === 0 ? 0x263026 : 0x222b24;
+                board.fillStyle(fill, 1);
+                board.fillRect(x, y, tile - 1, tile - 1);
+              }
+            }
+
+            const route = this.add.graphics();
+            route.lineStyle(42, 0x786343, 0.82);
+            route.beginPath();
+            route.moveTo(pathPoints[0].x, pathPoints[0].y);
+
+            for (let index = 1; index < pathPoints.length; index += 1) {
+              route.lineTo(pathPoints[index].x, pathPoints[index].y);
+            }
+
+            route.strokePath();
+            route.lineStyle(3, 0xf2c14e, 0.55);
+            route.strokePath();
+            route.setDepth(1);
+            this.add.rectangle(pathPoints[0].x - 48, pathPoints[0].y, 28, 72, 0x3c2520).setStrokeStyle(3, 0xff715b, 0.95).setDepth(5);
+          }
+
+          handlePointerMove(pointer) {
+            const cell = this.pointerToCell(pointer);
+            this.hideRanges();
+
+            if (!cell) {
+              this.hover.setVisible(false);
+              return;
+            }
+
+            const tower = this.findTower(cell.col, cell.row);
+
+            if (tower) {
+              tower.rangeRing.setVisible(true);
+            }
+
+            const placeable = this.canPlace(cell.col, cell.row) || tower;
+            const center = cellCenter(cell.col, cell.row);
+            this.hover.setPosition(center.x, center.y).setStrokeStyle(2, placeable ? 0xf2c14e : 0xff715b, 0.9).setVisible(true);
+          }
+
+          handlePointerDown(pointer) {
+            if (this.gameOver || this.paused) return;
+            const cell = this.pointerToCell(pointer);
+            if (!cell) return;
+            const existing = this.findTower(cell.col, cell.row);
+            if (existing) {
+              this.upgradeTower(existing);
+              return;
+            }
+            this.placeTower(cell.col, cell.row);
+          }
+
+          pointerToCell(pointer) {
+            const col = Math.floor((pointer.x - originX) / tile);
+            const row = Math.floor((pointer.y - originY) / tile);
+            if (col < 0 || row < 0 || col >= cols || row >= rows) return null;
+            return { col, row };
+          }
+
+          canPlace(col, row) {
+            return !pathCells.has(cellKey(col, row)) && !this.findTower(col, row);
+          }
+
+          findTower(col, row) {
+            return this.towers.find((tower) => tower.col === col && tower.row === row);
+          }
+
+          placeTower(col, row) {
+            if (!this.canPlace(col, row)) {
+              showNotice("배치 불가");
+              return;
+            }
+
+            const config = towerTypes[this.selected];
+            if (this.gold < config.cost) {
+              showNotice("골드 부족");
+              return;
+            }
+
+            const center = cellCenter(col, row);
+            const tower = {
+              col,
+              row,
+              x: center.x,
+              y: center.y,
+              type: this.selected,
+              level: 1,
+              damage: config.damage,
+              range: config.range,
+              cooldown: config.cooldown,
+              nextFire: 0
+            };
+
+            this.gold -= config.cost;
+            this.paintTower(tower);
+            this.towers.push(tower);
+            showNotice(`${config.name} 배치`);
+            this.publish(true);
+          }
+
+          paintTower(tower) {
+            const config = towerTypes[tower.type];
+            tower.rangeRing = this.add.circle(tower.x, tower.y, tower.range, 0xffffff, 0).setStrokeStyle(2, config.color, 0.22).setVisible(false).setDepth(2);
+            tower.base = this.add.rectangle(tower.x, tower.y, 36, 36, 0x171a18).setStrokeStyle(3, 0xefe2b8, 0.75).setDepth(7);
+            tower.head = this.add.circle(tower.x, tower.y, 13, config.color, 1).setDepth(8);
+            tower.levelText = this.add.text(tower.x, tower.y + 28, "I", {
+              color: "#f5efd9",
+              fontFamily: "Arial, Helvetica, sans-serif",
+              fontSize: "13px",
+              fontStyle: "700"
+            }).setOrigin(0.5).setDepth(9);
+          }
+
+          upgradeTower(tower) {
+            if (tower.level >= 3) {
+              showNotice("최대 레벨");
+              return;
+            }
+
+            const cost = 32 + tower.level * 28;
+            if (this.gold < cost) {
+              showNotice("업그레이드 골드 부족");
+              return;
+            }
+
+            const config = towerTypes[tower.type];
+            this.gold -= cost;
+            tower.level += 1;
+            tower.damage = Math.round(tower.damage * 1.38);
+            tower.range += 14;
+            tower.cooldown = Math.max(300, Math.floor(tower.cooldown * 0.88));
+            tower.rangeRing.setRadius(tower.range);
+            tower.head.setRadius(12 + tower.level * 3);
+            tower.levelText.setText("I".repeat(tower.level));
+            this.tweens.add({ targets: [tower.base, tower.head], scale: 1.18, duration: 90, yoyo: true });
+            showNotice(`${config.name} 강화`);
+            this.publish(true);
+          }
+
+          hideRanges() {
+            for (const tower of this.towers) tower.rangeRing.setVisible(false);
+          }
+
+          startWave() {
+            if (this.waveActive || this.gameOver) return;
+            this.wave += 1;
+            this.waveActive = true;
+            this.toSpawn = 7 + this.wave * 3;
+            this.spawnDelay = Math.max(370, 840 - this.wave * 28);
+            this.nextSpawnAt = this.time.now + 250;
+            showNotice(`웨이브 ${this.wave}`);
+            this.publish(true);
+          }
+
+          finishWave() {
+            this.waveActive = false;
+            const reward = 34 + this.wave * 6;
+            this.gold += reward;
+            this.score += 220 + this.wave * 40;
+            showNotice(`정비 보급 +${reward}`);
+            this.publish(true);
+          }
+
+          spawnEnemy() {
+            const start = pathPoints[0];
+            const elite = this.wave % 4 === 0 && this.toSpawn % 5 === 0;
+            const maxHp = elite ? 150 + this.wave * 38 : 72 + this.wave * 24;
+            const radius = elite ? 17 : 13;
+            const color = elite ? 0xf2c14e : 0xff715b;
+            const enemy = {
+              x: start.x,
+              y: start.y,
+              pathIndex: 1,
+              hp: maxHp,
+              maxHp,
+              speed: elite ? 34 + this.wave * 2.2 : 45 + this.wave * 2.8,
+              bounty: elite ? 30 + this.wave * 2 : 12 + this.wave,
+              radius,
+              slowUntil: 0,
+              alive: true
+            };
+
+            enemy.body = this.add.circle(start.x, start.y, radius, color, 1).setDepth(10);
+            enemy.core = this.add.circle(start.x, start.y, radius * 0.42, 0x2b1814, 1).setDepth(11);
+            enemy.barBack = this.add.rectangle(start.x - 15, start.y - 23, 30, 4, 0x281816).setOrigin(0, 0.5).setDepth(12);
+            enemy.bar = this.add.rectangle(start.x - 15, start.y - 23, 30, 4, 0x84a35a).setOrigin(0, 0.5).setDepth(13);
+            this.enemies.push(enemy);
+          }
+
+          moveEnemies(time, delta) {
+            const stepFactor = delta / 1000;
+
+            for (const enemy of this.enemies) {
+              if (!enemy.alive) continue;
+              const target = pathPoints[enemy.pathIndex];
+
+              if (!target) {
+                this.enemyReachedBase(enemy);
+                continue;
+              }
+
+              const slowed = enemy.slowUntil > time;
+              const speed = enemy.speed * (slowed ? 0.55 : 1);
+              const distance = Phaser.Math.Distance.Between(enemy.x, enemy.y, target.x, target.y);
+              const travel = speed * stepFactor;
+
+              if (travel >= distance) {
+                enemy.x = target.x;
+                enemy.y = target.y;
+                enemy.pathIndex += 1;
+              } else {
+                enemy.x += ((target.x - enemy.x) / distance) * travel;
+                enemy.y += ((target.y - enemy.y) / distance) * travel;
+              }
+
+              enemy.body.setPosition(enemy.x, enemy.y);
+              enemy.core.setPosition(enemy.x, enemy.y);
+              enemy.body.setFillStyle(slowed ? 0x45c4d8 : enemy.radius > 14 ? 0xf2c14e : 0xff715b);
+              enemy.barBack.setPosition(enemy.x - 15, enemy.y - 23);
+              enemy.bar.setPosition(enemy.x - 15, enemy.y - 23);
+            }
+
+            this.enemies = this.enemies.filter((enemy) => enemy.alive);
+          }
+
+          enemyReachedBase(enemy) {
+            enemy.alive = false;
+            this.destroyEnemy(enemy);
+            this.base -= enemy.radius > 14 ? 2 : 1;
+            this.cameras.main.shake(140, 0.004);
+
+            if (this.base <= 0) {
+              this.base = 0;
+              this.gameOver = true;
+              this.waveActive = false;
+              showNotice("기지 함락");
+            }
+
+            this.publish(true);
+          }
+
+          fireTowers(time) {
+            for (const tower of this.towers) {
+              if (time < tower.nextFire) continue;
+              const target = this.pickTarget(tower);
+              if (!target) continue;
+              this.attack(tower, target, time);
+              tower.nextFire = time + tower.cooldown;
+            }
+          }
+
+          pickTarget(tower) {
+            let best = null;
+            let bestScore = -1;
+
+            for (const enemy of this.enemies) {
+              const distance = Phaser.Math.Distance.Between(tower.x, tower.y, enemy.x, enemy.y);
+              if (distance > tower.range) continue;
+              const progress = enemy.pathIndex * 1000 - distance;
+              if (progress > bestScore) {
+                best = enemy;
+                bestScore = progress;
+              }
+            }
+
+            return best;
+          }
+
+          attack(tower, target, time) {
+            const config = towerTypes[tower.type];
+
+            if (tower.type === "mortar") {
+              this.damageArea(target.x, target.y, tower.damage, config.splash);
+              this.drawExplosion(target.x, target.y, config.splash, config.color);
+            } else {
+              this.damageEnemy(target, tower.damage);
+              if (config.slow) target.slowUntil = time + config.slow;
+            }
+
+            this.drawShot(tower.x, tower.y, target.x, target.y, config.flash);
+          }
+
+          damageArea(x, y, damage, radius) {
+            for (const enemy of this.enemies) {
+              const distance = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
+              if (distance <= radius) this.damageEnemy(enemy, damage * (1 - distance / (radius * 1.8)));
+            }
+          }
+
+          damageEnemy(enemy, amount) {
+            if (!enemy.alive) return;
+            enemy.hp -= Math.max(4, Math.round(amount));
+            enemy.bar.scaleX = Math.max(0, enemy.hp / enemy.maxHp);
+
+            if (enemy.hp <= 0) {
+              enemy.alive = false;
+              this.gold += enemy.bounty;
+              this.score += enemy.bounty * 8 + this.wave * 3;
+              this.destroyEnemy(enemy);
+            }
+          }
+
+          destroyEnemy(enemy) {
+            enemy.body.destroy();
+            enemy.core.destroy();
+            enemy.barBack.destroy();
+            enemy.bar.destroy();
+          }
+
+          drawShot(fromX, fromY, toX, toY, color) {
+            const beam = this.add.graphics().setDepth(20);
+            beam.lineStyle(4, color, 0.9);
+            beam.lineBetween(fromX, fromY, toX, toY);
+            this.tweens.add({ targets: beam, alpha: 0, duration: 130, onComplete: () => beam.destroy() });
+          }
+
+          drawExplosion(x, y, radius, color) {
+            const blast = this.add.circle(x, y, 8, color, 0.12).setStrokeStyle(3, color, 0.8).setDepth(18);
+            this.tweens.add({ targets: blast, radius, alpha: 0, duration: 220, onComplete: () => blast.destroy() });
+          }
+
+          command(event) {
+            if (!event) return;
+            if (event.command === "select") {
+              this.selected = event.value;
+              showNotice(`${towerTypes[this.selected].name} 선택`);
+              this.publish(true);
+            }
+            if (event.command === "wave") this.startWave();
+            if (event.command === "pause") {
+              this.paused = !this.paused;
+              showNotice(this.paused ? "일시정지" : "재개");
+              this.publish(true);
+            }
+            if (event.command === "restart") {
+              showNotice("새 작전");
+              this.scene.restart();
+            }
+          }
+
+          publish(force = false, time = this.time.now) {
+            if (!force && time - this.lastPublishedAt < 180) return;
+            this.lastPublishedAt = time;
+            paintHud({
+              base: this.base,
+              gold: this.gold,
+              wave: this.wave,
+              score: this.score,
+              enemies: this.enemies.length + this.toSpawn,
+              selected: this.selected,
+              status: this.gameOver ? "기지 함락" : this.waveActive ? "교전 중" : "정비 중",
+              paused: this.paused
+            });
+          }
+        }
+
+        new Phaser.Game({
+          type: Phaser.AUTO,
+          parent: "game",
+          width: 960,
+          height: 540,
+          backgroundColor: "#151a18",
+          scene: DefenseScene,
+          scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+          render: { antialias: true, pixelArt: false }
+        });
+
+        for (const button of ui.towerButtons) {
+          button.addEventListener("click", () => sceneRef?.command({ command: "select", value: button.dataset.tower }));
+        }
+
+        ui.waveButton.addEventListener("click", () => sceneRef?.command({ command: "wave" }));
+        ui.pauseButton.addEventListener("click", () => sceneRef?.command({ command: "pause" }));
+        ui.resetButton.addEventListener("click", () => sceneRef?.command({ command: "restart" }));
+      }
+    </script>
+  </body>
+</html>
