@@ -200,4 +200,493 @@
         wave: document.getElementById("wave"),
         score: document.getElementById("score"),
         status: document.getElementById("status"),
-        runnersCount: document.
+        runnersCount: document.getElementById("runnersCount"),
+        selected: document.getElementById("selected"),
+        mapSelect: document.getElementById("mapSelect"),
+        waveButton: document.getElementById("waveButton"),
+        pauseButton: document.getElementById("pauseButton"),
+        resetButton: document.getElementById("resetButton"),
+        towerButtons: [...document.querySelectorAll("[data-tower]")]
+      };
+
+      // 랜덤 맵 생성기 (10개)
+      function generateRandomMaps(count, cols, rows) {
+        const maps = [];
+        for(let i=0; i<count; i++) {
+          let col = 0;
+          let row = Math.floor(Math.random() * (rows - 2)) + 1; 
+          let nodes = [[col, row]];
+
+          while (col < cols - 1) {
+            let stepX = Math.floor(Math.random() * 3) + 2; 
+            col = Math.min(cols - 1, col + stepX);
+            nodes.push([col, row]);
+            if (col === cols - 1) break;
+
+            let upSpace = row - 1;
+            let downSpace = (rows - 2) - row;
+            let dir = 0;
+            if (upSpace > 0 && downSpace > 0) dir = Math.random() > 0.5 ? 1 : -1;
+            else if (upSpace > 0) dir = -1;
+            else dir = 1;
+
+            if (dir !== 0) {
+               let maxStepY = dir === 1 ? downSpace : upSpace;
+               let stepY = Math.floor(Math.random() * maxStepY) + 1;
+               row += dir * stepY;
+               nodes.push([col, row]);
+            }
+          }
+          maps.push(nodes);
+        }
+        return maps;
+      }
+
+      if (!Phaser) {
+        fallback.classList.add("visible");
+      } else {
+        boot();
+      }
+
+      function showNotice(message) {
+        notice.textContent = message;
+        notice.classList.add("visible");
+        window.clearTimeout(showNotice.timer);
+        showNotice.timer = window.setTimeout(() => notice.classList.remove("visible"), 2400);
+      }
+
+      function paintHud(state) {
+        ui.base.textContent = state.base;
+        ui.gold.textContent = state.gold;
+        ui.wave.textContent = state.wave;
+        ui.score.textContent = state.score;
+        ui.status.textContent = state.paused ? "휴식 중" : state.status;
+        ui.runnersCount.textContent = state.runners;
+        
+        const towerNames = { bolt: "테이저", frost: "방지턱", mortar: "물대포" };
+        ui.selected.textContent = towerNames[state.selected] + " 장착";
+        ui.waveButton.disabled = state.status === "단속 중";
+        ui.pauseButton.disabled = state.status === "산책로 점령됨";
+        ui.pauseButton.textContent = state.paused ? "순찰 재개" : "일시정지";
+
+        for (const button of ui.towerButtons) {
+          button.classList.toggle("active", button.dataset.tower === state.selected);
+        }
+      }
+
+      function boot() {
+        const cols = 12; const rows = 7;
+        const tile = 64; const originX = 96; const originY = 46;
+        
+        // 10개의 코스 생성 및 UI 드롭다운 추가
+        const mapList = generateRandomMaps(10, cols, rows);
+        mapList.forEach((_, idx) => {
+          const opt = document.createElement("option");
+          opt.value = idx;
+          opt.textContent = `산책로 코스 0${idx + 1}`;
+          ui.mapSelect.appendChild(opt);
+        });
+
+        const towerTypes = {
+          bolt: { name: "테이저", cost: 45, range: 132, damage: 24, cooldown: 480, color: 0xf2c14e, flash: 0xfff1a6 },
+          frost: { name: "방지턱", cost: 60, range: 114, damage: 12, cooldown: 820, color: 0x45c4d8, flash: 0xbdf7ff, slow: 1000 },
+          mortar: { name: "물대포", cost: 85, range: 154, damage: 38, cooldown: 1160, color: 0xff715b, flash: 0xffc0a8, splash: 54 }
+        };
+
+        function cellKey(col, row) { return `${col}:${row}`; }
+        function cellCenter(col, row) { return { x: originX + col * tile + tile / 2, y: originY + row * tile + tile / 2 }; }
+        function expandPath(nodes) {
+          const cells = new Set();
+          for (let index = 0; index < nodes.length - 1; index += 1) {
+            const [fromCol, fromRow] = nodes[index];
+            const [toCol, toRow] = nodes[index + 1];
+            const colStep = Math.sign(toCol - fromCol);
+            const rowStep = Math.sign(toRow - fromRow);
+            let col = fromCol; let row = fromRow;
+            cells.add(cellKey(col, row));
+            while (col !== toCol || row !== toRow) {
+              col += colStep; row += rowStep;
+              cells.add(cellKey(col, row));
+            }
+          }
+          return cells;
+        }
+
+        let sceneRef = null;
+
+        class DefenseScene extends Phaser.Scene {
+          constructor() { super("DefenseScene"); }
+
+          init() {
+            const mapIndex = parseInt(ui.mapSelect.value) || 0;
+            this.pathNodes = mapList[mapIndex];
+            this.pathCells = expandPath(this.pathNodes);
+            this.pathPoints = this.pathNodes.map(([col, row]) => cellCenter(col, row));
+
+            this.base = 20; this.gold = 120; this.wave = 0; this.score = 0;
+            this.selected = "bolt"; this.waveActive = false; this.paused = false;
+            this.gameOver = false; this.toSpawn = 0; this.nextSpawnAt = 0;
+            this.spawnDelay = 820; this.runners = []; this.towers = [];
+            this.lastPublishedAt = 0;
+          }
+
+          create() {
+            sceneRef = this;
+            this.cameras.main.setBackgroundColor("#151a18");
+            this.drawArena();
+            this.hover = this.add.rectangle(0, 0, tile - 8, tile - 8, 0xffffff, 0.04).setStrokeStyle(2, 0xf2c14e, 0.9).setVisible(false).setDepth(30);
+            
+            const lastPoint = this.pathPoints[this.pathPoints.length - 1];
+            this.add.rectangle(lastPoint.x + 48, lastPoint.y, 28, 84, 0x84a35a).setStrokeStyle(3, 0xd9f6a0).setDepth(6);
+            
+            this.input.on("pointermove", this.handlePointerMove, this);
+            this.input.on("pointerdown", this.handlePointerDown, this);
+            this.publish(true);
+            showNotice("단속 준비 완료");
+          }
+
+          update(time, delta) {
+            if (this.paused || this.gameOver) {
+              this.publish(false, time); return;
+            }
+            if (this.waveActive && this.toSpawn > 0 && time >= this.nextSpawnAt) {
+              this.spawnRunner();
+              this.toSpawn -= 1;
+              this.nextSpawnAt = time + this.spawnDelay;
+            }
+            this.moveRunners(time, delta);
+            this.fireTowers(time);
+
+            if (this.waveActive && this.toSpawn === 0 && this.runners.length === 0) {
+              this.finishWave();
+            }
+            this.publish(false, time);
+          }
+
+          drawArena() {
+            const board = this.add.graphics();
+            board.fillStyle(0x20251f, 1);
+            board.fillRoundedRect(originX - 12, originY - 12, cols * tile + 24, rows * tile + 24, 8);
+            board.lineStyle(2, 0x394033, 1);
+            board.strokeRoundedRect(originX - 12, originY - 12, cols * tile + 24, rows * tile + 24, 8);
+
+            for (let row = 0; row < rows; row += 1) {
+              for (let col = 0; col < cols; col += 1) {
+                const x = originX + col * tile;
+                const y = originY + row * tile;
+                const isPath = this.pathCells.has(cellKey(col, row));
+                const fill = isPath ? 0x5a5140 : (row + col) % 2 === 0 ? 0x263026 : 0x222b24;
+                board.fillStyle(fill, 1);
+                board.fillRect(x, y, tile - 1, tile - 1);
+              }
+            }
+
+            const route = this.add.graphics();
+            route.lineStyle(42, 0x786343, 0.82);
+            route.beginPath();
+            route.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
+            for (let index = 1; index < this.pathPoints.length; index += 1) {
+              route.lineTo(this.pathPoints[index].x, this.pathPoints[index].y);
+            }
+            route.strokePath();
+            route.lineStyle(3, 0xf2c14e, 0.55);
+            route.strokePath();
+            route.setDepth(1);
+            
+            this.add.rectangle(this.pathPoints[0].x - 48, this.pathPoints[0].y, 28, 72, 0x3c2520).setStrokeStyle(3, 0xff715b, 0.95).setDepth(5);
+          }
+
+          handlePointerMove(pointer) {
+            const cell = this.pointerToCell(pointer);
+            this.hideRanges();
+            if (!cell) { this.hover.setVisible(false); return; }
+            const tower = this.findTower(cell.col, cell.row);
+            if (tower) tower.rangeRing.setVisible(true);
+            const placeable = this.canPlace(cell.col, cell.row) || tower;
+            const center = cellCenter(cell.col, cell.row);
+            this.hover.setPosition(center.x, center.y).setStrokeStyle(2, placeable ? 0xf2c14e : 0xff715b, 0.9).setVisible(true);
+          }
+
+          handlePointerDown(pointer) {
+            if (this.gameOver || this.paused) return;
+            const cell = this.pointerToCell(pointer);
+            if (!cell) return;
+            const existing = this.findTower(cell.col, cell.row);
+            if (existing) { this.upgradeTower(existing); return; }
+            this.placeTower(cell.col, cell.row);
+          }
+
+          pointerToCell(pointer) {
+            const col = Math.floor((pointer.x - originX) / tile);
+            const row = Math.floor((pointer.y - originY) / tile);
+            if (col < 0 || row < 0 || col >= cols || row >= rows) return null;
+            return { col, row };
+          }
+
+          canPlace(col, row) {
+            return !this.pathCells.has(cellKey(col, row)) && !this.findTower(col, row);
+          }
+
+          findTower(col, row) {
+            return this.towers.find((tower) => tower.col === col && tower.row === row);
+          }
+
+          placeTower(col, row) {
+            if (!this.canPlace(col, row)) { showNotice("설치 불가 구역"); return; }
+            const config = towerTypes[this.selected];
+            if (this.gold < config.cost) { showNotice("예산 부족"); return; }
+            
+            const center = cellCenter(col, row);
+            const tower = {
+              col, row, x: center.x, y: center.y, type: this.selected,
+              level: 1, damage: config.damage, range: config.range,
+              cooldown: config.cooldown, nextFire: 0
+            };
+            this.gold -= config.cost;
+            this.paintTower(tower);
+            this.towers.push(tower);
+            showNotice(`${config.name} 배치 완료`);
+            this.publish(true);
+          }
+
+          paintTower(tower) {
+            const config = towerTypes[tower.type];
+            tower.rangeRing = this.add.circle(tower.x, tower.y, tower.range, 0xffffff, 0).setStrokeStyle(2, config.color, 0.22).setVisible(false).setDepth(2);
+            tower.base = this.add.rectangle(tower.x, tower.y, 36, 36, 0x171a18).setStrokeStyle(3, 0xefe2b8, 0.75).setDepth(7);
+            tower.head = this.add.circle(tower.x, tower.y, 13, config.color, 1).setDepth(8);
+            tower.levelText = this.add.text(tower.x, tower.y + 28, "I", {
+              color: "#f5efd9", fontFamily: "Arial, Helvetica, sans-serif", fontSize: "13px", fontStyle: "700"
+            }).setOrigin(0.5).setDepth(9);
+          }
+
+          upgradeTower(tower) {
+            if (tower.level >= 3) { showNotice("최대 레벨 도달"); return; }
+            const cost = 32 + tower.level * 28;
+            if (this.gold < cost) { showNotice("예산 부족"); return; }
+            
+            const config = towerTypes[tower.type];
+            this.gold -= cost; tower.level += 1;
+            tower.damage = Math.round(tower.damage * 1.38);
+            tower.range += 14;
+            tower.cooldown = Math.max(300, Math.floor(tower.cooldown * 0.88));
+            tower.rangeRing.setRadius(tower.range);
+            tower.head.setRadius(12 + tower.level * 3);
+            tower.levelText.setText("I".repeat(tower.level));
+            this.tweens.add({ targets: [tower.base, tower.head], scale: 1.18, duration: 90, yoyo: true });
+            showNotice(`${config.name} 성능 강화`);
+            this.publish(true);
+          }
+
+          hideRanges() { for (const tower of this.towers) tower.rangeRing.setVisible(false); }
+
+          startWave() {
+            if (this.waveActive || this.gameOver) return;
+            this.wave += 1; this.waveActive = true;
+            this.toSpawn = 7 + this.wave * 3;
+            this.spawnDelay = Math.max(300, 840 - this.wave * 32);
+            this.nextSpawnAt = this.time.now + 250;
+            showNotice(`경고: 러너 크루 웨이브 ${this.wave} 진입`);
+            this.publish(true);
+          }
+
+          finishWave() {
+            this.waveActive = false;
+            const reward = 34 + this.wave * 6;
+            this.gold += reward; this.score += 220 + this.wave * 40;
+            showNotice(`단속 성공! 추가 예산 +${reward}`);
+            this.publish(true);
+          }
+
+          spawnRunner() {
+            const start = this.pathPoints[0];
+            // 일반 러너보다 훨씬 빠르고 안하무인인 "풀코스 폭주 러너" 컨셉 추가
+            const isRecklessRunner = this.wave % 3 === 0 && this.toSpawn % 4 === 0;
+            const maxHp = isRecklessRunner ? 130 + this.wave * 35 : 60 + this.wave * 20;
+            const radius = isRecklessRunner ? 16 : 12;
+            const color = isRecklessRunner ? 0xff0055 : 0xffaa00;
+            // 자라니 이상의 속도를 구현하기 위해 이동속도를 대폭 늘렸습니다.
+            const speed = isRecklessRunner ? 85 + this.wave * 6 : 55 + this.wave * 3;
+            
+            const runner = {
+              x: start.x, y: start.y, pathIndex: 1, hp: maxHp, maxHp, speed,
+              bounty: isRecklessRunner ? 25 + this.wave * 2 : 10 + this.wave,
+              radius, slowUntil: 0, alive: true
+            };
+
+            runner.body = this.add.circle(start.x, start.y, radius, color, 1).setDepth(10);
+            runner.core = this.add.circle(start.x, start.y, radius * 0.42, 0x2b1814, 1).setDepth(11);
+            runner.barBack = this.add.rectangle(start.x - 15, start.y - 23, 30, 4, 0x281816).setOrigin(0, 0.5).setDepth(12);
+            runner.bar = this.add.rectangle(start.x - 15, start.y - 23, 30, 4, 0x84a35a).setOrigin(0, 0.5).setDepth(13);
+            this.runners.push(runner);
+            
+            if (isRecklessRunner) {
+              const alert = this.add.text(start.x, start.y - 40, "폭주 러너!", { color: "#ff0055", fontSize: "11px", fontWeight: "bold" }).setOrigin(0.5);
+              this.tweens.add({ targets: alert, y: start.y - 60, alpha: 0, duration: 800, onComplete: () => alert.destroy() });
+            }
+          }
+
+          moveRunners(time, delta) {
+            const stepFactor = delta / 1000;
+            for (const runner of this.runners) {
+              if (!runner.alive) continue;
+              const target = this.pathPoints[runner.pathIndex];
+
+              if (!target) { this.runnerReachedBase(runner); continue; }
+
+              const slowed = runner.slowUntil > time;
+              const speed = runner.speed * (slowed ? 0.4 : 1); // 감속 효과 상향
+              const distance = Phaser.Math.Distance.Between(runner.x, runner.y, target.x, target.y);
+              const travel = speed * stepFactor;
+
+              if (travel >= distance) {
+                runner.x = target.x; runner.y = target.y; runner.pathIndex += 1;
+              } else {
+                runner.x += ((target.x - runner.x) / distance) * travel;
+                runner.y += ((target.y - runner.y) / distance) * travel;
+              }
+
+              runner.body.setPosition(runner.x, runner.y); runner.core.setPosition(runner.x, runner.y);
+              runner.body.setFillStyle(slowed ? 0x45c4d8 : runner.radius > 14 ? 0xff0055 : 0xffaa00);
+              runner.barBack.setPosition(runner.x - 15, runner.y - 23);
+              runner.bar.setPosition(runner.x - 15, runner.y - 23);
+            }
+            this.runners = this.runners.filter((runner) => runner.alive);
+          }
+
+          runnerReachedBase(runner) {
+            runner.alive = false; this.destroyRunner(runner);
+            this.base -= runner.radius > 14 ? 3 : 1; // 폭주 러너는 평화 지수를 3이나 깎음
+            this.cameras.main.shake(140, 0.004);
+
+            if (this.base <= 0) {
+              this.base = 0; this.gameOver = true; this.waveActive = false;
+              showNotice("산책로 점령당함 (단속 실패)");
+            }
+            this.publish(true);
+          }
+
+          fireTowers(time) {
+            for (const tower of this.towers) {
+              if (time < tower.nextFire) continue;
+              const target = this.pickTarget(tower);
+              if (!target) continue;
+              this.attack(tower, target, time);
+              tower.nextFire = time + tower.cooldown;
+            }
+          }
+
+          pickTarget(tower) {
+            let best = null; let bestScore = -1;
+            for (const runner of this.runners) {
+              const distance = Phaser.Math.Distance.Between(tower.x, tower.y, runner.x, runner.y);
+              if (distance > tower.range) continue;
+              const progress = runner.pathIndex * 1000 - distance;
+              if (progress > bestScore) { best = runner; bestScore = progress; }
+            }
+            return best;
+          }
+
+          attack(tower, target, time) {
+            const config = towerTypes[tower.type];
+            if (tower.type === "mortar") {
+              this.damageArea(target.x, target.y, tower.damage, config.splash);
+              this.drawExplosion(target.x, target.y, config.splash, config.color);
+            } else {
+              this.damageRunner(target, tower.damage);
+              if (config.slow) target.slowUntil = time + config.slow;
+            }
+            this.drawShot(tower.x, tower.y, target.x, target.y, config.flash);
+          }
+
+          damageArea(x, y, damage, radius) {
+            for (const runner of this.runners) {
+              const distance = Phaser.Math.Distance.Between(x, y, runner.x, runner.y);
+              if (distance <= radius) this.damageRunner(runner, damage * (1 - distance / (radius * 1.8)));
+            }
+          }
+
+          damageRunner(runner, amount) {
+            if (!runner.alive) return;
+            runner.hp -= Math.max(4, Math.round(amount));
+            runner.bar.scaleX = Math.max(0, runner.hp / runner.maxHp);
+
+            if (runner.hp <= 0) {
+              runner.alive = false;
+              this.gold += runner.bounty;
+              this.score += runner.bounty * 8 + this.wave * 3;
+              this.destroyRunner(runner);
+            }
+          }
+
+          destroyRunner(runner) {
+            runner.body.destroy(); runner.core.destroy();
+            runner.barBack.destroy(); runner.bar.destroy();
+          }
+
+          drawShot(fromX, fromY, toX, toY, color) {
+            const beam = this.add.graphics().setDepth(20);
+            beam.lineStyle(4, color, 0.9); beam.lineBetween(fromX, fromY, toX, toY);
+            this.tweens.add({ targets: beam, alpha: 0, duration: 130, onComplete: () => beam.destroy() });
+          }
+
+          drawExplosion(x, y, radius, color) {
+            const blast = this.add.circle(x, y, 8, color, 0.12).setStrokeStyle(3, color, 0.8).setDepth(18);
+            this.tweens.add({ targets: blast, radius, alpha: 0, duration: 220, onComplete: () => blast.destroy() });
+          }
+
+          command(event) {
+            if (!event) return;
+            if (event.command === "select") {
+              this.selected = event.value;
+              showNotice(`${towerTypes[this.selected].name} 준비`);
+              this.publish(true);
+            }
+            if (event.command === "wave") this.startWave();
+            if (event.command === "pause") {
+              this.paused = !this.paused;
+              showNotice(this.paused ? "휴식 중" : "순찰 재개");
+              this.publish(true);
+            }
+            if (event.command === "restart") {
+              showNotice("코스 재배치 및 작전 초기화");
+              this.scene.restart();
+            }
+          }
+
+          publish(force = false, time = this.time.now) {
+            if (!force && time - this.lastPublishedAt < 180) return;
+            this.lastPublishedAt = time;
+            paintHud({
+              base: this.base, gold: this.gold, wave: this.wave, score: this.score,
+              runners: this.runners.length + this.toSpawn, selected: this.selected,
+              status: this.gameOver ? "산책로 점령됨" : this.waveActive ? "단속 중" : "순찰 대기",
+              paused: this.paused
+            });
+          }
+        }
+
+        new Phaser.Game({
+          type: Phaser.AUTO, parent: "game", width: 960, height: 540,
+          backgroundColor: "#151a18", scene: DefenseScene,
+          scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+          render: { antialias: true, pixelArt: false }
+        });
+
+        for (const button of ui.towerButtons) {
+          button.addEventListener("click", () => sceneRef?.command({ command: "select", value: button.dataset.tower }));
+        }
+
+        ui.waveButton.addEventListener("click", () => sceneRef?.command({ command: "wave" }));
+        ui.pauseButton.addEventListener("click", () => sceneRef?.command({ command: "pause" }));
+        ui.resetButton.addEventListener("click", () => sceneRef?.command({ command: "restart" }));
+        
+        // 맵이 변경되면 씬을 즉시 재시작
+        ui.mapSelect.addEventListener("change", () => {
+          if(sceneRef && !sceneRef.gameOver) {
+            sceneRef.command({ command: "restart" });
+          }
+        });
+      }
+    </script>
+  </body>
+</html>
