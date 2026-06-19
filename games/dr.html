@@ -211,18 +211,19 @@
       };
 
       // 랜덤 맵 생성기 (10개)
-      // 기존 방식은 가로 이동 폭이 길어서 코스가 직선적으로 보였습니다.
-      // 아래 버전은 짧은 가로 구간 + 잦은 세로 이동 + 방향 전환 점수 검사를 통해
-      // S자, 지그재그, ㄷ자형 굴곡이 더 자주 나오도록 만듭니다.
+      // 각 맵은 1~3개의 진입로를 가질 수 있고, 모든 진입로는 최종 방어 지점으로 합류합니다.
+      // 또한 포탑을 설치할 수 있는 칸을 별도 계산해 “맵 전체 도배”를 막습니다.
       function generateRandomMaps(count, cols, rows) {
         const maps = [];
         const minRow = 1;
         const maxRow = rows - 2;
         const minTurns = 8;
         const minVerticalDistance = rows + 1;
+        const placementZoneCount = 15;
 
         const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
         const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+        const key = (col, row) => `${col}:${row}`;
 
         function addNode(nodes, col, row) {
           const last = nodes[nodes.length - 1];
@@ -247,20 +248,18 @@
           return { turns, verticalDistance, visitedRows: visitedRows.size };
         }
 
-        function makeCandidate(preferredStartRow = null) {
+        function makeCandidate(preferredStartRow = null, forcedEndRow = null) {
           let col = 0;
           let row = preferredStartRow ?? randomInt(minRow, maxRow);
           let verticalDir = Math.random() > 0.5 ? 1 : -1;
           const nodes = [[col, row]];
 
           while (col < cols - 1) {
-            // 1~2칸 단위로 짧게 전진시켜 굴곡을 만들 기회를 늘립니다.
             const stepX = randomInt(1, 2);
             col = Math.min(cols - 1, col + stepX);
             addNode(nodes, col, row);
             if (col >= cols - 1) break;
 
-            // 가장자리에서는 반드시 안쪽으로 튕기고, 중앙에서는 방향 반전 확률을 높입니다.
             if (row <= minRow) verticalDir = 1;
             else if (row >= maxRow) verticalDir = -1;
             else if (Math.random() < 0.72) verticalDir *= -1;
@@ -270,7 +269,6 @@
             row = clamp(row + verticalDir * stepY, minRow, maxRow);
             addNode(nodes, col, row);
 
-            // 가끔 짧은 역방향 꺾임을 추가해 ㄷ자/헤어핀 느낌을 만듭니다.
             if (col < cols - 2 && Math.random() < 0.34) {
               col = Math.min(cols - 1, col + 1);
               addNode(nodes, col, row);
@@ -284,24 +282,82 @@
             }
           }
 
+          if (forcedEndRow !== null && row !== forcedEndRow) {
+            addNode(nodes, cols - 1, forcedEndRow);
+          }
+
           return nodes;
         }
 
+        function expandPathCells(nodes) {
+          const cells = new Set();
+          for (let index = 0; index < nodes.length - 1; index += 1) {
+            const [fromCol, fromRow] = nodes[index];
+            const [toCol, toRow] = nodes[index + 1];
+            const colStep = Math.sign(toCol - fromCol);
+            const rowStep = Math.sign(toRow - fromRow);
+            let col = fromCol;
+            let row = fromRow;
+            cells.add(key(col, row));
+            while (col !== toCol || row !== toRow) {
+              col += colStep;
+              row += rowStep;
+              cells.add(key(col, row));
+            }
+          }
+          return cells;
+        }
+
+        function mergePathCells(routes) {
+          const cells = new Set();
+          routes.forEach((route) => expandPathCells(route).forEach((cell) => cells.add(cell)));
+          return cells;
+        }
+
+        function buildPlacementZones(routes) {
+          const pathCells = mergePathCells(routes);
+          const scored = [];
+          const seen = new Set();
+
+          for (const route of routes) {
+            for (let index = 0; index < route.length; index += 1) {
+              const [col, row] = route[index];
+              const neighbors = [
+                [col, row - 1], [col, row + 1], [col - 1, row], [col + 1, row],
+                [col - 1, row - 1], [col + 1, row + 1]
+              ];
+
+              for (const [zoneCol, zoneRow] of neighbors) {
+                if (zoneCol < 0 || zoneRow < 0 || zoneCol >= cols || zoneRow >= rows) continue;
+                const zoneKey = key(zoneCol, zoneRow);
+                if (seen.has(zoneKey) || pathCells.has(zoneKey)) continue;
+                seen.add(zoneKey);
+
+                const centerBias = Math.abs(zoneCol - Math.floor(cols * 0.55));
+                const edgePenalty = zoneCol <= 1 || zoneCol >= cols - 2 ? 4 : 0;
+                const routeValue = 30 - centerBias * 2 - edgePenalty + Math.random() * 8 + index * 0.35;
+                scored.push({ zoneKey, routeValue });
+              }
+            }
+          }
+
+          scored.sort((a, b) => b.routeValue - a.routeValue);
+          return new Set(scored.slice(0, placementZoneCount).map((item) => item.zoneKey));
+        }
+
         for (let i = 0; i < count; i += 1) {
-          let best = null;
+          let mainRoute = null;
           let bestScore = -1;
-
-          // 같은 시작 줄만 반복되지 않도록 시작 위치를 분산합니다.
           const preferredStartRow = minRow + (i % (maxRow - minRow + 1));
+          const endRow = minRow + ((i * 2 + 1) % (maxRow - minRow + 1));
 
-          // 여러 후보 중 굴곡 점수가 높은 코스를 채택합니다.
           for (let attempt = 0; attempt < 70; attempt += 1) {
-            const candidate = makeCandidate(attempt < 12 ? preferredStartRow : null);
+            const candidate = makeCandidate(attempt < 12 ? preferredStartRow : null, endRow);
             const stats = scorePath(candidate);
             const score = stats.turns * 3 + stats.verticalDistance * 2 + stats.visitedRows;
 
             if (score > bestScore) {
-              best = candidate;
+              mainRoute = candidate;
               bestScore = score;
             }
 
@@ -310,12 +366,39 @@
               stats.verticalDistance >= minVerticalDistance &&
               stats.visitedRows >= Math.min(4, maxRow - minRow + 1)
             ) {
-              best = candidate;
+              mainRoute = candidate;
               break;
             }
           }
 
-          maps.push(best);
+          const routes = [mainRoute];
+          const entranceCount = 1 + (i % 3); // 맵별 1~3개 진입로
+          const mergeCol = randomInt(3, 5);
+          const mergeNode = mainRoute.find(([col]) => col >= mergeCol) ?? mainRoute[Math.min(3, mainRoute.length - 1)];
+          const usedStartRows = new Set([mainRoute[0][1]]);
+
+          for (let entrance = 1; entrance < entranceCount; entrance += 1) {
+            let startRow = minRow + ((preferredStartRow + entrance * 2) % (maxRow - minRow + 1));
+            while (usedStartRows.has(startRow)) startRow = startRow >= maxRow ? minRow : startRow + 1;
+            usedStartRows.add(startRow);
+
+            const branch = [[0, startRow]];
+            const joinCol = mergeNode[0];
+            const joinRow = mergeNode[1];
+            const midCol = Math.max(1, Math.floor(joinCol / 2));
+            addNode(branch, midCol, startRow);
+            addNode(branch, midCol, joinRow);
+            addNode(branch, joinCol, joinRow);
+
+            const joinIndex = mainRoute.findIndex(([col, row]) => col === joinCol && row === joinRow);
+            routes.push(branch.concat(mainRoute.slice(joinIndex + 1)));
+          }
+
+          maps.push({
+            routes,
+            towerZones: buildPlacementZones(routes),
+            entranceCount: routes.length
+          });
         }
 
         return maps;
@@ -359,10 +442,10 @@
         
         // 10개의 코스 생성 및 UI 드롭다운 추가
         const mapList = generateRandomMaps(10, cols, rows);
-        mapList.forEach((_, idx) => {
+        mapList.forEach((map, idx) => {
           const opt = document.createElement("option");
           opt.value = idx;
-          opt.textContent = `산책로 코스 0${idx + 1}`;
+          opt.textContent = `산책로 코스 0${idx + 1} · 진입로 ${map.entranceCount}개`;
           ui.mapSelect.appendChild(opt);
         });
 
@@ -426,8 +509,14 @@
 
           init() {
             const mapIndex = parseInt(ui.mapSelect.value) || 0;
-            this.pathNodes = mapList[mapIndex];
-            this.pathCells = expandPath(this.pathNodes);
+            this.mapData = mapList[mapIndex];
+            this.routes = this.mapData.routes;
+            this.pathNodes = this.routes[0];
+            this.pathCells = new Set();
+            for (const route of this.routes) {
+              for (const cell of expandPath(route)) this.pathCells.add(cell);
+            }
+            this.towerZones = this.mapData.towerZones;
             this.pathPoints = this.pathNodes.map(([col, row]) => cellCenter(col, row));
 
             this.base = 20; this.gold = 105; this.wave = 0; this.score = 0;
@@ -446,6 +535,9 @@
             
             const lastPoint = this.pathPoints[this.pathPoints.length - 1];
             this.add.rectangle(lastPoint.x + 48, lastPoint.y, 28, 84, 0x84a35a).setStrokeStyle(3, 0xd9f6a0).setDepth(6);
+            this.add.text(lastPoint.x + 48, lastPoint.y + 52, "종점", {
+              color: "#d9f6a0", fontFamily: "Arial, Helvetica, sans-serif", fontSize: "11px", fontStyle: "700"
+            }).setOrigin(0.5).setDepth(7);
             
             this.input.on("pointermove", this.handlePointerMove, this);
             this.input.on("pointerdown", this.handlePointerDown, this);
@@ -490,19 +582,35 @@
               }
             }
 
-            const route = this.add.graphics();
-            route.lineStyle(42, 0x786343, 0.82);
-            route.beginPath();
-            route.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
-            for (let index = 1; index < this.pathPoints.length; index += 1) {
-              route.lineTo(this.pathPoints[index].x, this.pathPoints[index].y);
+            const zoneLayer = this.add.graphics().setDepth(2);
+            zoneLayer.lineStyle(2, 0x84a35a, 0.78);
+            zoneLayer.fillStyle(0x84a35a, 0.13);
+            for (const zoneKey of this.towerZones) {
+              const [col, row] = zoneKey.split(":").map(Number);
+              const x = originX + col * tile + 7;
+              const y = originY + row * tile + 7;
+              zoneLayer.fillRoundedRect(x, y, tile - 15, tile - 15, 6);
+              zoneLayer.strokeRoundedRect(x, y, tile - 15, tile - 15, 6);
             }
-            route.strokePath();
-            route.lineStyle(3, 0xf2c14e, 0.55);
-            route.strokePath();
-            route.setDepth(1);
-            
-            this.add.rectangle(this.pathPoints[0].x - 48, this.pathPoints[0].y, 28, 72, 0x3c2520).setStrokeStyle(3, 0xff715b, 0.95).setDepth(5);
+
+            for (const routeNodes of this.routes) {
+              const routePoints = routeNodes.map(([col, row]) => cellCenter(col, row));
+              const route = this.add.graphics();
+              route.lineStyle(42, 0x786343, 0.82);
+              route.beginPath();
+              route.moveTo(routePoints[0].x, routePoints[0].y);
+              for (let index = 1; index < routePoints.length; index += 1) {
+                route.lineTo(routePoints[index].x, routePoints[index].y);
+              }
+              route.strokePath();
+              route.lineStyle(3, 0xf2c14e, 0.55);
+              route.strokePath();
+              route.setDepth(1);
+
+              this.add.rectangle(routePoints[0].x - 48, routePoints[0].y, 28, 72, 0x3c2520)
+                .setStrokeStyle(3, 0xff715b, 0.95)
+                .setDepth(5);
+            }
           }
 
           handlePointerMove(pointer) {
@@ -533,7 +641,7 @@
           }
 
           canPlace(col, row) {
-            return !this.pathCells.has(cellKey(col, row)) && !this.findTower(col, row);
+            return this.towerZones.has(cellKey(col, row)) && !this.pathCells.has(cellKey(col, row)) && !this.findTower(col, row);
           }
 
           findTower(col, row) {
@@ -541,7 +649,7 @@
           }
 
           placeTower(col, row) {
-            if (!this.canPlace(col, row)) { showNotice("설치 불가 구역"); return; }
+            if (!this.canPlace(col, row)) { showNotice("초록 표시 구역에만 설치 가능"); return; }
             const config = towerTypes[this.selected];
             if (this.gold < config.cost) { showNotice("예산 부족"); return; }
             
@@ -648,7 +756,9 @@
           }
 
           spawnRunner(typeKey = "selfie") {
-            const start = this.pathPoints[0];
+            const routeNodes = this.routes[Math.floor(Math.random() * this.routes.length)];
+            const runnerPathPoints = routeNodes.map(([col, row]) => cellCenter(col, row));
+            const start = runnerPathPoints[0];
             const type = runnerTypes[typeKey];
             const maxHp = Math.round((type.hp + this.wave * type.hpWave) * (1 + Math.max(0, this.wave - 1) * 0.045));
             const speed = type.speed + this.wave * type.speedWave + Math.max(0, this.wave - 3) * 1.8;
@@ -657,7 +767,7 @@
             
             const runner = {
               typeKey, typeName: type.name, x: start.x, y: start.y, visualX: start.x, visualY: start.y,
-              pathIndex: 1, hp: maxHp, maxHp, speed, bounty,
+              pathPoints: runnerPathPoints, pathIndex: 1, hp: maxHp, maxHp, speed, bounty,
               radius: type.radius, peaceDamage: type.peaceDamage, slowUntil: 0,
               alive: true, color: type.color, coreColor: type.core,
               wobble: type.wobble, wobbleSeed: Math.random() * Math.PI * 2,
@@ -690,7 +800,7 @@
             const stepFactor = delta / 1000;
             for (const runner of this.runners) {
               if (!runner.alive) continue;
-              const target = this.pathPoints[runner.pathIndex];
+              const target = runner.pathPoints[runner.pathIndex];
 
               if (!target) { this.runnerReachedBase(runner); continue; }
 
