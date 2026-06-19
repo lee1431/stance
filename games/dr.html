@@ -4,8 +4,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Aegis Trail Defense - 빌런 러너 확장판</title>
-    <meta name="description" content="러너 타입이 다양해진 실시간 산책로 디펜스 게임">
+    <title>Aegis Trail Defense - 매 회차 보스전</title>
+    <meta name="description" content="매 회차 대왕 라스트 보스와 호위 부대를 상대하는 실시간 산책로 디펜스 게임">
     <style>
       * { box-sizing: border-box; }
       :root {
@@ -135,9 +135,9 @@
       <header class="site-header">
         <div>
           <p class="kicker">Aegis Trail Defense</p>
-          <h1>산책로 빌런 단속반</h1>
+          <h1>대왕 러너 토벌전</h1>
         </div>
-        <p class="site-summary">셀카봉 러너, 스프린터, 탱커, 지그재그 러너까지 몰려옵니다. 굴곡진 10개 코스에서 산책로 평화를 지켜내세요!</p>
+        <p class="site-summary">매 회차마다 대왕 라스트 보스가 호위 부대를 이끌고 등장합니다. 굴곡진 10개 코스에서 보스와 부대를 모두 막아내야 클리어됩니다!</p>
       </header>
 
       <section class="defense-layout" aria-label="Aegis Line defense game">
@@ -394,9 +394,9 @@
             bounty: 18, bountyWave: 1.6, peaceDamage: 1, weight: 18, wobble: 11
           },
           boss: {
-            name: "풀코스 대장", tag: "보스", color: 0xff0055, core: 0x300012,
-            hp: 320, hpWave: 75, speed: 48, speedWave: 2.2, radius: 22,
-            bounty: 60, bountyWave: 5, peaceDamage: 5, weight: 0, wobble: 3
+            name: "대왕 라스트 보스", tag: "왕보스", color: 0xff0055, core: 0x300012,
+            hp: 420, hpWave: 95, speed: 42, speedWave: 1.8, radius: 24,
+            bounty: 78, bountyWave: 7, peaceDamage: 6, weight: 0, wobble: 3
           }
         };
 
@@ -434,6 +434,7 @@
             this.selected = "bolt"; this.waveActive = false; this.paused = false;
             this.gameOver = false; this.toSpawn = 0; this.nextSpawnAt = 0;
             this.spawnDelay = 820; this.runners = []; this.towers = [];
+            this.spawnQueue = []; this.bossPhase = false; this.bossDefeatedThisWave = false;
             this.lastPublishedAt = 0;
           }
 
@@ -456,9 +457,10 @@
             if (this.paused || this.gameOver) {
               this.publish(false, time); return;
             }
-            if (this.waveActive && this.toSpawn > 0 && time >= this.nextSpawnAt) {
-              this.spawnRunner();
-              this.toSpawn -= 1;
+            if (this.waveActive && this.spawnQueue.length > 0 && time >= this.nextSpawnAt) {
+              const nextType = this.spawnQueue.shift();
+              this.spawnRunner(nextType);
+              this.toSpawn = this.spawnQueue.length;
               this.nextSpawnAt = time + this.spawnDelay;
             }
             this.moveRunners(time, delta);
@@ -589,26 +591,45 @@
           startWave() {
             if (this.waveActive || this.gameOver) return;
             this.wave += 1; this.waveActive = true;
-            this.toSpawn = 7 + this.wave * 3;
-            this.spawnDelay = Math.max(280, 820 - this.wave * 30);
+            this.bossPhase = false; this.bossDefeatedThisWave = false;
+            this.spawnQueue = this.buildWaveSquad();
+            this.toSpawn = this.spawnQueue.length;
+            this.spawnDelay = Math.max(260, 780 - this.wave * 26);
             this.nextSpawnAt = this.time.now + 250;
-            showNotice(`경고: 산책로 빌런 웨이브 ${this.wave} 진입`);
+            showNotice(`웨이브 ${this.wave}: 대왕 라스트 보스 부대 접근!`);
             this.publish(true);
           }
 
           finishWave() {
-            this.waveActive = false;
-            const reward = 34 + this.wave * 6;
-            this.gold += reward; this.score += 220 + this.wave * 40;
-            showNotice(`단속 성공! 추가 예산 +${reward}`);
+            this.waveActive = false; this.bossPhase = false;
+            const reward = 42 + this.wave * 9;
+            this.gold += reward; this.score += 300 + this.wave * 65;
+            showNotice(`보스 토벌 성공! 클리어 보너스 +${reward}`);
             this.publish(true);
           }
 
-          chooseRunnerType() {
-            if (this.wave % 5 === 0 && this.toSpawn === Math.ceil((7 + this.wave * 3) / 2)) return "boss";
-            if (this.wave >= 4 && this.toSpawn % 7 === 0) return "tanker";
-            if (this.wave >= 2 && this.toSpawn % 5 === 0) return "sprinter";
-            if (this.wave >= 3 && this.toSpawn % 4 === 0) return "zigzag";
+          buildWaveSquad() {
+            const squad = [];
+            const vanguardCount = 5 + this.wave * 2;
+            for (let i = 0; i < vanguardCount; i += 1) squad.push(this.chooseMinionType(i));
+
+            const escortCount = 3 + Math.floor(this.wave / 2);
+            const escorts = [];
+            for (let i = 0; i < escortCount; i += 1) {
+              if (i % 4 === 0) escorts.push("tanker");
+              else if (i % 3 === 0) escorts.push("zigzag");
+              else escorts.push("sprinter");
+            }
+
+            // 보스가 먼저 모습을 드러내고, 호위 부대가 뒤따라 겹쳐 들어오도록 구성합니다.
+            squad.push("boss", ...escorts);
+            return squad;
+          }
+
+          chooseMinionType(index = 0) {
+            if (this.wave >= 4 && index % 7 === 0) return "tanker";
+            if (this.wave >= 2 && index % 5 === 0) return "sprinter";
+            if (this.wave >= 3 && index % 4 === 0) return "zigzag";
 
             const available = Object.entries(runnerTypes).filter(([key]) => {
               if (key === "boss") return false;
@@ -626,9 +647,8 @@
             return "selfie";
           }
 
-          spawnRunner() {
+          spawnRunner(typeKey = "selfie") {
             const start = this.pathPoints[0];
-            const typeKey = this.chooseRunnerType();
             const type = runnerTypes[typeKey];
             const maxHp = Math.round(type.hp + this.wave * type.hpWave);
             const speed = type.speed + this.wave * type.speedWave;
@@ -652,6 +672,11 @@
               color: "#f6f0dc", fontFamily: "Arial, Helvetica, sans-serif", fontSize: "10px", fontStyle: "700"
             }).setOrigin(0.5).setDepth(14);
             this.runners.push(runner);
+            if (typeKey === "boss") {
+              this.bossPhase = true;
+              this.cameras.main.shake(220, 0.006);
+              showNotice("대왕 라스트 보스 등장! 호위 부대까지 모두 막아야 클리어!");
+            }
             
             if (typeKey !== "selfie") {
               const alert = this.add.text(start.x, start.y - type.radius - 26, `${type.name}!`, {
@@ -699,6 +724,10 @@
             this.cameras.main.shake(120 + runner.peaceDamage * 35, 0.003 + runner.peaceDamage * 0.0008);
             showNotice(`${runner.typeName} 통과! 평화 지수 -${runner.peaceDamage}`);
 
+            if (runner.typeKey === "boss") {
+              this.gameOver = true; this.waveActive = false;
+              showNotice("대왕 보스가 산책로를 장악했습니다! 단속 실패");
+            }
             if (this.base <= 0) {
               this.base = 0; this.gameOver = true; this.waveActive = false;
               showNotice("산책로 점령당함 (단속 실패)");
@@ -755,6 +784,11 @@
               runner.alive = false;
               this.gold += runner.bounty;
               this.score += runner.bounty * 8 + this.wave * 3;
+              if (runner.typeKey === "boss") {
+                this.bossDefeatedThisWave = true;
+                this.cameras.main.shake(260, 0.005);
+                showNotice("대왕 라스트 보스 제압! 남은 호위 부대를 정리하세요!");
+              }
               this.destroyRunner(runner);
             }
           }
@@ -801,7 +835,7 @@
             paintHud({
               base: this.base, gold: this.gold, wave: this.wave, score: this.score,
               runners: this.runners.length + this.toSpawn, selected: this.selected,
-              status: this.gameOver ? "산책로 점령됨" : this.waveActive ? "단속 중" : "순찰 대기",
+              status: this.gameOver ? "산책로 점령됨" : this.waveActive ? (this.bossPhase ? "보스전" : "부대 진입 중") : "순찰 대기",
               paused: this.paused
             });
           }
