@@ -150,7 +150,7 @@
         <aside class="hud-panel" aria-label="game controls">
           <div class="stat-grid">
             <div class="stat-card"><span>평화 지수</span><strong id="base">20</strong></div>
-            <div class="stat-card"><span>예산</span><strong id="gold">120</strong></div>
+            <div class="stat-card"><span>예산</span><strong id="gold">105</strong></div>
             <div class="stat-card"><span>크루 웨이브</span><strong id="wave">0</strong></div>
             <div class="stat-card"><span>단속 점수</span><strong id="score">0</strong></div>
           </div>
@@ -376,27 +376,27 @@
           selfie: {
             name: "셀카봉 러너", tag: "촬영 중", color: 0xffaa00, core: 0x2b1814,
             hp: 62, hpWave: 18, speed: 54, speedWave: 2.8, radius: 12,
-            bounty: 10, bountyWave: 1, peaceDamage: 1, weight: 52, wobble: 0
+            bounty: 6, bountyWave: 0.35, peaceDamage: 1, weight: 48, wobble: 0
           },
           sprinter: {
             name: "스프린터 빌런", tag: "빠름", color: 0x39ff88, core: 0x10271b,
             hp: 42, hpWave: 12, speed: 98, speedWave: 5.5, radius: 10,
-            bounty: 14, bountyWave: 1.2, peaceDamage: 1, weight: 22, wobble: 2
+            bounty: 8, bountyWave: 0.45, peaceDamage: 1, weight: 24, wobble: 2
           },
           tanker: {
             name: "탱커 러너", tag: "튼튼함", color: 0x8b5cf6, core: 0x21113d,
             hp: 185, hpWave: 42, speed: 34, speedWave: 1.4, radius: 18,
-            bounty: 28, bountyWave: 2.5, peaceDamage: 3, weight: 18, wobble: 0
+            bounty: 13, bountyWave: 0.8, peaceDamage: 3, weight: 22, wobble: 0
           },
           zigzag: {
             name: "지그재그 러너", tag: "회피", color: 0x45c4d8, core: 0x0d2930,
             hp: 76, hpWave: 21, speed: 68, speedWave: 3.4, radius: 12,
-            bounty: 18, bountyWave: 1.6, peaceDamage: 1, weight: 18, wobble: 11
+            bounty: 9, bountyWave: 0.55, peaceDamage: 1, weight: 20, wobble: 11
           },
           boss: {
             name: "대왕 라스트 보스", tag: "왕보스", color: 0xff0055, core: 0x300012,
             hp: 420, hpWave: 95, speed: 42, speedWave: 1.8, radius: 24,
-            bounty: 78, bountyWave: 7, peaceDamage: 6, weight: 0, wobble: 3
+            bounty: 28, bountyWave: 1.8, peaceDamage: 6, weight: 0, wobble: 3
           }
         };
 
@@ -430,7 +430,7 @@
             this.pathCells = expandPath(this.pathNodes);
             this.pathPoints = this.pathNodes.map(([col, row]) => cellCenter(col, row));
 
-            this.base = 20; this.gold = 120; this.wave = 0; this.score = 0;
+            this.base = 20; this.gold = 105; this.wave = 0; this.score = 0;
             this.selected = "bolt"; this.waveActive = false; this.paused = false;
             this.gameOver = false; this.toSpawn = 0; this.nextSpawnAt = 0;
             this.spawnDelay = 820; this.runners = []; this.towers = [];
@@ -570,14 +570,14 @@
 
           upgradeTower(tower) {
             if (tower.level >= 3) { showNotice("최대 레벨 도달"); return; }
-            const cost = 32 + tower.level * 28;
+            const cost = 48 + tower.level * 38;
             if (this.gold < cost) { showNotice("예산 부족"); return; }
             
             const config = towerTypes[tower.type];
             this.gold -= cost; tower.level += 1;
-            tower.damage = Math.round(tower.damage * 1.38);
-            tower.range += 14;
-            tower.cooldown = Math.max(300, Math.floor(tower.cooldown * 0.88));
+            tower.damage = Math.round(tower.damage * 1.30);
+            tower.range += 10;
+            tower.cooldown = Math.max(330, Math.floor(tower.cooldown * 0.91));
             tower.rangeRing.setRadius(tower.range);
             tower.head.setRadius(12 + tower.level * 3);
             tower.levelText.setText("I".repeat(tower.level));
@@ -602,18 +602,18 @@
 
           finishWave() {
             this.waveActive = false; this.bossPhase = false;
-            const reward = 42 + this.wave * 9;
+            const reward = Math.max(18, 30 + this.wave * 3 - Math.floor(this.wave / 3) * 4);
             this.gold += reward; this.score += 300 + this.wave * 65;
-            showNotice(`보스 토벌 성공! 클리어 보너스 +${reward}`);
+            showNotice(`보스 토벌 성공! 긴축 보너스 +${reward}`);
             this.publish(true);
           }
 
           buildWaveSquad() {
             const squad = [];
-            const vanguardCount = 5 + this.wave * 2;
+            const vanguardCount = 6 + this.wave * 3;
             for (let i = 0; i < vanguardCount; i += 1) squad.push(this.chooseMinionType(i));
 
-            const escortCount = 3 + Math.floor(this.wave / 2);
+            const escortCount = 4 + Math.floor(this.wave * 0.85);
             const escorts = [];
             for (let i = 0; i < escortCount; i += 1) {
               if (i % 4 === 0) escorts.push("tanker");
@@ -650,9 +650,9 @@
           spawnRunner(typeKey = "selfie") {
             const start = this.pathPoints[0];
             const type = runnerTypes[typeKey];
-            const maxHp = Math.round(type.hp + this.wave * type.hpWave);
-            const speed = type.speed + this.wave * type.speedWave;
-            const bounty = Math.round(type.bounty + this.wave * type.bountyWave);
+            const maxHp = Math.round((type.hp + this.wave * type.hpWave) * (1 + Math.max(0, this.wave - 1) * 0.045));
+            const speed = type.speed + this.wave * type.speedWave + Math.max(0, this.wave - 3) * 1.8;
+            const bounty = Math.max(3, Math.round(type.bounty + this.wave * type.bountyWave - Math.floor(this.wave / 4)));
             const barWidth = Math.max(30, type.radius * 2 + 12);
             
             const runner = {
