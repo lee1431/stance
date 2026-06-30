@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>이벤트 페이지</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    #app {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      cursor: pointer;
+    }
+
+    #slider {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      transition: opacity 900ms ease-in-out;
+      pointer-events: none;
+    }
+
+    .slide.is-active {
+      opacity: 1;
+    }
+
+    .slide img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .loading,
+    .empty-message {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 28px;
+      font-weight: 800;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .touch-guide {
+      position: absolute;
+      left: 50%;
+      bottom: 48px;
+      transform: translateX(-50%);
+      padding: 14px 28px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.42);
+      color: #fff;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.54);
+      padding: 40px;
+    }
+
+    .modal-backdrop.is-open {
+      display: flex;
+    }
+
+    .modal-card {
+      width: min(720px, 88vw);
+      padding: 64px 48px 56px;
+      border-radius: 36px;
+      background: #fff;
+      color: #111;
+      text-align: center;
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.38);
+      cursor: default;
+      animation: modalIn 220ms ease-out;
+    }
+
+    @keyframes modalIn {
+      from {
+        opacity: 0;
+        transform: scale(0.96) translateY(12px);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .modal-title {
+      margin: 0 0 16px;
+      font-size: clamp(34px, 5vw, 56px);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1.08;
+    }
+
+    .modal-desc {
+      margin: 0 0 40px;
+      font-size: clamp(20px, 2.5vw, 30px);
+      font-weight: 600;
+      color: #444;
+      line-height: 1.35;
+    }
+
+    .event-button {
+      width: 100%;
+      min-height: 92px;
+      border: 0;
+      border-radius: 999px;
+      background: #111;
+      color: #fff;
+      font-size: clamp(24px, 3vw, 38px);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      cursor: pointer;
+    }
+
+    .event-button:active {
+      transform: scale(0.985);
+    }
+
+    .status {
+      position: fixed;
+      right: 16px;
+      bottom: 12px;
+      z-index: 30;
+      color: rgba(255, 255, 255, 0.35);
+      font-size: 12px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body>
+  <main id="app">
+    <div id="slider">
+      <div class="loading">이벤트 이미지를 불러오는 중입니다.</div>
+    </div>
+
+    <div class="touch-guide">화면을 터치해 이벤트에 참여하세요</div>
+  </main>
+
+  <section id="eventModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h1 id="modalTitle" class="modal-title">이벤트에 참여하시겠어요?</h1>
+      <p class="modal-desc">
+        아래 버튼을 눌러 참여를 진행해주세요.
+      </p>
+
+      <button id="joinButton" class="event-button" type="button">
+        이벤트 참여하기
+      </button>
+    </div>
+  </section>
+
+  <div id="status" class="status"></div>
+
+  <script>
+    const CONFIG_JSON_URL = "https://mrdindoin.ddns.net/jsonhub/api/json/localflow/event";
+
+    const DEFAULT_ROTATION_INTERVAL = 5000;
+    const DEFAULT_MODAL_AUTO_CLOSE = 15000;
+    const JSON_RELOAD_INTERVAL = 60000;
+
+    const app = document.getElementById("app");
+    const slider = document.getElementById("slider");
+    const modal = document.getElementById("eventModal");
+    const joinButton = document.getElementById("joinButton");
+    const statusEl = document.getElementById("status");
+
+    let slides = [];
+    let currentIndex = 0;
+    let sliderTimer = null;
+    let jsonReloadTimer = null;
+    let modalTimer = null;
+
+    let rotationInterval = DEFAULT_ROTATION_INTERVAL;
+    let modalAutoClose = DEFAULT_MODAL_AUTO_CLOSE;
+    let participationUrl = "https://llsshh.com/event.html";
+
+    let lastConfigSignature = "";
+    let wakeLock = null;
+    let hasUserActivated = false;
+
+    async function loadEventConfig() {
+      try {
+        const url = `${CONFIG_JSON_URL}?t=${Date.now()}`;
+
+        const response = await fetch(url, {
+          cache: "no-store"
+        });
+
+        if (!response.ok) {
+          throw new Error(`JSON 로딩 실패: ${response.status}`);
+        }
+
+        const config = await response.json();
+        applyConfig(config);
+        updateStatus("JSON updated");
+      } catch (error) {
+        console.error(error);
+        updateStatus("JSON load failed");
+
+        if (slides.length === 0) {
+          renderEmptyMessage("이벤트 정보를 불러오지 못했습니다.");
+        }
+      }
+    }
+
+    function applyConfig(config) {
+      const normalizedConfig = normalizeConfig(config);
+      const signature = JSON.stringify(normalizedConfig);
+
+      if (signature === lastConfigSignature) {
+        return;
+      }
+
+      lastConfigSignature = signature;
+
+      rotationInterval = normalizedConfig.rotationInterval;
+      modalAutoClose = normalizedConfig.modalAutoClose;
+      participationUrl = normalizedConfig.participationUrl;
+
+      joinButton.textContent = normalizedConfig.buttonText;
+
+      renderSlides(normalizedConfig.slides);
+      startSlider();
+    }
+
+    function normalizeConfig(config) {
+      const rawSlides = Array.isArray(config.slides) ? config.slides : [];
+
+      const enabledSlides = rawSlides
+        .filter((slide) => slide && slide.enabled !== false && slide.imageUrl)
+        .sort((a, b) => {
+          const sortA = Number(a.sort || 0);
+          const sortB = Number(b.sort || 0);
+          return sortA - sortB;
+        })
+        .map((slide, index) => ({
+          id: String(slide.id || `slide-${index + 1}`),
+          title: String(slide.title || ""),
+          imageUrl: String(slide.imageUrl),
+          alt: String(slide.alt || slide.title || `이벤트 이미지 ${index + 1}`),
+          sort: Number(slide.sort || index + 1)
+        }));
+
+      return {
+        rotationInterval: Number(config.rotationInterval || DEFAULT_ROTATION_INTERVAL),
+        modalAutoClose: Number(config.modalAutoClose || DEFAULT_MODAL_AUTO_CLOSE),
+        buttonText: String(config.buttonText || "이벤트 참여하기"),
+        participationUrl: String(config.participationUrl || "/fu/event-join.php"),
+        slides: enabledSlides
+      };
+    }
+
+    function renderSlides(slideItems) {
+      stopSlider();
+
+      if (!slideItems.length) {
+        renderEmptyMessage("등록된 이벤트 이미지가 없습니다.");
+        return;
+      }
+
+      slider.innerHTML = "";
+
+      slideItems.forEach((item, index) => {
+        const slide = document.createElement("div");
+        slide.className = "slide";
+
+        if (index === 0) {
+          slide.classList.add("is-active");
+        }
+
+        const img = document.createElement("img");
+        img.src = item.imageUrl;
+        img.alt = item.alt;
+        img.draggable = false;
+        img.decoding = "async";
+
+        if (index === 0) {
+          img.loading = "eager";
+        } else {
+          img.loading = "lazy";
+        }
+
+        slide.appendChild(img);
+        slider.appendChild(slide);
+      });
+
+      slides = Array.from(document.querySelectorAll(".slide"));
+      currentIndex = 0;
+
+      preloadImages(slideItems.map((item) => item.imageUrl));
+    }
+
+    function renderEmptyMessage(message) {
+      stopSlider();
+
+      slides = [];
+      currentIndex = 0;
+
+      slider.innerHTML = `
+        <div class="empty-message">${escapeHtml(message)}</div>
+      `;
+    }
+
+    function preloadImages(urls) {
+      urls.forEach((url) => {
+        const image = new Image();
+        image.src = url;
+      });
+    }
+
+    function showSlide(nextIndex) {
+      if (slides.length === 0) return;
+      if (!slides[currentIndex] || !slides[nextIndex]) return;
+
+      slides[currentIndex].classList.remove("is-active");
+      slides[nextIndex].classList.add("is-active");
+      currentIndex = nextIndex;
+    }
+
+    function nextSlide() {
+      if (slides.length <= 1) return;
+
+      const nextIndex = (currentIndex + 1) % slides.length;
+      showSlide(nextIndex);
+    }
+
+    function startSlider() {
+      stopSlider();
+
+      if (slides.length <= 1) {
+        return;
+      }
+
+      sliderTimer = window.setInterval(nextSlide, rotationInterval);
+    }
+
+    function stopSlider() {
+      if (sliderTimer) {
+        window.clearInterval(sliderTimer);
+        sliderTimer = null;
+      }
+    }
+
+    function startJsonReload() {
+      stopJsonReload();
+
+      jsonReloadTimer = window.setInterval(() => {
+        loadEventConfig();
+      }, JSON_RELOAD_INTERVAL);
+    }
+
+    function stopJsonReload() {
+      if (jsonReloadTimer) {
+        window.clearInterval(jsonReloadTimer);
+        jsonReloadTimer = null;
+      }
+    }
+
+    function openModal() {
+      stopSlider();
+      clearModalTimer();
+
+      modal.classList.add("is-open");
+      modal.setAttribute("aria-hidden", "false");
+
+      modalTimer = window.setTimeout(() => {
+        closeModal();
+      }, modalAutoClose);
+    }
+
+    function closeModal() {
+      modal.classList.remove("is-open");
+      modal.setAttribute("aria-hidden", "true");
+
+      clearModalTimer();
+      startSlider();
+    }
+
+    function clearModalTimer() {
+      if (modalTimer) {
+        window.clearTimeout(modalTimer);
+        modalTimer = null;
+      }
+    }
+
+    async function requestWakeLock() {
+      try {
+        if ("wakeLock" in navigator) {
+          wakeLock = await navigator.wakeLock.request("screen");
+        }
+      } catch (error) {
+        console.warn("Wake Lock 실패:", error);
+      }
+    }
+
+    async function requestFullscreen() {
+      try {
+        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        }
+      } catch (error) {
+        console.warn("Fullscreen 실패:", error);
+      }
+    }
+
+    async function activateKioskHelpers() {
+      if (hasUserActivated) return;
+
+      hasUserActivated = true;
+      await requestWakeLock();
+      await requestFullscreen();
+    }
+
+    function updateStatus(message) {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, "0");
+      const mm = String(now.getMinutes()).padStart(2, "0");
+      const ss = String(now.getSeconds()).padStart(2, "0");
+
+      statusEl.textContent = `${message} ${hh}:${mm}:${ss}`;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    app.addEventListener("pointerdown", async () => {
+      await activateKioskHelpers();
+      openModal();
+    });
+
+    modal.addEventListener("pointerdown", (event) => {
+      if (event.target === modal) {
+        closeModal();
+      }
+    });
+
+    joinButton.addEventListener("pointerdown", (event) => {
+      event.stopPropagation();
+    });
+
+    joinButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      window.location.href = participationUrl;
+    });
+
+    document.addEventListener("visibilitychange", async () => {
+      if (document.visibilityState === "visible") {
+        loadEventConfig();
+
+        if (hasUserActivated) {
+          await requestWakeLock();
+        }
+      }
+    });
+
+    window.addEventListener("load", () => {
+      loadEventConfig();
+      startJsonReload();
+    });
+  </script>
+</body>
+</html>
