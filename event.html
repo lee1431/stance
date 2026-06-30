@@ -45,7 +45,7 @@
       width: 100%;
       height: 100%;
       opacity: 0;
-      transition: opacity 900ms ease-in-out;
+      transition: opacity 300ms ease-in-out;
       pointer-events: none;
     }
 
@@ -58,6 +58,20 @@
       height: 100%;
       object-fit: cover;
       display: block;
+    }
+
+    #fadeOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      background: #000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1000ms ease-in-out;
+    }
+
+    #fadeOverlay.is-dark {
+      opacity: 1;
     }
 
     .loading,
@@ -130,6 +144,14 @@
       }
     }
 
+    .modal-step {
+      display: none;
+    }
+
+    .modal-step.is-active {
+      display: block;
+    }
+
     .modal-title {
       margin: 0 0 16px;
       font-size: clamp(34px, 5vw, 56px);
@@ -159,8 +181,53 @@
       cursor: pointer;
     }
 
-    .event-button:active {
+    .event-button:active,
+    .secondary-button:active {
       transform: scale(0.985);
+    }
+
+    .event-button:disabled,
+    .secondary-button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .qr-box {
+      width: min(360px, 58vw);
+      height: min(360px, 58vw);
+      margin: 24px auto 20px;
+      padding: 18px;
+      border-radius: 28px;
+      background: #fff;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+    }
+
+    .qr-box img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+    }
+
+    .qr-status {
+      min-height: 32px;
+      margin: 0 0 24px;
+      color: #444;
+      font-size: clamp(18px, 2.2vw, 26px);
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .secondary-button {
+      width: 100%;
+      min-height: 72px;
+      border: 0;
+      border-radius: 999px;
+      background: #e9e9e9;
+      color: #111;
+      font-size: clamp(20px, 2.4vw, 30px);
+      font-weight: 900;
+      cursor: pointer;
     }
 
     .status {
@@ -181,19 +248,49 @@
       <div class="loading">이벤트 이미지를 불러오는 중입니다.</div>
     </div>
 
+    <div id="fadeOverlay" aria-hidden="true"></div>
+
     <div class="touch-guide">화면을 터치해 이벤트에 참여하세요</div>
   </main>
 
   <section id="eventModal" class="modal-backdrop" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <h1 id="modalTitle" class="modal-title">이벤트에 참여하시겠어요?</h1>
-      <p class="modal-desc">
-        아래 버튼을 눌러 참여를 진행해주세요.
-      </p>
+      <div id="joinStep" class="modal-step is-active">
+        <h1 id="modalTitle" class="modal-title">이벤트에 참여하시겠어요?</h1>
+        <p class="modal-desc">
+          아래 버튼을 누르면 QR 코드가 표시됩니다.
+        </p>
 
-      <button id="joinButton" class="event-button" type="button">
-        이벤트 참여하기
-      </button>
+        <button id="joinButton" class="event-button" type="button">
+          이벤트 참여하기
+        </button>
+      </div>
+
+      <div id="qrStep" class="modal-step">
+        <h1 class="modal-title">QR 코드를 스캔해주세요</h1>
+        <p class="modal-desc">
+          참여자 스마트폰에서 Google 인증을 진행합니다.
+        </p>
+
+        <div class="qr-box">
+          <img id="qrImage" alt="이벤트 참여 QR 코드" />
+        </div>
+
+        <p id="qrStatus" class="qr-status">
+          QR 코드를 생성하는 중입니다.
+        </p>
+
+        <button id="cancelQrButton" class="secondary-button" type="button">
+          처음으로 돌아가기
+        </button>
+      </div>
+
+      <div id="completeStep" class="modal-step">
+        <h1 class="modal-title">인증이 완료되었습니다</h1>
+        <p class="modal-desc">
+          참여자 스마트폰에서 카드 3장 중 하나를 선택해주세요.
+        </p>
+      </div>
     </div>
   </section>
 
@@ -202,25 +299,51 @@
   <script>
     const CONFIG_JSON_URL = "https://mrdindoin.ddns.net/jsonhub/api/json/localflow/event";
 
-    const DEFAULT_ROTATION_INTERVAL = 5000;
+    const DEFAULT_ROTATION_INTERVAL = 7000;
     const DEFAULT_MODAL_AUTO_CLOSE = 15000;
     const JSON_RELOAD_INTERVAL = 60000;
 
+    const FADE_OUT_TIME = 1000;
+    const BLACK_HOLD_TIME = 350;
+    const FADE_IN_TIME = 1000;
+
     const app = document.getElementById("app");
     const slider = document.getElementById("slider");
+    const fadeOverlay = document.getElementById("fadeOverlay");
     const modal = document.getElementById("eventModal");
     const joinButton = document.getElementById("joinButton");
     const statusEl = document.getElementById("status");
+
+    const joinStep = document.getElementById("joinStep");
+    const qrStep = document.getElementById("qrStep");
+    const completeStep = document.getElementById("completeStep");
+    const qrImage = document.getElementById("qrImage");
+    const qrStatus = document.getElementById("qrStatus");
+    const cancelQrButton = document.getElementById("cancelQrButton");
 
     let slides = [];
     let currentIndex = 0;
     let sliderTimer = null;
     let jsonReloadTimer = null;
     let modalTimer = null;
+    let slideChangeTimer1 = null;
+    let slideChangeTimer2 = null;
+    let slideChangeTimer3 = null;
 
     let rotationInterval = DEFAULT_ROTATION_INTERVAL;
     let modalAutoClose = DEFAULT_MODAL_AUTO_CLOSE;
     let participationUrl = "https://llsshh.com/event.html";
+
+    let qrSessionApi = "/api/event-session";
+    let qrStatusApiBase = "/api/event-session";
+    let qrPollInterval = 1500;
+    let qrSessionTimeout = 300000;
+
+    let activeEventSessionId = null;
+    let qrPollTimer = null;
+    let qrExpireTimer = null;
+    let isCreatingQr = false;
+    let isSlideChanging = false;
 
     let lastConfigSignature = "";
     let wakeLock = null;
@@ -228,14 +351,14 @@
 
     async function loadEventConfig() {
       try {
-        const url = `${CONFIG_JSON_URL}?t=${Date.now()}`;
+        const url = CONFIG_JSON_URL + "?t=" + Date.now();
 
         const response = await fetch(url, {
           cache: "no-store"
         });
 
         if (!response.ok) {
-          throw new Error(`JSON 로딩 실패: ${response.status}`);
+          throw new Error("JSON 로딩 실패: " + response.status);
         }
 
         const config = await response.json();
@@ -252,7 +375,7 @@
     }
 
     function applyConfig(config) {
-      const normalizedConfig = normalizeConfig(config);
+      const normalizedConfig = normalizeConfig(config || {});
       const signature = JSON.stringify(normalizedConfig);
 
       if (signature === lastConfigSignature) {
@@ -265,14 +388,25 @@
       modalAutoClose = normalizedConfig.modalAutoClose;
       participationUrl = normalizedConfig.participationUrl;
 
+      qrSessionApi = normalizedConfig.auth.sessionCreateUrl;
+      qrStatusApiBase = normalizedConfig.auth.statusUrlBase;
+      qrPollInterval = normalizedConfig.auth.pollInterval;
+      qrSessionTimeout = normalizedConfig.auth.qrExpireSeconds * 1000;
+
       joinButton.textContent = normalizedConfig.buttonText;
 
       renderSlides(normalizedConfig.slides);
-      startSlider();
+
+      if (isModalOpen()) {
+        stopSlider();
+      } else {
+        startSlider();
+      }
     }
 
     function normalizeConfig(config) {
       const rawSlides = Array.isArray(config.slides) ? config.slides : [];
+      const rawAuth = config.auth || {};
 
       const enabledSlides = rawSlides
         .filter((slide) => slide && slide.enabled !== false && slide.imageUrl)
@@ -282,10 +416,10 @@
           return sortA - sortB;
         })
         .map((slide, index) => ({
-          id: String(slide.id || `slide-${index + 1}`),
+          id: String(slide.id || "slide-" + (index + 1)),
           title: String(slide.title || ""),
           imageUrl: String(slide.imageUrl),
-          alt: String(slide.alt || slide.title || `이벤트 이미지 ${index + 1}`),
+          alt: String(slide.alt || slide.title || "이벤트 이미지 " + (index + 1)),
           sort: Number(slide.sort || index + 1)
         }));
 
@@ -293,13 +427,20 @@
         rotationInterval: Number(config.rotationInterval || DEFAULT_ROTATION_INTERVAL),
         modalAutoClose: Number(config.modalAutoClose || DEFAULT_MODAL_AUTO_CLOSE),
         buttonText: String(config.buttonText || "이벤트 참여하기"),
-        participationUrl: String(config.participationUrl || "/fu/event-join.php"),
+        participationUrl: String(config.participationUrl || "https://llsshh.com/event.html"),
+        auth: {
+          sessionCreateUrl: String(rawAuth.sessionCreateUrl || "/api/event-session"),
+          statusUrlBase: String(rawAuth.statusUrlBase || "/api/event-session"),
+          pollInterval: Number(rawAuth.pollInterval || 1500),
+          qrExpireSeconds: Number(rawAuth.qrExpireSeconds || 300)
+        },
         slides: enabledSlides
       };
     }
 
     function renderSlides(slideItems) {
       stopSlider();
+      clearSlideChangeTimers();
 
       if (!slideItems.length) {
         renderEmptyMessage("등록된 이벤트 이미지가 없습니다.");
@@ -321,12 +462,7 @@
         img.alt = item.alt;
         img.draggable = false;
         img.decoding = "async";
-
-        if (index === 0) {
-          img.loading = "eager";
-        } else {
-          img.loading = "lazy";
-        }
+        img.loading = index === 0 ? "eager" : "lazy";
 
         slide.appendChild(img);
         slider.appendChild(slide);
@@ -334,19 +470,17 @@
 
       slides = Array.from(document.querySelectorAll(".slide"));
       currentIndex = 0;
-
       preloadImages(slideItems.map((item) => item.imageUrl));
     }
 
     function renderEmptyMessage(message) {
       stopSlider();
+      clearSlideChangeTimers();
 
       slides = [];
       currentIndex = 0;
 
-      slider.innerHTML = `
-        <div class="empty-message">${escapeHtml(message)}</div>
-      `;
+      slider.innerHTML = '<div class="empty-message">' + escapeHtml(message) + '</div>';
     }
 
     function preloadImages(urls) {
@@ -357,12 +491,41 @@
     }
 
     function showSlide(nextIndex) {
+      if (isSlideChanging) return;
       if (slides.length === 0) return;
       if (!slides[currentIndex] || !slides[nextIndex]) return;
+      if (currentIndex === nextIndex) return;
 
-      slides[currentIndex].classList.remove("is-active");
-      slides[nextIndex].classList.add("is-active");
-      currentIndex = nextIndex;
+      isSlideChanging = true;
+      fadeOverlay.classList.add("is-dark");
+
+      slideChangeTimer1 = window.setTimeout(() => {
+        slides[currentIndex].classList.remove("is-active");
+        slides[nextIndex].classList.add("is-active");
+        currentIndex = nextIndex;
+
+        slideChangeTimer2 = window.setTimeout(() => {
+          fadeOverlay.classList.remove("is-dark");
+
+          slideChangeTimer3 = window.setTimeout(() => {
+            isSlideChanging = false;
+          }, FADE_IN_TIME);
+        }, BLACK_HOLD_TIME);
+      }, FADE_OUT_TIME);
+    }
+
+    function clearSlideChangeTimers() {
+      [slideChangeTimer1, slideChangeTimer2, slideChangeTimer3].forEach((timer) => {
+        if (timer) {
+          window.clearTimeout(timer);
+        }
+      });
+
+      slideChangeTimer1 = null;
+      slideChangeTimer2 = null;
+      slideChangeTimer3 = null;
+      isSlideChanging = false;
+      fadeOverlay.classList.remove("is-dark");
     }
 
     function nextSlide() {
@@ -404,9 +567,14 @@
       }
     }
 
+    function isModalOpen() {
+      return modal.classList.contains("is-open");
+    }
+
     function openModal() {
       stopSlider();
       clearModalTimer();
+      resetQrState();
 
       modal.classList.add("is-open");
       modal.setAttribute("aria-hidden", "false");
@@ -421,6 +589,7 @@
       modal.setAttribute("aria-hidden", "true");
 
       clearModalTimer();
+      resetQrState();
       startSlider();
     }
 
@@ -429,6 +598,180 @@
         window.clearTimeout(modalTimer);
         modalTimer = null;
       }
+    }
+
+    function setModalStep(stepName) {
+      joinStep.classList.remove("is-active");
+      qrStep.classList.remove("is-active");
+      completeStep.classList.remove("is-active");
+
+      if (stepName === "join") {
+        joinStep.classList.add("is-active");
+      }
+
+      if (stepName === "qr") {
+        qrStep.classList.add("is-active");
+      }
+
+      if (stepName === "complete") {
+        completeStep.classList.add("is-active");
+      }
+    }
+
+    function resetQrState() {
+      stopQrPolling();
+      clearQrExpireTimer();
+
+      activeEventSessionId = null;
+      isCreatingQr = false;
+
+      qrImage.removeAttribute("src");
+      qrStatus.textContent = "QR 코드를 생성하는 중입니다.";
+      joinButton.disabled = false;
+      cancelQrButton.disabled = false;
+
+      setModalStep("join");
+    }
+
+    async function createQrSession() {
+      if (isCreatingQr) return;
+
+      isCreatingQr = true;
+      joinButton.disabled = true;
+      cancelQrButton.disabled = true;
+
+      clearModalTimer();
+      clearQrExpireTimer();
+
+      setModalStep("qr");
+      qrStatus.textContent = "QR 코드를 생성하는 중입니다.";
+
+      try {
+        const response = await fetch(qrSessionApi, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          cache: "no-store",
+          body: JSON.stringify({
+            source: "tablet-event-page",
+            pageUrl: window.location.href,
+            createdAt: new Date().toISOString()
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error("QR 세션 생성 실패: " + response.status);
+        }
+
+        const data = await response.json();
+        const qrSource = data.qrImageDataUrl || data.qrDataUrl || data.qrImageUrl;
+
+        if (!data.ok || !data.sid || !qrSource) {
+          throw new Error("QR 세션 응답 형식이 올바르지 않습니다.");
+        }
+
+        activeEventSessionId = data.sid;
+        qrImage.src = qrSource;
+        qrStatus.textContent = "스마트폰 카메라로 QR 코드를 스캔해주세요.";
+        cancelQrButton.disabled = false;
+
+        startQrPolling();
+
+        qrExpireTimer = window.setTimeout(() => {
+          qrStatus.textContent = "QR 코드 유효 시간이 만료되었습니다. 다시 시도해주세요.";
+          stopQrPolling();
+        }, qrSessionTimeout);
+      } catch (error) {
+        console.error(error);
+        qrStatus.textContent = "QR 코드를 생성하지 못했습니다. 다시 시도해주세요.";
+        cancelQrButton.disabled = false;
+      } finally {
+        isCreatingQr = false;
+        joinButton.disabled = false;
+      }
+    }
+
+    function startQrPolling() {
+      stopQrPolling();
+
+      qrPollTimer = window.setInterval(() => {
+        pollQrStatus();
+      }, qrPollInterval);
+
+      pollQrStatus();
+    }
+
+    function stopQrPolling() {
+      if (qrPollTimer) {
+        window.clearInterval(qrPollTimer);
+        qrPollTimer = null;
+      }
+    }
+
+    function clearQrExpireTimer() {
+      if (qrExpireTimer) {
+        window.clearTimeout(qrExpireTimer);
+        qrExpireTimer = null;
+      }
+    }
+
+    async function pollQrStatus() {
+      if (!activeEventSessionId) return;
+
+      try {
+        const url = qrStatusApiBase.replace(/\/$/, "") + "/" + encodeURIComponent(activeEventSessionId) + "?t=" + Date.now();
+
+        const response = await fetch(url, {
+          method: "GET",
+          cache: "no-store"
+        });
+
+        if (!response.ok) {
+          throw new Error("상태 확인 실패: " + response.status);
+        }
+
+        const data = await response.json();
+
+        if (!data.ok) {
+          throw new Error("상태 확인 응답이 올바르지 않습니다.");
+        }
+
+        if (data.status === "pending") {
+          qrStatus.textContent = "스마트폰 스캔을 기다리는 중입니다.";
+          return;
+        }
+
+        if (data.status === "scanned") {
+          qrStatus.textContent = "Google 인증을 진행 중입니다.";
+          return;
+        }
+
+        if (data.status === "authenticated" || data.status === "card_selected" || data.status === "completed") {
+          showQrComplete();
+          return;
+        }
+
+        if (data.status === "expired") {
+          qrStatus.textContent = "QR 코드가 만료되었습니다. 다시 시도해주세요.";
+          stopQrPolling();
+          clearQrExpireTimer();
+          return;
+        }
+      } catch (error) {
+        console.warn(error);
+      }
+    }
+
+    function showQrComplete() {
+      stopQrPolling();
+      clearQrExpireTimer();
+
+      setModalStep("complete");
+
+      window.setTimeout(() => {
+        closeModal();
+      }, 5000);
     }
 
     async function requestWakeLock() {
@@ -465,16 +808,16 @@
       const mm = String(now.getMinutes()).padStart(2, "0");
       const ss = String(now.getSeconds()).padStart(2, "0");
 
-      statusEl.textContent = `${message} ${hh}:${mm}:${ss}`;
+      statusEl.textContent = message + " " + hh + ":" + mm + ":" + ss;
     }
 
     function escapeHtml(value) {
       return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
 
     app.addEventListener("pointerdown", async () => {
@@ -492,9 +835,23 @@
       event.stopPropagation();
     });
 
-    joinButton.addEventListener("click", (event) => {
+    joinButton.addEventListener("click", async (event) => {
       event.stopPropagation();
-      window.location.href = participationUrl;
+      await createQrSession();
+    });
+
+    cancelQrButton.addEventListener("pointerdown", (event) => {
+      event.stopPropagation();
+    });
+
+    cancelQrButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      resetQrState();
+
+      clearModalTimer();
+      modalTimer = window.setTimeout(() => {
+        closeModal();
+      }, modalAutoClose);
     });
 
     document.addEventListener("visibilitychange", async () => {
