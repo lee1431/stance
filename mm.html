@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>LAM GAK Prize Vault</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background: #02080a;
+      color: #eaffff;
+      font-family: Arial, sans-serif;
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 30px;
+    }
+
+    h1 {
+      color: #ffd84d;
+      margin-bottom: 8px;
+    }
+
+    .panel {
+      background: rgba(0, 20, 24, 0.9);
+      border: 1px solid rgba(255, 216, 77, 0.35);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 24px rgba(0, 255, 140, 0.08);
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: #061114;
+      border: 1px solid rgba(0, 255, 140, 0.25);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .label {
+      font-size: 13px;
+      color: #8aa;
+    }
+
+    .value {
+      font-size: 28px;
+      font-weight: 800;
+      margin-top: 6px;
+      color: #44ff88;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    input {
+      flex: 1;
+      background: #010607;
+      border: 1px solid #2cff7a;
+      color: white;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 18px;
+    }
+
+    button {
+      background: #ffd84d;
+      border: none;
+      color: #111;
+      font-weight: 800;
+      border-radius: 10px;
+      padding: 0 20px;
+      cursor: pointer;
+    }
+
+    button.danger {
+      background: #ff4d4d;
+      color: white;
+    }
+
+    canvas {
+      width: 100%;
+      height: 420px;
+    }
+
+    .log {
+      max-height: 260px;
+      overflow-y: auto;
+      font-size: 14px;
+    }
+
+    .log-item {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 8px 0;
+    }
+
+    .plus { color: #44ff88; }
+    .minus { color: #ff5b5b; }
+
+    .status {
+      font-size: 13px;
+      color: #8aa;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 760px) {
+      .wrap {
+        padding: 18px;
+      }
+
+      .summary {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .input-row {
+        flex-direction: column;
+      }
+
+      button {
+        padding: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>💰 LAM GAK Prize Vault</h1>
+    <p>매매 직후 USDT 수익금만 입력하면 JSONHub에 저장되고 누적 상금 차트가 갱신됩니다.</p>
+
+    <div class="panel">
+      <div class="input-row">
+        <input id="profitInput" type="number" step="0.01" placeholder="수익금 입력 예: 12.5 / 손실은 -5" />
+        <button onclick="addProfit()">기록</button>
+        <button class="danger" onclick="resetData()">초기화</button>
+      </div>
+      <div class="status" id="statusText">서버 데이터 불러오는 중...</div>
+    </div>
+
+    <div class="summary">
+      <div class="card">
+        <div class="label">누적 상금</div>
+        <div class="value" id="totalProfit">$0</div>
+      </div>
+      <div class="card">
+        <div class="label">오늘 수익</div>
+        <div class="value" id="todayProfit">$0</div>
+      </div>
+      <div class="card">
+        <div class="label">기록 수</div>
+        <div class="value" id="tradeCount">0</div>
+      </div>
+      <div class="card">
+        <div class="label">최고 단일 수익</div>
+        <div class="value" id="bestProfit">$0</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <canvas id="profitChart"></canvas>
+    </div>
+
+    <div class="panel">
+      <h3>실시간 상금 로그</h3>
+      <div class="log" id="profitLog"></div>
+    </div>
+  </div>
+
+<script>
+const API_URL = "https://mrdindoin.ddns.net/jsonhub/api/json/localflow/sk";
+
+let records = [];
+
+const ctx = document.getElementById("profitChart").getContext("2d");
+
+const chart = new Chart(ctx, {
+  type: "line",
+  data: {
+    labels: [],
+    datasets: [{
+      label: "누적 USDT",
+      data: [],
+      borderWidth: 3,
+      tension: 0.35,
+      pointRadius: 4,
+      pointHoverRadius: 7
+    }]
+  },
+  options: {
+    responsive: true,
+    animation: {
+      duration: 350
+    },
+    plugins: {
+      legend: {
+        labels: { color: "#eaffff" }
+      },
+      tooltip: {
+        callbacks: {
+          label: ctx => `누적: $${ctx.raw.toFixed(2)}`
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: "#9fb" },
+        grid: { color: "rgba(255,255,255,0.08)" }
+      },
+      y: {
+        ticks: {
+          color: "#9fb",
+          callback: value => "$" + value
+        },
+        grid: { color: "rgba(255,255,255,0.08)" }
+      }
+    }
+  }
+});
+
+function setStatus(text) {
+  document.getElementById("statusText").textContent = text;
+}
+
+async function loadData() {
+  try {
+    const res = await fetch(API_URL, {
+      method: "GET",
+      cache: "no-store"
+    });
+
+    if (!res.ok) {
+      records = [];
+      render();
+      setStatus("기존 기록 없음. 새로 시작합니다.");
+      return;
+    }
+
+    const data = await res.json();
+
+    if (Array.isArray(data)) {
+      records = data;
+    } else if (Array.isArray(data.items)) {
+      records = data.items;
+    } else {
+      records = [];
+    }
+
+    render();
+    setStatus("서버 데이터 로드 완료");
+  } catch (err) {
+    console.error("로드 실패:", err);
+    records = [];
+    render();
+    setStatus("서버 연결 실패. API 주소 또는 CORS를 확인하세요.");
+  }
+}
+
+async function save() {
+  try {
+    const payload = {
+      title: "LAM GAK Prize Vault",
+      project: "localflow",
+      name: "sk",
+      items: records
+    };
+
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      throw new Error("save_failed");
+    }
+
+    setStatus("저장 완료");
+  } catch (err) {
+    console.error("저장 실패:", err);
+    setStatus("저장 실패! 서버 상태를 확인하세요.");
+    alert("JSON 저장 실패! 서버 상태를 확인하세요.");
+  }
+}
+
+async function addProfit() {
+  const input = document.getElementById("profitInput");
+  const value = parseFloat(input.value);
+
+  if (Number.isNaN(value)) return;
+
+  records.push({
+    value,
+    time: new Date().toISOString()
+  });
+
+  input.value = "";
+  render();
+  await save();
+}
+
+async function resetData() {
+  if (!confirm("상금 기록을 전부 초기화할까요?")) return;
+
+  records = [];
+  render();
+  await save();
+}
+
+function render() {
+  let cumulative = 0;
+
+  const labels = [];
+  const data = [];
+
+  records.forEach((r) => {
+    cumulative += Number(r.value || 0);
+    const d = new Date(r.time);
+    labels.push(`${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`);
+    data.push(Number(cumulative.toFixed(2)));
+  });
+
+  chart.data.labels = labels;
+  chart.data.datasets[0].data = data;
+  chart.update();
+
+  const today = new Date().toDateString();
+
+  const todayProfit = records
+    .filter(r => new Date(r.time).toDateString() === today)
+    .reduce((sum, r) => sum + Number(r.value || 0), 0);
+
+  const best = records.length
+    ? Math.max(...records.map(r => Number(r.value || 0)))
+    : 0;
+
+  document.getElementById("totalProfit").textContent = `$${cumulative.toFixed(2)}`;
+  document.getElementById("todayProfit").textContent = `$${todayProfit.toFixed(2)}`;
+  document.getElementById("tradeCount").textContent = records.length;
+  document.getElementById("bestProfit").textContent = `$${best.toFixed(2)}`;
+
+  const log = document.getElementById("profitLog");
+
+  log.innerHTML = [...records].reverse().map(r => {
+    const d = new Date(r.time);
+    const value = Number(r.value || 0);
+    const cls = value >= 0 ? "plus" : "minus";
+    const sign = value >= 0 ? "+" : "";
+
+    return `
+      <div class="log-item">
+        <span>${d.toLocaleString()}</span>
+        <strong class="${cls}">${sign}$${value.toFixed(2)}</strong>
+      </div>
+    `;
+  }).join("");
+}
+
+document.getElementById("profitInput").addEventListener("keydown", e => {
+  if (e.key === "Enter") addProfit();
+});
+
+loadData();
+</script>
+</body>
+</html>
