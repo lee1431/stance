@@ -2,33 +2,109 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <link rel="icon" href="data:,">
-  <title>QR Google 인증 테스트</title>
+  <title>이벤트 슬라이더 & QR 팝업</title>
+
   <style>
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background: radial-gradient(circle at top, #22315c 0, #080b16 58%, #000 100%);
-      color: #fff;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      padding: 24px;
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
     }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    /* 1. 기본 화면 (광고 슬라이더) */
+    #slider {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      cursor: pointer; /* 터치 유도 */
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      transition: opacity 900ms ease-in-out;
+      pointer-events: none;
+    }
+
+    .slide.is-active {
+      opacity: 1;
+    }
+
+    .slide img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .loading, .empty-message {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 28px;
+      font-weight: 800;
+      text-align: center;
+      padding: 40px;
+    }
+
+    /* 2. QR 생성 팝업 (모달) */
+    #qrModal {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: none; /* 기본적으로 숨김 */
+      place-items: center;
+      padding: 24px;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+
+    #qrModal.is-open {
+      display: grid; /* 열렸을 때 보이게 함 */
+    }
+
     .card {
       width: min(520px, 100%);
       padding: 34px 28px;
       border-radius: 32px;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       text-align: center;
-      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.38);
-      backdrop-filter: blur(16px);
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      animation: modalIn 250ms ease-out;
     }
-    h1 { margin: 0 0 12px; font-size: 32px; letter-spacing: -0.04em; }
-    p { margin: 0 0 24px; color: rgba(255,255,255,.72); font-size: 17px; font-weight: 700; line-height: 1.5; }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.95) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    h1 { margin: 0 0 12px; font-size: 32px; letter-spacing: -0.04em; color: #fff; }
+    p { margin: 0 0 24px; color: rgba(255, 255, 255, 0.8); font-size: 17px; font-weight: 700; line-height: 1.5; }
+
     button {
       width: 100%;
       min-height: 68px;
@@ -40,44 +116,127 @@
       font-weight: 900;
       cursor: pointer;
     }
-    button:active { transform: scale(.985); }
-    button:disabled { opacity: .55; cursor: not-allowed; }
+    button:active { transform: scale(0.985); }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+
     .qr-wrap { display: none; margin-top: 28px; }
-    .qr-box {
-      width: 280px;
-      height: 280px;
-      margin: 0 auto 18px;
-      padding: 16px;
-      border-radius: 24px;
-      background: white;
-    }
+    .qr-box { width: 280px; height: 280px; margin: 0 auto 18px; padding: 16px; border-radius: 24px; background: white; }
     .qr-box img { width: 100%; height: 100%; display: block; }
-    .status { min-height: 26px; color: rgba(255,255,255,.8); font-size: 16px; font-weight: 800; }
-    .link { margin-top: 12px; font-size: 13px; word-break: break-all; color: rgba(255,255,255,.45); }
+    
+    .status { min-height: 26px; color: rgba(255, 255, 255, 0.9); font-size: 16px; font-weight: 800; }
+    .link { margin-top: 12px; font-size: 13px; word-break: break-all; color: rgba(255, 255, 255, 0.5); }
   </style>
 </head>
+
 <body>
-  <main class="card">
-    <h1>QR Google 인증 테스트</h1>
-    <p>
-      버튼을 누르면 QR이 생성됩니다.<br>
-      스마트폰 인증이 끝나면 태블릿이 자동으로 카드 페이지로 이동합니다.
-    </p>
+  <div id="slider">
+    <div class="loading">광고 이미지를 불러오는 중입니다.</div>
+  </div>
 
-    <button id="startButton" type="button">QR 생성하기</button>
+  <div id="qrModal">
+    <main class="card">
+      <h1>QR Google 인증 테스트</h1>
+      <p>
+        버튼을 누르면 QR이 생성됩니다.<br>
+        스마트폰 인증이 끝나면 태블릿이 자동으로 이동합니다.
+      </p>
 
-    <section id="qrWrap" class="qr-wrap">
-      <div class="qr-box">
-        <img id="qrImage" alt="QR 코드" />
-      </div>
-      <div id="status" class="status">QR 생성을 기다리는 중입니다.</div>
-      <div id="rawLink" class="link"></div>
-    </section>
-  </main>
+      <button id="startButton" type="button">QR 생성하기</button>
+
+      <section id="qrWrap" class="qr-wrap">
+        <div class="qr-box">
+          <img id="qrImage" alt="QR 코드" />
+        </div>
+        <div id="status" class="status">QR 생성을 기다리는 중입니다.</div>
+        <div id="rawLink" class="link"></div>
+      </section>
+    </main>
+  </div>
 
   <script>
-    const API_BASE = "https://localflow.ddns.net/qr/api";
+    // ==========================================
+    // 1. 화면 터치 및 팝업 제어 로직
+    // ==========================================
+    const sliderEl = document.getElementById("slider");
+    const qrModal = document.getElementById("qrModal");
 
+    // 화면(슬라이더)을 터치하면 팝업 열기
+    sliderEl.addEventListener("pointerdown", () => {
+      qrModal.classList.add("is-open");
+    });
+
+    // 팝업 바깥 어두운 배경을 터치하면 팝업 닫기
+    qrModal.addEventListener("pointerdown", (e) => {
+      if (e.target === qrModal) {
+        qrModal.classList.remove("is-open");
+        // 필요시 여기서 QR 생성 상태 초기화 가능
+      }
+    });
+
+
+    // ==========================================
+    // 2. 이미지 슬라이더 로직
+    // ==========================================
+    const CONFIG_JSON_URL = "https://mrdindoin.ddns.net/jsonhub/api/json/localflow/event";
+    const DEFAULT_ROTATION_INTERVAL = 5000;
+    
+    let slides = [];
+    let currentIndex = 0;
+    let sliderTimer = null;
+    let rotationInterval = DEFAULT_ROTATION_INTERVAL;
+
+    async function loadEventConfig() {
+      try {
+        const response = await fetch(`${CONFIG_JSON_URL}?t=${Date.now()}`, { cache: "no-store" });
+        if (!response.ok) throw new Error("JSON 로딩 실패");
+        const config = await response.json();
+        
+        const enabledSlides = (config.slides || [])
+          .filter(slide => slide && slide.enabled !== false && slide.imageUrl)
+          .sort((a, b) => Number(a.sort || 0) - Number(b.sort || 0));
+
+        rotationInterval = Number(config.rotationInterval || DEFAULT_ROTATION_INTERVAL);
+        renderSlides(enabledSlides);
+      } catch (error) {
+        console.error(error);
+        if (slides.length === 0) sliderEl.innerHTML = `<div class="empty-message">이미지를 불러오지 못했습니다.</div>`;
+      }
+    }
+
+    function renderSlides(slideItems) {
+      if (sliderTimer) clearInterval(sliderTimer);
+      if (!slideItems.length) return;
+
+      sliderEl.innerHTML = "";
+      slideItems.forEach((item, index) => {
+        const slide = document.createElement("div");
+        slide.className = "slide" + (index === 0 ? " is-active" : "");
+        
+        const img = document.createElement("img");
+        img.src = item.imageUrl;
+        img.loading = index === 0 ? "eager" : "lazy";
+        
+        slide.appendChild(img);
+        sliderEl.appendChild(slide);
+      });
+
+      slides = Array.from(document.querySelectorAll(".slide"));
+      currentIndex = 0;
+
+      if (slides.length > 1) {
+        sliderTimer = setInterval(() => {
+          slides[currentIndex].classList.remove("is-active");
+          currentIndex = (currentIndex + 1) % slides.length;
+          slides[currentIndex].classList.add("is-active");
+        }, rotationInterval);
+      }
+    }
+
+
+    // ==========================================
+    // 3. QR 인증 로직
+    // ==========================================
+    const API_BASE = "https://localflow.ddns.net/qr/api";
     const startButton = document.getElementById("startButton");
     const qrWrap = document.getElementById("qrWrap");
     const qrImage = document.getElementById("qrImage");
@@ -87,46 +246,30 @@
     let activeSid = null;
     let pollTimer = null;
 
-    function stopPolling() {
-      if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
-      }
-    }
-
     async function startQr() {
-      stopPolling();
+      if (pollTimer) clearInterval(pollTimer);
       startButton.disabled = true;
       statusEl.textContent = "QR 생성 중입니다.";
       qrWrap.style.display = "block";
-      rawLink.textContent = "";
 
       try {
         const response = await fetch(API_BASE + "/start", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           cache: "no-store",
-          body: JSON.stringify({
-            source: "github-pages-tablet-event",
-            pageUrl: location.href,
-            createdAt: new Date().toISOString()
-          })
+          body: JSON.stringify({ source: "tablet-event", pageUrl: location.href })
         });
 
-        if (!response.ok) throw new Error("QR 생성 실패: " + response.status);
-
         const data = await response.json();
-        if (!data.ok || !data.sid || !data.authUrl) throw new Error("응답 형식 오류");
+        if (!data.ok) throw new Error("생성 실패");
 
         activeSid = data.sid;
-        qrImage.src = "https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=" + encodeURIComponent(data.authUrl);
+        qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(data.authUrl)}`;
         rawLink.textContent = data.authUrl;
         statusEl.textContent = "휴대폰으로 QR을 스캔해주세요.";
 
         pollTimer = setInterval(checkStatus, 1500);
-        checkStatus();
       } catch (error) {
-        console.error(error);
         statusEl.textContent = "QR 생성에 실패했습니다.";
         startButton.disabled = false;
       }
@@ -134,55 +277,27 @@
 
     async function checkStatus() {
       if (!activeSid) return;
-
       try {
-        const response = await fetch(API_BASE + "/status/" + encodeURIComponent(activeSid) + "?t=" + Date.now(), {
-          method: "GET",
-          cache: "no-store"
-        });
+        const res = await fetch(`${API_BASE}/status/${encodeURIComponent(activeSid)}?t=${Date.now()}`, { cache: "no-store" });
+        const data = await res.json();
 
-        if (!response.ok) throw new Error("상태 확인 실패: " + response.status);
-
-        const data = await response.json();
-
-        if (data.status === "pending") {
-          statusEl.textContent = "휴대폰 스캔을 기다리는 중입니다.";
-          return;
-        }
-
-        if (data.status === "scanned") {
-          statusEl.textContent = "휴대폰에서 Google 인증 화면이 열렸습니다.";
-          return;
-        }
-
-        if (data.status === "authenticated") {
-          statusEl.textContent = "인증 완료. 카드 선택 페이지로 이동합니다.";
-          stopPolling();
-          setTimeout(() => {
-            location.href = data.tabletCardUrl;
-          }, 700);
-          return;
-        }
-
-        if (data.status === "card_selected") {
-          statusEl.textContent = "카드 선택 완료!";
-          stopPolling();
+        if (data.status === "scanned") statusEl.textContent = "휴대폰에서 인증 화면이 열렸습니다.";
+        else if (data.status === "authenticated") {
+          statusEl.textContent = "인증 완료! 이동합니다.";
+          clearInterval(pollTimer);
+          setTimeout(() => location.href = data.tabletCardUrl, 700);
+        } else if (data.status === "expired") {
+          statusEl.textContent = "QR이 만료되었습니다. 다시 시도해주세요.";
+          clearInterval(pollTimer);
           startButton.disabled = false;
-          return;
         }
-
-        if (data.status === "expired") {
-          statusEl.textContent = "QR이 만료되었습니다. 다시 생성해주세요.";
-          stopPolling();
-          startButton.disabled = false;
-          return;
-        }
-      } catch (error) {
-        console.warn(error);
-      }
+      } catch (error) { console.warn(error); }
     }
 
     startButton.addEventListener("click", startQr);
+    
+    // 초기 실행
+    window.addEventListener("load", loadEventConfig);
   </script>
 </body>
 </html>
