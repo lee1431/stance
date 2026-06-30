@@ -162,6 +162,16 @@
     .event-button:active {
       transform: scale(0.985);
     }
+
+    .status {
+      position: fixed;
+      right: 16px;
+      bottom: 12px;
+      z-index: 30;
+      color: rgba(255, 255, 255, 0.35);
+      font-size: 12px;
+      pointer-events: none;
+    }
   </style>
 </head>
 
@@ -187,54 +197,118 @@
     </div>
   </section>
 
-  <script>
-    const IMAGE_LIST_API = "/fu/event-images.php";
-    const PARTICIPATION_URL = "/fu/event-join.php";
+  <div id="status" class="status"></div>
 
-    const ROTATION_INTERVAL = 5000;
-    const MODAL_AUTO_CLOSE_TIME = 15000;
+  <script>
+    const CONFIG_JSON_URL = "/fu/uploads/event/event.json";
+
+    const DEFAULT_ROTATION_INTERVAL = 5000;
+    const DEFAULT_MODAL_AUTO_CLOSE = 15000;
+    const JSON_RELOAD_INTERVAL = 60000;
 
     const app = document.getElementById("app");
     const slider = document.getElementById("slider");
     const modal = document.getElementById("eventModal");
     const joinButton = document.getElementById("joinButton");
+    const statusEl = document.getElementById("status");
 
     let slides = [];
     let currentIndex = 0;
     let sliderTimer = null;
+    let jsonReloadTimer = null;
     let modalTimer = null;
+
+    let rotationInterval = DEFAULT_ROTATION_INTERVAL;
+    let modalAutoClose = DEFAULT_MODAL_AUTO_CLOSE;
+    let participationUrl = "/fu/event-join.php";
+
+    let lastConfigSignature = "";
     let wakeLock = null;
     let hasUserActivated = false;
 
-    async function loadEventImages() {
+    async function loadEventConfig() {
       try {
-        const response = await fetch(IMAGE_LIST_API, {
+        const url = `${CONFIG_JSON_URL}?t=${Date.now()}`;
+
+        const response = await fetch(url, {
           cache: "no-store"
         });
 
         if (!response.ok) {
-          throw new Error("이미지 목록 API 호출 실패");
+          throw new Error(`JSON 로딩 실패: ${response.status}`);
         }
 
-        const data = await response.json();
-
-        if (!data.ok || !Array.isArray(data.images) || data.images.length === 0) {
-          renderEmptyMessage();
-          return;
-        }
-
-        renderSlides(data.images);
-        startSlider();
+        const config = await response.json();
+        applyConfig(config);
+        updateStatus("JSON updated");
       } catch (error) {
         console.error(error);
-        renderEmptyMessage("이벤트 이미지를 불러오지 못했습니다.");
+        updateStatus("JSON load failed");
+
+        if (slides.length === 0) {
+          renderEmptyMessage("이벤트 정보를 불러오지 못했습니다.");
+        }
       }
     }
 
-    function renderSlides(images) {
+    function applyConfig(config) {
+      const normalizedConfig = normalizeConfig(config);
+      const signature = JSON.stringify(normalizedConfig);
+
+      if (signature === lastConfigSignature) {
+        return;
+      }
+
+      lastConfigSignature = signature;
+
+      rotationInterval = normalizedConfig.rotationInterval;
+      modalAutoClose = normalizedConfig.modalAutoClose;
+      participationUrl = normalizedConfig.participationUrl;
+
+      joinButton.textContent = normalizedConfig.buttonText;
+
+      renderSlides(normalizedConfig.slides);
+      startSlider();
+    }
+
+    function normalizeConfig(config) {
+      const rawSlides = Array.isArray(config.slides) ? config.slides : [];
+
+      const enabledSlides = rawSlides
+        .filter((slide) => slide && slide.enabled !== false && slide.imageUrl)
+        .sort((a, b) => {
+          const sortA = Number(a.sort || 0);
+          const sortB = Number(b.sort || 0);
+          return sortA - sortB;
+        })
+        .map((slide, index) => ({
+          id: String(slide.id || `slide-${index + 1}`),
+          title: String(slide.title || ""),
+          imageUrl: String(slide.imageUrl),
+          alt: String(slide.alt || slide.title || `이벤트 이미지 ${index + 1}`),
+          sort: Number(slide.sort || index + 1)
+        }));
+
+      return {
+        rotationInterval: Number(config.rotationInterval || DEFAULT_ROTATION_INTERVAL),
+        modalAutoClose: Number(config.modalAutoClose || DEFAULT_MODAL_AUTO_CLOSE),
+        buttonText: String(config.buttonText || "이벤트 참여하기"),
+        participationUrl: String(config.participationUrl || "/fu/event-join.php"),
+        slides: enabledSlides
+      };
+    }
+
+    function renderSlides(slideItems) {
+      stopSlider();
+
+      if (!slideItems.length) {
+        renderEmptyMessage("등록된 이벤트 이미지가 없습니다.");
+        return;
+      }
+
       slider.innerHTML = "";
 
-      images.forEach((image, index) => {
+      slideItems.forEach((item, index) => {
         const slide = document.createElement("div");
         slide.className = "slide";
 
@@ -243,8 +317,8 @@
         }
 
         const img = document.createElement("img");
-        img.src = image.url;
-        img.alt = image.name || `이벤트 이미지 ${index + 1}`;
+        img.src = item.imageUrl;
+        img.alt = item.alt;
         img.draggable = false;
         img.decoding = "async";
 
@@ -261,14 +335,17 @@
       slides = Array.from(document.querySelectorAll(".slide"));
       currentIndex = 0;
 
-      preloadImages(images.map((image) => image.url));
+      preloadImages(slideItems.map((item) => item.imageUrl));
     }
 
-    function renderEmptyMessage(message = "등록된 이벤트 이미지가 없습니다.") {
+    function renderEmptyMessage(message) {
       stopSlider();
 
+      slides = [];
+      currentIndex = 0;
+
       slider.innerHTML = `
-        <div class="empty-message">${message}</div>
+        <div class="empty-message">${escapeHtml(message)}</div>
       `;
     }
 
@@ -281,6 +358,7 @@
 
     function showSlide(nextIndex) {
       if (slides.length === 0) return;
+      if (!slides[currentIndex] || !slides[nextIndex]) return;
 
       slides[currentIndex].classList.remove("is-active");
       slides[nextIndex].classList.add("is-active");
@@ -301,13 +379,28 @@
         return;
       }
 
-      sliderTimer = window.setInterval(nextSlide, ROTATION_INTERVAL);
+      sliderTimer = window.setInterval(nextSlide, rotationInterval);
     }
 
     function stopSlider() {
       if (sliderTimer) {
         window.clearInterval(sliderTimer);
         sliderTimer = null;
+      }
+    }
+
+    function startJsonReload() {
+      stopJsonReload();
+
+      jsonReloadTimer = window.setInterval(() => {
+        loadEventConfig();
+      }, JSON_RELOAD_INTERVAL);
+    }
+
+    function stopJsonReload() {
+      if (jsonReloadTimer) {
+        window.clearInterval(jsonReloadTimer);
+        jsonReloadTimer = null;
       }
     }
 
@@ -320,7 +413,7 @@
 
       modalTimer = window.setTimeout(() => {
         closeModal();
-      }, MODAL_AUTO_CLOSE_TIME);
+      }, modalAutoClose);
     }
 
     function closeModal() {
@@ -366,6 +459,24 @@
       await requestFullscreen();
     }
 
+    function updateStatus(message) {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, "0");
+      const mm = String(now.getMinutes()).padStart(2, "0");
+      const ss = String(now.getSeconds()).padStart(2, "0");
+
+      statusEl.textContent = `${message} ${hh}:${mm}:${ss}`;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
     app.addEventListener("pointerdown", async () => {
       await activateKioskHelpers();
       openModal();
@@ -383,17 +494,22 @@
 
     joinButton.addEventListener("click", (event) => {
       event.stopPropagation();
-      window.location.href = PARTICIPATION_URL;
+      window.location.href = participationUrl;
     });
 
     document.addEventListener("visibilitychange", async () => {
-      if (document.visibilityState === "visible" && hasUserActivated) {
-        await requestWakeLock();
+      if (document.visibilityState === "visible") {
+        loadEventConfig();
+
+        if (hasUserActivated) {
+          await requestWakeLock();
+        }
       }
     });
 
     window.addEventListener("load", () => {
-      loadEventImages();
+      loadEventConfig();
+      startJsonReload();
     });
   </script>
 </body>
