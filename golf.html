@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GRAVITY Shaft</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #020307; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Pretendard, sans-serif; cursor: pointer; }
+    #stage, #smoke, #vignette, #grain, #glare { position: fixed; inset: 0; width: 100%; height: 100%; }
+    #stage { z-index: 1; }
+    #smoke { z-index: 2; pointer-events: none; mix-blend-mode: screen; opacity: .7; }
+    #vignette { z-index: 3; pointer-events: none; background: radial-gradient(circle at 50% 45%, transparent 0 34%, rgba(0,0,0,.25) 56%, rgba(0,0,0,.86) 100%); }
+    #grain { z-index: 4; pointer-events: none; opacity: .075; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+    #glare { z-index: 5; pointer-events: none; background: linear-gradient(110deg, transparent 0 38%, rgba(255,255,255,.11) 45%, transparent 52%); transform: translateX(-120%); animation: sweep 7s ease-in-out infinite; }
+    .tap-zone { position: fixed; inset: 0; z-index: 10; }
+    .hint { position: fixed; left: 50%; bottom: 28px; z-index: 11; transform: translateX(-50%); color: rgba(255,255,255,.42); font-size: 12px; letter-spacing: .18em; text-transform: uppercase; user-select: none; pointer-events: none; animation: breathe 2.4s ease-in-out infinite; }
+    .loading { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: #020307; color: rgba(255,255,255,.7); letter-spacing: .18em; font-size: 12px; transition: opacity .8s ease, visibility .8s ease; }
+    .loading.hide { opacity: 0; visibility: hidden; }
+    @keyframes sweep { 0%, 50% { transform: translateX(-120%); opacity: 0; } 62% { opacity: .75; } 82%, 100% { transform: translateX(120%); opacity: 0; } }
+    @keyframes breathe { 0%,100% { opacity: .28; } 50% { opacity: .62; } }
+    @media (max-width: 720px) { .hint { bottom: 18px; font-size: 10px; } }
+  </style>
+</head>
+<body>
+  <div id="stage"></div>
+  <canvas id="smoke"></canvas>
+  <div id="vignette"></div>
+  <div id="grain"></div>
+  <div id="glare"></div>
+  <div class="tap-zone" id="tapZone" title="event"></div>
+  <div class="hint">Touch to join event</div>
+  <div class="loading" id="loading">GRAVITY LOADING</div>
+
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+    import { RoomEnvironment } from 'https://unpkg.com/three@0.160.0/examples/jsm/environments/RoomEnvironment.js';
+
+    const EVENT_URL = './event.html';
+    const stage = document.getElementById('stage');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x05070c, 0.035);
+
+    const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.1, 100);
+    camera.position.set(0, 0.42, 8.4);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.22;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    stage.appendChild(renderer.domElement);
+
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+
+    const hemi = new THREE.HemisphereLight(0x9ebcff, 0x050505, 0.7);
+    scene.add(hemi);
+    const key = new THREE.DirectionalLight(0xffffff, 4.2);
+    key.position.set(-2.8, 3.4, 5.2);
+    scene.add(key);
+    const rim = new THREE.DirectionalLight(0x7fb0ff, 3.2);
+    rim.position.set(4.5, 1.6, -2.8);
+    scene.add(rim);
+    const gold = new THREE.PointLight(0xd9bb72, 11, 8);
+    gold.position.set(-3.6, -1.8, 2.6);
+    scene.add(gold);
+    const blueLight = new THREE.PointLight(0x1b5cff, 7, 8);
+    blueLight.position.set(3.2, 1.4, 3.2);
+    scene.add(blueLight);
+
+    const group = new THREE.Group();
+    scene.add(group);
+
+    function makeShaftTexture(base, accent, label) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 2048;
+      canvas.height = 512;
+      const c = canvas.getContext('2d');
+      const grd = c.createLinearGradient(0, 0, 0, canvas.height);
+      grd.addColorStop(0, '#04060a');
+      grd.addColorStop(.17, base);
+      grd.addColorStop(.36, accent);
+      grd.addColorStop(.50, '#ffffff');
+      grd.addColorStop(.58, accent);
+      grd.addColorStop(.82, base);
+      grd.addColorStop(1, '#010103');
+      c.fillStyle = grd;
+      c.fillRect(0, 0, canvas.width, canvas.height);
+
+      c.globalAlpha = .34;
+      for (let x = -80; x < canvas.width + 80; x += 70) {
+        c.fillStyle = 'rgba(255,255,255,.9)';
+        for (let y = 42; y < canvas.height - 42; y += 42) {
+          const off = ((x / 70) % 2) * 18;
+          for (let k = 0; k < 5; k++) {
+            c.beginPath();
+            c.ellipse(x + off + k * 10, y + k * 3, 4.8, 2.1, -0.52, 0, Math.PI * 2);
+            c.fill();
+          }
+          for (let k = 0; k < 5; k++) {
+            c.beginPath();
+            c.ellipse(x + off + 42 - k * 10, y + k * 3, 4.8, 2.1, 0.52, 0, Math.PI * 2);
+            c.fill();
+          }
+        }
+      }
+      c.globalAlpha = 1;
+
+      const centerX = canvas.width * .52;
+      c.save();
+      c.translate(centerX, canvas.height / 2);
+      c.rotate(-0.01);
+      c.fillStyle = 'rgba(0,0,0,.82)';
+      roundRect(c, -330, -92, 660, 184, 34);
+      c.fill();
+      c.strokeStyle = 'rgba(255,255,255,.45)';
+      c.lineWidth = 5;
+      c.stroke();
+      c.font = '900 118px Arial, sans-serif';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillStyle = '#f4f6fb';
+      c.shadowColor = 'rgba(255,255,255,.7)';
+      c.shadowBlur = 18;
+      c.fillText(label, 0, 4);
+      c.restore();
+
+      for (const x of [72, 1920]) {
+        c.fillStyle = 'rgba(255,255,255,.92)';
+        c.fillRect(x, 36, 12, 440);
+        c.fillRect(x + 36, 36, 7, 440);
+        c.fillStyle = 'rgba(0,0,0,.7)';
+        c.fillRect(x + 15, 36, 18, 440);
+      }
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.ClampToEdgeWrapping;
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      return tex;
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    const shaftGeo = new THREE.CylinderGeometry(0.105, 0.105, 7.9, 128, 1, false);
+    function shaftMaterial(texture) {
+      return new THREE.MeshPhysicalMaterial({
+        map: texture,
+        metalness: 0.45,
+        roughness: 0.16,
+        clearcoat: 1,
+        clearcoatRoughness: 0.045,
+        envMapIntensity: 1.7
+      });
+    }
+
+    const blue = new THREE.Mesh(shaftGeo, shaftMaterial(makeShaftTexture('#06144a', '#0c45f5', 'GRAVITY')));
+    const black = new THREE.Mesh(shaftGeo, shaftMaterial(makeShaftTexture('#030305', '#151923', 'GRAVITY')));
+    blue.rotation.z = Math.PI / 2;
+    black.rotation.z = Math.PI / 2;
+    blue.position.set(0, 0.36, 0);
+    black.position.set(0, -0.38, 0.04);
+    blue.rotation.y = 0.015;
+    black.rotation.y = -0.02;
+    group.add(blue, black);
+
+    const floorGeo = new THREE.PlaneGeometry(16, 9, 1, 1);
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x050607, roughness: .42, metalness: .18, envMapIntensity: .9 });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -1.2;
+    floor.position.z = .4;
+    scene.add(floor);
+
+    const reflection = new THREE.Mesh(new THREE.PlaneGeometry(8.6, 1.1), new THREE.MeshBasicMaterial({ color: 0x2b3b5a, transparent: true, opacity: .11, blending: THREE.AdditiveBlending }));
+    reflection.rotation.x = -Math.PI / 2;
+    reflection.position.set(0, -1.185, .4);
+    scene.add(reflection);
+
+    const particles = new THREE.BufferGeometry();
+    const count = 360;
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      pos[i * 3] = (Math.random() - .5) * 11;
+      pos[i * 3 + 1] = (Math.random() - .5) * 5.4;
+      pos[i * 3 + 2] = (Math.random() - .5) * 4;
+    }
+    particles.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const particleMat = new THREE.PointsMaterial({ color: 0xb9c9ff, size: .018, transparent: true, opacity: .34, blending: THREE.AdditiveBlending });
+    const points = new THREE.Points(particles, particleMat);
+    scene.add(points);
+
+    let targetX = 0, targetY = 0;
+    addEventListener('pointermove', e => {
+      targetX = (e.clientX / innerWidth - .5) * 0.22;
+      targetY = (e.clientY / innerHeight - .5) * 0.16;
+    });
+
+    document.getElementById('tapZone').addEventListener('click', () => {
+      document.body.style.transition = 'filter .28s ease';
+      document.body.style.filter = 'brightness(1.5)';
+      setTimeout(() => { document.body.style.filter = 'brightness(1)'; }, 230);
+      // 실제 이벤트 페이지로 이동하려면 아래 주석을 해제하고 주소를 수정하세요.
+      // location.href = EVENT_URL;
+    });
+
+    const smokeCanvas = document.getElementById('smoke');
+    const sx = smokeCanvas.getContext('2d');
+    let smokeW, smokeH, clouds = [];
+    function resizeSmoke() {
+      smokeW = smokeCanvas.width = Math.floor(innerWidth * Math.min(devicePixelRatio, 2));
+      smokeH = smokeCanvas.height = Math.floor(innerHeight * Math.min(devicePixelRatio, 2));
+      smokeCanvas.style.width = innerWidth + 'px';
+      smokeCanvas.style.height = innerHeight + 'px';
+      clouds = Array.from({ length: innerWidth < 720 ? 28 : 48 }, () => ({
+        x: Math.random() * smokeW,
+        y: smokeH * (.38 + Math.random() * .48),
+        r: smokeW * (.045 + Math.random() * .09),
+        a: .02 + Math.random() * .06,
+        vx: smokeW * (.00008 + Math.random() * .00016),
+        phase: Math.random() * Math.PI * 2
+      }));
+    }
+    resizeSmoke();
+
+    function drawSmoke(t) {
+      sx.clearRect(0, 0, smokeW, smokeH);
+      sx.globalCompositeOperation = 'lighter';
+      for (const p of clouds) {
+        p.x += p.vx;
+        p.y += Math.sin(t * .0004 + p.phase) * .16;
+        if (p.x - p.r > smokeW) p.x = -p.r;
+        const g = sx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        g.addColorStop(0, `rgba(170,190,220,${p.a})`);
+        g.addColorStop(.45, `rgba(90,110,145,${p.a * .46})`);
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        sx.fillStyle = g;
+        sx.beginPath();
+        sx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        sx.fill();
+      }
+      sx.globalCompositeOperation = 'source-over';
+    }
+
+    function resize() {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      resizeSmoke();
+    }
+    addEventListener('resize', resize);
+
+    let clock = new THREE.Clock();
+    function animate(t) {
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+      group.rotation.x += (targetY - group.rotation.x) * .035;
+      group.rotation.y += (targetX - group.rotation.y) * .035;
+      group.rotation.z = Math.sin(elapsed * .45) * .018;
+      blue.rotation.x = elapsed * .18;
+      black.rotation.x = -elapsed * .16 + .9;
+      blue.position.y = .36 + Math.sin(elapsed * 1.25) * .025;
+      black.position.y = -.38 + Math.sin(elapsed * 1.1 + 1.6) * .02;
+      gold.intensity = 9 + Math.sin(elapsed * 1.8) * 2.2;
+      blueLight.position.x = Math.sin(elapsed * .7) * 3.7;
+      points.rotation.y = elapsed * .025;
+      drawSmoke(t);
+      renderer.render(scene, camera);
+    }
+    animate(0);
+    setTimeout(() => document.getElementById('loading').classList.add('hide'), 500);
+  </script>
+</body>
+</html>
