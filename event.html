@@ -3,14 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:,">
   <title>QR Google 인증 테스트</title>
-
   <style>
-    * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
       margin: 0;
       min-height: 100vh;
@@ -21,7 +17,6 @@
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       padding: 24px;
     }
-
     .card {
       width: min(520px, 100%);
       padding: 34px 28px;
@@ -32,21 +27,8 @@
       box-shadow: 0 28px 80px rgba(0, 0, 0, 0.38);
       backdrop-filter: blur(16px);
     }
-
-    h1 {
-      margin: 0 0 12px;
-      font-size: 32px;
-      letter-spacing: -0.04em;
-    }
-
-    p {
-      margin: 0 0 24px;
-      color: rgba(255, 255, 255, 0.72);
-      font-size: 17px;
-      font-weight: 700;
-      line-height: 1.5;
-    }
-
+    h1 { margin: 0 0 12px; font-size: 32px; letter-spacing: -0.04em; }
+    p { margin: 0 0 24px; color: rgba(255,255,255,.72); font-size: 17px; font-weight: 700; line-height: 1.5; }
     button {
       width: 100%;
       min-height: 68px;
@@ -58,21 +40,9 @@
       font-weight: 900;
       cursor: pointer;
     }
-
-    button:active {
-      transform: scale(.985);
-    }
-
-    button:disabled {
-      opacity: .55;
-      cursor: not-allowed;
-    }
-
-    .qr-wrap {
-      display: none;
-      margin-top: 28px;
-    }
-
+    button:active { transform: scale(.985); }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .qr-wrap { display: none; margin-top: 28px; }
     .qr-box {
       width: 280px;
       height: 280px;
@@ -81,50 +51,26 @@
       border-radius: 24px;
       background: white;
     }
-
-    .qr-box img {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    .status {
-      min-height: 26px;
-      color: rgba(255, 255, 255, 0.8);
-      font-size: 16px;
-      font-weight: 800;
-    }
-
-    .link {
-      margin-top: 12px;
-      font-size: 13px;
-      word-break: break-all;
-      color: rgba(255,255,255,.45);
-    }
+    .qr-box img { width: 100%; height: 100%; display: block; }
+    .status { min-height: 26px; color: rgba(255,255,255,.8); font-size: 16px; font-weight: 800; }
+    .link { margin-top: 12px; font-size: 13px; word-break: break-all; color: rgba(255,255,255,.45); }
   </style>
 </head>
-
 <body>
   <main class="card">
     <h1>QR Google 인증 테스트</h1>
     <p>
       버튼을 누르면 QR이 생성됩니다.<br>
-      휴대폰으로 QR을 찍고 인증 완료 페이지까지 넘어가는지만 확인합니다.
+      스마트폰 인증이 끝나면 태블릿이 자동으로 카드 페이지로 이동합니다.
     </p>
 
-    <button id="startButton" type="button">
-      QR 생성하기
-    </button>
+    <button id="startButton" type="button">QR 생성하기</button>
 
     <section id="qrWrap" class="qr-wrap">
       <div class="qr-box">
         <img id="qrImage" alt="QR 코드" />
       </div>
-
-      <div id="status" class="status">
-        QR 생성을 기다리는 중입니다.
-      </div>
-
+      <div id="status" class="status">QR 생성을 기다리는 중입니다.</div>
       <div id="rawLink" class="link"></div>
     </section>
   </main>
@@ -150,7 +96,6 @@
 
     async function startQr() {
       stopPolling();
-
       startButton.disabled = true;
       statusEl.textContent = "QR 생성 중입니다.";
       qrWrap.style.display = "block";
@@ -159,39 +104,27 @@
       try {
         const response = await fetch(API_BASE + "/start", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           cache: "no-store",
           body: JSON.stringify({
-            source: "github-pages-test",
+            source: "github-pages-tablet-event",
             pageUrl: location.href,
             createdAt: new Date().toISOString()
           })
         });
 
-        if (!response.ok) {
-          throw new Error("QR 생성 실패: " + response.status);
-        }
+        if (!response.ok) throw new Error("QR 생성 실패: " + response.status);
 
         const data = await response.json();
-
-        if (!data.ok || !data.sid || !data.authUrl) {
-          throw new Error("응답 형식 오류");
-        }
+        if (!data.ok || !data.sid || !data.authUrl) throw new Error("응답 형식 오류");
 
         activeSid = data.sid;
-
-        qrImage.src =
-          "https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=" +
-          encodeURIComponent(data.authUrl);
-
+        qrImage.src = "https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=" + encodeURIComponent(data.authUrl);
         rawLink.textContent = data.authUrl;
         statusEl.textContent = "휴대폰으로 QR을 스캔해주세요.";
 
         pollTimer = setInterval(checkStatus, 1500);
         checkStatus();
-
       } catch (error) {
         console.error(error);
         statusEl.textContent = "QR 생성에 실패했습니다.";
@@ -203,17 +136,12 @@
       if (!activeSid) return;
 
       try {
-        const response = await fetch(
-          API_BASE + "/status/" + encodeURIComponent(activeSid) + "?t=" + Date.now(),
-          {
-            method: "GET",
-            cache: "no-store"
-          }
-        );
+        const response = await fetch(API_BASE + "/status/" + encodeURIComponent(activeSid) + "?t=" + Date.now(), {
+          method: "GET",
+          cache: "no-store"
+        });
 
-        if (!response.ok) {
-          throw new Error("상태 확인 실패: " + response.status);
-        }
+        if (!response.ok) throw new Error("상태 확인 실패: " + response.status);
 
         const data = await response.json();
 
@@ -228,7 +156,16 @@
         }
 
         if (data.status === "authenticated") {
-          statusEl.textContent = "인증 완료! 기능 확인 성공입니다.";
+          statusEl.textContent = "인증 완료. 카드 선택 페이지로 이동합니다.";
+          stopPolling();
+          setTimeout(() => {
+            location.href = data.tabletCardUrl;
+          }, 700);
+          return;
+        }
+
+        if (data.status === "card_selected") {
+          statusEl.textContent = "카드 선택 완료!";
           stopPolling();
           startButton.disabled = false;
           return;
@@ -240,7 +177,6 @@
           startButton.disabled = false;
           return;
         }
-
       } catch (error) {
         console.warn(error);
       }
