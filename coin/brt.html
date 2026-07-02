@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binance Real-time OI Dashboard</title>
+    <style>
+        /* 기본 테마 및 초기화 */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background-color: #0b0e11;
+            color: #eaecef;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+        h1 { text-align: center; margin-bottom: 30px; color: #fcd535; font-size: 28px; }
+
+        /* 검색 섹션 (제공해주신 UI 스타일 응용) */
+        .search-section {
+            max-width: 600px;
+            margin: 0 auto 40px auto;
+            position: relative;
+        }
+        .input {
+            width: 100%;
+            height: 52px;
+            padding: 0 16px;
+            font-size: 16px;
+            border: 1px solid #2b3139;
+            border-radius: 12px;
+            outline: none;
+            background: #181a20;
+            color: #ffffff;
+            transition: border-color 0.2s;
+        }
+        .input:focus { border-color: #fcd535; }
+        
+        /* 검색 결과 리스트 */
+        .coin-list {
+            position: absolute;
+            top: 60px;
+            left: 0;
+            right: 0;
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(24, 26, 32, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid #2b3139;
+            border-radius: 12px;
+            z-index: 100;
+            display: none;
+            padding: 8px;
+            gap: 8px;
+            flex-direction: column;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+        }
+        .coin-list.active { display: flex; }
+        
+        .coin-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: #1e2026;
+            transition: background 0.2s;
+        }
+        .coin-item:hover { background: #2b3139; }
+        .coin-name { font-weight: bold; font-size: 16px; color: #fff; }
+        
+        .select-button {
+            border: none;
+            border-radius: 6px;
+            background: #fcd535;
+            color: #0b0e11;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .select-button:hover { background: #e0bd2e; }
+
+        /* 상태 메시지 */
+        .status-msg { text-align: center; color: #848e9c; margin-bottom: 20px; font-size: 14px; }
+
+        /* 카드 그리드 */
+        .card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* 개별 카드 UI */
+        .oi-card {
+            background-color: #181a20;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            border: 1px solid #2b3139;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: relative;
+        }
+        .delete-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: #848e9c;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        .delete-btn:hover { color: #f6465d; }
+
+        .card-header { border-bottom: 1px solid #2b3139; padding-bottom: 12px; padding-right: 20px; }
+        .coin-symbol-title { font-size: 22px; font-weight: bold; color: #ffffff; }
+        .current-price { font-size: 20px; font-weight: 600; margin-top: 8px; display: flex; align-items: center; justify-content: space-between;}
+        .price-change { font-size: 14px; font-weight: bold; }
+        
+        .data-row { display: flex; justify-content: space-between; align-items: center; }
+        .data-label { font-size: 14px; color: #848e9c; }
+        .data-value { font-size: 16px; font-weight: 600; }
+        
+        /* 색상 유틸리티 */
+        .text-green { color: #0ecb81 !important; }
+        .text-red { color: #f6465d !important; }
+        .text-neutral { color: #eaecef !important; }
+
+        /* 업데이트 깜빡임 효과 */
+        @keyframes flashGreen { 0% { background-color: rgba(14, 203, 129, 0.2); } 100% { background-color: transparent; } }
+        @keyframes flashRed { 0% { background-color: rgba(246, 70, 93, 0.2); } 100% { background-color: transparent; } }
+        .flash-up { animation: flashGreen 0.8s ease-out; }
+        .flash-down { animation: flashRed 0.8s ease-out; }
+        
+        /* 로딩 스피너 */
+        .loading { text-align: center; color: #848e9c; padding: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>🔥 바이낸스 선물 실시간 OI 추적기</h1>
+    
+    <div class="status-msg" id="apiStatus">바이낸스 서버와 연결 중...</div>
+
+    <div class="search-section">
+        <input type="text" id="searchInput" class="input" placeholder="코인 심볼 검색 (예: BTC, SOL)" autocomplete="off">
+        <div id="coinList" class="coin-list">
+            <!-- 검색 결과가 여기에 표시됩니다 -->
+        </div>
+    </div>
+
+    <div class="card-container" id="oi-container">
+        <!-- 워치리스트 카드가 여기에 추가됩니다 -->
+    </div>
+
+    <script>
+        const BINANCE_FAPI = "https://fapi.binance.com";
+        let allSymbols = []; // 바이낸스의 모든 선물 티커 저장
+        let watchlist = [];  // 내가 추가한 코인 목록
+        let priceCache = {}; // 이전 가격 저장 (색상 깜빡임 비교용)
+
+        const searchInput = document.getElementById('searchInput');
+        const coinList = document.getElementById('coinList');
+        const container = document.getElementById('oi-container');
+        const apiStatus = document.getElementById('apiStatus');
+
+        // 숫자 포맷팅 유틸
+        const formatNumber = (num) => new Intl.NumberFormat('en-US').format(num);
+        const formatPrice = (num) => num < 1 ? Number(num).toFixed(4) : new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(num);
+        const formatPercent = (val) => `${val > 0 ? '+' : ''}${Number(val).toFixed(3)}%`;
+        const getColorClass = (val) => val > 0 ? 'text-green' : (val < 0 ? 'text-red' : 'text-neutral');
+
+        // 1. 바이낸스에서 전체 선물 상장 코인 목록 가져오기 (초기 1회)
+        async function fetchExchangeInfo() {
+            try {
+                const res = await fetch(`${BINANCE_FAPI}/fapi/v1/exchangeInfo`);
+                const data = await res.json();
+                
+                // USDT 페어이면서 현재 거래중(TRADING)인 무기한(PERPETUAL) 계약만 필터링
+                allSymbols = data.symbols
+                    .filter(s => s.quoteAsset === 'USDT' && s.contractType === 'PERPETUAL' && s.status === 'TRADING')
+                    .map(s => s.symbol);
+                
+                apiStatus.innerText = `✅ 바이낸스 서버 연결 완료 (${allSymbols.length}개 코인 검색 가능)`;
+            } catch (error) {
+                apiStatus.innerText = "❌ 바이낸스 서버 연결 실패. 새로고침 해주세요.";
+                console.error("Exchange Info Fetch Error:", error);
+            }
+        }
+
+        // 2. 검색창 입력 이벤트 (리스트 렌더링)
+        searchInput.addEventListener('input', (e) => {
+            const keyword = e.target.value.trim().toUpperCase();
+            coinList.innerHTML = '';
+
+            if (!keyword) {
+                coinList.classList.remove('active');
+                return;
+            }
+
+            // 검색어 포함하는 최대 20개 심볼 찾기
+            const matched = allSymbols.filter(sym => sym.includes(keyword)).slice(0, 20);
+
+            if (matched.length === 0) {
+                coinList.innerHTML = '<div style="text-align:center; color:#848e9c; padding: 10px;">검색 결과 없음</div>';
+            } else {
+                matched.forEach(symbol => {
+                    const item = document.createElement('div');
+                    item.className = 'coin-item';
+                    
+                    const isAdded = watchlist.includes(symbol);
+                    
+                    item.innerHTML = `
+                        <div class="coin-name">${symbol.replace('USDT', '')} <span style="color:#848e9c; font-size:12px;">/USDT</span></div>
+                        <button class="select-button" onclick="addCoin('${symbol}')" ${isAdded ? 'disabled style="background:#444; color:#888; cursor:not-allowed;"' : ''}>
+                            ${isAdded ? '추가됨' : '추가'}
+                        </button>
+                    `;
+                    coinList.appendChild(item);
+                });
+            }
+            coinList.classList.add('active');
+        });
+
+        // 바탕 클릭 시 검색창 닫기
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-section')) {
+                coinList.classList.remove('active');
+            }
+        });
+
+        // 3. 워치리스트에 코인 추가
+        function addCoin(symbol) {
+            if (watchlist.includes(symbol)) return;
+            watchlist.push(symbol);
+            
+            // UI 초기화
+            searchInput.value = '';
+            coinList.classList.remove('active');
+            
+            renderEmptyCards(); // 틀 먼저 만들고
+            fetchLiveData();    // 즉시 데이터 당겨오기
+        }
+
+        // 워치리스트에서 제거
+        function removeCoin(symbol) {
+            watchlist = watchlist.filter(s => s !== symbol);
+            delete priceCache[symbol];
+            renderEmptyCards();
+        }
+
+        // 4. 워치리스트 카드 기본 틀 렌더링
+        function renderEmptyCards() {
+            container.innerHTML = '';
+            
+            if (watchlist.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#848e9c; grid-column: 1 / -1; margin-top:40px;">관심 있는 코인을 검색하여 추가해주세요.</p>';
+                return;
+            }
+
+            watchlist.forEach(symbol => {
+                const card = document.createElement('div');
+                card.className = 'oi-card';
+                card.id = `card-${symbol}`;
+                const shortSymbol = symbol.replace('USDT', '');
+
+                // 데이터가 들어갈 자리에 로딩 표시 (...) 세팅
+                card.innerHTML = `
+                    <button class="delete-btn" onclick="removeCoin('${symbol}')">✖</button>
+                    <div class="card-header">
+                        <div class="coin-symbol-title">${shortSymbol}/USDT</div>
+                        <div class="current-price text-neutral">
+                            <span id="price-${symbol}">...</span>
+                            <span id="change-${symbol}" class="price-change">...</span>
+                        </div>
+                    </div>
+                    <div class="data-row">
+                        <div class="data-label">Open Interest (코인)</div>
+                        <div class="data-value text-neutral" id="oi-${symbol}">...</div>
+                    </div>
+                    <div class="data-row">
+                        <div class="data-label">Funding Rate (8h)</div>
+                        <div class="data-value" id="funding-${symbol}">...</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // 5. 바이낸스 API에서 실시간 데이터 패치 및 DOM 업데이트
+        async function fetchLiveData() {
+            if (watchlist.length === 0) return;
+
+            // 여러 종목의 API 호출을 Promise.all로 병렬 처리하여 속도 최적화
+            watchlist.forEach(async (symbol) => {
+                try {
+                    // 1) 24h 가격 및 변동률
+                    const tickerRes = await fetch(`${BINANCE_FAPI}/fapi/v1/ticker/24hr?symbol=${symbol}`);
+                    const ticker = await tickerRes.json();
+                    
+                    // 2) 펀딩비 (Premium Index)
+                    const fundingRes = await fetch(`${BINANCE_FAPI}/fapi/v1/premiumIndex?symbol=${symbol}`);
+                    const funding = await fundingRes.json();
+                    
+                    // 3) 미결제약정 (Open Interest)
+                    const oiRes = await fetch(`${BINANCE_FAPI}/fapi/v1/openInterest?symbol=${symbol}`);
+                    const oi = await oiRes.json();
+
+                    updateCardDOM(symbol, ticker, funding, oi);
+                } catch (error) {
+                    console.error(`Error fetching data for ${symbol}:`, error);
+                }
+            });
+        }
+
+        // 6. 가져온 데이터로 개별 카드 내용만 업데이트 (화면 깜빡임 방지)
+        function updateCardDOM(symbol, ticker, funding, oi) {
+            const priceEl = document.getElementById(`price-${symbol}`);
+            const changeEl = document.getElementById(`change-${symbol}`);
+            const oiEl = document.getElementById(`oi-${symbol}`);
+            const fundingEl = document.getElementById(`funding-${symbol}`);
+            const cardEl = document.getElementById(`card-${symbol}`);
+
+            if (!priceEl) return; // 카드가 삭제된 경우 예외 처리
+
+            const currentPrice = parseFloat(ticker.lastPrice);
+            const priceChange = parseFloat(ticker.priceChangePercent);
+            const fundingRate = parseFloat(funding.lastFundingRate) * 100; // %로 변환
+            const openInterest = parseFloat(oi.openInterest);
+
+            // 데이터 주입
+            priceEl.innerText = `$${formatPrice(currentPrice)}`;
+            changeEl.innerText = formatPercent(priceChange);
+            changeEl.className = `price-change ${getColorClass(priceChange)}`;
+            
+            oiEl.innerText = formatNumber(Math.floor(openInterest));
+            
+            fundingEl.innerText = formatPercent(fundingRate);
+            fundingEl.className = `data-value ${getColorClass(fundingRate)}`;
+
+            // 이전 가격과 비교하여 깜빡임 효과 (플래시) 적용
+            const oldPrice = priceCache[symbol];
+            if (oldPrice && currentPrice !== oldPrice) {
+                cardEl.classList.remove('flash-up', 'flash-down');
+                void cardEl.offsetWidth; // DOM 리플로우 강제 발생 (애니메이션 재시작 트릭)
+                cardEl.classList.add(currentPrice > oldPrice ? 'flash-up' : 'flash-down');
+                priceEl.className = currentPrice > oldPrice ? 'text-green' : 'text-red';
+            } else if (!oldPrice) {
+                priceEl.className = 'text-neutral';
+            }
+
+            // 현재 가격 캐싱
+            priceCache[symbol] = currentPrice;
+        }
+
+        // --- 초기화 및 루프 실행 ---
+        fetchExchangeInfo();
+        renderEmptyCards();
+
+        // 5초마다 실시간 데이터 갱신 (바이낸스 API Limit 고려)
+        setInterval(fetchLiveData, 5000);
+
+    </script>
+</body>
+</html>
