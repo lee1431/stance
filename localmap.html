@@ -374,6 +374,7 @@
     .thumb-row img { width: 100%; height: 54px; object-fit: cover; border-radius: 10px; }
 
     .news-card { padding: 20px; }
+    .bottom-news-card { align-self: stretch; }
     .card-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
     .card-title { margin: 0; font-size: 18px; font-weight: 950; letter-spacing: -0.04em; }
     .more-link { color: var(--primary); font-size: 13px; font-weight: 950; }
@@ -398,6 +399,12 @@
       overflow: hidden;
       background: #fff;
       box-shadow: 0 8px 20px rgba(15,23,42,0.04);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+    .mini-store:hover {
+      transform: translateY(-3px);
+      border-color: rgba(225, 29, 72, 0.25);
+      box-shadow: 0 14px 28px rgba(15,23,42,0.08);
     }
     .mini-img-wrap { position: relative; height: 98px; overflow: hidden; }
     .mini-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
@@ -406,21 +413,6 @@
     .mini-title { font-size: 14px; font-weight: 950; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .mini-desc { color: #64748b; font-size: 12px; font-weight: 750; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .mini-meta { margin-top: 8px; display: flex; justify-content: space-between; color: #64748b; font-size: 11px; font-weight: 800; }
-
-    .ad-inline {
-      min-height: 146px;
-      border: 1px dashed #cbd5e1;
-      border-radius: 16px;
-      background: rgba(248, 250, 252, 0.9);
-      display: grid;
-      place-items: center;
-      text-align: center;
-      color: #64748b;
-      font-size: 14px;
-      line-height: 1.7;
-      padding: 20px;
-    }
-    .ad-label { font-weight: 950; color: #334155; }
 
     .footer {
       background: #0f172a;
@@ -578,18 +570,6 @@
               </div>
             </article>
 
-            <article class="side-card news-card">
-              <div class="card-title-row">
-                <h3 class="card-title">LocalFlow 소식</h3>
-                <a class="more-link" href="#">더보기 ›</a>
-              </div>
-              <div class="news-list">
-                <div class="news-item"><strong>신규 스마트 스토어 3곳이 추가되었습니다.</strong><span>2026-06-20</span></div>
-                <div class="news-item"><strong>8월 추첨 이벤트 일정 안내</strong><span>2026-06-19</span></div>
-                <div class="news-item"><strong>LocalFlow 투자 심사 기준 안내</strong><span>2026-06-18</span></div>
-                <div class="news-item"><strong>쿠폰맵 AR 기능 준비 중!</strong><span>2026-06-17</span></div>
-              </div>
-            </article>
           </aside>
         </section>
 
@@ -602,13 +582,16 @@
             <div class="recommend-grid" id="recommendGrid"></div>
           </article>
 
-          <aside class="section-card">
-            <div class="ad-inline" aria-label="본문 광고 영역">
-              <div>
-                <div class="ad-label">Google AdSense 본문 자동광고 영역</div>
-                지도 아래 또는 업체 상세 콘텐츠 사이에 자연스럽게 배치되는 반응형 광고 구역입니다.<br />
-                광고 클릭 유도 문구 없이 콘텐츠와 명확히 분리합니다.
-              </div>
+          <aside class="section-card news-card bottom-news-card">
+            <div class="card-title-row">
+              <h3 class="card-title">LocalFlow 소식</h3>
+              <a class="more-link" href="#">더보기 ›</a>
+            </div>
+            <div class="news-list">
+              <div class="news-item"><strong>신규 스마트 스토어 3곳이 추가되었습니다.</strong><span>2026-06-20</span></div>
+              <div class="news-item"><strong>8월 추첨 이벤트 일정 안내</strong><span>2026-06-19</span></div>
+              <div class="news-item"><strong>LocalFlow 투자 심사 기준 안내</strong><span>2026-06-18</span></div>
+              <div class="news-item"><strong>쿠폰맵 AR 기능 준비 중!</strong><span>2026-06-17</span></div>
             </div>
           </aside>
         </section>
@@ -714,7 +697,14 @@
       document.getElementById("entryCount").textContent = store.entries;
       document.getElementById("remainCount").textContent = store.remain;
       document.getElementById("progressBar").style.width = `${store.progress}%`;
-      if (moveMap) map.flyTo([store.lat, store.lng], 14, { duration: 0.75 });
+      if (moveMap) {
+        const mapCard = document.querySelector(".map-card");
+        if (mapCard) {
+          mapCard.scrollIntoView({ behavior: "smooth", block: "center" });
+          setTimeout(() => map.invalidateSize(), 360);
+        }
+        map.flyTo([store.lat, store.lng], 14, { duration: 0.75 });
+      }
     }
 
     function renderRecommendations() {
