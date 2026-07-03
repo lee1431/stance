@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LocalFlow 쿠폰맵 - 충주 혜택 지도</title>
+  <meta name="description" content="충주에서 지금 쿠폰과 이벤트가 진행 중인 LocalFlow 업체를 지도에서 확인하세요." />
+  <meta name="keywords" content="LocalFlow, 로컬플로우, 충주 쿠폰맵, 충주 쿠폰, 충주 이벤트, 충주 소상공인" />
+  <meta name="author" content="STANCE" />
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --nav: #ffffff;
+      --nav-dark: #0f172a;
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --card: #ffffff;
+      --primary: #e11d48;
+      --primary-light: #fff1f2;
+      --primary-dark: #be123c;
+      --green: #10b981;
+      --blue: #3b82f6;
+      --orange: #f97316;
+      --shadow: 0 22px 55px rgba(15, 23, 42, 0.08);
+      --soft-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+      background:
+        radial-gradient(circle at 18% 12%, var(--primary-light), transparent 24%),
+        radial-gradient(circle at 82% 18%, rgba(13, 148, 136, 0.07), transparent 28%),
+        #f8fafc;
+    }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; cursor: pointer; }
+
+    .site-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 160px) minmax(980px, 1280px) minmax(0, 160px);
+      justify-content: center;
+      gap: 18px;
+      width: 100%;
+    }
+
+    .ad-rail {
+      position: sticky;
+      top: 86px;
+      height: calc(100vh - 104px);
+      margin-top: 18px;
+      border: 1px dashed #cbd5e1;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.55);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #64748b;
+      padding: 18px 14px;
+    }
+    .ad-rail strong { color: #475569; font-size: 15px; margin-bottom: 18px; }
+    .ad-rail .ad-size { margin-top: 16px; font-size: 12px; line-height: 1.6; }
+    .ad-rail .ad-icon { font-size: 42px; opacity: 0.35; margin: 24px 0; }
+
+    .main-column {
+      min-width: 0;
+      background: transparent;
+    }
+
+    .topbar {
+      height: 72px;
+      background: rgba(15, 23, 42, 0.96);
+      color: #fff;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 14px 35px rgba(15, 23, 42, 0.15);
+    }
+    .nav-inner {
+      width: min(1180px, calc(100% - 48px));
+      height: 100%;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 900; }
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      font-size: 19px;
+      box-shadow: 0 8px 22px rgba(225, 29, 72, 0.28);
+    }
+    .brand-name { font-size: 20px; letter-spacing: -0.04em; }
+    .brand-sub { color: #94a3b8; font-size: 12px; font-weight: 700; margin-left: 4px; }
+    .nav { display: flex; align-items: center; gap: 36px; font-size: 15px; font-weight: 800; }
+    .nav a { color: #cbd5e1; position: relative; height: 72px; display: flex; align-items: center; }
+    .nav a:hover, .nav a.active { color: #fff; }
+    .nav a.active::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      width: 100%;
+      height: 3px;
+      border-radius: 999px;
+      transform: translateX(-50%);
+      background: var(--primary);
+    }
+    .nav-action {
+      border: 0;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      padding: 10px 18px;
+      font-weight: 900;
+    }
+    .hamburger { width: 44px; height: 44px; border: 0; background: transparent; color: #fff; font-size: 28px; display: none; }
+
+    .page {
+      width: min(1180px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 34px 0 0;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(420px, 560px);
+      gap: 24px;
+      align-items: end;
+      margin-bottom: 24px;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid var(--line);
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 900;
+      box-shadow: var(--soft-shadow);
+      margin-bottom: 12px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(34px, 5vw, 52px);
+      line-height: 1.02;
+      letter-spacing: -0.07em;
+      font-weight: 950;
+    }
+    h1 span { color: var(--primary); }
+    .hero-desc {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      font-weight: 650;
+      line-height: 1.7;
+    }
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.82);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px 18px;
+      box-shadow: var(--soft-shadow);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .stat-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+      background: var(--primary-light);
+    }
+    .stat-label { color: var(--muted); font-size: 12px; font-weight: 800; margin-bottom: 2px; }
+    .stat-value { font-size: 22px; font-weight: 950; letter-spacing: -0.05em; }
+    .stat-card:nth-child(1) .stat-value { color: var(--primary); }
+    .stat-card:nth-child(2) .stat-value { color: var(--orange); }
+    .stat-card:nth-child(3) .stat-value { color: var(--green); }
+    .stat-card:nth-child(4) .stat-value { color: var(--blue); }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 390px;
+      gap: 18px;
+      align-items: start;
+    }
+    .map-card, .side-card, .section-card {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .map-card { position: relative; min-height: 620px; }
+    #couponMap { height: 620px; width: 100%; z-index: 1; }
+    .map-overlay-top {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      right: 18px;
+      z-index: 500;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+    }
+    .city-select, .locate-btn, .filter-box, .legend-box {
+      pointer-events: auto;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--soft-shadow);
+    }
+    .city-select {
+      min-width: 150px;
+      padding: 12px 16px;
+      font-weight: 900;
+      color: #334155;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .locate-btn {
+      border: 0;
+      background: #0f172a;
+      color: #fff;
+      padding: 12px 18px;
+      font-weight: 900;
+    }
+    .filter-box {
+      position: absolute;
+      top: 78px;
+      left: 18px;
+      z-index: 500;
+      width: 150px;
+      padding: 8px;
+      display: grid;
+      gap: 8px;
+    }
+    .filter-btn {
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: #334155;
+      text-align: left;
+      padding: 11px 12px;
+      font-size: 13px;
+      font-weight: 900;
+      display: flex;
+      gap: 7px;
+      align-items: center;
+    }
+    .filter-btn.active { background: #0f172a; color: #fff; }
+    .legend-box {
+      position: absolute;
+      left: 18px;
+      bottom: 18px;
+      z-index: 500;
+      padding: 12px 14px;
+      display: grid;
+      gap: 7px;
+      font-size: 12px;
+      color: #475569;
+      font-weight: 800;
+    }
+    .legend-title { font-size: 12px; color: #0f172a; font-weight: 950; margin-bottom: 2px; }
+    .legend-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+    .dot-red { background: var(--primary); }
+    .dot-orange { background: var(--orange); }
+    .dot-green { background: var(--green); }
+    .dot-blue { background: var(--blue); }
+
+    .glow-marker {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 950;
+      border: 3px solid rgba(255,255,255,0.85);
+      position: relative;
+      box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.44);
+      animation: pulse-red 1.8s infinite;
+    }
+    .glow-red { background: linear-gradient(135deg, #fb7185, var(--primary)); box-shadow: 0 0 18px rgba(225,29,72,0.62); }
+    .glow-orange { background: linear-gradient(135deg, #fdba74, var(--orange)); box-shadow: 0 0 18px rgba(249,115,22,0.55); animation-name: pulse-orange; }
+    .glow-green { background: linear-gradient(135deg, #6ee7b7, var(--green)); box-shadow: 0 0 18px rgba(16,185,129,0.55); animation-name: pulse-green; }
+    .glow-blue { background: linear-gradient(135deg, #93c5fd, var(--blue)); box-shadow: 0 0 18px rgba(59,130,246,0.55); animation-name: pulse-blue; }
+    @keyframes pulse-red { 70% { box-shadow: 0 0 0 20px rgba(225,29,72,0); } 100% { box-shadow: 0 0 0 0 rgba(225,29,72,0); } }
+    @keyframes pulse-orange { 70% { box-shadow: 0 0 0 20px rgba(249,115,22,0); } 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); } }
+    @keyframes pulse-green { 70% { box-shadow: 0 0 0 20px rgba(16,185,129,0); } 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); } }
+    @keyframes pulse-blue { 70% { box-shadow: 0 0 0 20px rgba(59,130,246,0); } 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); } }
+
+    .side-panel { display: grid; gap: 16px; }
+    .store-card { padding: 20px; }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 950;
+      margin-bottom: 14px;
+    }
+    .store-head {
+      display: grid;
+      grid-template-columns: 124px 1fr;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .store-img {
+      width: 124px;
+      height: 124px;
+      border-radius: 16px;
+      object-fit: cover;
+      background: #f1f5f9;
+    }
+    .store-name { margin: 0 0 6px; font-size: 25px; font-weight: 950; letter-spacing: -0.05em; }
+    .store-meta { color: var(--muted); font-size: 14px; font-weight: 750; line-height: 1.5; }
+    .coupon-box {
+      border: 1px solid #fecdd3;
+      background: linear-gradient(135deg, #fff1f2, #fff);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+    .coupon-box-title { color: var(--primary); font-size: 13px; font-weight: 950; margin-bottom: 8px; }
+    .coupon-name { font-size: 22px; font-weight: 950; line-height: 1.35; letter-spacing: -0.05em; margin-bottom: 16px; }
+    .info-row { display: grid; grid-template-columns: 92px 1fr; gap: 12px; align-items: center; font-size: 14px; margin: 10px 0; }
+    .info-row span:first-child { color: var(--muted); font-weight: 900; }
+    .info-row span:last-child { color: #0f172a; font-weight: 850; }
+    .progress {
+      height: 7px;
+      border-radius: 999px;
+      background: #ffe4e6;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .progress > i { display: block; height: 100%; width: 76%; background: var(--primary); border-radius: 999px; }
+    .primary-btn {
+      width: 100%;
+      height: 50px;
+      border: 0;
+      border-radius: 12px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      font-weight: 950;
+      box-shadow: 0 14px 24px rgba(225, 29, 72, 0.22);
+      margin-bottom: 10px;
+    }
+    .sub-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .sub-actions button {
+      height: 42px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #334155;
+      font-size: 13px;
+      font-weight: 900;
+    }
+    .thumb-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 16px; }
+    .thumb-row img { width: 100%; height: 54px; object-fit: cover; border-radius: 10px; }
+
+    .news-card { padding: 20px; }
+    .card-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .card-title { margin: 0; font-size: 18px; font-weight: 950; letter-spacing: -0.04em; }
+    .more-link { color: var(--primary); font-size: 13px; font-weight: 950; }
+    .news-list { display: grid; gap: 0; }
+    .news-item { display: flex; justify-content: space-between; gap: 12px; padding: 13px 0; border-bottom: 1px solid #eef2f7; font-size: 14px; }
+    .news-item:last-child { border-bottom: 0; }
+    .news-item strong { font-weight: 850; color: #334155; }
+    .news-item span { color: #94a3b8; font-size: 13px; font-weight: 750; white-space: nowrap; }
+
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.8fr);
+      gap: 18px;
+      margin-top: 18px;
+      margin-bottom: 24px;
+    }
+    .section-card { padding: 20px; }
+    .recommend-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .mini-store {
+      border: 1px solid #edf2f7;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 8px 20px rgba(15,23,42,0.04);
+    }
+    .mini-img-wrap { position: relative; height: 98px; overflow: hidden; }
+    .mini-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+    .mini-badge { position: absolute; top: 8px; left: 8px; padding: 5px 8px; border-radius: 999px; color: #fff; font-size: 11px; font-weight: 950; background: var(--primary); }
+    .mini-body { padding: 10px 12px 12px; }
+    .mini-title { font-size: 14px; font-weight: 950; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mini-desc { color: #64748b; font-size: 12px; font-weight: 750; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mini-meta { margin-top: 8px; display: flex; justify-content: space-between; color: #64748b; font-size: 11px; font-weight: 800; }
+
+    .ad-inline {
+      min-height: 146px;
+      border: 1px dashed #cbd5e1;
+      border-radius: 16px;
+      background: rgba(248, 250, 252, 0.9);
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: #64748b;
+      font-size: 14px;
+      line-height: 1.7;
+      padding: 20px;
+    }
+    .ad-label { font-weight: 950; color: #334155; }
+
+    .footer {
+      background: #0f172a;
+      color: #cbd5e1;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .footer-inner {
+      width: min(1180px, calc(100% - 48px));
+      margin: 0 auto;
+      min-height: 78px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+    }
+    .footer-brand { color: #fff; font-size: 18px; font-weight: 950; margin-bottom: 4px; }
+    .copyright { color: #94a3b8; font-size: 12px; font-weight: 700; }
+    .footer-links { display: flex; gap: 14px; font-size: 13px; font-weight: 800; color: #cbd5e1; }
+
+    @media (max-width: 1500px) {
+      .site-shell { grid-template-columns: minmax(0, 1fr); }
+      .ad-rail { display: none; }
+    }
+    @media (max-width: 1080px) {
+      .hero-grid, .content-grid, .bottom-grid { grid-template-columns: 1fr; }
+      .stat-row { grid-template-columns: repeat(2, 1fr); }
+      .side-panel { grid-template-columns: 1fr; }
+      .recommend-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 720px) {
+      .nav-inner, .page, .footer-inner { width: min(100% - 28px, 1180px); }
+      .topbar { height: auto; }
+      .nav-inner { min-height: 72px; }
+      .nav { display: none; }
+      .hamburger { display: block; }
+      .nav-action { display: none; }
+      .page { padding-top: 24px; }
+      .stat-row { grid-template-columns: 1fr; }
+      .map-card { min-height: auto; }
+      #couponMap { height: 520px; }
+      .filter-box { top: 74px; width: 136px; }
+      .map-overlay-top { left: 12px; right: 12px; top: 12px; }
+      .locate-btn { padding: 10px 12px; font-size: 12px; }
+      .city-select { min-width: 128px; padding: 10px 12px; font-size: 13px; }
+      .store-head { grid-template-columns: 1fr; }
+      .store-img { width: 100%; height: 180px; }
+      .recommend-grid { grid-template-columns: 1fr; }
+      .footer-inner { flex-direction: column; align-items: flex-start; padding: 20px 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="site-shell">
+    <aside class="ad-rail" aria-label="좌측 광고 영역">
+      <strong>Google AdSense</strong>
+      <div>자동광고<br />좌측 영역</div>
+      <div class="ad-icon">📄💰</div>
+      <div>광고가 이 영역에<br />자동으로 표시됩니다.</div>
+      <div class="ad-size">권장 사이즈<br />160px ~ 300px</div>
+    </aside>
+
+    <div class="main-column">
+      <header class="topbar">
+        <div class="nav-inner">
+          <a href="index.html" class="brand" aria-label="LocalFlow 홈">
+            <span class="brand-icon">L</span>
+            <span>
+              <span class="brand-name">LocalFlow</span>
+              <span class="brand-sub">충주 로컬플로우</span>
+            </span>
+          </a>
+          <nav class="nav" aria-label="주요 메뉴">
+            <a href="index.html">홈</a>
+            <a href="gallery.html">갤러리</a>
+            <a href="coupon.html">쿠폰</a>
+            <a href="coupon-map.html" class="active">쿠폰맵</a>
+            <a href="identity.html">정체성</a>
+          </nav>
+          <button class="nav-action" type="button">🎁 내 쿠폰함</button>
+          <button class="hamburger" type="button" aria-label="메뉴">☰</button>
+        </div>
+      </header>
+
+      <main class="page">
+        <section class="hero-grid">
+          <div>
+            <div class="eyebrow">📍 LocalFlow Flow Map</div>
+            <h1>충주 <span>쿠폰맵</span></h1>
+            <p class="hero-desc">
+              충주에서 지금 혜택이 흐르고 있는 곳을 한눈에 확인하세요.<br />
+              LocalFlow가 지원하는 강소상공인의 쿠폰과 이벤트만 지도 위에서 반짝입니다.
+            </p>
+          </div>
+          <div class="stat-row">
+            <div class="stat-card">
+              <div class="stat-icon">🎟</div>
+              <div><div class="stat-label">진행중 쿠폰</div><div class="stat-value">12개</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">🧡</div>
+              <div><div class="stat-label">이번 달 추첨</div><div class="stat-value">5건</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">🎁</div>
+              <div><div class="stat-label">신규 지원 업체</div><div class="stat-value">3곳</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">👥</div>
+              <div><div class="stat-label">오늘 방문자</div><div class="stat-value">1,248명</div></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="content-grid">
+          <article class="map-card">
+            <div id="couponMap" aria-label="충주 쿠폰맵"></div>
+            <div class="map-overlay-top">
+              <div class="city-select">충주시 <span>⌄</span></div>
+              <button class="locate-btn" type="button" id="locateBtn">⌖ 현재 위치로 이동</button>
+            </div>
+            <div class="filter-box">
+              <button class="filter-btn active" data-filter="all" type="button">전체</button>
+              <button class="filter-btn" data-filter="coupon" type="button">🎟 쿠폰 진행중</button>
+              <button class="filter-btn" data-filter="event" type="button">🧡 이벤트 진행중</button>
+              <button class="filter-btn" data-filter="new" type="button">🌱 신규 지원</button>
+              <button class="filter-btn" data-filter="invest" type="button">⭐ 투자 업체</button>
+            </div>
+            <div class="legend-box">
+              <div class="legend-title">범례</div>
+              <div><span class="legend-dot dot-red"></span>쿠폰 진행중</div>
+              <div><span class="legend-dot dot-orange"></span>이벤트 진행중</div>
+              <div><span class="legend-dot dot-green"></span>신규 지원</div>
+              <div><span class="legend-dot dot-blue"></span>투자 업체</div>
+            </div>
+          </article>
+
+          <aside class="side-panel">
+            <article class="side-card store-card" id="storePanel">
+              <div class="status-badge">🔥 쿠폰 진행중</div>
+              <div class="store-head">
+                <img class="store-img" id="storeImage" src="https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=500&q=80" alt="업체 대표 이미지" />
+                <div>
+                  <h2 class="store-name" id="storeName">더이네블루베리</h2>
+                  <div class="store-meta" id="storeMeta">농산물 · 충주시 앙성면<br />직접 생산한 농산물로 건강한 먹거리를 만듭니다.</div>
+                </div>
+              </div>
+              <div class="coupon-box">
+                <div class="coupon-box-title">🔥 진행중인 쿠폰</div>
+                <div class="coupon-name" id="couponName">직접 생산한 쌀 20kg<br />50% 할인쿠폰</div>
+                <div class="info-row"><span>추첨일</span><span id="drawDate">2026-08-31 (월) 21:00</span></div>
+                <div class="info-row"><span>응모 현황</span><span id="entryCount">128명 참여중</span></div>
+                <div class="progress"><i id="progressBar"></i></div>
+                <div class="info-row"><span>남은 쿠폰</span><span id="remainCount">12개</span></div>
+              </div>
+              <button class="primary-btn" type="button">쿠폰 응모하기</button>
+              <div class="sub-actions">
+                <button type="button">상세보기</button>
+                <button type="button">길찾기</button>
+                <button type="button">공유하기</button>
+              </div>
+              <div class="thumb-row" id="thumbRow">
+                <img src="https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=300&q=80" alt="쌀" />
+                <img src="https://images.unsplash.com/photo-1498557850523-fd3d118b962e?auto=format&fit=crop&w=300&q=80" alt="블루베리" />
+                <img src="https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=300&q=80" alt="논" />
+                <img src="https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=300&q=80" alt="상점" />
+              </div>
+            </article>
+
+            <article class="side-card news-card">
+              <div class="card-title-row">
+                <h3 class="card-title">LocalFlow 소식</h3>
+                <a class="more-link" href="#">더보기 ›</a>
+              </div>
+              <div class="news-list">
+                <div class="news-item"><strong>신규 스마트 스토어 3곳이 추가되었습니다.</strong><span>2026-06-20</span></div>
+                <div class="news-item"><strong>8월 추첨 이벤트 일정 안내</strong><span>2026-06-19</span></div>
+                <div class="news-item"><strong>LocalFlow 투자 심사 기준 안내</strong><span>2026-06-18</span></div>
+                <div class="news-item"><strong>쿠폰맵 AR 기능 준비 중!</strong><span>2026-06-17</span></div>
+              </div>
+            </article>
+          </aside>
+        </section>
+
+        <section class="bottom-grid">
+          <article class="section-card">
+            <div class="card-title-row">
+              <h3 class="card-title">오늘의 추천 업체 ›</h3>
+              <a class="more-link" href="#">전체보기</a>
+            </div>
+            <div class="recommend-grid" id="recommendGrid"></div>
+          </article>
+
+          <aside class="section-card">
+            <div class="ad-inline" aria-label="본문 광고 영역">
+              <div>
+                <div class="ad-label">Google AdSense 본문 자동광고 영역</div>
+                지도 아래 또는 업체 상세 콘텐츠 사이에 자연스럽게 배치되는 반응형 광고 구역입니다.<br />
+                광고 클릭 유도 문구 없이 콘텐츠와 명확히 분리합니다.
+              </div>
+            </div>
+          </aside>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="footer-inner">
+          <div>
+            <div class="footer-brand">LocalFlow</div>
+            <div class="copyright">© 2026 STANCE. LocalFlow Project. All rights reserved.</div>
+          </div>
+          <div class="footer-links">
+            <a href="#">이용약관</a><span>|</span><a href="#">개인정보처리방침</a><span>|</span><a href="#">문의하기</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <aside class="ad-rail" aria-label="우측 광고 영역">
+      <strong>Google AdSense</strong>
+      <div>자동광고<br />우측 영역</div>
+      <div class="ad-icon">📄💰</div>
+      <div>광고가 이 영역에<br />자동으로 표시됩니다.</div>
+      <div class="ad-size">권장 사이즈<br />160px ~ 300px</div>
+    </aside>
+  </div>
+
+  <script>
+    const stores = [
+      {
+        id: "blueberry", name: "더이네블루베리", category: "농산물", area: "충주시 앙성면", type: "coupon", icon: "🎁", color: "red",
+        lat: 37.011, lng: 127.940,
+        image: "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80",
+        desc: "직접 생산한 농산물로 건강한 먹거리를 만듭니다.",
+        coupon: "직접 생산한 쌀 20kg<br />50% 할인쿠폰", draw: "2026-08-31 (월) 21:00", entries: "128명 참여중", remain: "12개", progress: 76,
+        badge: "🔥 쿠폰 진행중"
+      },
+      {
+        id: "golf", name: "커스텀포즈 그립교환", category: "골프용품", area: "충주시 연수동", type: "event", icon: "🎁", color: "orange",
+        lat: 36.991, lng: 127.927,
+        image: "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?auto=format&fit=crop&w=600&q=80",
+        desc: "샤프트와 그립 교환 이벤트를 진행하는 골프용품 업체입니다.",
+        coupon: "샤프트 특별 할인<br />그립 교환 이벤트", draw: "2026-08-25 (화) 20:00", entries: "65명 참여중", remain: "8개", progress: 54,
+        badge: "🧡 이벤트 진행중"
+      },
+      {
+        id: "cafe", name: "마라탕 커피로스터스", category: "카페", area: "충주시 성서동", type: "new", icon: "🌱", color: "green",
+        lat: 36.973, lng: 127.936,
+        image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=600&q=80",
+        desc: "신규 오픈 기념 쿠폰과 갤러리 콘텐츠를 준비 중입니다.",
+        coupon: "신규 오픈 기념<br />아메리카노 쿠폰", draw: "2026-09-05 (토) 19:00", entries: "32명 참여중", remain: "20개", progress: 35,
+        badge: "🌱 신규 지원 업체"
+      },
+      {
+        id: "pottery", name: "달항아리 공방", category: "공방", area: "충주시 중앙탑면", type: "invest", icon: "⭐", color: "blue",
+        lat: 36.982, lng: 127.868,
+        image: "https://images.unsplash.com/photo-1493106819501-66d381c466f1?auto=format&fit=crop&w=600&q=80",
+        desc: "지역 외부 고객 유입이 가능한 LocalFlow 선정 강소상공인 후보입니다.",
+        coupon: "체험 클래스<br />20% 할인쿠폰", draw: "2026-08-28 (금) 18:00", entries: "48명 참여중", remain: "6개", progress: 64,
+        badge: "⭐ 투자 업체"
+      },
+      {
+        id: "burger", name: "충주 수제버거", category: "맛집", area: "충주시 호암동", type: "coupon", icon: "🎁", color: "red",
+        lat: 36.955, lng: 127.928,
+        image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80",
+        desc: "오늘 뭐먹지 흐름과 연결되는 로컬 맛집 쿠폰 진행 업체입니다.",
+        coupon: "수제버거 세트<br />50% 할인 이벤트", draw: "2026-08-20 (목) 20:30", entries: "97명 참여중", remain: "10개", progress: 70,
+        badge: "🔥 쿠폰 진행중"
+      }
+    ];
+
+    const map = L.map("couponMap", { zoomControl: false }).setView([36.982, 127.925], 12);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap"
+    }).addTo(map);
+    L.control.zoom({ position: "bottomright" }).addTo(map);
+
+    const markerLayer = L.layerGroup().addTo(map);
+    let activeFilter = "all";
+
+    function markerHtml(store) {
+      return `<div class="glow-marker glow-${store.color}">${store.icon}</div>`;
+    }
+
+    function renderMarkers() {
+      markerLayer.clearLayers();
+      stores
+        .filter(s => activeFilter === "all" || s.type === activeFilter)
+        .forEach(store => {
+          const marker = L.marker([store.lat, store.lng], {
+            icon: L.divIcon({
+              className: "localflow-marker",
+              html: markerHtml(store),
+              iconSize: [34, 34],
+              iconAnchor: [17, 17]
+            })
+          }).addTo(markerLayer);
+          marker.on("click", () => selectStore(store.id, true));
+        });
+    }
+
+    function selectStore(id, moveMap = false) {
+      const store = stores.find(s => s.id === id) || stores[0];
+      document.querySelector(".status-badge").textContent = store.badge;
+      document.getElementById("storeImage").src = store.image;
+      document.getElementById("storeName").textContent = store.name;
+      document.getElementById("storeMeta").innerHTML = `${store.category} · ${store.area}<br />${store.desc}`;
+      document.getElementById("couponName").innerHTML = store.coupon;
+      document.getElementById("drawDate").textContent = store.draw;
+      document.getElementById("entryCount").textContent = store.entries;
+      document.getElementById("remainCount").textContent = store.remain;
+      document.getElementById("progressBar").style.width = `${store.progress}%`;
+      if (moveMap) map.flyTo([store.lat, store.lng], 14, { duration: 0.75 });
+    }
+
+    function renderRecommendations() {
+      const grid = document.getElementById("recommendGrid");
+      grid.innerHTML = stores.slice(0, 4).map(store => `
+        <a class="mini-store" href="javascript:void(0)" onclick="selectStore('${store.id}', true)">
+          <div class="mini-img-wrap">
+            <img src="${store.image}" alt="${store.name}" />
+            <span class="mini-badge">${store.badge.replace(/[🔥🧡🌱⭐]/g, '').trim()}</span>
+          </div>
+          <div class="mini-body">
+            <div class="mini-title">${store.name}</div>
+            <div class="mini-desc">${store.coupon.replace(/<br \/>/g, ' ')}</div>
+            <div class="mini-meta"><span>👥 ${store.entries.replace(' 참여중', '')}</span><span>⏱ ${store.draw.slice(5, 10)} 추첨</span></div>
+          </div>
+        </a>
+      `).join("");
+    }
+
+    document.querySelectorAll(".filter-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        activeFilter = btn.dataset.filter;
+        renderMarkers();
+      });
+    });
+
+    document.getElementById("locateBtn").addEventListener("click", () => {
+      map.flyTo([36.982, 127.925], 12, { duration: 0.75 });
+    });
+
+    renderMarkers();
+    renderRecommendations();
+    selectStore("blueberry");
+  </script>
+</body>
+</html>
