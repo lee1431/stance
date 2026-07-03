@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://unpkg.com" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9382191250873184" crossorigin="anonymous"></script>
   <style>
     :root {
       --bg: #f8fafc;
@@ -459,7 +460,6 @@
       .footer-inner { flex-direction: column; align-items: flex-start; padding: 20px 0; }
     }
   </style>
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9382191250873184" crossorigin="anonymous"></script>
 </head>
 <body>
   <div class="site-shell">
@@ -669,21 +669,56 @@
       return `<div class="glow-marker glow-${store.color}">${store.icon}</div>`;
     }
 
+    function getFilteredStores() {
+      return stores.filter(s => activeFilter === "all" || s.type === activeFilter);
+    }
+
     function renderMarkers() {
       markerLayer.clearLayers();
-      stores
-        .filter(s => activeFilter === "all" || s.type === activeFilter)
-        .forEach(store => {
-          const marker = L.marker([store.lat, store.lng], {
-            icon: L.divIcon({
-              className: "localflow-marker",
-              html: markerHtml(store),
-              iconSize: [34, 34],
-              iconAnchor: [17, 17]
-            })
-          }).addTo(markerLayer);
-          marker.on("click", () => selectStore(store.id, true));
+      getFilteredStores().forEach(store => {
+        const marker = L.marker([store.lat, store.lng], {
+          icon: L.divIcon({
+            className: "localflow-marker",
+            html: markerHtml(store),
+            iconSize: [34, 34],
+            iconAnchor: [17, 17]
+          })
+        }).addTo(markerLayer);
+        marker.on("click", () => selectStore(store.id, true));
+      });
+    }
+
+    function scrollToMap() {
+      const mapCard = document.querySelector(".map-card");
+      if (!mapCard) return;
+      mapCard.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => map.invalidateSize(), 360);
+    }
+
+    function focusMapForCurrentFilter() {
+      const filtered = getFilteredStores();
+      if (filtered.length === 0) return;
+
+      scrollToMap();
+
+      if (filtered.length === 1) {
+        const store = filtered[0];
+        selectStore(store.id, false);
+        setTimeout(() => {
+          map.flyTo([store.lat, store.lng], 14, { duration: 0.75 });
+        }, 120);
+        return;
+      }
+
+      const bounds = L.latLngBounds(filtered.map(store => [store.lat, store.lng]));
+      setTimeout(() => {
+        map.fitBounds(bounds, {
+          padding: [70, 70],
+          maxZoom: 13,
+          animate: true,
+          duration: 0.75
         });
+      }, 120);
     }
 
     function selectStore(id, moveMap = false) {
@@ -698,12 +733,10 @@
       document.getElementById("remainCount").textContent = store.remain;
       document.getElementById("progressBar").style.width = `${store.progress}%`;
       if (moveMap) {
-        const mapCard = document.querySelector(".map-card");
-        if (mapCard) {
-          mapCard.scrollIntoView({ behavior: "smooth", block: "center" });
-          setTimeout(() => map.invalidateSize(), 360);
-        }
-        map.flyTo([store.lat, store.lng], 14, { duration: 0.75 });
+        scrollToMap();
+        setTimeout(() => {
+          map.flyTo([store.lat, store.lng], 14, { duration: 0.75 });
+        }, 120);
       }
     }
 
@@ -730,6 +763,7 @@
         btn.classList.add("active");
         activeFilter = btn.dataset.filter;
         renderMarkers();
+        focusMapForCurrentFilter();
       });
     });
 
