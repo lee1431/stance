@@ -253,16 +253,31 @@
               </span>
             </div>
 
-            <!-- 닉네임 입력 -->
-            <div>
-              <label for="nicknameInput" class="block text-[10px] sm:text-[11px] text-slate-400 font-bold mb-1.5 pl-1">대표 닉네임 (최대 20자)</label>
-              <input
-                id="nicknameInput"
-                class="w-full h-11 px-3.5 bg-slate-900/90 border border-white/10 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-[#ffd166]/50 transition-all placeholder:text-slate-500"
-                maxlength="20"
-                autocomplete="nickname"
-                placeholder="기프티콘 당첨 시 본인 확인용 닉네임"
-              />
+            <!-- 닉네임 및 구글 이메일 주소 입력 (2단 분할 그리드) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <!-- 닉네임 입력 -->
+              <div>
+                <label for="nicknameInput" class="block text-[10px] sm:text-[11px] text-slate-400 font-bold mb-1.5 pl-1">대표 닉네임 (최대 20자)</label>
+                <input
+                  id="nicknameInput"
+                  class="w-full h-11 px-3.5 bg-slate-900/90 border border-white/10 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-[#ffd166]/50 transition-all placeholder:text-slate-500"
+                  maxlength="20"
+                  autocomplete="nickname"
+                  placeholder="당첨 확인용 닉네임"
+                />
+              </div>
+
+              <!-- [추가] 구글 이메일 입력 -->
+              <div>
+                <label for="emailInput" class="block text-[10px] sm:text-[11px] text-slate-400 font-bold mb-1.5 pl-1">구글 이메일 주소 (필수)</label>
+                <input
+                  id="emailInput"
+                  type="email"
+                  class="w-full h-11 px-3.5 bg-slate-900/90 border border-white/10 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-[#ffd166]/50 transition-all placeholder:text-slate-500"
+                  autocomplete="email"
+                  placeholder="기프티콘 수령할 Gmail 주소"
+                />
+              </div>
             </div>
 
             <button 
@@ -324,7 +339,7 @@
           <div id="rulesContent" class="hidden border-t border-white/5 bg-slate-950/90 p-4 text-xs text-slate-400 space-y-3.5 leading-relaxed">
             <div class="flex gap-2">
               <span class="text-[#ffd166] font-bold">1.</span>
-              <p><strong>참여 시각:</strong> 매일 저녁 21시부터 다음 날 저녁 20시 50분 전까지 자유롭게 참여 가능합니다. (브라우저당 하루 1회 참여로 엄격히 제한됩니다.)</p>
+              <p><strong>참여 시각:</strong> 매일 저녁 21시부터 다음 날 저녁 20시 50분 전까지 자유롭게 참여 가능합니다. (구글 이메일 오기입 시 당첨에서 제외됩니다.)</p>
             </div>
             <div class="flex gap-2">
               <span class="text-[#ffd166] font-bold">2.</span>
@@ -336,7 +351,7 @@
             </div>
             <div class="flex gap-2">
               <span class="text-[#ffd166] font-bold">4.</span>
-              <p><strong>인증코드 제출:</strong> 버튼 클릭 시 발급되는 본인 고유 검증 코드를 복사 또는 캡처해 개발자 메일로 제출하시면 즉시 모바일 상품권이 전달됩니다. (밤 21시에 새 시즌으로 완전 초기화됩니다.)</p>
+              <p><strong>인증코드 제출:</strong> 버튼 클릭 시 발급되는 본인 고유 당첨 코드를 복사 또는 캡처해 개발자 메일로 제출하시면 즉시 모바일 상품권이 등록된 구글 이메일로 발송됩니다.</p>
             </div>
             <div class="flex gap-2">
               <span class="text-amber-400 font-bold">※</span>
@@ -369,7 +384,7 @@
         <h3 class="text-lg font-black text-[#ffd166]">축하합니다! 오늘의 최종 우승!</h3>
         <p class="text-xs text-slate-300 leading-relaxed">
           오늘 저녁 최고의 분석력으로 당당하게 1위를 차지하셨습니다!<br/>
-          아래의 <strong class="text-white">본인 구별 코드</strong>를 캡처하거나 복사하여 개발자 이메일로 보내주시면 기프티콘을 즉시 발송해 드립니다.
+          아래의 <strong class="text-white">본인 구별 코드</strong>를 캡처하거나 복사하여 개발자 이메일로 보내주시면 등록된 구글 이메일로 기프티콘을 즉시 발송해 드립니다.
         </p>
 
         <div class="bg-black/50 p-3 rounded-xl border border-white/5 font-mono text-xs select-all text-amber-200 break-all" id="winVerifyCode">
@@ -386,8 +401,8 @@
 
         <div class="pt-2 text-[10px] text-slate-500 leading-relaxed text-left border-t border-white/5">
           • 접수처: <strong class="text-slate-300">stance_dev@naver.com</strong><br/>
-          • 기프티콘은 메일 신청일 기준 최대 12시간 내 발송 완료됩니다.<br/>
-          • 신청하신 브라우저 세션 정보와 당첨 코드 이중 대조 완료 시 승인됩니다.
+          • 기프티콘은 등록하신 구글 이메일 주소로 최대 12시간 내 발송 완료됩니다.<br/>
+          • 신청하신 브라우저 세션 정보, 구글 이메일, 당첨 코드 삼중 대조 완료 시 승인됩니다.
         </div>
       </div>
     </div>
@@ -409,6 +424,7 @@
         <div id="myRankResultArea" class="hidden space-y-3">
           <div class="bg-black/40 p-4 rounded-xl border border-white/5 space-y-2">
             <div class="text-xs text-slate-400 font-bold" id="myRankNickname">닉네임 님</div>
+            <div class="text-[11px] text-slate-500" id="myRankEmail">이메일: -</div>
             <div class="text-3xl font-black text-[#ffd166]" id="myRankValue">현재 -위</div>
             <div class="text-sm font-extrabold" id="myRankCoin">선택 코인 정보</div>
             <div class="text-sm font-mono" id="myRankRate">실시간 수익률: -%</div>
@@ -425,7 +441,7 @@
           </p>
           <p class="text-xs text-slate-500">
             상단 마켓 목록에서 1등이 될 코인을 고른 뒤,<br/>
-            대표 닉네임을 작성하고 등록해 보상을 노려보세요!
+            대표 닉네임과 구글 이메일을 작성하고 등록해 보상을 노려보세요!
           </p>
           <button 
             id="goRegisterBtn"
@@ -470,16 +486,16 @@
     ];
 
     const backupRankings = [
-      { nickname: "도곡동고래", symbol: "SOLUSDT", displayName: "SOL/USDT", startPrice: "162.40", currentPrice: "182.12", returnRate: "12.14" },
-      { nickname: "주식탈출지능순", symbol: "DOGEUSDT", displayName: "DOGE/USDT", startPrice: "0.1512", currentPrice: "0.1682", returnRate: "11.24" },
-      { nickname: "화성갈끄니까", symbol: "BTCUSDT", displayName: "BTC/USDT", startPrice: "68240.5", currentPrice: "74105.1", returnRate: "8.59" },
-      { nickname: "한강뷰입주예정", symbol: "ETHUSDT", displayName: "ETH/USDT", startPrice: "3491.2", currentPrice: "3672.0", returnRate: "5.18" },
-      { nickname: "솔라나풀매수자", symbol: "SOLUSDT", displayName: "SOL/USDT", startPrice: "165.00", currentPrice: "171.50", returnRate: "3.94" },
-      { nickname: "존버만이살길", symbol: "ETHUSDT", displayName: "ETH/USDT", startPrice: "3500.0", currentPrice: "3550.0", returnRate: "1.43" },
-      { nickname: "리플오백배", symbol: "XRPUSDT", displayName: "XRP/USDT", startPrice: "0.5820", currentPrice: "0.5895", returnRate: "1.29" },
-      { nickname: "가즈아아아아", symbol: "ADAUSDT", displayName: "ADA/USDT", startPrice: "0.4510", currentPrice: "0.4532", returnRate: "0.49" },
-      { nickname: "디센트럴인인", symbol: "LINKUSDT", displayName: "LINK/USDT", startPrice: "15.42", currentPrice: "15.31", returnRate: "-0.71" },
-      { nickname: "풀시드하락맨", symbol: "TRXUSDT", displayName: "TRON/USDT", startPrice: "0.1245", currentPrice: "0.1192", returnRate: "-4.26" }
+      { nickname: "도곡동고래", email: "g***@gmail.com", symbol: "SOLUSDT", displayName: "SOL/USDT", startPrice: "162.40", currentPrice: "182.12", returnRate: "12.14" },
+      { nickname: "주식탈출지능순", email: "s***@gmail.com", symbol: "DOGEUSDT", displayName: "DOGE/USDT", startPrice: "0.1512", currentPrice: "0.1682", returnRate: "11.24" },
+      { nickname: "화성갈끄니까", email: "e***@gmail.com", symbol: "BTCUSDT", displayName: "BTC/USDT", startPrice: "68240.5", currentPrice: "74105.1", returnRate: "8.59" },
+      { nickname: "한강뷰입주예정", email: "h***@gmail.com", symbol: "ETHUSDT", displayName: "ETH/USDT", startPrice: "3491.2", currentPrice: "3672.0", returnRate: "5.18" },
+      { nickname: "솔라나풀매수자", email: "a***@gmail.com", symbol: "SOLUSDT", displayName: "SOL/USDT", startPrice: "165.00", currentPrice: "171.50", returnRate: "3.94" },
+      { nickname: "존버만이살길", email: "j***@gmail.com", symbol: "ETHUSDT", displayName: "ETH/USDT", startPrice: "3500.0", currentPrice: "3550.0", returnRate: "1.43" },
+      { nickname: "리플오백배", email: "r***@gmail.com", symbol: "XRPUSDT", displayName: "XRP/USDT", startPrice: "0.5820", currentPrice: "0.5895", returnRate: "1.29" },
+      { nickname: "가즈아아아아", email: "k***@gmail.com", symbol: "ADAUSDT", displayName: "ADA/USDT", startPrice: "0.4510", currentPrice: "0.4532", returnRate: "0.49" },
+      { nickname: "디센트럴인인", email: "d***@gmail.com", symbol: "LINKUSDT", displayName: "LINK/USDT", startPrice: "15.42", currentPrice: "15.31", returnRate: "-0.71" },
+      { nickname: "풀시드하락맨", email: "p***@gmail.com", symbol: "TRXUSDT", displayName: "TRON/USDT", startPrice: "0.1245", currentPrice: "0.1192", returnRate: "-4.26" }
     ];
 
     // DOM 선택자 모음
@@ -492,6 +508,7 @@
     const coinList = document.querySelector("#coinList");
     const selectedCoinText = document.querySelector("#selectedCoinText");
     const nicknameInput = document.querySelector("#nicknameInput");
+    const emailInput = document.querySelector("#emailInput"); // [추가]
     const registerBtn = document.querySelector("#registerBtn");
     const registrationSection = document.querySelector("#registrationSection");
     const message = document.querySelector("#message");
@@ -522,6 +539,7 @@
     const myRankResultArea = document.querySelector("#myRankResultArea");
     const myRankEmptyArea = document.querySelector("#myRankEmptyArea");
     const myRankNickname = document.querySelector("#myRankNickname");
+    const myRankEmail = document.querySelector("#myRankEmail"); // [추가]
     const myRankValue = document.querySelector("#myRankValue");
     const myRankCoin = document.querySelector("#myRankCoin");
     const myRankRate = document.querySelector("#myRankRate");
@@ -530,6 +548,7 @@
 
     // 기본 이벤트 초기화 값 주입
     nicknameInput.value = localStorage.getItem("omt_nickname") || "";
+    emailInput.value = localStorage.getItem("omt_email") || ""; // [추가]
 
     /**
      * 1) 하루 1회 베팅 제한을 위한 사이클 ID 생성 함수
@@ -673,7 +692,7 @@
         
         statusAlert.classList.remove("hidden");
         statusAlertTitle.textContent = "★ 오늘의 등락폭 대결 결과 발표! ★";
-        statusAlertDesc.textContent = "1위 당첨자분은 보드 내 [1등 기프티콘 받기] 버튼을 눌러 인증 코드를 제출하세요! 21시 정각에 새 대결이 초기화 가동됩니다.";
+        statusAlertDesc.textContent = "1위 당첨자분은 보드 내 [1등 기프티콘 받기] 버튼을 눌러 인증 코드를 제출하세요! 구글 이메일로 자동 전송됩니다.";
 
         coinSearchSection.classList.add("opacity-40", "pointer-events-none");
         registrationSection.classList.add("opacity-40", "pointer-events-none");
@@ -819,12 +838,12 @@
       }
     }
 
-    // 1등 당첨 수령 모달 오픈 및 고유 대조 토큰 영수증 생성
-    function openWinnerModal(nickname, coin) {
+    // 1등 당첨 수령 모달 오픈 및 고유 대조 토큰 영수증 생성 (이메일 정보 삼중 대조 추가)
+    function openWinnerModal(nickname, email, coin) {
       const codePart1 = 'OMT-WIN';
       const codePart2 = Math.random().toString(36).substring(2, 8).toUpperCase();
       const codePart3 = Date.now().toString().slice(-6);
-      winVerifyCode.textContent = `${codePart1}-${codePart2}-${codePart3} [${nickname} | ${coin}]`;
+      winVerifyCode.textContent = `${codePart1}-${codePart2}-${codePart3} [${nickname} | ${email} | ${coin}]`;
       winModal.classList.remove("hidden");
     }
 
@@ -849,7 +868,7 @@
       }, 1500);
     });
 
-    // 베팅 및 랭킹 등록 접수 처리
+    // 베팅 및 랭킹 등록 접수 처리 (구글 이메일 검증 로직 수혈)
     async function registerPick() {
       if (getTimeState() !== "LIVE") {
         setMessage("정산 및 발표 시간에는 신규 대결 참가등록이 거부됩니다.", "error");
@@ -869,6 +888,14 @@
         return;
       }
 
+      const email = emailInput.value.trim();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !emailRegex.test(email)) {
+        setMessage("기프티콘을 안전하게 자동 수령할 수 있는 올바른 구글 이메일을 기입해줘!", "error");
+        emailInput.focus();
+        return;
+      }
+
       if (!state.selectedCoin) {
         setMessage("대결에 출전시킬 오늘의 코인을 검색해서 골라줘!", "error");
         coinSearchInput.focus();
@@ -876,6 +903,8 @@
       }
 
       localStorage.setItem("omt_nickname", nickname);
+      localStorage.setItem("omt_email", email); // [추가] 로컬 저장
+
       state.registering = true;
       registerBtn.disabled = true;
       registerBtn.textContent = "안전 베팅 원장 기록중...";
@@ -901,6 +930,7 @@
 
             state.rankings.push({
               nickname: nickname,
+              email: email,
               symbol: state.selectedCoin.symbol,
               displayName: state.selectedCoin.displayName,
               startPrice: startPrice.toString(),
@@ -921,6 +951,7 @@
             method: "POST",
             body: JSON.stringify({
               nickname,
+              email, // [구글 이메일 연동 스펙 추가]
               market: state.selectedCoin.symbol
             })
           });
@@ -932,13 +963,14 @@
         }
       } catch (error) {
         if (error.status === 409) {
-          setMessage("본 닉네임 혹은 기기 정보로 이미 참여 완료한 베팅 세션이 감지되었습니다.", "error");
+          setMessage("본 닉네임, 이메일 혹은 기기 정보로 이미 참여 완료한 베팅 세션이 감지되었습니다.", "error");
         } else {
           // 백엔드 연동 장애 대응을 위한 가상 로컬 전환 강제 진행
           state.isSimulationMode = true;
           localStorage.setItem("omt_registered_cycle", currentCycle);
           state.rankings.push({
             nickname: nickname,
+            email: email,
             symbol: state.selectedCoin.symbol,
             displayName: state.selectedCoin.displayName,
             startPrice: "1.00",
@@ -1062,6 +1094,7 @@
         const cls = rateClass(item.returnRate);
         const startPrice = formatPrice(item.startPrice);
         const currentPrice = formatPrice(item.currentPrice);
+        const userEmail = item.email || "이메일 없음";
         
         let rankBadge = "";
         let borderClass = "border-white/5 bg-slate-900/30";
@@ -1079,7 +1112,7 @@
             winnerBtn = `
               <button 
                 class="mt-2.5 w-full py-2.5 bg-gradient-to-r from-[#ffd166] to-amber-500 hover:brightness-115 active:scale-95 text-slate-950 font-black text-xs rounded-lg flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/10 transition-all cursor-pointer"
-                onclick="openWinnerModal('${escapeHtml(item.nickname)}', '${escapeHtml(displayName)}')"
+                onclick="openWinnerModal('${escapeHtml(item.nickname)}', '${escapeHtml(userEmail)}', '${escapeHtml(displayName)}')"
               >
                 <i data-lucide="gift" class="w-4 h-4"></i> 1등 기프티콘 받기
               </button>
@@ -1125,9 +1158,10 @@
       lucide.createIcons();
     }
 
-    // 내 순위 찾기 분석 스크립트 바인딩
+    // 내 순위 찾기 분석 스크립트 바인딩 (이메일 주소 포함 분석 업데이트)
     myRankBtn.addEventListener("click", () => {
       const storedNickname = localStorage.getItem("omt_nickname") || nicknameInput.value.trim();
+      const storedEmail = localStorage.getItem("omt_email") || emailInput.value.trim();
       const currentCycle = getBettingCycleId();
       const hasRegistered = localStorage.getItem("omt_registered_cycle") === currentCycle;
 
@@ -1152,6 +1186,7 @@
         const rate = Number(userPick.returnRate || 0);
         
         myRankNickname.textContent = `${escapeHtml(storedNickname)} 님의 대결 성적`;
+        myRankEmail.textContent = `기프티콘 수령 이메일: ${escapeHtml(storedEmail || userPick.email || "-")}`;
         myRankValue.textContent = `현재 ${rank}위`;
         myRankCoin.textContent = `선택 코인: ${escapeHtml(userPick.displayName || userPick.symbol)}`;
         
@@ -1178,6 +1213,7 @@
       } else {
         // 등록은 완료했으나 아직 실시간 연산에서 정합이 맞물리기 전 시점 대처
         myRankNickname.textContent = `${escapeHtml(storedNickname)} 님`;
+        myRankEmail.textContent = `이메일: ${escapeHtml(storedEmail)}`;
         myRankValue.textContent = "연산 대기 중";
         myRankValue.className = "text-3xl font-black text-slate-400";
         myRankCoin.textContent = "상태: 등록 완료";
@@ -1207,6 +1243,10 @@
     reloadRankingsBtn.addEventListener("click", fetchRankings);
 
     nicknameInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") registerPick();
+    });
+    
+    emailInput.addEventListener("keydown", event => {
       if (event.key === "Enter") registerPick();
     });
 
