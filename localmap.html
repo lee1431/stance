@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LocalFlow 쿠폰맵 - 충주 혜택 지도</title>
-  <meta name="description" content="충주에서 현재 LocalFlow 쿠폰과 이벤트가 진행 중인 업체를 지도에서 확인하고 이벤트에 참여하세요." />
-  <meta name="keywords" content="LocalFlow, 로컬플로우, 충주 쿠폰맵, 충주 이벤트, 충주 로컬, 할인쿠폰" />
+  <title>쿠폰맵 - 충주 혜택 지도</title>
+  <meta name="description" content="충주에서 현재 진행 중인 쿠폰과 이벤트 업체를 지도에서 확인하고 바로 참여하세요." />
+  <meta name="keywords" content="쿠폰맵, 충주 쿠폰, 충주 이벤트, 충주 로컬, LocalFlow, 로컬플로우" />
   <meta name="author" content="STANCE" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="LocalFlow 쿠폰맵 | 충주 혜택 지도" />
+  <meta property="og:title" content="쿠폰맵 | 충주 혜택 지도" />
   <meta property="og:description" content="충주에서 지금 혜택이 흐르고 있는 곳을 지도 위에서 확인하세요." />
   <meta property="og:image" content="https://localflow.info/oi.png" />
   <meta property="og:url" content="https://localflow.info/localmap.html" />
 
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9382191250873184" crossorigin="anonymous"></script>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
   <style>
@@ -28,12 +28,16 @@
       --primary: #e11d48;
       --primary-light: #fff1f2;
       --primary-dark: #be123c;
+      --badge-bg: #fff1f2;
+      --badge-border: #ffe4e6;
+      --badge-text: #be123c;
       --shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
       --soft-shadow: 0 12px 34px rgba(15, 23, 42, 0.08);
       --radius: 18px;
     }
 
     * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 86px; }
     html, body { margin: 0; min-height: 100%; }
     body {
       color: var(--text);
@@ -46,10 +50,11 @@
     }
 
     a { color: inherit; text-decoration: none; }
-    button { font: inherit; cursor: pointer; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
 
     .topbar {
-      height: 72px;
+      min-height: 72px;
       background: rgba(15, 23, 42, 0.96);
       color: #fff;
       position: sticky;
@@ -62,7 +67,7 @@
 
     .nav-inner {
       width: min(1180px, calc(100% - 48px));
-      height: 100%;
+      min-height: 72px;
       margin: 0 auto;
       display: flex;
       align-items: center;
@@ -79,12 +84,12 @@
       background: linear-gradient(135deg, var(--primary), var(--primary-dark));
       box-shadow: 0 10px 25px rgba(225, 29, 72, 0.26);
       font-weight: 900;
-      font-size: 19px;
+      font-size: 18px;
     }
     .brand-name { font-size: 20px; letter-spacing: -0.04em; }
     .brand-sub { margin-left: 4px; color: #cbd5e1; font-size: 12px; font-weight: 700; }
 
-    .nav { display: flex; align-items: center; gap: 34px; font-size: 15px; font-weight: 800; }
+    .nav { display: flex; align-items: center; gap: 30px; font-size: 15px; font-weight: 800; }
     .nav a { height: 72px; display: flex; align-items: center; color: #cbd5e1; position: relative; }
     .nav a:hover, .nav a.active { color: #fff; }
     .nav a.active::after {
@@ -107,19 +112,19 @@
     .page { width: min(1180px, calc(100% - 48px)); margin: 0 auto; padding: 38px 0 60px; }
 
     .hero {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      align-items: end;
       gap: 24px;
       margin-bottom: 22px;
     }
-    .eyebrow {
+    .eyebrow, .badge {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      color: var(--primary);
-      background: #fff;
-      border: 1px solid var(--line);
+      color: var(--badge-text);
+      background: var(--badge-bg);
+      border: 1px solid var(--badge-border);
       border-radius: 999px;
       padding: 8px 14px;
       font-size: 13px;
@@ -131,12 +136,39 @@
     .title span { color: var(--primary); }
     .desc { margin: 0; color: var(--muted); font-size: 16px; font-weight: 700; line-height: 1.65; }
 
-    .summary {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(96px, 1fr));
+    .vote-box {
+      margin-top: 22px;
+      width: 100%;
+      max-width: 660px;
+      min-height: 70px;
+      padding: 10px 10px 10px 20px;
+      display: flex;
+      align-items: center;
       gap: 12px;
-      min-width: 360px;
+      border: 1px solid #cbd5e1;
+      border-radius: 16px;
+      background: #ffffff;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
     }
+    .vote-box:focus-within { border-color: var(--primary); }
+    .vote-box input { min-width: 0; flex: 1; height: 48px; border: 0; outline: 0; color: var(--text); background: transparent; font-size: 15px; font-weight: 700; }
+    .vote-box button {
+      width: 150px;
+      height: 50px;
+      border: 0;
+      border-radius: 12px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .chips { margin-top: 14px; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+    .chips strong { font-size: 13px; font-weight: 900; }
+    .chip { border: 1px solid #e2e8f0; color: var(--muted); background: #fff; border-radius: 999px; padding: 8px 12px; font-size: 13px; font-weight: 800; }
+    .chip:hover { background: var(--primary-light); color: var(--primary); border-color: transparent; }
+
+    .summary { display: grid; grid-template-columns: repeat(3, minmax(96px, 1fr)); gap: 12px; }
     .summary-card {
       background: rgba(255,255,255,0.82);
       border: 1px solid var(--line);
@@ -146,7 +178,7 @@
       text-align: center;
     }
     .summary-card b { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
-    .summary-card strong { color: var(--primary); font-size: 26px; font-weight: 1000; letter-spacing: -0.06em; }
+    .summary-card strong { color: var(--primary); font-size: 25px; font-weight: 1000; letter-spacing: -0.06em; }
 
     .map-shell {
       background: #fff;
@@ -272,84 +304,40 @@
     .marker-support { background: #10b981; color: #10b981; }
     .marker-invest { background: #3b82f6; color: #3b82f6; }
     .pulse-marker span { color: #fff; position: relative; z-index: 2; }
+    @keyframes pulse { 0% { transform: scale(0.82); opacity: 0.36; } 80%, 100% { transform: scale(1.7); opacity: 0; } }
 
-    @keyframes pulse {
-      0% { transform: scale(0.82); opacity: 0.36; }
-      80%, 100% { transform: scale(1.7); opacity: 0; }
-    }
+    .below-grid { margin-top: 24px; display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 24px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--soft-shadow); }
+    .event-card, .gallery-card, .about-card { padding: 28px; }
+    .card-head { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
+    .card-title { margin: 0; font-size: 20px; letter-spacing: -0.03em; font-weight: 900; }
+    .more { color: var(--primary); font-weight: 900; font-size: 14px; }
+    .event-schedule-list { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #fff; }
+    .schedule-row { min-height: 60px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 16px; padding: 0 18px; border-bottom: 1px solid var(--line); font-size: 14px; font-weight: 800; }
+    .schedule-row:last-child { border-bottom: 0; }
+    .schedule-date { background: var(--primary-light); color: var(--primary); font-size: 12px; font-weight: 1000; padding: 4px 10px; border-radius: 7px; text-align: center; white-space: nowrap; }
+    .schedule-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .schedule-status { font-size: 13px; font-weight: 900; color: var(--primary); }
+    .gallery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .gallery-thumb { height: 132px; border-radius: 12px; overflow: hidden; background-size: cover; background-position: center; background-color: #e2e8f0; }
+    .about-card p { margin: 0 0 16px; color: var(--muted); font-size: 14px; line-height: 1.7; font-weight: 700; }
+    .outline-btn { height: 42px; padding: 0 16px; border: 1px solid #cbd5e1; border-radius: 10px; color: var(--text); background: #fff; font-size: 13px; font-weight: 900; }
+    .outline-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
 
-    .leaflet-popup-content-wrapper { border-radius: 16px; box-shadow: var(--soft-shadow); }
-    .leaflet-popup-content { margin: 12px 14px; font-family: inherit; font-weight: 800; }
-    .leaflet-control-attribution { font-size: 10px; }
-
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 2000;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      background: rgba(15, 23, 42, 0.58);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-    }
+    .modal-overlay { position: fixed; inset: 0; z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(15, 23, 42, 0.58); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
     .modal-overlay.show { display: flex; }
-    .store-modal {
-      width: min(480px, 100%);
-      max-height: min(760px, calc(100vh - 40px));
-      overflow: auto;
-      background: #fff;
-      border-radius: 24px;
-      box-shadow: 0 30px 80px rgba(15, 23, 42, 0.28);
-      border: 1px solid rgba(226,232,240,0.9);
-      position: relative;
-      animation: modalIn 0.22s ease both;
-    }
+    .store-modal, .terms-modal, .privacy-modal, .about-modal { width: min(500px, 100%); max-height: min(760px, calc(100vh - 40px)); overflow: auto; background: #fff; border-radius: 24px; box-shadow: 0 30px 80px rgba(15, 23, 42, 0.28); border: 1px solid rgba(226,232,240,0.9); position: relative; animation: modalIn 0.22s ease both; }
     @keyframes modalIn { from { transform: translateY(18px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    .modal-close {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      z-index: 2;
-      width: 36px;
-      height: 36px;
-      border: 0;
-      border-radius: 50%;
-      background: rgba(15,23,42,0.72);
-      color: #fff;
-      font-size: 22px;
-      line-height: 1;
-    }
-    .modal-cover {
-      height: 210px;
-      background: linear-gradient(135deg, #f1f5f9, #fff1f2);
-      overflow: hidden;
-    }
+    .modal-close, .modal-close-btn { position: absolute; top: 16px; right: 16px; z-index: 2; width: 36px; height: 36px; border: 0; border-radius: 50%; background: rgba(15,23,42,0.72); color: #fff; font-size: 22px; line-height: 1; }
+    .modal-cover { height: 210px; background: linear-gradient(135deg, #f1f5f9, #fff1f2); overflow: hidden; }
     .modal-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .modal-body { padding: 24px; }
-    .modal-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 11px;
-      border-radius: 999px;
-      background: var(--primary-light);
-      color: var(--primary);
-      font-size: 12px;
-      font-weight: 1000;
-      margin-bottom: 12px;
-    }
+    .modal-body, .terms-modal, .privacy-modal, .about-modal { padding: 24px; }
+    .terms-modal, .privacy-modal, .about-modal { padding-top: 52px; }
+    .modal-badge { display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px; border-radius: 999px; background: var(--primary-light); color: var(--primary); font-size: 12px; font-weight: 1000; margin-bottom: 12px; }
     .modal-title { margin: 0 0 8px; font-size: 28px; font-weight: 1000; letter-spacing: -0.06em; line-height: 1.15; }
     .modal-region { margin: 0 0 16px; color: var(--muted); font-size: 14px; font-weight: 800; }
     .modal-summary { margin: 0 0 20px; color: #334155; font-size: 15px; line-height: 1.65; font-weight: 700; }
-    .event-box {
-      border: 1px solid rgba(225,29,72,0.2);
-      border-radius: 18px;
-      padding: 18px;
-      background: linear-gradient(135deg, #fff7f7, #fff);
-      margin-bottom: 18px;
-    }
+    .event-box { border: 1px solid rgba(225,29,72,0.2); border-radius: 18px; padding: 18px; background: linear-gradient(135deg, #fff7f7, #fff); margin-bottom: 18px; }
     .event-label { color: var(--primary); font-size: 13px; font-weight: 1000; margin-bottom: 8px; }
     .event-title { font-size: 20px; font-weight: 1000; letter-spacing: -0.05em; line-height: 1.25; margin-bottom: 14px; }
     .event-row { display: flex; justify-content: space-between; gap: 14px; font-size: 14px; font-weight: 900; padding: 8px 0; color: #334155; }
@@ -357,141 +345,104 @@
     .progress { height: 7px; border-radius: 999px; overflow: hidden; background: #ffe4e6; margin: 8px 0 4px; }
     .progress > i { display: block; height: 100%; width: 72%; background: linear-gradient(90deg, var(--primary), var(--primary-dark)); border-radius: inherit; }
     .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .apply-btn {
-      grid-column: 1 / -1;
-      height: 54px;
-      border: 0;
-      border-radius: 13px;
-      color: #fff;
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      font-size: 16px;
-      font-weight: 1000;
-      box-shadow: 0 16px 30px rgba(225,29,72,0.22);
-    }
-    .sub-btn {
-      height: 46px;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: #fff;
-      color: #0f172a;
-      font-size: 14px;
-      font-weight: 900;
-    }
-    .sub-btn:hover { background: #f8fafc; }
+    .apply-btn { grid-column: 1 / -1; height: 54px; border: 0; border-radius: 13px; color: #fff; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); font-size: 16px; font-weight: 1000; box-shadow: 0 16px 30px rgba(225,29,72,0.22); }
+    .sub-btn { height: 46px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: #0f172a; font-size: 14px; font-weight: 900; }
+    .modal-scroll-body { overflow-y: auto; max-height: 58vh; padding-right: 6px; margin-bottom: 20px; font-size: 14px; line-height: 1.6; color: #334155; text-align: left; }
+    .modal-scroll-body h4 { font-size: 15px; font-weight: 900; color: var(--text); margin: 18px 0 6px; }
+    .modal-scroll-body p { margin: 0 0 10px; font-weight: 600; color: #475569; }
+    .modal-confirm-btn { height: 50px; width: 100%; border: 0; border-radius: 12px; color: #fff; font-size: 15px; font-weight: 900; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); }
 
-    .footer {
-      border-top: 1px solid var(--line);
-      background: #fff;
-      margin-top: 46px;
-    }
-    .footer-inner {
-      width: min(1180px, calc(100% - 48px));
-      min-height: 82px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 24px;
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 700;
-    }
+    .footer { border-top: 1px solid var(--line); background: #fff; margin-top: 46px; }
+    .footer-inner { width: min(1180px, calc(100% - 48px)); min-height: 82px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 24px; color: var(--muted); font-size: 13px; font-weight: 700; }
     .footer-brand { color: var(--primary); font-size: 18px; font-weight: 1000; margin-bottom: 4px; }
     .footer-links { display: flex; align-items: center; gap: 14px; }
-
-    .toast {
-      position: fixed;
-      left: 50%; bottom: 28px;
-      z-index: 3000;
-      transform: translateX(-50%) translateY(30px);
-      opacity: 0;
-      pointer-events: none;
-      background: #0f172a;
-      color: #fff;
-      border-radius: 999px;
-      padding: 14px 22px;
-      box-shadow: 0 18px 34px rgba(15,23,42,0.2);
-      font-weight: 900;
-      transition: 0.22s ease;
-      text-align: center;
-    }
+    .toast { position: fixed; left: 50%; bottom: 28px; z-index: 3000; transform: translateX(-50%) translateY(30px); opacity: 0; pointer-events: none; background: #0f172a; color: #fff; border-radius: 999px; padding: 14px 22px; box-shadow: 0 18px 34px rgba(15,23,42,0.2); font-weight: 900; transition: 0.22s ease; text-align: center; }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-    @media (max-width: 860px) {
-      .topbar { height: auto; }
-      .nav-inner { width: min(100% - 28px, 1180px); min-height: 72px; flex-wrap: wrap; padding: 14px 0; }
+    @media (max-width: 940px) {
+      .hero { grid-template-columns: 1fr; }
+      .summary { grid-template-columns: repeat(3, 1fr); }
+      .below-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 680px) {
+      .nav-inner { width: min(100% - 28px, 1180px); flex-wrap: wrap; padding: 14px 0; }
       .nav { width: 100%; gap: 22px; overflow-x: auto; padding-bottom: 4px; }
       .nav a { height: 32px; flex: 0 0 auto; }
       .nav a.active::after { bottom: -6px; }
       .coupon-box { display: none; }
-      .page { width: min(100% - 28px, 1180px); padding-top: 28px; }
-      .hero { display: block; }
-      .summary { min-width: 0; grid-template-columns: repeat(3, 1fr); margin-top: 18px; }
-      .summary-card { padding: 13px 8px; }
-      .summary-card strong { font-size: 21px; }
-      #map { height: 68vh; min-height: 520px; }
-      .map-toolbar { top: 12px; left: 12px; }
-      .filter-panel { width: 150px; }
-      .locate-btn { top: 12px; right: 12px; padding: 12px 14px; font-size: 13px; }
-      .legend { left: 12px; bottom: 12px; }
-      .footer-inner { width: min(100% - 28px, 1180px); flex-direction: column; align-items: flex-start; padding: 20px 0; }
-    }
-
-    @media (max-width: 520px) {
-      .brand-sub { display: none; }
-      .title { font-size: 38px; }
-      .desc { font-size: 14px; }
+      .page, .footer-inner { width: min(100% - 28px, 1180px); }
       .summary { grid-template-columns: 1fr; }
       .summary-card { display: flex; align-items: center; justify-content: space-between; text-align: left; }
       .summary-card b { margin: 0; }
-      .map-toolbar { max-width: calc(100% - 24px); }
-      .city-select { min-width: 132px; }
+      .vote-box { flex-direction: column; align-items: stretch; padding: 16px; }
+      .vote-box button { width: 100%; }
+      #map { height: 68vh; min-height: 520px; }
+      .map-toolbar { top: 12px; left: 12px; max-width: calc(100% - 24px); }
       .filter-panel { display: grid; grid-template-columns: 1fr 1fr; width: 248px; }
       .filter-btn { font-size: 12px; padding: 10px 9px; }
-      .locate-btn { right: 12px; top: 76px; }
+      .locate-btn { right: 12px; top: 76px; padding: 12px 14px; font-size: 13px; }
       .legend { display: none; }
       .modal-cover { height: 170px; }
       .modal-title { font-size: 24px; }
       .modal-actions { grid-template-columns: 1fr; }
       .apply-btn { grid-column: auto; }
+      .schedule-row { grid-template-columns: 1fr; gap: 4px; padding: 14px; }
+      .gallery-grid { grid-template-columns: 1fr; }
+      .footer-inner { flex-direction: column; align-items: flex-start; padding: 20px 0; }
+      .footer-links { flex-wrap: wrap; }
     }
   </style>
 </head>
 <body>
   <header class="topbar">
     <div class="nav-inner">
-      <a href="index.html" class="brand" aria-label="LocalFlow 홈">
-        <span class="brand-icon">L</span>
+      <a href="#home" class="brand" aria-label="쿠폰맵 홈">
+        <span class="brand-icon">C</span>
         <span>
-          <span class="brand-name">LocalFlow</span>
-          <span class="brand-sub">충주 로컬플로우</span>
+          <span class="brand-name">쿠폰맵</span>
+          <span class="brand-sub">LocalFlow legacy</span>
         </span>
       </a>
       <nav class="nav" aria-label="주요 메뉴">
-        <a href="index.html">홈</a>
-        <a href="gallery.html">갤러리</a>
-        <a href="coupon.html">쿠폰</a>
-        <a href="localmap.html" class="active">쿠폰맵</a>
-        <a href="identity.html">정체성</a>
+        <a href="#home" class="active">홈</a>
+        <a href="#mapSection">쿠폰맵</a>
+        <a href="#schedule">일정</a>
+        <a href="#gallery">갤러리</a>
+        <a href="javascript:void(0);" onclick="openAboutModal()">정체성</a>
       </nav>
-      <button class="coupon-box" type="button">🎁 내 쿠폰함</button>
+      <button class="coupon-box" type="button" onclick="showToast('내 쿠폰함 기능은 쿠폰 API 연결 후 활성화하세요.')">🎁 내 쿠폰함</button>
     </div>
   </header>
 
-  <main class="page">
+  <main class="page" id="home">
     <section class="hero">
       <div>
-        <div class="eyebrow">📍 LocalFlow Flow Map</div>
+        <div class="badge" id="dayBadge">📍 충주 혜택이 지도 위에서 흐릅니다</div>
         <h1 class="title">충주 <span>쿠폰맵</span></h1>
         <p class="desc">
-          충주에서 지금 혜택이 흐르고 있는 곳을 한눈에 확인하세요.<br />
+          기존 LocalFlow의 투표, 쿠폰 일정, 갤러리 흐름을 쿠폰맵 중심으로 통합했습니다.<br />
           반짝이는 핀을 누르면 업체 소개와 이벤트 참여창이 열립니다.
         </p>
+
+        <form class="vote-box" id="voteForm">
+          <input id="voteInput" type="text" placeholder="오늘 먹고 싶은 메뉴나 가게를 적어주세요!" autocomplete="off" required />
+          <button type="submit">✈ 투표하기</button>
+        </form>
+        <div class="chips" aria-label="추천 키워드">
+          <strong>추천 키워드</strong>
+          <button class="chip" type="button">마라탕</button>
+          <button class="chip" type="button">칼국수</button>
+          <button class="chip" type="button">떡볶이</button>
+          <button class="chip" type="button">카페</button>
+          <button class="chip" type="button">초밥</button>
+          <button class="chip" type="button">삼겹살</button>
+        </div>
       </div>
       <div class="summary" aria-label="쿠폰맵 요약">
         <div class="summary-card"><b>진행중 쿠폰</b><strong id="summaryCoupon">0개</strong></div>
         <div class="summary-card"><b>이벤트 업체</b><strong id="summaryStores">0곳</strong></div>
-        <div class="summary-card"><b>오늘 방문자</b><strong>1,248명</strong></div>
+        <div class="summary-card"><b>오늘 방문자</b><strong id="summaryVisitors">-</strong></div>
       </div>
     </section>
 
@@ -518,6 +469,37 @@
         <div class="legend-row"><span class="dot invest"></span>투자 업체</div>
       </div>
     </section>
+
+    <section class="below-grid">
+      <article class="card event-card" id="schedule">
+        <div class="card-head">
+          <h2 class="card-title">📅 실시간 쿠폰 추첨 일정</h2>
+          <a href="#mapSection" class="more">지도 보기 ›</a>
+        </div>
+        <div class="event-schedule-list" id="scheduleList"></div>
+      </article>
+
+      <article class="card gallery-card" id="gallery">
+        <div class="card-head">
+          <h2 class="card-title">▣ 오늘의 갤러리</h2>
+          <a href="javascript:void(0);" class="more" onclick="showToast('갤러리 상세 페이지는 필요 시 별도 연결하세요.')">더보기 ›</a>
+        </div>
+        <div class="gallery-grid" id="homeGallery"></div>
+      </article>
+    </section>
+
+    <section class="below-grid">
+      <article class="card about-card">
+        <h2 class="card-title">♡ LocalFlow에서 쿠폰맵으로</h2>
+        <p>기존 LocalFlow 도메인은 보류하고, 운영 중심을 쿠폰맵으로 이전하는 구조입니다. 브랜드 스토리는 남기되 사용자가 처음 만나는 화면은 지도와 이벤트 참여가 되도록 정리했습니다.</p>
+        <button class="outline-btn" type="button" onclick="openAboutModal()">정체성 보기 ›</button>
+      </article>
+      <article class="card about-card">
+        <h2 class="card-title">⚙ 연결 구조</h2>
+        <p>기존 API_BASE, 투표 저장, 쿠폰 일정, 갤러리 로딩 구조를 유지했습니다. 쿠폰 데이터에 lat/lng가 있으면 지도 핀으로 자동 표시되고, 없으면 샘플 데이터가 fallback으로 표시됩니다.</p>
+        <button class="outline-btn" type="button" onclick="showToast('관리자 API에서 lat/lng 필드를 채우면 지도에 자동 반영됩니다.')">관리 팁 보기 ›</button>
+      </article>
+    </section>
   </main>
 
   <div class="modal-overlay" id="storeModalOverlay" onclick="closeStoreModal()">
@@ -529,7 +511,6 @@
         <h2 class="modal-title" id="modalStoreName">업체명</h2>
         <p class="modal-region" id="modalRegion">충주시</p>
         <p class="modal-summary" id="modalSummary">업체 소개</p>
-
         <div class="event-box">
           <div class="event-label" id="modalEventLabel">진행중인 이벤트</div>
           <div class="event-title" id="modalCouponTitle">쿠폰명</div>
@@ -538,7 +519,6 @@
           <div class="progress"><i id="modalProgress"></i></div>
           <div class="event-row"><span>남은 쿠폰</span><strong id="modalRemainCount">-</strong></div>
         </div>
-
         <div class="modal-actions">
           <button class="apply-btn" type="button" id="modalApplyBtn">이벤트 참가하기</button>
           <button class="sub-btn" type="button" id="modalRouteBtn">길찾기</button>
@@ -548,16 +528,68 @@
     </article>
   </div>
 
+  <div class="modal-overlay" id="termsModalOverlay" onclick="closeTermsModal()">
+    <div class="terms-modal" onclick="event.stopPropagation()">
+      <button class="modal-close-btn" onclick="closeTermsModal()">×</button>
+      <h3>이용약관</h3>
+      <div class="modal-scroll-body">
+        <h4>1. 서비스 소개</h4>
+        <p>쿠폰맵은 충주 시민들의 참여를 기반으로 운영되는 로컬 정보 및 이벤트 플랫폼입니다.</p>
+        <h4>2. 서비스 이용 목적</h4>
+        <p>지역 상권 활성화와 시민 참여형 로컬 커뮤니티 형성을 목적으로 운영됩니다.</p>
+        <h4>3. 이벤트 및 쿠폰 정책</h4>
+        <p>쿠폰 및 이벤트는 운영 정책에 따라 변경 또는 종료될 수 있으며, 비정상적인 반복 응모는 제한될 수 있습니다.</p>
+        <h4>4. 문의</h4>
+        <p>문의 이메일: <strong>llsshh1431@naver.com</strong></p>
+      </div>
+      <button class="modal-confirm-btn" onclick="closeTermsModal()">확인했습니다</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="privacyModalOverlay" onclick="closePrivacyModal()">
+    <div class="privacy-modal" onclick="event.stopPropagation()">
+      <button class="modal-close-btn" onclick="closePrivacyModal()">×</button>
+      <h3>개인정보 처리방침</h3>
+      <div class="modal-scroll-body">
+        <h4>1. 수집 항목</h4>
+        <p>이벤트 응모 시 이메일 주소를 수집할 수 있습니다.</p>
+        <h4>2. 이용 목적</h4>
+        <p>쿠폰 추첨, 당첨 안내, 리워드 발송 및 민원 응대 목적으로 사용합니다.</p>
+        <h4>3. 보유 기간</h4>
+        <p>목적 달성 후 최대 30일 보관 후 삭제합니다.</p>
+        <h4>4. 문의</h4>
+        <p>문의 이메일: <strong>llsshh1431@naver.com</strong></p>
+      </div>
+      <button class="modal-confirm-btn" onclick="closePrivacyModal()">확인했습니다</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="aboutModalOverlay" onclick="closeAboutModal()">
+    <div class="about-modal" onclick="event.stopPropagation()">
+      <button class="modal-close-btn" onclick="closeAboutModal()">×</button>
+      <h3>♡ 쿠폰맵이란?</h3>
+      <div class="modal-scroll-body">
+        <h4>혜택을 지도 위에 올리는 로컬 프로젝트</h4>
+        <p>쿠폰맵은 기존 LocalFlow의 시민 참여, 투표, 기록, 쿠폰 이벤트 구조를 지도 중심으로 재정렬한 서비스입니다.</p>
+        <h4>왜 지도 중심인가?</h4>
+        <p>사용자는 복잡한 설명보다 지금 어디에서 어떤 혜택이 있는지를 먼저 봅니다. 그래서 홈의 중심을 지도, 핀, 모달, 이벤트 참가로 통합했습니다.</p>
+        <h4>운영 방향</h4>
+        <p>업체 등록 → 지도 노출 → 이벤트 참여 → 쿠폰 발송 → 재방문 흐름으로 단순화합니다.</p>
+      </div>
+      <button class="modal-confirm-btn" onclick="closeAboutModal()">OK</button>
+    </div>
+  </div>
+
   <footer class="footer">
     <div class="footer-inner">
       <div>
-        <div class="footer-brand">LocalFlow</div>
-        <div>© 2026 STANCE. LocalFlow Project. All rights reserved.</div>
+        <div class="footer-brand">쿠폰맵</div>
+        <div>© 2026 STANCE. CouponMap / LocalFlow Project. All rights reserved.</div>
       </div>
       <div class="footer-links">
-        <a href="javascript:void(0);">이용약관</a>
+        <a href="javascript:void(0);" onclick="openTermsModal()">이용약관</a>
         <span>|</span>
-        <a href="javascript:void(0);">개인정보처리방침</a>
+        <a href="javascript:void(0);" onclick="openPrivacyModal()">개인정보처리방침</a>
         <span>|</span>
         <a href="https://llsshh.com/cs.html" target="_blank" rel="noopener noreferrer">문의하기</a>
       </div>
@@ -567,7 +599,19 @@
   <div class="toast" id="toast">메시지</div>
 
   <script>
-    const stores = [
+    const API_BASE = "https://localflow.ddns.net/lf";
+
+    const THEMES = [
+      { primary: "#0d9488", primaryLight: "#f0fdfa", primaryDark: "#115e59", badgeBg: "#f0fdfa", badgeBorder: "#ccfbf1", badgeText: "#115e59" },
+      { primary: "#2563eb", primaryLight: "#eff6ff", primaryDark: "#1d4ed8", badgeBg: "#eff6ff", badgeBorder: "#bfdbfe", badgeText: "#1d4ed8" },
+      { primary: "#059669", primaryLight: "#ecfdf5", primaryDark: "#047857", badgeBg: "#ecfdf5", badgeBorder: "#d1fae5", badgeText: "#047857" },
+      { primary: "#7c3aed", primaryLight: "#f5f3ff", primaryDark: "#6d28d9", badgeBg: "#f5f3ff", badgeBorder: "#ede9fe", badgeText: "#6d28d9" },
+      { primary: "#ea580c", primaryLight: "#fff7ed", primaryDark: "#c2410c", badgeBg: "#fff7ed", badgeBorder: "#ffedd5", badgeText: "#c2410c" },
+      { primary: "#e11d48", primaryLight: "#fff1f2", primaryDark: "#be123c", badgeBg: "#fff1f2", badgeBorder: "#ffe4e6", badgeText: "#be123c" },
+      { primary: "#4f46e5", primaryLight: "#eef2ff", primaryDark: "#3730a3", badgeBg: "#eef2ff", badgeBorder: "#e0e7ff", badgeText: "#3730a3" }
+    ];
+
+    const fallbackStores = [
       {
         id: "theine-blueberry",
         name: "더이네블루베리",
@@ -642,28 +686,85 @@
       }
     ];
 
-    const typeClass = {
-      coupon: "marker-coupon",
-      event: "marker-event",
-      support: "marker-support",
-      invest: "marker-invest"
-    };
-
-    const map = L.map("map", {
-      zoomControl: false,
-      scrollWheelZoom: true
-    }).setView([36.991, 127.925], 12);
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "&copy; OpenStreetMap"
-    }).addTo(map);
-
-    L.control.zoom({ position: "bottomright" }).addTo(map);
-
-    const markerLayer = L.layerGroup().addTo(map);
+    const typeClass = { coupon: "marker-coupon", event: "marker-event", support: "marker-support", invest: "marker-invest" };
+    let stores = [...fallbackStores];
     let visibleStores = [...stores];
     let markers = [];
+
+    function applyDailyTheme() {
+      const theme = THEMES[new Date().getDay()];
+      const root = document.documentElement;
+      root.style.setProperty("--primary", theme.primary);
+      root.style.setProperty("--primary-light", theme.primaryLight);
+      root.style.setProperty("--primary-dark", theme.primaryDark);
+      root.style.setProperty("--badge-bg", theme.badgeBg);
+      root.style.setProperty("--badge-border", theme.badgeBorder);
+      root.style.setProperty("--badge-text", theme.badgeText);
+    }
+
+    function apiUrl(path) {
+      if (/^https?:\/\//i.test(path)) return path;
+      return `${API_BASE}${path.startsWith("/") ? path : "/" + path}`;
+    }
+
+    async function localApiGet(path) {
+      const res = await fetch(apiUrl(path), { method: "GET", mode: "cors" });
+      return await res.json();
+    }
+
+    async function localApiSend(path, method, body) {
+      const res = await fetch(apiUrl(path), {
+        method,
+        mode: "cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      return await res.json();
+    }
+
+    function escapeHtml(text) {
+      return String(text ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      }[char]));
+    }
+
+    function normalizeCouponToStore(c, index) {
+      const lat = Number(c.lat ?? c.latitude);
+      const lng = Number(c.lng ?? c.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      const remain = Number(c.remainCount ?? c.remaining ?? c.stock ?? c.quantity ?? 0);
+      const apply = Number(c.applyCount ?? c.applies ?? c.entries ?? 0);
+      const total = Number(c.totalCount ?? c.total ?? remain + apply || 1);
+      const type = c.type || c.category || "coupon";
+      return {
+        id: String(c.id || c.slug || `coupon-${index}`),
+        name: c.store || c.storeName || c.name || "쿠폰 업체",
+        region: c.region || c.address || "충주시",
+        lat,
+        lng,
+        type: ["coupon", "event", "support", "invest"].includes(type) ? type : "coupon",
+        badge: c.badge || "🎁 쿠폰 진행중",
+        image: c.image || c.imageUrl || c.thumbnail || "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=80",
+        summary: c.summary || c.description || c.desc || "쿠폰맵에 등록된 로컬 업체입니다.",
+        couponTitle: c.title || c.couponTitle || "로컬 쿠폰 이벤트",
+        drawDate: c.drawDate || c.expire || c.expiredAt || "-",
+        applyCount: apply,
+        remainCount: remain,
+        totalCount: Math.max(total, apply + remain, 1),
+        markerIcon: c.markerIcon || "🎁",
+        routeUrl: c.routeUrl || "https://map.naver.com/"
+      };
+    }
+
+    applyDailyTheme();
+    const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
+    document.getElementById("dayBadge").innerHTML = `♣ 오늘은 ${dayNames[new Date().getDay()]}요일! 충주 혜택 지도를 확인해보세요`;
+    document.getElementById("summaryVisitors").textContent = `${(980 + new Date().getDate() * 7).toLocaleString()}명`;
+
+    const map = L.map("map", { zoomControl: false, scrollWheelZoom: true }).setView([36.991, 127.925], 12);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(map);
+    L.control.zoom({ position: "bottomright" }).addTo(map);
+    const markerLayer = L.layerGroup().addTo(map);
 
     function makeIcon(store) {
       return L.divIcon({
@@ -679,20 +780,20 @@
       markerLayer.clearLayers();
       markers = [];
       visibleStores = filter === "all" ? [...stores] : stores.filter(store => store.type === filter);
-
       visibleStores.forEach(store => {
         const marker = L.marker([store.lat, store.lng], { icon: makeIcon(store) })
-          .bindPopup(`<strong>${store.name}</strong><br>${store.couponTitle}`)
+          .bindPopup(`<strong>${escapeHtml(store.name)}</strong><br>${escapeHtml(store.couponTitle)}`)
           .on("click", () => openStoreModal(store.id));
         marker.addTo(markerLayer);
         markers.push(marker);
       });
-
       fitVisibleStores();
+      updateSummary();
     }
 
     function fitVisibleStores() {
       if (!visibleStores.length) return;
+      setTimeout(() => map.invalidateSize(), 80);
       if (visibleStores.length === 1) {
         map.setView([visibleStores[0].lat, visibleStores[0].lng], 15, { animate: true });
         return;
@@ -701,10 +802,14 @@
       map.fitBounds(bounds, { padding: [80, 80], maxZoom: 14, animate: true });
     }
 
+    function updateSummary() {
+      document.getElementById("summaryCoupon").textContent = `${stores.length}개`;
+      document.getElementById("summaryStores").textContent = `${stores.length}곳`;
+    }
+
     function openStoreModal(id) {
       const store = stores.find(item => item.id === id);
       if (!store) return;
-
       document.getElementById("modalImage").src = store.image;
       document.getElementById("modalImage").alt = `${store.name} 대표 이미지`;
       document.getElementById("modalBadge").textContent = store.badge;
@@ -717,11 +822,9 @@
       document.getElementById("modalRemainCount").textContent = `${store.remainCount}개`;
       const ratio = Math.min(100, Math.max(4, Math.round((store.applyCount / store.totalCount) * 100)));
       document.getElementById("modalProgress").style.width = `${ratio}%`;
-
       document.getElementById("modalApplyBtn").onclick = () => {
         showToast(`${store.name} 이벤트 참가 페이지로 이동합니다.`);
-        // 실제 쿠폰 응모 페이지 연결 시 아래 URL을 교체하세요.
-        // location.href = `coupon.html?store=${encodeURIComponent(store.id)}`;
+        location.href = `coupon.html?store=${encodeURIComponent(store.id)}`;
       };
       document.getElementById("modalRouteBtn").onclick = () => window.open(store.routeUrl, "_blank", "noopener,noreferrer");
       document.getElementById("modalShareBtn").onclick = async () => {
@@ -733,16 +836,29 @@
           showToast("링크를 복사했습니다.");
         }
       };
-
       document.getElementById("storeModalOverlay").classList.add("show");
       document.body.style.overflow = "hidden";
       map.setView([store.lat, store.lng], 15, { animate: true });
     }
 
-    window.closeStoreModal = function() {
-      document.getElementById("storeModalOverlay").classList.remove("show");
-      document.body.style.overflow = "auto";
-    };
+    window.closeStoreModal = function() { closeModal("storeModalOverlay"); };
+    window.openTermsModal = function() { openModal("termsModalOverlay"); };
+    window.closeTermsModal = function() { closeModal("termsModalOverlay"); };
+    window.openPrivacyModal = function() { openModal("privacyModalOverlay"); };
+    window.closePrivacyModal = function() { closeModal("privacyModalOverlay"); };
+    window.openAboutModal = function() { openModal("aboutModalOverlay"); };
+    window.closeAboutModal = function() { closeModal("aboutModalOverlay"); };
+
+    function openModal(id) {
+      document.getElementById(id).classList.add("show");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove("show");
+      const anyOpen = [...document.querySelectorAll(".modal-overlay")].some(el => el.classList.contains("show"));
+      if (!anyOpen) document.body.style.overflow = "auto";
+    }
 
     document.querySelectorAll(".filter-btn").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -750,6 +866,29 @@
         btn.classList.add("active");
         renderMarkers(btn.dataset.filter);
       });
+    });
+
+    document.querySelectorAll(".chip").forEach(chip => chip.addEventListener("click", () => {
+      document.getElementById("voteInput").value = chip.textContent.trim();
+      document.getElementById("voteInput").focus();
+    }));
+
+    document.getElementById("voteForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("voteInput");
+      const text = input.value.trim();
+      if (!text) return;
+      try {
+        const data = await localApiSend("/api/votes", "POST", { text, source: "couponmap" });
+        if (data.ok) {
+          showToast(`🎉 "${text}" 의견이 쿠폰맵에 기록되었습니다.`);
+          input.value = "";
+        } else {
+          showToast("❌ 저장 실패");
+        }
+      } catch (err) {
+        showToast("❌ 서버 연결 실패");
+      }
     });
 
     document.getElementById("locateBtn").addEventListener("click", () => {
@@ -760,21 +899,56 @@
       navigator.geolocation.getCurrentPosition(
         pos => {
           const { latitude, longitude } = pos.coords;
-          L.circleMarker([latitude, longitude], {
-            radius: 8,
-            color: "#0f172a",
-            fillColor: "#0f172a",
-            fillOpacity: 0.85
-          }).addTo(map).bindPopup("현재 위치").openPopup();
+          L.circleMarker([latitude, longitude], { radius: 8, color: "#0f172a", fillColor: "#0f172a", fillOpacity: 0.85 }).addTo(map).bindPopup("현재 위치").openPopup();
           map.setView([latitude, longitude], 15, { animate: true });
         },
         () => showToast("현재 위치 권한이 필요합니다.")
       );
     });
 
-    document.addEventListener("keydown", e => {
-      if (e.key === "Escape") closeStoreModal();
-    });
+    async function renderHomeData() {
+      const scheduleListEl = document.getElementById("scheduleList");
+      const homeGalleryEl = document.getElementById("homeGallery");
+      try {
+        const coupons = (await localApiGet("/api/coupons")).items || [];
+        const gallery = (await localApiGet("/api/gallery")).items || [];
+        const mappedStores = coupons.map(normalizeCouponToStore).filter(Boolean);
+        if (mappedStores.length) stores = mappedStores;
+
+        const activeCoupons = coupons.filter(c => c.active !== false).slice(0, 5);
+        scheduleListEl.innerHTML = activeCoupons.length ? activeCoupons.map(c => `
+          <div class="schedule-row">
+            <span class="schedule-date">${escapeHtml((c.expire || c.drawDate || "").slice(5) || "예정")}</span>
+            <span class="schedule-name">${escapeHtml(c.store || c.storeName || "업체")} - ${escapeHtml(c.title || c.couponTitle || "쿠폰 이벤트")}</span>
+            <span class="schedule-status">● 대기중</span>
+          </div>
+        `).join("") : renderFallbackSchedule();
+
+        homeGalleryEl.innerHTML = gallery.slice(0, 4).map(g => `
+          <div class="gallery-thumb" title="${escapeHtml(g.title)}" style="background-image:url('${escapeHtml(g.url)}')"></div>
+        `).join("") || renderFallbackGallery();
+      } catch (err) {
+        scheduleListEl.innerHTML = renderFallbackSchedule();
+        homeGalleryEl.innerHTML = renderFallbackGallery();
+      }
+      renderMarkers("all");
+    }
+
+    function renderFallbackSchedule() {
+      return fallbackStores.map(s => `
+        <div class="schedule-row">
+          <span class="schedule-date">${escapeHtml(String(s.drawDate).slice(5, 10) || "예정")}</span>
+          <span class="schedule-name">${escapeHtml(s.name)} - ${escapeHtml(s.couponTitle)}</span>
+          <span class="schedule-status">● 대기중</span>
+        </div>
+      `).join("");
+    }
+
+    function renderFallbackGallery() {
+      return fallbackStores.slice(0, 4).map(s => `
+        <div class="gallery-thumb" title="${escapeHtml(s.name)}" style="background-image:url('${escapeHtml(s.image)}')"></div>
+      `).join("");
+    }
 
     function showToast(message) {
       const toast = document.getElementById("toast");
@@ -784,9 +958,14 @@
       showToast.timer = setTimeout(() => toast.classList.remove("show"), 2600);
     }
 
-    document.getElementById("summaryCoupon").textContent = `${stores.length}개`;
-    document.getElementById("summaryStores").textContent = `${stores.length}곳`;
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape") {
+        closeStoreModal(); closeTermsModal(); closePrivacyModal(); closeAboutModal();
+      }
+    });
+
     renderMarkers("all");
+    renderHomeData();
   </script>
 </body>
 </html>
