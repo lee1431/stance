@@ -48,6 +48,7 @@
       color: var(--text);
       font-family: 'Pretendard', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
     }
 
     /* 우주 별빛 배경 애니메이션 */
@@ -128,199 +129,228 @@
     ::-webkit-scrollbar-thumb:hover {
       background: rgba(255, 255, 255, 0.3);
     }
+
+    /* 터치 및 마찰 가속 성능 최적화 */
+    .smooth-scroll {
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+    }
   </style>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9382191250873184" crossorigin="anonymous"></script>
 </head>
-<body class="relative min-h-screen text-slate-100 flex flex-col items-center py-6 px-4">
+<body class="relative min-h-screen text-slate-100 flex flex-col items-center py-4 sm:py-8 px-3 sm:px-4">
 
-  <!-- 메인 래퍼 컨테이너 -->
-  <main class="w-full max-w-[540px] z-10 flex flex-col gap-6">
+  <!-- 메인 래퍼 컨테이너 (모바일 가로폭 540px 보존하면서 데스크탑 시 최대 1040px 가로 확장 대응) -->
+  <main class="w-full max-w-[540px] lg:max-w-[1040px] z-10 flex flex-col gap-5 sm:gap-6">
     
     <!-- 헤더 섹션 -->
-    <header class="text-center flex flex-col items-center gap-1 mt-2">
+    <header class="text-center flex flex-col items-center gap-1 mt-1 sm:mt-2">
       <div class="flex items-center gap-2">
-        <i data-lucide="trending-up" class="text-[#ffd166] w-8 h-8 animate-bounce"></i>
-        <h1 class="text-4xl font-black tracking-tighter grad-text">오늘뭐타?</h1>
+        <i data-lucide="trending-up" class="text-[#ffd166] w-7 h-7 sm:w-8 sm:h-8 animate-bounce"></i>
+        <h1 class="text-3xl sm:text-4xl font-black tracking-tighter grad-text">오늘뭐타?</h1>
       </div>
-      <p class="text-xs text-slate-400 mt-1 tracking-wide">돈 없이 코인 하나 콕 찝어 매일 저녁 수익률 배틀!</p>
+      <p class="text-[11px] sm:text-xs text-slate-400 mt-1 tracking-wide">돈 없이 코인 하나 콕 찝어 매일 저녁 수익률 배틀!</p>
     </header>
 
-    <!-- 기프티콘 이벤트 현황판 배너 -->
-    <section class="rounded-2xl border border-[#ffd166]/30 bg-slate-900/80 backdrop-blur-xl p-4 relative overflow-hidden shadow-2xl">
-      <div class="absolute -right-8 -bottom-8 opacity-10 pointer-events-none">
-        <i data-lucide="gift" class="w-32 h-32 text-[#ffd166]"></i>
-      </div>
-      
-      <!-- 상단 정보 헤더 -->
-      <div class="flex items-center justify-between border-b border-white/5 pb-3">
-        <div class="flex items-center gap-2">
-          <span class="flex h-2 w-2 relative">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          <span class="text-xs font-bold text-[#ffd166] tracking-wider uppercase">TODAY'S EVENT</span>
-        </div>
-        <span class="text-[10px] bg-amber-500/10 text-[#ffd166] px-2 py-0.5 rounded-full border border-[#ffd166]/20 font-bold">
-          매일 5,000원 증정
-        </span>
-      </div>
-
-      <!-- 기프티콘 혜택 설명 -->
-      <div class="my-4 flex items-center gap-3">
-        <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-500 to-[#ffd166] flex items-center justify-center text-slate-950 font-black text-2xl shadow-lg shrink-0">
-          🎁
-        </div>
-        <div>
-          <h3 class="text-sm font-bold text-white">매일 밤 20:55, 등락률 1등 구글 기프티콘!</h3>
-          <p class="text-xs text-slate-400 mt-0.5">참가는 무료, 오직 최고의 상승 코인을 고른 실력자에게만!</p>
-        </div>
-      </div>
-
-      <!-- 카운트다운 타이머 박스 -->
-      <div class="bg-black/40 rounded-xl p-3 flex flex-col items-center justify-center border border-white/5">
-        <span class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold mb-1" id="timerLabel">
-          오늘 베팅 종료까지 남은시간
-        </span>
-        <div class="text-2xl font-mono font-black tracking-widest text-[#ffd166] drop-shadow-[0_0_10px_rgba(255,209,102,0.3)]" id="countdownTimer">
-          00:00:00
-        </div>
-        <div class="text-[10px] text-slate-500 mt-1 font-medium" id="timerBottomLabel">
-          매일 저녁 20시 50분 칼마감 ⏰
-        </div>
-      </div>
-    </section>
-
     <!-- [안내 경고창 - 동적 활성화] -->
-    <div id="statusAlert" class="hidden rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-amber-300 flex items-start gap-2.5">
+    <div id="statusAlert" class="hidden rounded-2xl bg-amber-500/10 border border-amber-500/30 p-3.5 sm:p-4 text-xs text-amber-300 flex items-start gap-2.5 shadow-lg">
       <i data-lucide="alert-circle" class="w-4 h-4 shrink-0 mt-0.5"></i>
       <div>
-        <strong id="statusAlertTitle">현재 참여 불가 시간대</strong>
-        <p class="text-slate-400 mt-0.5" id="statusAlertDesc">매일 저녁 20시 50분부터 21시까지는 오늘의 정산 및 발표 시간으로 신규 등록이 불가능합니다.</p>
+        <strong id="statusAlertTitle" class="font-bold">현재 참여 불가 시간대</strong>
+        <p class="text-slate-400 mt-1 leading-relaxed" id="statusAlertDesc">매일 저녁 20시 50분부터 21시까지는 오늘의 정산 및 발표 시간으로 신규 등록이 불가능합니다.</p>
       </div>
     </div>
 
-    <!-- 코인 검색 & 리스트 섹션 -->
-    <section id="coinSearchSection" class="rounded-2xl border border-white/10 bg-slate-950/70 backdrop-blur-md p-4 transition-all duration-300">
-      <div class="flex items-center justify-between mb-3">
-        <div class="flex items-center gap-2">
-          <i data-lucide="search" class="w-4 h-4 text-[#ffd166]"></i>
-          <h2 class="text-sm font-bold text-white">코인 검색 및 선택</h2>
-        </div>
-        <button id="reloadCoinsBtn" class="text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1" type="button">
-          <i data-lucide="rotate-cw" class="w-3 h-3"></i> 코인 동기화
-        </button>
-      </div>
+    <!-- 반응형 데스크탑 그리드 구조 분할 포인트 -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+      
+      <!-- [좌측 분할 컬럼] - 이벤트 소식, 마켓 검색, 베팅 참여 -->
+      <div class="lg:col-span-6 flex flex-col gap-5 sm:gap-6 w-full">
+        
+        <!-- 기프티콘 이벤트 현황판 배너 -->
+        <section class="rounded-2xl border border-[#ffd166]/30 bg-slate-900/80 backdrop-blur-xl p-4 sm:p-5 relative overflow-hidden shadow-2xl transition-all duration-300 hover:border-[#ffd166]/50">
+          <div class="absolute -right-8 -bottom-8 opacity-10 pointer-events-none">
+            <i data-lucide="gift" class="w-32 h-32 text-[#ffd166]"></i>
+          </div>
+          
+          <!-- 상단 정보 헤더 -->
+          <div class="flex items-center justify-between border-b border-white/5 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="flex h-2 w-2 relative">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span class="text-xs font-bold text-[#ffd166] tracking-wider uppercase">TODAY'S EVENT</span>
+            </div>
+            <span class="text-[10px] bg-amber-500/10 text-[#ffd166] px-2 py-0.5 rounded-full border border-[#ffd166]/20 font-bold">
+              매일 5,000원 증정
+            </span>
+          </div>
 
-      <input
-        id="coinSearchInput"
-        class="w-full h-11 px-3 bg-slate-900/90 border border-white/10 rounded-xl text-sm focus:outline-none focus:border-[#ffd166]/50 transition-all placeholder:text-slate-500 mb-3"
-        autocomplete="off"
-        placeholder="BTC, ETH, SOL 등 검색..."
-      />
+          <!-- 기프티콘 혜택 설명 -->
+          <div class="my-4 flex items-center gap-3">
+            <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-500 to-[#ffd166] flex items-center justify-center text-slate-950 font-black text-2xl shadow-lg shrink-0">
+              🎁
+            </div>
+            <div>
+              <h3 class="text-xs sm:text-sm font-bold text-white leading-tight">매일 밤 20:55, 등락률 1등 구글 기프티콘!</h3>
+              <p class="text-[11px] text-slate-400 mt-1 leading-normal">참가는 무료, 오직 최고의 상승 코인을 고른 실력자에게만!</p>
+            </div>
+          </div>
 
-      <!-- 코인 선택 결과 리스트 컨테이너 -->
-      <div id="coinList" class="grid gap-2 max-h-[160px] overflow-y-auto pr-1">
-        <!-- JS 동적 로딩 -->
-      </div>
-    </section>
+          <!-- 카운트다운 타이머 박스 -->
+          <div class="bg-black/40 rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center border border-white/5">
+            <span class="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1.5" id="timerLabel">
+              오늘 베팅 종료까지 남은시간
+            </span>
+            <div class="text-2xl sm:text-3xl font-mono font-black tracking-widest text-[#ffd166] drop-shadow-[0_0_12px_rgba(255,209,102,0.35)]" id="countdownTimer">
+              00:00:00
+            </div>
+            <div class="text-[10px] text-slate-500 mt-1.5 font-bold" id="timerBottomLabel">
+              매일 저녁 20시 50분 칼마감 ⏰
+            </div>
+          </div>
+        </section>
 
-    <!-- 랭킹 등록 등록하기 폼 -->
-    <section id="registrationSection" class="rounded-2xl border border-white/10 bg-slate-950/70 backdrop-blur-md p-4 transition-all duration-300">
-      <div class="flex items-center gap-2 mb-3">
-        <i data-lucide="user-plus" class="w-4 h-4 text-[#ffd166]"></i>
-        <h2 class="text-sm font-bold text-white">이벤트 참가하기</h2>
-      </div>
+        <!-- 코인 검색 & 리스트 섹션 -->
+        <section id="coinSearchSection" class="rounded-2xl border border-white/10 bg-slate-950/70 backdrop-blur-md p-4 sm:p-5 transition-all duration-300">
+          <div class="flex items-center justify-between mb-3.5">
+            <div class="flex items-center gap-2">
+              <i data-lucide="search" class="w-4 h-4 text-[#ffd166]"></i>
+              <h2 class="text-xs sm:text-sm font-bold text-white">코인 검색 및 선택</h2>
+            </div>
+            <button id="reloadCoinsBtn" class="text-[11px] text-slate-400 hover:text-white transition-colors flex items-center gap-1 cursor-pointer active:scale-95" type="button">
+              <i data-lucide="rotate-cw" class="w-3 h-3"></i> 코인 동기화
+            </button>
+          </div>
 
-      <div class="space-y-3">
-        <!-- 현재 선택 코인 표기 -->
-        <div class="flex justify-between items-center bg-slate-900/60 border border-white/5 p-3 rounded-xl">
-          <span class="text-xs text-slate-400">내가 고른 코인:</span>
-          <span class="text-sm font-black text-[#ffd166] flex items-center gap-1" id="selectedCoinText">
-            <i data-lucide="circle-dot" class="w-3.5 h-3.5"></i> 선택 없음
-          </span>
-        </div>
-
-        <!-- 닉네임 입력 -->
-        <div>
-          <label for="nicknameInput" class="block text-[11px] text-slate-400 font-bold mb-1 pl-1">대표 닉네임 (최대 20자)</label>
           <input
-            id="nicknameInput"
-            class="w-full h-11 px-3 bg-slate-900/90 border border-white/10 rounded-xl text-sm focus:outline-none focus:border-[#ffd166]/50 transition-all placeholder:text-slate-500"
-            maxlength="20"
-            autocomplete="nickname"
-            placeholder="기프티콘 당첨 시 본인 확인용 닉네임"
+            id="coinSearchInput"
+            class="w-full h-11 px-3.5 bg-slate-900/90 border border-white/10 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-[#ffd166]/50 transition-all placeholder:text-slate-500 mb-3"
+            autocomplete="off"
+            placeholder="BTC, ETH, SOL 등 검색..."
           />
-        </div>
 
-        <button 
-          id="registerBtn" 
-          class="w-full h-12 bg-gradient-to-r from-amber-400 to-[#ffd166] text-slate-950 font-black rounded-xl text-sm hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/10"
-          type="button"
-        >
-          <i data-lucide="check-circle" class="w-4 h-4"></i> 랭킹 등록하기
-        </button>
+          <!-- 코인 선택 결과 리스트 컨테이너 -->
+          <div id="coinList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[180px] overflow-y-auto pr-1 smooth-scroll">
+            <!-- JS 동적 로딩 -->
+          </div>
+        </section>
 
-        <!-- 피드백 메시지 박스 -->
-        <div id="message" class="hidden text-xs text-center font-semibold rounded-lg p-2.5"></div>
-      </div>
-    </section>
+        <!-- 랭킹 등록 등록하기 폼 -->
+        <section id="registrationSection" class="rounded-2xl border border-white/10 bg-slate-950/70 backdrop-blur-md p-4 sm:p-5 transition-all duration-300">
+          <div class="flex items-center gap-2 mb-3.5">
+            <i data-lucide="user-plus" class="w-4 h-4 text-[#ffd166]"></i>
+            <h2 class="text-xs sm:text-sm font-bold text-white">이벤트 참가하기</h2>
+          </div>
 
-    <!-- 오늘 랭킹 보드 -->
-    <section class="rounded-2xl border border-white/10 bg-slate-950/70 backdrop-blur-md p-4">
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-2">
-          <i data-lucide="trophy" class="text-amber-400 w-5 h-5"></i>
-          <h2 id="rankingBoardTitle" class="text-sm font-bold text-white flex items-center gap-1.5">
-            오늘의 수익률 실시간 랭킹
-          </h2>
-        </div>
-        <button id="reloadRankingsBtn" class="text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1" type="button">
-          <i data-lucide="refresh-cw" class="w-3 h-3"></i> 실시간 갱신
-        </button>
-      </div>
+          <div class="space-y-3.5">
+            <!-- 현재 선택 코인 표기 -->
+            <div class="flex justify-between items-center bg-slate-900/60 border border-white/5 p-3 rounded-xl">
+              <span class="text-xs text-slate-400">내가 고른 코인:</span>
+              <span class="text-xs sm:text-sm font-black text-[#ffd166] flex items-center gap-1" id="selectedCoinText">
+                <i data-lucide="circle-dot" class="w-3.5 h-3.5"></i> 선택 없음
+              </span>
+            </div>
 
-      <!-- 리더보드 리스트 -->
-      <div id="rankingList" class="flex flex-col gap-2.5">
-        <!-- JS 동적 랭킹 렌더링 -->
-      </div>
-    </section>
+            <!-- 닉네임 입력 -->
+            <div>
+              <label for="nicknameInput" class="block text-[10px] sm:text-[11px] text-slate-400 font-bold mb-1.5 pl-1">대표 닉네임 (최대 20자)</label>
+              <input
+                id="nicknameInput"
+                class="w-full h-11 px-3.5 bg-slate-900/90 border border-white/10 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-[#ffd166]/50 transition-all placeholder:text-slate-500"
+                maxlength="20"
+                autocomplete="nickname"
+                placeholder="기프티콘 당첨 시 본인 확인용 닉네임"
+              />
+            </div>
 
-    <!-- 참여 방법 및 규칙 (아코디언) -->
-    <section class="rounded-2xl border border-white/10 bg-slate-950/50 backdrop-blur-md overflow-hidden">
-      <button id="rulesToggleBtn" class="w-full p-4 flex items-center justify-between text-left hover:bg-white/5 transition-colors">
-        <div class="flex items-center gap-2">
-          <i data-lucide="help-circle" class="w-4.5 h-4.5 text-[#ffd166]"></i>
-          <span class="text-xs font-bold text-white">어떻게 참여하고 당첨금을 받나요?</span>
-        </div>
-        <i data-lucide="chevron-down" id="rulesToggleIcon" class="w-4 h-4 text-slate-400 transition-transform duration-200"></i>
-      </button>
+            <button 
+              id="registerBtn" 
+              class="w-full h-12 bg-gradient-to-r from-amber-400 to-[#ffd166] text-slate-950 font-black rounded-xl text-xs sm:text-sm hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/10 cursor-pointer"
+              type="button"
+            >
+              <i data-lucide="check-circle" class="w-4 h-4"></i> 랭킹 등록하기
+            </button>
 
-      <div id="rulesContent" class="hidden border-t border-white/5 bg-slate-950/90 p-4 text-xs text-slate-400 space-y-3 leading-relaxed">
-        <div class="flex gap-2">
-          <span class="text-[#ffd166] font-bold">1.</span>
-          <p><strong>참여 시각:</strong> 매일 저녁 21시부터 다음 날 저녁 20시 50분 전까지 자유롭게 참여 가능합니다. (브라우저당 하루 1회 참여로 엄격히 제한됩니다.)</p>
-        </div>
-        <div class="flex gap-2">
-          <span class="text-[#ffd166] font-bold">2.</span>
-          <p><strong>베팅 종료 (20:50 ~ 20:55):</strong> 20시 50분이 되면 추가 참가가 전면 금지되며 최종 수익률 데이터 취합 및 정산에 들어갑니다.</p>
-        </div>
-        <div class="flex gap-2">
-          <span class="text-[#ffd166] font-bold">3.</span>
-          <p><strong>우승자 발표 (20:55 ~ 21:00):</strong> 20시 55분에 최종 <strong>TOP 10</strong> 순위가 공식 발표되며, 오직 당첨 마감 기간 1위 홀더에게만 <strong>[1등 기프티콘 받기]</strong> 버튼이 활성화됩니다.</p>
-        </div>
-        <div class="flex gap-2">
-          <span class="text-[#ffd166] font-bold">4.</span>
-          <p><strong>인증코드 제출:</strong> 버튼 클릭 시 발급되는 본인 고유 검증 코드를 복사 또는 캡처해 개발자 메일로 제출하시면 즉시 모바일 상품권이 전달됩니다. (밤 21시에 새 시즌으로 완전 초기화됩니다.)</p>
-        </div>
-        <div class="flex gap-2">
-          <span class="text-amber-400 font-bold">※</span>
-          <p class="text-amber-200/90">본 웹사이트는 오직 순수 모의 등락률 정보로 실력을 겨루는 커뮤니티 대결 장소입니다. 실제 투자나 도박, 사행성 행위와 일절 무관합니다.</p>
-        </div>
-      </div>
-    </section>
+            <!-- 피드백 메시지 박스 -->
+            <div id="message" class="hidden text-xs text-center font-semibold rounded-xl p-3"></div>
+          </div>
+        </section>
+
+      </div> <!-- [좌측 분할 컬럼 끝] -->
+
+
+      <!-- [우측 분할 컬럼] - 실시간 오늘 랭킹 보드, 규칙 가이드 (데스크탑 탑 고정 지원) -->
+      <div class="lg:col-span-6 flex flex-col gap-5 sm:gap-6 w-full lg:sticky lg:top-6 lg:h-fit">
+        
+        <!-- 오늘 랭킹 보드 -->
+        <section class="rounded-2xl border border-white/10 bg-slate-950/70 backdrop-blur-md p-4 sm:p-5 shadow-xl transition-all duration-300">
+          <div class="flex items-center justify-between gap-2 mb-4">
+            <div class="flex items-center gap-2 shrink-0">
+              <i data-lucide="trophy" class="text-amber-400 w-5 h-5"></i>
+              <h2 id="rankingBoardTitle" class="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                오늘의 수익률 실시간 랭킹
+              </h2>
+            </div>
+            
+            <!-- 내 순위 보기 버튼 & 갱신 레이아웃 정렬 -->
+            <div class="flex items-center gap-2 shrink-0">
+              <button id="myRankBtn" class="text-[10px] sm:text-[11px] text-[#ffd166] bg-[#ffd166]/10 border border-[#ffd166]/20 hover:bg-[#ffd166]/20 px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-all font-black cursor-pointer active:scale-95" type="button">
+                <i data-lucide="award" class="w-3.5 h-3.5"></i> 내 순위
+              </button>
+              <button id="reloadRankingsBtn" class="text-[10px] sm:text-[11px] text-slate-400 hover:text-white transition-colors flex items-center gap-1 p-1.5 cursor-pointer active:scale-95" type="button">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> 갱신
+              </button>
+            </div>
+          </div>
+
+          <!-- 리더보드 리스트 -->
+          <div id="rankingList" class="flex flex-col gap-2.5 max-h-[480px] lg:max-h-[580px] overflow-y-auto pr-1 smooth-scroll">
+            <!-- JS 동적 랭킹 렌더링 -->
+          </div>
+        </section>
+
+        <!-- 참여 방법 및 규칙 (아코디언) -->
+        <section class="rounded-2xl border border-white/10 bg-slate-950/50 backdrop-blur-md overflow-hidden">
+          <button id="rulesToggleBtn" class="w-full p-4 flex items-center justify-between text-left hover:bg-white/5 transition-colors cursor-pointer">
+            <div class="flex items-center gap-2">
+              <i data-lucide="help-circle" class="w-4 h-4 text-[#ffd166]"></i>
+              <span class="text-xs font-bold text-white">어떻게 참여하고 당첨금을 받나요?</span>
+            </div>
+            <i data-lucide="chevron-down" id="rulesToggleIcon" class="w-4 h-4 text-slate-400 transition-transform duration-200"></i>
+          </button>
+
+          <div id="rulesContent" class="hidden border-t border-white/5 bg-slate-950/90 p-4 text-xs text-slate-400 space-y-3.5 leading-relaxed">
+            <div class="flex gap-2">
+              <span class="text-[#ffd166] font-bold">1.</span>
+              <p><strong>참여 시각:</strong> 매일 저녁 21시부터 다음 날 저녁 20시 50분 전까지 자유롭게 참여 가능합니다. (브라우저당 하루 1회 참여로 엄격히 제한됩니다.)</p>
+            </div>
+            <div class="flex gap-2">
+              <span class="text-[#ffd166] font-bold">2.</span>
+              <p><strong>베팅 종료 (20:50 ~ 20:55):</strong> 20시 50분이 되면 추가 참가가 전면 금지되며 최종 수익률 데이터 취합 및 정산에 들어갑니다.</p>
+            </div>
+            <div class="flex gap-2">
+              <span class="text-[#ffd166] font-bold">3.</span>
+              <p><strong>우승자 발표 (20:55 ~ 21:00):</strong> 20시 55분에 최종 <strong>TOP 10</strong> 순위가 공식 발표되며, 오직 당첨 마감 기간 1위 홀더에게만 <strong>[1등 기프티콘 받기]</strong> 버튼이 활성화됩니다.</p>
+            </div>
+            <div class="flex gap-2">
+              <span class="text-[#ffd166] font-bold">4.</span>
+              <p><strong>인증코드 제출:</strong> 버튼 클릭 시 발급되는 본인 고유 검증 코드를 복사 또는 캡처해 개발자 메일로 제출하시면 즉시 모바일 상품권이 전달됩니다. (밤 21시에 새 시즌으로 완전 초기화됩니다.)</p>
+            </div>
+            <div class="flex gap-2">
+              <span class="text-amber-400 font-bold">※</span>
+              <p class="text-amber-200/90">본 웹사이트는 오직 순수 모의 등락률 정보로 실력을 겨루는 커뮤니티 대결 장소입니다. 실제 투자나 도박, 사행성 행위와 일절 무관합니다.</p>
+            </div>
+          </div>
+        </section>
+
+      </div> <!-- [우측 분할 컬럼 끝] -->
+
+    </div> <!-- 반응형 그리드 끝 -->
 
     <!-- 최하단 저작권 및 상태 표시 -->
-    <footer class="text-center text-[10px] text-slate-600 space-y-1">
+    <footer class="text-center text-[10px] text-slate-600 space-y-1 mt-4">
       <p>Copyright © STANCE. All Rights Reserved.</p>
       <div id="systemMode" class="font-mono text-[9px] text-emerald-500/70">
         시스템 연결: 정상 가동중
@@ -331,7 +361,7 @@
   <!-- 1등 당첨 수령 모달 -->
   <div id="winModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
     <div class="bg-slate-900 border border-[#ffd166] rounded-2xl w-full max-w-[400px] p-5 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
-      <button id="closeModalBtn" class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
+      <button id="closeModalBtn" class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors cursor-pointer">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
       <div class="text-center space-y-3">
@@ -348,7 +378,7 @@
 
         <button 
           id="copyCodeBtn"
-          class="w-full py-2.5 bg-[#ffd166] hover:brightness-110 text-slate-950 font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 transition-all"
+          class="w-full py-2.5 bg-[#ffd166] hover:brightness-110 text-slate-950 font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer"
           type="button"
         >
           <i data-lucide="copy" class="w-3.5 h-3.5"></i> 인증 코드 복사하기
@@ -358,6 +388,52 @@
           • 접수처: <strong class="text-slate-300">stance_dev@naver.com</strong><br/>
           • 기프티콘은 메일 신청일 기준 최대 12시간 내 발송 완료됩니다.<br/>
           • 신청하신 브라우저 세션 정보와 당첨 코드 이중 대조 완료 시 승인됩니다.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 내 순위 분석 보기 모달 -->
+  <div id="myRankModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-[400px] p-5 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+      <button id="closeMyRankModalBtn" class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors cursor-pointer">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+      <div class="text-center space-y-4">
+        <div class="w-14 h-14 bg-gradient-to-tr from-amber-500 to-[#ffd166] rounded-full flex items-center justify-center text-slate-950 mx-auto shadow-lg shadow-amber-500/10">
+          <i data-lucide="award" class="w-7 h-7"></i>
+        </div>
+        <h3 class="text-lg font-black text-white" id="myRankModalTitle">내 순위 현황</h3>
+        
+        <!-- 결과 영역 (참여 기록 존재 시 활성화) -->
+        <div id="myRankResultArea" class="hidden space-y-3">
+          <div class="bg-black/40 p-4 rounded-xl border border-white/5 space-y-2">
+            <div class="text-xs text-slate-400 font-bold" id="myRankNickname">닉네임 님</div>
+            <div class="text-3xl font-black text-[#ffd166]" id="myRankValue">현재 -위</div>
+            <div class="text-sm font-extrabold" id="myRankCoin">선택 코인 정보</div>
+            <div class="text-sm font-mono" id="myRankRate">실시간 수익률: -%</div>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-relaxed px-2" id="myRankMessage">
+            밤 20:55 최종 확정까지 추세를 지켜보세요!
+          </p>
+        </div>
+
+        <!-- 결과 영역 (미참여 시 활성화) -->
+        <div id="myRankEmptyArea" class="hidden space-y-3 p-3">
+          <p class="text-sm text-slate-300 font-medium">
+            아직 오늘 대결 세션에 참가하지 않았습니다!
+          </p>
+          <p class="text-xs text-slate-500">
+            상단 마켓 목록에서 1등이 될 코인을 고른 뒤,<br/>
+            대표 닉네임을 작성하고 등록해 보상을 노려보세요!
+          </p>
+          <button 
+            id="goRegisterBtn"
+            class="w-full py-2.5 bg-gradient-to-r from-amber-400 to-[#ffd166] text-slate-950 font-black text-xs rounded-lg transition-all active:scale-95 cursor-pointer"
+            type="button"
+          >
+            지금 대결 등록하러 가기
+          </button>
         </div>
       </div>
     </div>
@@ -394,11 +470,16 @@
     ];
 
     const backupRankings = [
-      { nickname: "주식탈출지능순", symbol: "DOGEUSDT", displayName: "DOGE/USDT", startPrice: "0.1512", currentPrice: "0.1782", returnRate: "17.85" },
-      { nickname: "도곡동고래", symbol: "SOLUSDT", displayName: "SOL/USDT", startPrice: "162.40", currentPrice: "171.12", returnRate: "5.36" },
-      { nickname: "한강뷰입주예정", symbol: "BTCUSDT", displayName: "BTC/USDT", startPrice: "68240.5", currentPrice: "69105.1", returnRate: "1.26" },
-      { nickname: "존버만이살길", symbol: "ETHUSDT", displayName: "ETH/USDT", startPrice: "3491.2", currentPrice: "3472.0", returnRate: "-0.55" },
-      { nickname: "솔라나풀매수자", symbol: "SOLUSDT", displayName: "SOL/USDT", startPrice: "165.00", currentPrice: "163.50", returnRate: "-0.91" }
+      { nickname: "도곡동고래", symbol: "SOLUSDT", displayName: "SOL/USDT", startPrice: "162.40", currentPrice: "182.12", returnRate: "12.14" },
+      { nickname: "주식탈출지능순", symbol: "DOGEUSDT", displayName: "DOGE/USDT", startPrice: "0.1512", currentPrice: "0.1682", returnRate: "11.24" },
+      { nickname: "화성갈끄니까", symbol: "BTCUSDT", displayName: "BTC/USDT", startPrice: "68240.5", currentPrice: "74105.1", returnRate: "8.59" },
+      { nickname: "한강뷰입주예정", symbol: "ETHUSDT", displayName: "ETH/USDT", startPrice: "3491.2", currentPrice: "3672.0", returnRate: "5.18" },
+      { nickname: "솔라나풀매수자", symbol: "SOLUSDT", displayName: "SOL/USDT", startPrice: "165.00", currentPrice: "171.50", returnRate: "3.94" },
+      { nickname: "존버만이살길", symbol: "ETHUSDT", displayName: "ETH/USDT", startPrice: "3500.0", currentPrice: "3550.0", returnRate: "1.43" },
+      { nickname: "리플오백배", symbol: "XRPUSDT", displayName: "XRP/USDT", startPrice: "0.5820", currentPrice: "0.5895", returnRate: "1.29" },
+      { nickname: "가즈아아아아", symbol: "ADAUSDT", displayName: "ADA/USDT", startPrice: "0.4510", currentPrice: "0.4532", returnRate: "0.49" },
+      { nickname: "디센트럴인인", symbol: "LINKUSDT", displayName: "LINK/USDT", startPrice: "15.42", currentPrice: "15.31", returnRate: "-0.71" },
+      { nickname: "풀시드하락맨", symbol: "TRXUSDT", displayName: "TRON/USDT", startPrice: "0.1245", currentPrice: "0.1192", returnRate: "-4.26" }
     ];
 
     // DOM 선택자 모음
@@ -434,12 +515,24 @@
     const winVerifyCode = document.querySelector("#winVerifyCode");
     const copyCodeBtn = document.querySelector("#copyCodeBtn");
 
+    // 내 순위 모달 선택자
+    const myRankBtn = document.querySelector("#myRankBtn");
+    const myRankModal = document.querySelector("#myRankModal");
+    const closeMyRankModalBtn = document.querySelector("#closeMyRankModalBtn");
+    const myRankResultArea = document.querySelector("#myRankResultArea");
+    const myRankEmptyArea = document.querySelector("#myRankEmptyArea");
+    const myRankNickname = document.querySelector("#myRankNickname");
+    const myRankValue = document.querySelector("#myRankValue");
+    const myRankCoin = document.querySelector("#myRankCoin");
+    const myRankRate = document.querySelector("#myRankRate");
+    const myRankMessage = document.querySelector("#myRankMessage");
+    const goRegisterBtn = document.querySelector("#goRegisterBtn");
+
     // 기본 이벤트 초기화 값 주입
     nicknameInput.value = localStorage.getItem("omt_nickname") || "";
 
     /**
      * 1) 하루 1회 베팅 제한을 위한 사이클 ID 생성 함수
-     * 기준 시점인 저녁 21:00 이전에는 당일 날짜, 21:00 이후는 명일 날짜를 하나의 대결 시즌ID(YYYY-MM-DD)로 규정합니다.
      */
     function getBettingCycleId() {
       const now = new Date();
@@ -457,9 +550,6 @@
 
     /**
      * 2) 현재 시각에 근거한 타임라인 세션 판단
-     * - LIVE: 21:00 ~ 다음 날 20:50 (일반 참가 및 대결 진행)
-     * - SETTLEMENT: 20:50 ~ 20:55 (5분간 참가 마감 및 최종 정산 기간)
-     * - ANNOUNCEMENT: 20:55 ~ 21:00 (5분간 TOP 10 발표 및 1위 상품 수령 자격 획득)
      */
     function getTimeState() {
       const now = new Date();
@@ -631,11 +721,11 @@
         `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
       
       if (stateStr === "SETTLEMENT") {
-        countdownTimer.className = "text-2xl font-mono font-black tracking-widest text-rose-400 drop-shadow-[0_0_10px_rgba(244,63,94,0.4)]";
+        countdownTimer.className = "text-2xl sm:text-3xl font-mono font-black tracking-widest text-rose-400 drop-shadow-[0_0_10px_rgba(244,63,94,0.4)]";
       } else if (stateStr === "ANNOUNCEMENT") {
-        countdownTimer.className = "text-2xl font-mono font-black tracking-widest text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.4)]";
+        countdownTimer.className = "text-2xl sm:text-3xl font-mono font-black tracking-widest text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.4)]";
       } else {
-        countdownTimer.className = "text-2xl font-mono font-black tracking-widest text-[#ffd166] drop-shadow-[0_0_10px_rgba(255,209,102,0.3)]";
+        countdownTimer.className = "text-2xl sm:text-3xl font-mono font-black tracking-widest text-[#ffd166] drop-shadow-[0_0_10px_rgba(255,209,102,0.3)]";
       }
     }
 
@@ -908,12 +998,12 @@
 
         return `
           <div class="flex items-center justify-between border rounded-xl p-2.5 transition-all duration-200 ${selectedClass}">
-            <div class="min-w-0 flex-1">
+            <div class="min-w-0 flex-1 pr-1">
               <div class="text-xs font-bold leading-tight truncate">${escapeHtml(coin.displayName)}</div>
               <div class="text-[10px] text-slate-500 mt-0.5">${escapeHtml(coin.symbol)}</div>
             </div>
             <button
-              class="text-[11px] px-3 py-1.5 rounded-lg transition-all scale-100 active:scale-[0.96] shrink-0 select-button ${btnClass}"
+              class="text-[10px] sm:text-[11px] px-2.5 py-1.5 rounded-lg transition-all scale-100 active:scale-[0.96] shrink-0 select-button cursor-pointer ${btnClass}"
               type="button"
               data-symbol="${escapeHtml(coin.symbol)}"
             >${isSelected ? "선택됨" : "선택"}</button>
@@ -956,11 +1046,11 @@
       // 랭킹 수익률 내림차순 정렬
       const rawSorted = [...state.rankings].sort((a, b) => Number(b.returnRate || 0) - Number(a.returnRate || 0));
       
-      // 기획조건: 20시 55분 발표 타임에는 오직 최정예 TOP 10만 표기!
-      const sorted = (activeState === "ANNOUNCEMENT") ? rawSorted.slice(0, 10) : rawSorted;
+      // 항상 정수 TOP 10만 고정 표기하도록 제한
+      const sorted = rawSorted.slice(0, 10);
 
       if (activeState === "ANNOUNCEMENT") {
-        rankingBoardTitle.innerHTML = `오늘의 최종 우승 TOP 10 발표 <span class="text-xs bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded ml-1 border border-emerald-500/20">확정순위</span>`;
+        rankingBoardTitle.innerHTML = `오늘의 최종 우승 TOP 10 발표 <span class="text-[10px] bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded ml-1 border border-emerald-500/20 font-bold shrink-0">확정순위</span>`;
       } else if (activeState === "SETTLEMENT") {
         rankingBoardTitle.innerHTML = `순위 마감 및 실시간 검증 집계중`;
       } else {
@@ -980,15 +1070,15 @@
 
         // TOP 3 엘리트 비주얼 스타일 부착
         if (index === 0) {
-          rankBadge = `<span class="text-lg">🥇</span>`;
+          rankBadge = `<span class="text-base sm:text-lg">🥇</span>`;
           borderClass = "rank-premium-1 border-[#ffd166] bg-amber-500/5 shadow-amber-500/5";
           specialClass = "text-[#ffd166]";
           
-          // 핵심 기획: [1등 기프티콘 받기] 버튼은 오직 "ANNOUNCEMENT" (20:55 ~ 21:00) 발표 정산 시즌에만 표시!
+          // [1등 기프티콘 받기] 버튼은 오직 "ANNOUNCEMENT" (20:55 ~ 21:00) 발표 정산 시즌에만 표시
           if (activeState === "ANNOUNCEMENT") {
             winnerBtn = `
               <button 
-                class="mt-2.5 w-full py-2.5 bg-gradient-to-r from-[#ffd166] to-amber-500 hover:brightness-115 active:scale-95 text-slate-950 font-black text-xs rounded-lg flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/10 transition-all"
+                class="mt-2.5 w-full py-2.5 bg-gradient-to-r from-[#ffd166] to-amber-500 hover:brightness-115 active:scale-95 text-slate-950 font-black text-xs rounded-lg flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/10 transition-all cursor-pointer"
                 onclick="openWinnerModal('${escapeHtml(item.nickname)}', '${escapeHtml(displayName)}')"
               >
                 <i data-lucide="gift" class="w-4 h-4"></i> 1등 기프티콘 받기
@@ -996,35 +1086,35 @@
             `;
           }
         } else if (index === 1) {
-          rankBadge = `<span class="text-lg">🥈</span>`;
+          rankBadge = `<span class="text-base sm:text-lg">🥈</span>`;
           borderClass = "border-slate-300/40 bg-slate-100/5 shadow-lg shadow-white/2.5";
           specialClass = "text-slate-100";
         } else if (index === 2) {
-          rankBadge = `<span class="text-lg">🥉</span>`;
+          rankBadge = `<span class="text-base sm:text-lg">🥉</span>`;
           borderClass = "border-amber-700/40 bg-amber-700/5";
           specialClass = "text-amber-500";
         } else {
-          rankBadge = `<span class="text-xs font-mono font-bold text-slate-500 w-5 text-center">${index + 1}</span>`;
+          rankBadge = `<span class="text-[11px] font-mono font-bold text-slate-500 w-5 text-center">${index + 1}</span>`;
         }
 
         return `
-          <div class="border rounded-2xl p-3.5 transition-all flex flex-col justify-between ${borderClass}">
+          <div class="border rounded-2xl p-3 sm:p-3.5 transition-all flex flex-col justify-between ${borderClass} hover:border-white/10">
             <div class="flex items-center justify-between gap-2">
-              <div class="flex items-center gap-3 min-w-0">
-                <div class="shrink-0 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center border border-white/5">
+              <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                <div class="shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/40 flex items-center justify-center border border-white/5">
                   ${rankBadge}
                 </div>
                 <div class="min-w-0">
-                  <div class="text-xs font-black truncate text-white">${escapeHtml(item.nickname || "익명")}</div>
-                  <div class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1 font-semibold ${specialClass}">
+                  <div class="text-xs font-black truncate text-white leading-tight">${escapeHtml(item.nickname || "익명")}</div>
+                  <div class="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-semibold ${specialClass}">
                     <i data-lucide="circle-dashed" class="w-2.5 h-2.5"></i> ${escapeHtml(displayName)}
                   </div>
                 </div>
               </div>
               
               <div class="text-right shrink-0">
-                <div class="text-sm font-black font-mono ${cls}">${formatPercent(item.returnRate)}</div>
-                <div class="text-[9px] text-slate-500 mt-0.5 font-medium font-mono">${startPrice} → ${currentPrice}</div>
+                <div class="text-xs sm:text-sm font-black font-mono ${cls}">${formatPercent(item.returnRate)}</div>
+                <div class="text-[9px] text-slate-500 mt-1 font-medium font-mono">${startPrice} → ${currentPrice}</div>
               </div>
             </div>
             ${winnerBtn}
@@ -1034,6 +1124,81 @@
 
       lucide.createIcons();
     }
+
+    // 내 순위 찾기 분석 스크립트 바인딩
+    myRankBtn.addEventListener("click", () => {
+      const storedNickname = localStorage.getItem("omt_nickname") || nicknameInput.value.trim();
+      const currentCycle = getBettingCycleId();
+      const hasRegistered = localStorage.getItem("omt_registered_cycle") === currentCycle;
+
+      // 미참가 세션일 시 가이드 유도 창 활성화
+      if (!storedNickname || !hasRegistered) {
+        myRankResultArea.classList.add("hidden");
+        myRankEmptyArea.classList.remove("hidden");
+        myRankModal.classList.remove("hidden");
+        return;
+      }
+
+      // 등록이 완료된 유저라면 등락폭 전체 소팅 후 내 순위 매칭
+      const sorted = [...state.rankings].sort((a, b) => Number(b.returnRate || 0) - Number(a.returnRate || 0));
+      const userRankIndex = sorted.findIndex(item => item.nickname.trim() === storedNickname.trim());
+
+      myRankEmptyArea.classList.add("hidden");
+      myRankResultArea.classList.remove("hidden");
+
+      if (userRankIndex !== -1) {
+        const userPick = sorted[userRankIndex];
+        const rank = userRankIndex + 1;
+        const rate = Number(userPick.returnRate || 0);
+        
+        myRankNickname.textContent = `${escapeHtml(storedNickname)} 님의 대결 성적`;
+        myRankValue.textContent = `현재 ${rank}위`;
+        myRankCoin.textContent = `선택 코인: ${escapeHtml(userPick.displayName || userPick.symbol)}`;
+        
+        const sign = rate > 0 ? "+" : "";
+        myRankRate.textContent = `실시간 수익률: ${sign}${rate.toFixed(2)}%`;
+        myRankRate.className = `text-sm font-mono font-black ${rateClass(rate)}`;
+
+        // 동기 부여용 등수별 세분화 코멘트 작성
+        if (rank === 1) {
+          myRankValue.className = "text-3xl font-black text-amber-300 animate-pulse";
+          myRankMessage.textContent = "🏆 현재 대결 단독 1위입니다! 저녁 20시 50분 마감까지 이 왕관을 필사적으로 수호하세요!";
+        } else if (rank <= 3) {
+          myRankValue.className = "text-3xl font-black text-slate-100";
+          myRankMessage.textContent = "🔥 포디움 입성! 앞자리 경쟁 상대의 등락폭을 추월하면 5천원 구글 기프티콘 자리에 직행합니다!";
+        } else if (rank <= 10) {
+          myRankValue.className = "text-3xl font-black text-slate-300";
+          myRankMessage.textContent = "👍 안정적인 TOP 10 안착! 마감 시간대 폭발적인 등락률 상승을 노려보세요.";
+        } else {
+          myRankValue.className = "text-3xl font-black text-slate-400";
+          const firstRate = Number(sorted[0].returnRate || 0);
+          const gap = firstRate - rate;
+          myRankMessage.textContent = `💪 현재 ${rank}위입니다. 1위와의 수익률 격차는 [${gap.toFixed(2)}%]! 언제든 시장 반등 시 극적인 역전이 가능합니다.`;
+        }
+      } else {
+        // 등록은 완료했으나 아직 실시간 연산에서 정합이 맞물리기 전 시점 대처
+        myRankNickname.textContent = `${escapeHtml(storedNickname)} 님`;
+        myRankValue.textContent = "연산 대기 중";
+        myRankValue.className = "text-3xl font-black text-slate-400";
+        myRankCoin.textContent = "상태: 등록 완료";
+        myRankRate.textContent = "최초 시황 동기화 대기 중...";
+        myRankRate.className = "text-sm font-bold text-slate-400";
+        myRankMessage.textContent = "참가 원장은 안전하게 입고되었습니다! 우측 상단 [실시간 갱신]을 눌러 시세를 강제 호출하거나 최초 정산 시 순위표에 등재됩니다.";
+      }
+
+      myRankModal.classList.remove("hidden");
+    });
+
+    closeMyRankModalBtn.addEventListener("click", () => {
+      myRankModal.classList.add("hidden");
+    });
+
+    // 참가 폼이 비어있을 시 포커싱 유도
+    goRegisterBtn.addEventListener("click", () => {
+      myRankModal.classList.add("hidden");
+      nicknameInput.focus();
+      nicknameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
 
     // 리스너 바인딩 및 라우팅 정리
     coinSearchInput.addEventListener("input", renderCoins);
