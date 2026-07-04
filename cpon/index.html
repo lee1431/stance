@@ -735,7 +735,7 @@
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
       const remain = Number(c.remainCount ?? c.remaining ?? c.stock ?? c.quantity ?? 0);
       const apply = Number(c.applyCount ?? c.applies ?? c.entries ?? 0);
-      const total = Number(c.totalCount ?? c.total ?? remain + apply || 1);
+      const total = Number(c.totalCount ?? c.total ?? ((remain + apply) || 1));
       const type = c.type || c.category || "coupon";
       return {
         id: String(c.id || c.slug || `coupon-${index}`),
