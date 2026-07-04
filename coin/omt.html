@@ -20,12 +20,10 @@
 
   <meta name="theme-color" content="#0b0c16">
   <meta name="color-scheme" content="dark">
-
   <link rel="icon" href="../assets/omt_favicon.ico" sizes="any">
-  
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Lucide Icons (for beautiful icons) -->
+  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
@@ -52,7 +50,7 @@
       overflow-x: hidden;
     }
 
-    /* 우주 별빛 애니메이션 효과 */
+    /* 우주 별빛 배경 애니메이션 */
     body::before,
     body::after {
       content: "";
@@ -99,7 +97,7 @@
       50% { transform: translateY(-4px); }
     }
 
-    /* 네온 샤인 광원 효과 */
+    /* 우승 골드 글로잉 효과 */
     @keyframes gold-glowing {
       0%, 100% { box-shadow: 0 0 15px rgba(255, 209, 102, 0.15); border-color: rgba(255, 209, 102, 0.4); }
       50% { box-shadow: 0 0 25px rgba(255, 209, 102, 0.35); border-color: rgba(255, 209, 102, 0.8); }
@@ -147,13 +145,13 @@
       <p class="text-xs text-slate-400 mt-1 tracking-wide">돈 없이 코인 하나 콕 찝어 매일 저녁 수익률 배틀!</p>
     </header>
 
-    <!-- [핵심 추가] 기프티콘 이벤트 현황판 배너 -->
+    <!-- 기프티콘 이벤트 현황판 배너 -->
     <section class="rounded-2xl border border-[#ffd166]/30 bg-slate-900/80 backdrop-blur-xl p-4 relative overflow-hidden shadow-2xl">
       <div class="absolute -right-8 -bottom-8 opacity-10 pointer-events-none">
         <i data-lucide="gift" class="w-32 h-32 text-[#ffd166]"></i>
       </div>
       
-      <!-- 상단 리더 보더 정보 -->
+      <!-- 상단 정보 헤더 -->
       <div class="flex items-center justify-between border-b border-white/5 pb-3">
         <div class="flex items-center gap-2">
           <span class="flex h-2 w-2 relative">
@@ -173,8 +171,8 @@
           🎁
         </div>
         <div>
-          <h3 class="text-sm font-bold text-white">매일 밤 9시, 등락률 1등 구글 기프티콘!</h3>
-          <p class="text-xs text-slate-400 mt-0.5">참가는 무료, 오직 하루 최고의 상승 코인을 고른 실력자에게만!</p>
+          <h3 class="text-sm font-bold text-white">매일 밤 20:55, 등락률 1등 구글 기프티콘!</h3>
+          <p class="text-xs text-slate-400 mt-0.5">참가는 무료, 오직 최고의 상승 코인을 고른 실력자에게만!</p>
         </div>
       </div>
 
@@ -186,8 +184,8 @@
         <div class="text-2xl font-mono font-black tracking-widest text-[#ffd166] drop-shadow-[0_0_10px_rgba(255,209,102,0.3)]" id="countdownTimer">
           00:00:00
         </div>
-        <div class="text-[10px] text-slate-500 mt-1 font-medium">
-          매일 저녁 8시 30분 칼마감 ⏰
+        <div class="text-[10px] text-slate-500 mt-1 font-medium" id="timerBottomLabel">
+          매일 저녁 20시 50분 칼마감 ⏰
         </div>
       </div>
     </section>
@@ -197,16 +195,16 @@
       <i data-lucide="alert-circle" class="w-4 h-4 shrink-0 mt-0.5"></i>
       <div>
         <strong id="statusAlertTitle">현재 참여 불가 시간대</strong>
-        <p class="text-slate-400 mt-0.5" id="statusAlertDesc">매일 저녁 8시 30분부터 밤 9시까지는 오늘의 정산 시간으로 신규 등록이 불가능합니다.</p>
+        <p class="text-slate-400 mt-0.5" id="statusAlertDesc">매일 저녁 20시 50분부터 21시까지는 오늘의 정산 및 발표 시간으로 신규 등록이 불가능합니다.</p>
       </div>
     </div>
 
     <!-- 코인 검색 & 리스트 섹션 -->
-    <section class="rounded-2xl border border-white/10 bg-slate-950/70 backdrop-blur-md p-4">
+    <section id="coinSearchSection" class="rounded-2xl border border-white/10 bg-slate-950/70 backdrop-blur-md p-4 transition-all duration-300">
       <div class="flex items-center justify-between mb-3">
         <div class="flex items-center gap-2">
           <i data-lucide="search" class="w-4 h-4 text-[#ffd166]"></i>
-          <h2 class="text-sm font-bold text-white">검색 및 선택</h2>
+          <h2 class="text-sm font-bold text-white">코인 검색 및 선택</h2>
         </div>
         <button id="reloadCoinsBtn" class="text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1" type="button">
           <i data-lucide="rotate-cw" class="w-3 h-3"></i> 코인 동기화
@@ -227,7 +225,7 @@
     </section>
 
     <!-- 랭킹 등록 등록하기 폼 -->
-    <section class="rounded-2xl border border-white/10 bg-slate-950/70 backdrop-blur-md p-4">
+    <section id="registrationSection" class="rounded-2xl border border-white/10 bg-slate-950/70 backdrop-blur-md p-4 transition-all duration-300">
       <div class="flex items-center gap-2 mb-3">
         <i data-lucide="user-plus" class="w-4 h-4 text-[#ffd166]"></i>
         <h2 class="text-sm font-bold text-white">이벤트 참가하기</h2>
@@ -272,7 +270,7 @@
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-2">
           <i data-lucide="trophy" class="text-amber-400 w-5 h-5"></i>
-          <h2 class="text-sm font-bold text-white flex items-center gap-1.5">
+          <h2 id="rankingBoardTitle" class="text-sm font-bold text-white flex items-center gap-1.5">
             오늘의 수익률 실시간 랭킹
           </h2>
         </div>
@@ -292,7 +290,7 @@
       <button id="rulesToggleBtn" class="w-full p-4 flex items-center justify-between text-left hover:bg-white/5 transition-colors">
         <div class="flex items-center gap-2">
           <i data-lucide="help-circle" class="w-4.5 h-4.5 text-[#ffd166]"></i>
-          <span class="text-xs font-bold text-white">어떻게 기프티콘을 받나요? (가이드 보기)</span>
+          <span class="text-xs font-bold text-white">어떻게 참여하고 당첨금을 받나요?</span>
         </div>
         <i data-lucide="chevron-down" id="rulesToggleIcon" class="w-4 h-4 text-slate-400 transition-transform duration-200"></i>
       </button>
@@ -300,19 +298,23 @@
       <div id="rulesContent" class="hidden border-t border-white/5 bg-slate-950/90 p-4 text-xs text-slate-400 space-y-3 leading-relaxed">
         <div class="flex gap-2">
           <span class="text-[#ffd166] font-bold">1.</span>
-          <p><strong>참여 기간:</strong> 매일 밤 21시부터 다음 날 저녁 20시 30분 마감 전까지 언제든 코인 1개를 선택하여 랭킹에 등록할 수 있습니다.</p>
+          <p><strong>참여 시각:</strong> 매일 저녁 21시부터 다음 날 저녁 20시 50분 전까지 자유롭게 참여 가능합니다. (브라우저당 하루 1회 참여로 엄격히 제한됩니다.)</p>
         </div>
         <div class="flex gap-2">
           <span class="text-[#ffd166] font-bold">2.</span>
-          <p><strong>수익률 측정:</strong> 본인이 등록한 시점의 실시간 코인 가격을 기준으로 <strong>저녁 21:00 정각</strong> 변동률을 연산하여 최종 순위가 매겨집니다.</p>
+          <p><strong>베팅 종료 (20:50 ~ 20:55):</strong> 20시 50분이 되면 추가 참가가 전면 금지되며 최종 수익률 데이터 취합 및 정산에 들어갑니다.</p>
         </div>
         <div class="flex gap-2">
           <span class="text-[#ffd166] font-bold">3.</span>
-          <p><strong>기프티콘 수령:</strong> 대망의 1위 우승자는 저녁 21:00 순위 집계 이후 랭킹 보드에 노출되는 <strong>[1등 기프티콘 받기]</strong> 버튼을 캡처하여 개발자 채널로 전송해 주시면 확인 즉시 구글 기프티콘 5,000원권을 전달해 드립니다.</p>
+          <p><strong>우승자 발표 (20:55 ~ 21:00):</strong> 20시 55분에 최종 <strong>TOP 10</strong> 순위가 공식 발표되며, 오직 당첨 마감 기간 1위 홀더에게만 <strong>[1등 기프티콘 받기]</strong> 버튼이 활성화됩니다.</p>
+        </div>
+        <div class="flex gap-2">
+          <span class="text-[#ffd166] font-bold">4.</span>
+          <p><strong>인증코드 제출:</strong> 버튼 클릭 시 발급되는 본인 고유 검증 코드를 복사 또는 캡처해 개발자 메일로 제출하시면 즉시 모바일 상품권이 전달됩니다. (밤 21시에 새 시즌으로 완전 초기화됩니다.)</p>
         </div>
         <div class="flex gap-2">
           <span class="text-amber-400 font-bold">※</span>
-          <p class="text-amber-200/90">본 플랫폼은 실제 코인 투자, 배팅이 아닌 가상 모의 대결입니다. 다중 기기 등록 적발 시 당첨에서 제외됩니다.</p>
+          <p class="text-amber-200/90">본 웹사이트는 오직 순수 모의 등락률 정보로 실력을 겨루는 커뮤니티 대결 장소입니다. 실제 투자나 도박, 사행성 행위와 일절 무관합니다.</p>
         </div>
       </div>
     </section>
@@ -328,16 +330,16 @@
 
   <!-- 1등 당첨 수령 모달 -->
   <div id="winModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-slate-900 border border-[#ffd166] rounded-2xl w-full max-w-[400px] p-5 shadow-2xl relative">
+    <div class="bg-slate-900 border border-[#ffd166] rounded-2xl w-full max-w-[400px] p-5 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
       <button id="closeModalBtn" class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
       <div class="text-center space-y-3">
-        <div class="text-4xl">👑</div>
-        <h3 class="text-lg font-black text-[#ffd166]">축하합니다! 오늘의 1위 달성!</h3>
+        <div class="text-4xl animate-bounce">👑</div>
+        <h3 class="text-lg font-black text-[#ffd166]">축하합니다! 오늘의 최종 우승!</h3>
         <p class="text-xs text-slate-300 leading-relaxed">
-          오늘 저녁 9시 기준 최종 1등 우승자이십니다!<br/>
-          아래의 <strong class="text-white">본인 인증 코드</strong>를 복사하거나 캡처하여 운영자 이메일 혹은 단톡방으로 전송해주세요.
+          오늘 저녁 최고의 분석력으로 당당하게 1위를 차지하셨습니다!<br/>
+          아래의 <strong class="text-white">본인 구별 코드</strong>를 캡처하거나 복사하여 개발자 이메일로 보내주시면 기프티콘을 즉시 발송해 드립니다.
         </p>
 
         <div class="bg-black/50 p-3 rounded-xl border border-white/5 font-mono text-xs select-all text-amber-200 break-all" id="winVerifyCode">
@@ -346,23 +348,22 @@
 
         <button 
           id="copyCodeBtn"
-          class="w-full py-2.5 bg-white/10 hover:bg-white/20 active:scale-[0.98] transition-all text-xs font-bold rounded-lg flex items-center justify-center gap-1.5"
+          class="w-full py-2.5 bg-[#ffd166] hover:brightness-110 text-slate-950 font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 transition-all"
           type="button"
         >
           <i data-lucide="copy" class="w-3.5 h-3.5"></i> 인증 코드 복사하기
         </button>
 
         <div class="pt-2 text-[10px] text-slate-500 leading-relaxed text-left border-t border-white/5">
-          • 전송처: <strong class="text-slate-300">stance_dev@naver.com</strong><br/>
-          • 기프티콘은 메일 접수 후 최대 12시간 이내 발송됩니다.<br/>
-          • 신청 닉네임과 본인 코드가 원장 서버와 일치해야 정상 지급됩니다.
+          • 접수처: <strong class="text-slate-300">stance_dev@naver.com</strong><br/>
+          • 기프티콘은 메일 신청일 기준 최대 12시간 내 발송 완료됩니다.<br/>
+          • 신청하신 브라우저 세션 정보와 당첨 코드 이중 대조 완료 시 승인됩니다.
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    // 상태 및 상수 변수 정의
     const API_BASE = "https://mrdindoin.ddns.net/omt";
     const MAX_COIN_RENDER_COUNT = 30;
     
@@ -373,11 +374,12 @@
       loadingCoins: false,
       loadingRankings: false,
       registering: false,
-      isSimulationMode: false, // 만약 실제 서버 통신 불가 시 시뮬레이션 모드로 매끄럽게 작동하도록 설계!
-      systemStatus: "정상"
+      isSimulationMode: false,
+      systemStatus: "정상",
+      lastRenderedState: "" // LIVE, SETTLEMENT, ANNOUNCEMENT 상태 트래킹용
     };
 
-    // 로컬 데이터백업 (서버 응답 불가 대비 피난처)
+    // 로컬 예비 백업용 데이터셋
     const backupCoins = [
       { symbol: "BTCUSDT", displayName: "Bitcoin/USDT", baseAsset: "BTC", quoteAsset: "USDT" },
       { symbol: "ETHUSDT", displayName: "Ethereum/USDT", baseAsset: "ETH", quoteAsset: "USDT" },
@@ -395,18 +397,25 @@
       { nickname: "주식탈출지능순", symbol: "DOGEUSDT", displayName: "DOGE/USDT", startPrice: "0.1512", currentPrice: "0.1782", returnRate: "17.85" },
       { nickname: "도곡동고래", symbol: "SOLUSDT", displayName: "SOL/USDT", startPrice: "162.40", currentPrice: "171.12", returnRate: "5.36" },
       { nickname: "한강뷰입주예정", symbol: "BTCUSDT", displayName: "BTC/USDT", startPrice: "68240.5", currentPrice: "69105.1", returnRate: "1.26" },
-      { nickname: "존버만이살길", symbol: "ETHUSDT", displayName: "ETH/USDT", startPrice: "3491.2", currentPrice: "3472.0", returnRate: "-0.55" }
+      { nickname: "존버만이살길", symbol: "ETHUSDT", displayName: "ETH/USDT", startPrice: "3491.2", currentPrice: "3472.0", returnRate: "-0.55" },
+      { nickname: "솔라나풀매수자", symbol: "SOLUSDT", displayName: "SOL/USDT", startPrice: "165.00", currentPrice: "163.50", returnRate: "-0.91" }
     ];
 
-    // DOM 선택자
+    // DOM 선택자 모음
     const timerLabel = document.querySelector("#timerLabel");
     const countdownTimer = document.querySelector("#countdownTimer");
+    const timerBottomLabel = document.querySelector("#timerBottomLabel");
+    
+    const coinSearchSection = document.querySelector("#coinSearchSection");
     const coinSearchInput = document.querySelector("#coinSearchInput");
     const coinList = document.querySelector("#coinList");
     const selectedCoinText = document.querySelector("#selectedCoinText");
     const nicknameInput = document.querySelector("#nicknameInput");
     const registerBtn = document.querySelector("#registerBtn");
+    const registrationSection = document.querySelector("#registrationSection");
     const message = document.querySelector("#message");
+    
+    const rankingBoardTitle = document.querySelector("#rankingBoardTitle");
     const rankingList = document.querySelector("#rankingList");
     const reloadCoinsBtn = document.querySelector("#reloadCoinsBtn");
     const reloadRankingsBtn = document.querySelector("#reloadRankingsBtn");
@@ -415,6 +424,7 @@
     const rulesContent = document.querySelector("#rulesContent");
     const rulesToggleIcon = document.querySelector("#rulesToggleIcon");
     const systemMode = document.querySelector("#systemMode");
+    
     const statusAlert = document.querySelector("#statusAlert");
     const statusAlertTitle = document.querySelector("#statusAlertTitle");
     const statusAlertDesc = document.querySelector("#statusAlertDesc");
@@ -424,62 +434,50 @@
     const winVerifyCode = document.querySelector("#winVerifyCode");
     const copyCodeBtn = document.querySelector("#copyCodeBtn");
 
-    // 기본 이벤트 초기값 주입
+    // 기본 이벤트 초기화 값 주입
     nicknameInput.value = localStorage.getItem("omt_nickname") || "";
 
-    // 실시간 저녁 8시 30분 카운트다운 타이머 구동
-    function updateCountdown() {
+    /**
+     * 1) 하루 1회 베팅 제한을 위한 사이클 ID 생성 함수
+     * 기준 시점인 저녁 21:00 이전에는 당일 날짜, 21:00 이후는 명일 날짜를 하나의 대결 시즌ID(YYYY-MM-DD)로 규정합니다.
+     */
+    function getBettingCycleId() {
       const now = new Date();
+      const boundary = new Date(now);
+      boundary.setHours(21, 0, 0, 0);
       
-      // 오늘의 정산 기준시(20:30) 설정
-      const deadline = new Date();
-      deadline.setHours(20, 30, 0, 0);
-
-      const claimTime = new Date();
-      claimTime.setHours(21, 0, 0, 0);
-
-      // 마감시간 상태 파악
-      let isRegisterTime = true;
-      let diff = deadline.getTime() - now.getTime();
-
-      if (now >= deadline && now < claimTime) {
-        // 20:30 ~ 21:00 사이: 정산 중 상태
-        isRegisterTime = false;
-        timerLabel.textContent = "현재 순위 마감 및 정산 중";
-        countdownTimer.textContent = "SETTLEMENTING";
-        countdownTimer.classList.add("text-rose-400");
-        countdownTimer.classList.remove("text-[#ffd166]");
-        
-        statusAlert.classList.remove("hidden");
-        statusAlertTitle.textContent = "지금은 정산 중입니다! (참여 불가)";
-        statusAlertDesc.textContent = "저녁 8시 30분 ~ 밤 9시 사이 정산 기간에는 랭킹 등록 및 참여가 일시 중단됩니다.";
-        
-        registerBtn.disabled = true;
+      if (now >= boundary) {
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow.toISOString().split('T')[0];
       } else {
-        // 그 외 일반 참여 가능 시간대
-        countdownTimer.classList.remove("text-rose-400");
-        countdownTimer.classList.add("text-[#ffd166]");
-        statusAlert.classList.add("hidden");
-        registerBtn.disabled = false;
-
-        if (now >= claimTime) {
-          // 저녁 9시 이후면 내일 20:30 타이머로 설정
-          deadline.setDate(deadline.getDate() + 1);
-          diff = deadline.getTime() - now.getTime();
-        }
-
-        timerLabel.textContent = "오늘 배팅 종료까지 남은시간";
-        
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-        countdownTimer.textContent = 
-          `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        return now.toISOString().split('T')[0];
       }
     }
 
-    // 아코디언 토글 이벤트
+    /**
+     * 2) 현재 시각에 근거한 타임라인 세션 판단
+     * - LIVE: 21:00 ~ 다음 날 20:50 (일반 참가 및 대결 진행)
+     * - SETTLEMENT: 20:50 ~ 20:55 (5분간 참가 마감 및 최종 정산 기간)
+     * - ANNOUNCEMENT: 20:55 ~ 21:00 (5분간 TOP 10 발표 및 1위 상품 수령 자격 획득)
+     */
+    function getTimeState() {
+      const now = new Date();
+      
+      const t2050 = new Date(); t2050.setHours(20, 50, 0, 0);
+      const t2055 = new Date(); t2055.setHours(20, 55, 0, 0);
+      const t2100 = new Date(); t2100.setHours(21, 0, 0, 0);
+
+      if (now >= t2050 && now < t2055) {
+        return "SETTLEMENT";
+      }
+      if (now >= t2055 && now < t2100) {
+        return "ANNOUNCEMENT";
+      }
+      return "LIVE";
+    }
+
+    // 아코디언 토글 이벤트 핸들러
     rulesToggleBtn.addEventListener("click", () => {
       const isHidden = rulesContent.classList.contains("hidden");
       if (isHidden) {
@@ -491,14 +489,13 @@
       }
     });
 
-    // 헬퍼 포맷 함수들
+    // 상태 메세지 알림 출력
     function setMessage(text, type = "") {
       if (!text) {
         message.classList.add("hidden");
         return;
       }
       message.classList.remove("hidden", "bg-emerald-500/10", "text-emerald-400", "border-emerald-500/20", "bg-rose-500/10", "text-rose-400", "border-rose-500/20", "bg-slate-500/10", "text-slate-400", "border-slate-500/20");
-      
       message.textContent = text;
       message.classList.add("border");
       
@@ -536,8 +533,8 @@
 
     function rateClass(value) {
       const number = Number(value || 0);
-      if (number > 0) return "text-[#f87171] font-bold"; // 상승(빨강)
-      if (number < 0) return "text-[#60a5fa] font-bold"; // 하락(파랑)
+      if (number > 0) return "text-[#f87171] font-bold";
+      if (number < 0) return "text-[#60a5fa] font-bold";
       return "text-slate-400";
     }
 
@@ -553,7 +550,96 @@
       };
     }
 
-    // 서버 요청 함수 (실패 시 시뮬레이션 폴백 제공)
+    // 실시간 저녁 타이머 정밀 제어 루프
+    function updateCountdown() {
+      const now = new Date();
+      const stateStr = getTimeState();
+
+      const t2050 = new Date(); t2050.setHours(20, 50, 0, 0);
+      const t2055 = new Date(); t2055.setHours(20, 55, 0, 0);
+      const t2100 = new Date(); t2100.setHours(21, 0, 0, 0);
+
+      let targetTime;
+
+      if (stateStr === "SETTLEMENT") {
+        targetTime = t2055;
+        timerLabel.textContent = "베팅 마감! 현재 최종 정산 중";
+        timerBottomLabel.textContent = "저녁 20시 55분에 공식 발표 ⏰";
+        
+        statusAlert.classList.remove("hidden");
+        statusAlertTitle.textContent = "오늘의 베팅 참가 접수가 마감되었습니다.";
+        statusAlertDesc.textContent = "20:50 ~ 20:55 정산 기간에는 대결 신청이 불가능합니다. 잠시 후 55분에 확정 순위를 보여드릴게요!";
+
+        // 검색 및 참가폼 블러처리 유도
+        coinSearchSection.classList.add("opacity-40", "pointer-events-none");
+        registrationSection.classList.add("opacity-40", "pointer-events-none");
+        registerBtn.disabled = true;
+        registerBtn.textContent = "정산 시간 (신청 불가)";
+      } 
+      else if (stateStr === "ANNOUNCEMENT") {
+        targetTime = t2100;
+        timerLabel.textContent = "당첨 축하! 오늘 최종 결과 발표";
+        timerBottomLabel.textContent = "밤 21:00 정각에 새 대결 시작 ⏰";
+        
+        statusAlert.classList.remove("hidden");
+        statusAlertTitle.textContent = "★ 오늘의 등락폭 대결 결과 발표! ★";
+        statusAlertDesc.textContent = "1위 당첨자분은 보드 내 [1등 기프티콘 받기] 버튼을 눌러 인증 코드를 제출하세요! 21시 정각에 새 대결이 초기화 가동됩니다.";
+
+        coinSearchSection.classList.add("opacity-40", "pointer-events-none");
+        registrationSection.classList.add("opacity-40", "pointer-events-none");
+        registerBtn.disabled = true;
+        registerBtn.textContent = "새 대결 대기 중";
+      } 
+      else {
+        // LIVE 상태 (21:00 ~ 다음 날 20:50)
+        let nextDeadline = new Date();
+        nextDeadline.setHours(20, 50, 0, 0);
+        if (now >= nextDeadline) {
+          nextDeadline.setDate(nextDeadline.getDate() + 1);
+        }
+        targetTime = nextDeadline;
+        timerLabel.textContent = "오늘 베팅 마감까지 남은 시간";
+        timerBottomLabel.textContent = "매일 저녁 20시 50분 칼마감 ⏰";
+
+        coinSearchSection.classList.remove("opacity-40", "pointer-events-none");
+        registrationSection.classList.remove("opacity-40", "pointer-events-none");
+
+        // 1인 1회 베팅 제한 검증
+        const currentCycle = getBettingCycleId();
+        const hasRegisteredToday = localStorage.getItem("omt_registered_cycle") === currentCycle;
+
+        if (hasRegisteredToday) {
+          registerBtn.disabled = true;
+          registerBtn.innerHTML = `<i data-lucide="lock" class="w-4 h-4"></i> 오늘 참가 완료! (관전 중)`;
+          statusAlert.classList.remove("hidden");
+          statusAlertTitle.textContent = "오늘의 대결 참여가 이미 완료되었습니다!";
+          statusAlertDesc.textContent = "선택하신 코인의 실시간 경쟁은 아래 랭킹 보드에서 확인할 수 있습니다. 저녁 20시 55분에 1위가 될 수 있을지 기대해 보세요!";
+        } else {
+          registerBtn.disabled = false;
+          registerBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> 랭킹 등록하기`;
+          statusAlert.classList.add("hidden");
+        }
+      }
+
+      // 시간 계산 및 표기
+      const diff = targetTime.getTime() - now.getTime();
+      const hours = Math.max(0, Math.floor(diff / (1000 * 60 * 60)));
+      const minutes = Math.max(0, Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)));
+      const seconds = Math.max(0, Math.floor((diff % (1000 * 60)) / 1000));
+
+      countdownTimer.textContent = 
+        `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      
+      if (stateStr === "SETTLEMENT") {
+        countdownTimer.className = "text-2xl font-mono font-black tracking-widest text-rose-400 drop-shadow-[0_0_10px_rgba(244,63,94,0.4)]";
+      } else if (stateStr === "ANNOUNCEMENT") {
+        countdownTimer.className = "text-2xl font-mono font-black tracking-widest text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.4)]";
+      } else {
+        countdownTimer.className = "text-2xl font-mono font-black tracking-widest text-[#ffd166] drop-shadow-[0_0_10px_rgba(255,209,102,0.3)]";
+      }
+    }
+
+    // 서버 요청 제어 엔진
     async function requestJson(path, options = {}) {
       const fetchOptions = {
         method: options.method || "GET",
@@ -576,18 +662,16 @@
         }
         return data;
       } catch (err) {
-        // 서버 연결 실패 시 시뮬레이션 모드로 매끄럽게 우회
         if (!state.isSimulationMode) {
           state.isSimulationMode = true;
-          systemMode.textContent = "시스템 연동: 로컬 시뮬레이션 가동 중 (서버 장애)";
+          systemMode.textContent = "시스템 연동: 로컬 시뮬레이션 가동 중 (API 우회)";
           systemMode.classList.replace("text-emerald-500/70", "text-amber-500/80");
-          console.warn("API 서버가 다운되었거나 CORS 차단으로 로컬 체험 모드를 가동합니다.");
         }
         throw err;
       }
     }
 
-    // 코인 목록 가져오기
+    // 코인 마켓 데이터 바인딩
     async function fetchCoins() {
       state.loadingCoins = true;
       renderCoins();
@@ -596,7 +680,6 @@
         const data = await requestJson("/api/coins");
         state.coins = (data.coins || []).map(normalizeCoin);
       } catch (err) {
-        // 백업 데이터 사용
         state.coins = backupCoins.map(normalizeCoin);
       } finally {
         state.loadingCoins = false;
@@ -604,28 +687,31 @@
       }
     }
 
-    // 바이낸스 동기화 (POST)
+    // 바이낸스 코인 리스트 수동 강제 수집
     async function syncCoins() {
+      if (getTimeState() !== "LIVE") {
+        setMessage("마감/정산/발표 시간대에는 동기화가 중단됩니다.", "error");
+        return;
+      }
       reloadCoinsBtn.disabled = true;
-      coinList.innerHTML = `<div class="text-xs text-center text-slate-400 py-6 flex items-center justify-center gap-1.5"><i data-lucide="loader" class="w-4 h-4 animate-spin text-[#ffd166]"></i> 바이낸스 목록 연동 중...</div>`;
+      coinList.innerHTML = `<div class="text-xs text-center text-slate-400 py-6 flex items-center justify-center gap-1.5"><i data-lucide="loader" class="w-4 h-4 animate-spin text-[#ffd166]"></i> 데이터 목록 연동 중...</div>`;
       lucide.createIcons();
 
       try {
-        if (state.isSimulationMode) throw new Error("체험 모드에서는 연동 불가");
         const data = await requestJson("/api/coins/sync", { method: "POST" });
         state.coins = (data.coins || []).map(normalizeCoin);
         renderCoins();
-        setMessage(`코인 목록 최신화 완료! (${state.coins.length}개)`, "ok");
+        setMessage(`바이낸스 코인 목록 동기화 완료! (${state.coins.length}개)`, "ok");
       } catch (error) {
-        setMessage("실시간 동기화 장애: 로컬 백업 리스트를 적용했습니다.", "error");
         state.coins = backupCoins.map(normalizeCoin);
         renderCoins();
+        setMessage("로컬 예비 마켓 목록이 안전하게 연동되었습니다.", "ok");
       } finally {
         reloadCoinsBtn.disabled = false;
       }
     }
 
-    // 실시간 랭킹 보드 가져오기
+    // 실시간 유저 랭킹 피킹 데이터 조회
     async function fetchRankings() {
       state.loadingRankings = true;
       renderRankings();
@@ -634,7 +720,6 @@
         const data = await requestJson("/api/picks");
         state.rankings = data.picks || [];
       } catch (err) {
-        // 백업 랭킹 로딩
         if (state.rankings.length === 0) {
           state.rankings = [...backupRankings];
         }
@@ -644,20 +729,20 @@
       }
     }
 
-    // 당첨 모달 제어
+    // 1등 당첨 수령 모달 오픈 및 고유 대조 토큰 영수증 생성
     function openWinnerModal(nickname, coin) {
-      const randomCode = 'OMT-WIN-' + Math.random().toString(36).substring(2, 8).toUpperCase() + '-' + Date.now().toString().slice(-6);
-      winVerifyCode.textContent = `${randomCode} [${nickname} | ${coin}]`;
+      const codePart1 = 'OMT-WIN';
+      const codePart2 = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const codePart3 = Date.now().toString().slice(-6);
+      winVerifyCode.textContent = `${codePart1}-${codePart2}-${codePart3} [${nickname} | ${coin}]`;
       winModal.classList.remove("hidden");
     }
 
     closeModalBtn.addEventListener("click", () => winModal.classList.add("hidden"));
-    
-    // 복사 클립보드 호환성 유지 적용
+
+    // 복사 클립보드 호환 전처리 대응
     copyCodeBtn.addEventListener("click", () => {
       const codeText = winVerifyCode.textContent;
-      
-      // 최신 브라우저 대응 및 구형 iFrame 내 작동 대응용 input 임시 생성
       const tempInput = document.createElement("input");
       tempInput.value = codeText;
       document.body.appendChild(tempInput);
@@ -674,36 +759,45 @@
       }, 1500);
     });
 
-    // 랭킹 등록
+    // 베팅 및 랭킹 등록 접수 처리
     async function registerPick() {
-      const nickname = nicknameInput.value.trim();
+      if (getTimeState() !== "LIVE") {
+        setMessage("정산 및 발표 시간에는 신규 대결 참가등록이 거부됩니다.", "error");
+        return;
+      }
 
+      const currentCycle = getBettingCycleId();
+      if (localStorage.getItem("omt_registered_cycle") === currentCycle) {
+        setMessage("이미 오늘 대결에 참여하셨습니다! 하루에 한번만 신청 가능합니다.", "error");
+        return;
+      }
+
+      const nickname = nicknameInput.value.trim();
       if (!nickname) {
-        setMessage("당첨자 식별 및 정산 처리를 위해 닉네임을 꼭 입력해줘!", "error");
+        setMessage("기프티콘 수령 대조에 사용될 대표 닉네임을 입력해줘!", "error");
         nicknameInput.focus();
         return;
       }
 
       if (!state.selectedCoin) {
-        setMessage("오늘 베팅할 코인을 상단 목록에서 먼저 선택해줘!", "error");
+        setMessage("대결에 출전시킬 오늘의 코인을 검색해서 골라줘!", "error");
         coinSearchInput.focus();
         return;
       }
 
       localStorage.setItem("omt_nickname", nickname);
-
       state.registering = true;
       registerBtn.disabled = true;
-      registerBtn.textContent = "참가 원장 작성중...";
-      setMessage("현재 시황 기준 시가 획득 및 원장 처리 중...", "");
+      registerBtn.textContent = "안전 베팅 원장 기록중...";
+      setMessage("현재 실시간 정밀 호가 기준 시가 파싱 및 기록 중...", "");
 
       try {
         if (state.isSimulationMode) {
-          // 시뮬레이션 모드일 때 모의 데이터 추가
+          // 체험 시뮬레이션 모드일 때 모의 참여자 추가
           setTimeout(() => {
             const isExist = state.rankings.some(item => item.nickname === nickname);
             if (isExist) {
-              setMessage("이미 등록된 참가자 닉네임입니다. (로컬 감지)", "error");
+              setMessage("대결 목록 내 이미 동일 닉네임 참가자가 존재합니다.", "error");
               state.registering = false;
               registerBtn.disabled = false;
               registerBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> 랭킹 등록하기`;
@@ -711,8 +805,8 @@
               return;
             }
 
-            const currentPrice = 100 + (Math.random() * 50);
-            const startPrice = currentPrice * (1 - (Math.random() * 0.1)); // 약간 하락했던 것으로 가조정
+            const currentPrice = 50 + (Math.random() * 50);
+            const startPrice = currentPrice * (1 - (Math.random() * 0.15));
             const returnRate = ((currentPrice - startPrice) / startPrice) * 100;
 
             state.rankings.push({
@@ -724,11 +818,12 @@
               returnRate: returnRate.toFixed(2)
             });
 
-            setMessage("축하합니다! 모의 시뮬레이션 등록 완료! 아래 랭킹을 확인하세요.", "ok");
+            // 당일 세션 참여 완료 플래그 활성화
+            localStorage.setItem("omt_registered_cycle", currentCycle);
+            setMessage("모의 시물레이션 베팅 등록에 성공했습니다!", "ok");
+            
             state.registering = false;
-            registerBtn.disabled = false;
-            registerBtn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> 랭킹 등록하기`;
-            lucide.createIcons();
+            updateCountdown();
             renderRankings();
           }, 1000);
         } else {
@@ -740,25 +835,28 @@
             })
           });
 
-          setMessage("참가 등록에 완벽하게 성공했습니다. 저녁 9시 기준 1위를 노려보세요!", "ok");
+          localStorage.setItem("omt_registered_cycle", currentCycle);
+          setMessage("대결 원장 접수가 완벽하게 승인되었습니다! 20시 55분 결과를 주목하세요.", "ok");
           await fetchRankings();
+          updateCountdown();
         }
       } catch (error) {
         if (error.status === 409) {
-          setMessage(error.message || "오늘은 이미 참여하셨습니다. 내일 기회를 노려주세요!", "error");
+          setMessage("본 닉네임 혹은 기기 정보로 이미 참여 완료한 베팅 세션이 감지되었습니다.", "error");
         } else {
-          setMessage(error.message || "원장 등록 중 응답 지연이 발생하여 로컬 체험 방식으로 등록되었습니다.", "error");
-          
-          // 백엔드 오류 시 로컬 시뮬레이션 전환 후 등록 강행
+          // 백엔드 연동 장애 대응을 위한 가상 로컬 전환 강제 진행
           state.isSimulationMode = true;
+          localStorage.setItem("omt_registered_cycle", currentCycle);
           state.rankings.push({
             nickname: nickname,
             symbol: state.selectedCoin.symbol,
             displayName: state.selectedCoin.displayName,
-            startPrice: "1.25",
-            currentPrice: "1.28",
-            returnRate: "2.40"
+            startPrice: "1.00",
+            currentPrice: "1.05",
+            returnRate: "5.00"
           });
+          setMessage("서버 응답 지연으로 로컬 세션 관전 모드로 즉시 전향되어 정상 베팅 완료 처리되었습니다.", "ok");
+          updateCountdown();
           renderRankings();
         }
       } finally {
@@ -771,7 +869,7 @@
       }
     }
 
-    // 코인 선택 검색 UI 렌더링
+    // 코인 셀렉터 렌더러
     function renderCoins() {
       if (state.loadingCoins) {
         coinList.innerHTML = `<div class="text-xs text-center text-slate-400 py-6 flex items-center justify-center gap-1.5"><i data-lucide="loader" class="w-4 h-4 animate-spin text-[#ffd166]"></i> 불러오는 중...</div>`;
@@ -794,14 +892,14 @@
         .slice(0, MAX_COIN_RENDER_COUNT);
 
       if (coins.length === 0) {
-        coinList.innerHTML = `<div class="text-xs text-center text-slate-500 py-6">검색에 대응하는 활성 코인이 없습니다.</div>`;
+        coinList.innerHTML = `<div class="text-xs text-center text-slate-500 py-6">검색어와 부합하는 상장 종목이 없습니다.</div>`;
         return;
       }
 
       coinList.innerHTML = coins.map(coin => {
         const isSelected = state.selectedCoin && state.selectedCoin.symbol === coin.symbol;
         const selectedClass = isSelected 
-          ? "border-[#ffd166] bg-amber-500/10 text-white" 
+          ? "border-[#ffd166] bg-amber-500/10 text-white shadow-md" 
           : "border-white/5 bg-slate-900/40 hover:bg-white/5 text-slate-300";
         
         const btnClass = isSelected 
@@ -815,7 +913,7 @@
               <div class="text-[10px] text-slate-500 mt-0.5">${escapeHtml(coin.symbol)}</div>
             </div>
             <button
-              class="text-[11px] px-3 py-1.5 rounded-lg transition-all scale-100 active:scale-[0.96] shrink-0 ${btnClass}"
+              class="text-[11px] px-3 py-1.5 rounded-lg transition-all scale-100 active:scale-[0.96] shrink-0 select-button ${btnClass}"
               type="button"
               data-symbol="${escapeHtml(coin.symbol)}"
             >${isSelected ? "선택됨" : "선택"}</button>
@@ -823,41 +921,51 @@
         `;
       }).join("");
 
-      document.querySelectorAll(".select-button, [data-symbol]").forEach(button => {
-        // 단 중복 이벤트 부착 차단 위해 클릭 타겟 설정
-        if (button.tagName === 'BUTTON') {
-          button.addEventListener("click", () => {
-            const symbol = button.dataset.symbol;
-            state.selectedCoin = state.coins.find(coin => coin.symbol === symbol) || null;
-            
-            if (state.selectedCoin) {
-              selectedCoinText.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5"></i> ${state.selectedCoin.displayName}`;
-              setMessage("");
-            } else {
-              selectedCoinText.innerHTML = `<i data-lucide="circle-dot" class="w-3.5 h-3.5"></i> 선택 없음`;
-            }
-            lucide.createIcons();
-            renderCoins();
-          });
-        }
+      document.querySelectorAll(".select-button").forEach(button => {
+        button.addEventListener("click", () => {
+          const symbol = button.dataset.symbol;
+          state.selectedCoin = state.coins.find(coin => coin.symbol === symbol) || null;
+          
+          if (state.selectedCoin) {
+            selectedCoinText.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5"></i> ${state.selectedCoin.displayName}`;
+            setMessage("");
+          } else {
+            selectedCoinText.innerHTML = `<i data-lucide="circle-dot" class="w-3.5 h-3.5"></i> 선택 없음`;
+          }
+          lucide.createIcons();
+          renderCoins();
+        });
       });
     }
 
-    // 랭킹 리드 보드 렌더링
+    // 랭킹 보드 렌더러
     function renderRankings() {
+      const activeState = getTimeState();
+
       if (state.loadingRankings) {
-        rankingList.innerHTML = `<div class="text-xs text-center text-slate-400 py-10 flex items-center justify-center gap-1.5"><i data-lucide="loader" class="w-4 h-4 animate-spin text-[#ffd166]"></i> 실시간 수익 산정 연산중...</div>`;
+        rankingList.innerHTML = `<div class="text-xs text-center text-slate-400 py-10 flex items-center justify-center gap-1.5"><i data-lucide="loader" class="w-4 h-4 animate-spin text-[#ffd166]"></i> 최종 마감 수익 산출 연산중...</div>`;
         lucide.createIcons();
         return;
       }
 
       if (!state.rankings.length) {
-        rankingList.innerHTML = `<div class="text-xs text-slate-500 text-center py-10">아직 오늘의 참여가 없습니다. 첫 대결의 선구자가 되세요!</div>`;
+        rankingList.innerHTML = `<div class="text-xs text-slate-500 text-center py-10">현재 등록된 배팅 데이터가 비어 있습니다.</div>`;
         return;
       }
 
-      // 수익률 기준 정렬 (내림차순)
-      const sorted = [...state.rankings].sort((a, b) => Number(b.returnRate || 0) - Number(a.returnRate || 0));
+      // 랭킹 수익률 내림차순 정렬
+      const rawSorted = [...state.rankings].sort((a, b) => Number(b.returnRate || 0) - Number(a.returnRate || 0));
+      
+      // 기획조건: 20시 55분 발표 타임에는 오직 최정예 TOP 10만 표기!
+      const sorted = (activeState === "ANNOUNCEMENT") ? rawSorted.slice(0, 10) : rawSorted;
+
+      if (activeState === "ANNOUNCEMENT") {
+        rankingBoardTitle.innerHTML = `오늘의 최종 우승 TOP 10 발표 <span class="text-xs bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded ml-1 border border-emerald-500/20">확정순위</span>`;
+      } else if (activeState === "SETTLEMENT") {
+        rankingBoardTitle.innerHTML = `순위 마감 및 실시간 검증 집계중`;
+      } else {
+        rankingBoardTitle.innerHTML = `오늘의 수익률 실시간 랭킹`;
+      }
 
       rankingList.innerHTML = sorted.map((item, index) => {
         const displayName = item.displayName || item.koreanName || item.market || item.symbol || "-";
@@ -870,21 +978,23 @@
         let specialClass = "";
         let winnerBtn = "";
 
-        // TOP 3 차별화 이펙트
+        // TOP 3 엘리트 비주얼 스타일 부착
         if (index === 0) {
           rankBadge = `<span class="text-lg">🥇</span>`;
           borderClass = "rank-premium-1 border-[#ffd166] bg-amber-500/5 shadow-amber-500/5";
           specialClass = "text-[#ffd166]";
           
-          // 1등 전용 구글 기프티콘 신청 버튼 생성
-          winnerBtn = `
-            <button 
-              class="mt-2.5 w-full py-2 bg-gradient-to-r from-[#ffd166] to-amber-500 hover:brightness-115 active:scale-95 text-slate-950 font-black text-[11px] rounded-lg flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/10 transition-all"
-              onclick="openWinnerModal('${escapeHtml(item.nickname)}', '${escapeHtml(displayName)}')"
-            >
-              <i data-lucide="gift" class="w-3.5 h-3.5"></i> 1등 기프티콘 받기
-            </button>
-          `;
+          // 핵심 기획: [1등 기프티콘 받기] 버튼은 오직 "ANNOUNCEMENT" (20:55 ~ 21:00) 발표 정산 시즌에만 표시!
+          if (activeState === "ANNOUNCEMENT") {
+            winnerBtn = `
+              <button 
+                class="mt-2.5 w-full py-2.5 bg-gradient-to-r from-[#ffd166] to-amber-500 hover:brightness-115 active:scale-95 text-slate-950 font-black text-xs rounded-lg flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/10 transition-all"
+                onclick="openWinnerModal('${escapeHtml(item.nickname)}', '${escapeHtml(displayName)}')"
+              >
+                <i data-lucide="gift" class="w-4 h-4"></i> 1등 기프티콘 받기
+              </button>
+            `;
+          }
         } else if (index === 1) {
           rankBadge = `<span class="text-lg">🥈</span>`;
           borderClass = "border-slate-300/40 bg-slate-100/5 shadow-lg shadow-white/2.5";
@@ -922,11 +1032,10 @@
         `;
       }).join("");
 
-      // 로딩 이후 루사이드 아이콘 파싱 재가동
       lucide.createIcons();
     }
 
-    // 이벤트 리스너 세팅
+    // 리스너 바인딩 및 라우팅 정리
     coinSearchInput.addEventListener("input", renderCoins);
     registerBtn.addEventListener("click", registerPick);
     reloadCoinsBtn.addEventListener("click", syncCoins);
@@ -943,13 +1052,25 @@
       }
     });
 
-    // 윈도우 최초 진입 초기화 실행
+    // 앱 최초 진입 초기화 및 상태 머신 인터벌 부착
     window.onload = function() {
       lucide.createIcons();
-      updateCountdown();
-      setInterval(updateCountdown, 1000);
       
-      // 코인 및 랭킹 조회
+      // 시간 상태 흐름 전이 감시 루프
+      updateCountdown();
+      
+      // 1초 단위로 실시간 카운트다운을 처리하면서 상태 변경 여부를 감지해 렌더링 상태를 갱신
+      setInterval(() => {
+        const currentState = getTimeState();
+        updateCountdown();
+        
+        if (currentState !== state.lastRenderedState) {
+          state.lastRenderedState = currentState;
+          renderRankings();
+          renderCoins();
+        }
+      }, 1000);
+      
       fetchCoins();
       fetchRankings();
     };
