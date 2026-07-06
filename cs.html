@@ -441,7 +441,10 @@
           <option value="closed">종료</option>
         </select>
       </div>
-      <button class="btn" onclick="openWriteModal()">문의 작성</button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn ghost" type="button" onclick="history.go(-1)">뒤로가기</button>
+        <button class="btn" type="button" onclick="openWriteModal()">문의 작성</button>
+      </div>
     </section>
 
     <section class="panel">
