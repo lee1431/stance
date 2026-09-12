@@ -106,7 +106,7 @@
       currentPage = data.page;
       const html = data.items.map(item => `
         <article class="item" onclick="startGame('${item.url}')">
-          <img src="${item.url}" loading="lazy" alt="img">
+          <img src="${item.thumbnail_url || item.url}" loading="lazy" alt="img">
           <div class="list-meta">${item.filename || 'Untitled'}</div>
         </article>
       `).join('');
