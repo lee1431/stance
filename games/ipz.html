@@ -180,7 +180,7 @@
         `).join('');
 
         if (page === 1) gallery.innerHTML = '';
-        gallery.insertAdjacentHTML('beforeend', itemsHtml);
+        gallery.insertAdjacentHTML('beforeend', html);
         document.getElementById('countText').innerHTML = `Total <strong>${data.total || 0}</strong> Images`;
       } catch (err) { console.error(err); } finally { isLoading = false; }
     }
