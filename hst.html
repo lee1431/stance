@@ -68,12 +68,19 @@
     .fill { display: block; height: 100%; background: #79e7c7; border-radius: 4px; }
     .schema { margin-top: 17px; color: #7997a2; font-size: 12px; line-height: 1.5; }
     .schema code { color: #b9ddd3; }
+    .prompt-panel { margin-top: 19px; padding: 27px 28px; }
+    .prompt-panel h2 { margin-top: 9px; font-size: 21px; letter-spacing: -.03em; text-transform: none; }
+    .prompt-panel p { color: #91abb5; font-size: 13px; line-height: 1.7; margin: 12px 0 17px; }
+    .prompt-panel .actions { align-items: center; }
+    .prompt-status { color: #90bda9; font-size: 12px; }
+    .prompt-text { width: 100%; min-height: 310px; resize: vertical; border: 1px solid #426673; border-radius: 10px; background: #0a1921; color: #d5eae7; padding: 17px; font: 12px/1.7 ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .prompt-text:focus-visible { outline: 2px solid #82ebc9; outline-offset: 2px; }
     .json-input { display: block; width: 100%; min-height: 124px; max-height: 340px; resize: vertical; background: #0a1921; border: 1px solid #426673; border-radius: 8px; color: #d5eae7; padding: 12px; margin-top: 16px; font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
     .json-input:focus-visible { outline: 2px solid #82ebc9; outline-offset: 2px; }
     .data-quality { color: #b4d7cc; font-size: 12px; margin: 12px 0 0; }
     .stat-line small { display: block; color: #83a2ad; font-size: 11px; margin-top: 2px; }
     @media (max-width: 950px) { .dashboard { grid-template-columns: 1fr; } .aside { display: grid; grid-template-columns: 1fr 1fr; } }
-    @media (max-width: 680px) { .shell { padding-top: 23px; } header { margin: 40px 0 24px; } .aside { display: flex; } .chart-wrap { min-height: 290px; } .summary, .upload, .bottom { padding: 22px; } .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .chart-foot { flex-wrap: wrap; } }
+    @media (max-width: 680px) { .shell { padding-top: 23px; } header { margin: 40px 0 24px; } .aside { display: flex; } .chart-wrap { min-height: 290px; } .summary, .upload, .bottom, .prompt-panel { padding: 22px; } .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .chart-foot { flex-wrap: wrap; } }
     @media (max-width: 380px) { .stat-grid { gap: 16px 12px; } .chart-panel { padding: 14px; } }
   </style>
 </head>
@@ -108,6 +115,107 @@
       </div>
     </div>
     <section class="panel bottom" aria-labelledby="all-heading"><div class="panel-head"><h2 id="all-heading">ALL STATS</h2><span class="unit">SCORE / 100</span></div><div class="stat-grid" id="stat-grid"></div></section>
+    <section class="panel prompt-panel" aria-labelledby="prompt-heading">
+      <div class="section-label">MAKE YOUR OWN PROFILE</div>
+      <h2 id="prompt-heading">내 대화로 STAT 추출하기</h2>
+      <p>아래 프롬프트를 복사해서 GPT에 붙여넣으세요. GPT가 접근할 수 있는 대화 기록만으로 v0.2 JSON을 생성합니다. 결과 JSON을 위 입력창에 붙여넣고 <strong>붙여넣은 JSON 적용</strong>을 누르면 차트가 바뀝니다.</p>
+      <label for="prompt-text" class="section-label">전체 추출 프롬프트</label>
+      <textarea class="prompt-text" id="prompt-text" readonly spellcheck="false">당신은 지금부터 사용자의 대화 기록을 기반으로 Human STAT을 분석하는 평가자다.
+
+목표는 성격을 자유롭게 해석하는 것이 아니라, 지금까지 접근 가능한 대화 기록에서 반복적으로 관찰된 행동, 선택, 사고방식, 반응 패턴을 동일한 기준으로 수치화하는 것이다. 이 분석은 절대적 능력이나 인간적 가치를 평가하지 않는다. 현재 접근 가능한 기록의 행동 경향만 나타낸다.
+
+[평가 규칙]
+1. 실제 대화 기록에서 관찰 가능한 내용만 사용한다.
+2. 단 한 번의 발언보다 반복 패턴을 우선한다.
+3. 자기평가보다 실제 행동, 완료된 결과물, 반복된 선택을 우선한다.
+4. 근거가 부족한 STAT은 추측하지 말고 score를 null로 둔다.
+5. 건강, 질병, 장애, 정치성향, 종교, 인종, 성적 성향, 범죄 가능성 등 민감한 속성은 평가하지 않는다.
+6. 진단하거나 낙인찍지 않는다. 동일 사용자를 재평가할 때도 같은 기준을 유지한다.
+7. 긍정·부정 표현에 끌리지 않고 행동 근거만 평가한다. 확신이 낮으면 극단 점수를 피한다.
+8. 전체 대화가 아니라 일부만 보이면 data_quality와 confidence에 반영한다.
+9. 대화량보다 서로 다른 시점과 상황에서 반복된 패턴을 중요하게 본다.
+10. 최근 행동과 과거 행동이 충돌하면 consistency와 해당 confidence를 낮춘다.
+
+[관찰 범위]
+observation_start/end: 접근 가능한 기록의 첫 날짜와 마지막 날짜. 확인 불가능하면 null.
+observation_days: 두 날짜 사이 일수. 확인 불가능하면 null.
+conversation_volume: very_low(근거 거의 없음), low(일부 패턴), medium(여러 주제·시점의 일부 반복), high(장기간·다양한 상황의 충분한 반복), very_high(장기간 다양한 활동과 결과물이 반복 관찰됨).
+context_diversity: 업무, 취미, 기술, 관계, 소비, 학습, 문제 해결, 프로젝트 등의 맥락 다양성. 0~1.
+temporal_coverage: 짧은 기간에 몰렸는지 여러 주·달에 분산됐는지. 0~1.
+
+[12개 STAT — score 0~100]
+exploration / 탐색성: 새로운 방법·장소·기술·아이디어를 탐색하는 경향. 0~20 거의 시도 없음, 21~40 필요할 때만, 41~60 보통, 61~80 자주 시도, 81~100 지속 탐색·실험.
+persistence / 지속성: 성과 지연 후에도 계속하는 경향. 0~20 빠른 중단, 21~40 짧게 시도, 41~60 보통, 61~80 실패 후 재시도, 81~100 장기 지속.
+execution / 실행력: 생각을 실제 행동으로 옮기는 정도. 0~20 실행 거의 없음, 21~40 간헐적, 41~60 보통, 61~80 자주 결과물로 전환, 81~100 실행·수정·재실행 반복.
+focus / 집중력: 한 목표·문제에 주의를 유지하는 경향. 0~20 지속 집중 거의 없음, 21~40 자주 끊김, 41~60 보통, 61~80 비교적 오래 집중, 81~100 장기 추적·개선.
+precision / 정밀성: 오류·숫자·조건·차이를 구분하려는 경향. 0~20 세부 관심 거의 없음, 21~40 세부 자주 생략, 41~60 보통, 61~80 반복 확인, 81~100 세밀한 검증.
+adaptability / 적응력: 변화·실패 이후 전략을 바꾸는 경향. 0~20 기존 방식 고수, 21~40 적응 지연, 41~60 보통, 61~80 다른 방식 시도, 81~100 지속적 전략 재구성.
+risk_tendency / 위험 감수: 불확실한 선택을 받아들이는 정도. 0~20 확실한 선택 강한 선호, 21~40 대체로 안정 선호, 41~60 상황에 따라 선택, 61~80 불확실성 자주 감수, 81~100 높은 변동성을 적극 수용. 무모함과 동일시하지 않는다.
+planning / 계획성: 목표를 단계화하고 구조화하는 경향. 0~20 대부분 즉흥적, 21~40 간단한 계획, 41~60 보통, 61~80 단계·조건 자주 구조화, 81~100 장기 계획과 하위 작업 체계적 수정.
+problem_solving / 문제 해결: 원인을 찾고 해결책을 만드는 경향. 0~20 해결 시도 거의 없음, 21~40 기존 해결책 위주, 41~60 보통, 61~80 원인 분석·대안 시도, 81~100 복잡한 문제 분해·반복 실험.
+creativity / 창의성: 다른 아이디어나 조합을 만드는 경향. 0~20 기존 방법 그대로, 21~40 일부 변형, 41~60 보통, 61~80 서로 다른 개념 자주 결합, 81~100 새로운 구조·용도·조합 지속 창출.
+social_orientation / 사회적 지향: 상호작용·협업·관계를 활동의 중요한 요소로 두는 정도. 0~20 대부분 혼자 선호, 21~40 필요 시 협업, 41~60 혼자와 협업 모두 활용, 61~80 관계·협업 자주 활용, 81~100 상호작용이 핵심.
+consistency / 일관성: 시간이 지나도 행동 패턴이 유지되는 정도. 0~20 변동 매우 큼, 21~40 자주 바뀜, 41~60 보통, 61~80 비슷한 상황에서 반복, 81~100 장기간 매우 일관됨.
+
+[근거 분류]
+A급: 실제 행동·완료 결과물, 가중치 3.
+B급: 반복 선택·계획·구체적 실행 의도, 가중치 2.
+C급: 사용자의 직접적인 자기설명·자기평가, 가중치 1.
+각 STAT마다 서로 다른 근거 최소 3개가 있어야 score를 부여한다. 단발성 발언 하나로 높은 점수를 주지 않는다.
+
+[STAT별 confidence — 점수가 사실일 확률이 아닌 추정의 안정성]
+A. Evidence Strength (30%): weighted_evidence = A급 수×3 + B급 수×2 + C급 수×1. 가중합 0~2=0.10, 3~5=0.30, 6~9=0.50, 10~15=0.70, 16~24=0.85, 25 이상=1.00.
+B. Temporal Coverage (20%): 한 시점·매우 짧음=0.20, 며칠=0.35, 여러 주=0.55, 1~3개월=0.75, 3개월 이상=0.90, 6개월 이상 반복=1.00. 판단 불가 시 0.40 이하.
+C. Context Diversity (20%): 한 맥락=0.20, 2개=0.40, 3개=0.60, 4~5개=0.80, 6개 이상=1.00.
+D. Pattern Consistency (20%): 충돌 많음=0.20, 낮음=0.40, 혼합적이나 방향성 있음=0.60, 대체로 일관=0.80, 매우 일관=1.00. 반대 사례 감점.
+E. Recency (10%): 최근과 과거 크게 다름=0.20, 최근 근거 거의 없음=0.40, 최근 일부 확인=0.60, 최근 반복 확인=0.80, 최근까지 매우 일관=1.00.
+confidence = A×0.30 + B×0.20 + C×0.20 + D×0.20 + E×0.10. 0.00~1.00, 소수점 둘째 자리.
+0.00~0.29 근거 부족 / 0.30~0.49 낮음 / 0.50~0.69 중간 / 0.70~0.84 높음 / 0.85~1.00 매우 높음.
+상한: 관찰 기간 모름=0.69, 근거가 3개뿐=0.59, 맥락이 1개뿐=0.59, 최근과 과거 명확히 충돌=0.69.
+
+[점수·품질·대표 항목]
+score는 행동 근거의 방향을 A급 중심으로 판단하고 B급으로 보조하며 C급은 제한적으로 쓴다. 상반 근거가 있으면 평균 방향으로 조정한다. score와 confidence를 혼동하지 않는다.
+data_quality는 전체 관찰 기간, 대화량, 맥락 수, A·B급 근거의 양, 12개 중 점수 산출 비율을 종합한다. low(짧거나 편향), medium(여러 STAT 분석 가능하나 기간·맥락 제한), high(장기간 다양한 실제 행동과 대부분 STAT 안정 평가).
+dominant_stat_1~3은 score·confidence·반복성을 함께 고려한다. confidence 0.50 미만은 제외하고 유사 점수에서는 높은 confidence를 우선한다. 후보가 부족하면 남는 값은 빈 문자열로 둔다.
+
+[출력]
+반드시 JSON 객체만 출력한다. 설명문·인사말·마크다운·코드블록은 출력하지 않는다.
+{
+  "version": "human-stat-v0.2",
+  "observation": {
+    "observation_start": null,
+    "observation_end": null,
+    "observation_days": null,
+    "conversation_volume": "very_low | low | medium | high | very_high",
+    "context_diversity": 0.00,
+    "temporal_coverage": 0.00
+  },
+  "stat": {
+    "exploration": {"score": null, "confidence": 0.00, "evidence_count": 0},
+    "persistence": {"score": null, "confidence": 0.00, "evidence_count": 0},
+    "execution": {"score": null, "confidence": 0.00, "evidence_count": 0},
+    "focus": {"score": null, "confidence": 0.00, "evidence_count": 0},
+    "precision": {"score": null, "confidence": 0.00, "evidence_count": 0},
+    "adaptability": {"score": null, "confidence": 0.00, "evidence_count": 0},
+    "risk_tendency": {"score": null, "confidence": 0.00, "evidence_count": 0},
+    "planning": {"score": null, "confidence": 0.00, "evidence_count": 0},
+    "problem_solving": {"score": null, "confidence": 0.00, "evidence_count": 0},
+    "creativity": {"score": null, "confidence": 0.00, "evidence_count": 0},
+    "social_orientation": {"score": null, "confidence": 0.00, "evidence_count": 0},
+    "consistency": {"score": null, "confidence": 0.00, "evidence_count": 0}
+  },
+  "summary": {
+    "dominant_stat_1": "",
+    "dominant_stat_2": "",
+    "dominant_stat_3": "",
+    "data_quality": "low | medium | high"
+  }
+}
+각 필드는 실제 판단 결과 한 값으로 채운다. 근거가 3개 미만이면 score는 null. 사용자의 가치, 직업 적합성, 지능, 정신건강 상태를 추정하지 않는다. 오직 접근 가능한 기록의 행동 패턴을 나타낸다.
+
+이제 지금까지 접근 가능한 사용자와의 대화 기록을 기준으로 Human STAT 분석을 수행하라.</textarea>
+      <div class="actions"><button type="button" class="btn primary" id="copy-prompt">추출 프롬프트 복사</button><span id="prompt-status" class="prompt-status" role="status" aria-live="polite">복사 후 GPT에 붙여넣으세요.</span></div>
+    </section>
     <p class="schema">JSON 구조: <code>{"version":"human-stat-v0.2","observation":{...},"stat":{"exploration":{"score":88,"confidence":0.82,"evidence_count":6},...},"summary":{...}}</code> · score 0–100 또는 null, confidence 0.00–1.00.</p>
   </main>
   <script>
@@ -234,6 +342,17 @@
         $('lang-toggle').setAttribute('aria-pressed',String(korean));
         $('lang-toggle').textContent=korean?'English':'한글 보기';
         render();
+      });
+      $('copy-prompt').addEventListener('click',async()=>{
+        const field=$('prompt-text');
+        try {
+          if(navigator.clipboard?.writeText) await navigator.clipboard.writeText(field.value);
+          else { field.select(); if(!document.execCommand('copy')) throw Error('복사 실패'); }
+          $('prompt-status').textContent='복사했습니다. GPT에 붙여넣으세요.';
+        } catch (_) {
+          field.focus(); field.select();
+          $('prompt-status').textContent='자동 복사가 차단되었습니다. 선택된 내용을 직접 복사하세요.';
+        }
       });
       $('select-btn').addEventListener('click',()=>$('file-input').click());
       $('file-input').addEventListener('change',e=>{importFile(e.target.files[0]);e.target.value='';});
