@@ -1,0 +1,10 @@
+{
+  "name":"1라인 피드",
+  "short_name":"1라인",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#f7f4ee",
+  "theme_color":"#f7f4ee",
+  "description":"한 줄만 쓰는 미니 피드 게시판",
+  "icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
