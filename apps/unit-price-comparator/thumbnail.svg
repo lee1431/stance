@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<rect width="1200" height="630" fill="#f8fafc"/>
+<rect x="55" y="55" width="1090" height="520" rx="42" fill="#111827"/>
+<text x="110" y="185" fill="#94a3b8" font-family="sans-serif" font-size="28" font-weight="700">PRICE TOOL</text>
+<text x="110" y="285" fill="#ffffff" font-family="sans-serif" font-size="72" font-weight="800">단가 비교 계산기</text>
+<text x="110" y="355" fill="#cbd5e1" font-family="sans-serif" font-size="34">개당 · 100g당 · 100ml당 가격 비교</text>
+<rect x="110" y="420" width="430" height="88" rx="22" fill="#ffffff"/>
+<text x="150" y="478" fill="#111827" font-family="sans-serif" font-size="32" font-weight="800">더 싼 상품 바로 찾기</text>
+<circle cx="1010" cy="455" r="84" fill="#22d3ee"/>
+<text x="1010" y="473" text-anchor="middle" fill="#083344" font-family="sans-serif" font-size="46" font-weight="900">₩</text>
+</svg>
