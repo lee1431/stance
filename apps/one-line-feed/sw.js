@@ -1,1 +1,7 @@
-const C='one-line-feed-v1';const A=['./','./index.html','./manifest.webmanifest','./icon.svg'];self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A))));self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));
+'use strict';
+self.addEventListener('install',()=>self.skipWaiting());
+self.addEventListener('activate',event=>event.waitUntil((async()=>{
+ for(const key of await caches.keys()) if(key.startsWith('one-line-feed-')) await caches.delete(key);
+ await self.clients.claim();
+})()));
+// Always use the network: never serve an old board or cache backend requests.
