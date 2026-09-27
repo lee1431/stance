@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<rect width="1200" height="630" fill="#171717"/>
+<rect x="70" y="70" width="1060" height="490" rx="36" fill="#f6f6f2"/>
+<text x="120" y="205" font-family="Arial,sans-serif" font-size="82" font-weight="800" fill="#171717">중복 줄 제거기</text>
+<text x="120" y="285" font-family="Arial,sans-serif" font-size="34" fill="#555">Dedupe Lines</text>
+<g font-family="Arial,sans-serif" font-size="34" fill="#171717">
+<text x="145" y="385">APPLE</text>
+<text x="145" y="435" opacity=".35">APPLE</text>
+<text x="145" y="485">BANANA</text>
+<path d="M520 430h130" stroke="#171717" stroke-width="12" stroke-linecap="round"/>
+<path d="M625 398l35 32-35 32" fill="none" stroke="#171717" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="740" y="385">APPLE</text>
+<text x="740" y="455">BANANA</text>
+</g>
+</svg>
