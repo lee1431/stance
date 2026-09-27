@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<rect width="1200" height="630" fill="#f4f5fb"/>
+<rect x="70" y="70" width="1060" height="490" rx="32" fill="#ffffff" stroke="#dfe2ee" stroke-width="3"/>
+<rect x="110" y="115" width="120" height="40" rx="20" fill="#5b63d8"/>
+<text x="170" y="142" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#ffffff">DATE TOOL</text>
+<text x="110" y="230" font-family="Arial,sans-serif" font-size="62" font-weight="800" fill="#181b29">날짜 차이 계산기</text>
+<text x="110" y="282" font-family="Arial,sans-serif" font-size="28" fill="#676b7d">두 날짜 사이 일수 · 주수 · 평일 수 · D-day</text>
+<rect x="110" y="340" width="320" height="130" rx="22" fill="#f5f6fb" stroke="#dfe2ec" stroke-width="2"/>
+<text x="138" y="382" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#7b7f90">시작 날짜</text>
+<text x="138" y="430" font-family="Arial,sans-serif" font-size="34" font-weight="800" fill="#202333">2026.09.28</text>
+<circle cx="500" cy="405" r="38" fill="#24273a"/>
+<text x="500" y="417" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="800" fill="#ffffff">→</text>
+<rect x="570" y="340" width="320" height="130" rx="22" fill="#f5f6fb" stroke="#dfe2ec" stroke-width="2"/>
+<text x="598" y="382" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#7b7f90">종료 날짜</text>
+<text x="598" y="430" font-family="Arial,sans-serif" font-size="34" font-weight="800" fill="#202333">2026.10.05</text>
+<rect x="925" y="340" width="160" height="130" rx="22" fill="#5b63d8"/>
+<text x="1005" y="385" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="700" fill="#dfe1ff">결과</text>
+<text x="1005" y="435" text-anchor="middle" font-family="Arial,sans-serif" font-size="42" font-weight="800" fill="#ffffff">7일</text>
+<text x="1005" y="515" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" font-weight="700" fill="#596074">llsshh.com</text>
+</svg>
