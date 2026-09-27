@@ -1,0 +1,12 @@
+{
+  "name": "3픽 - 오늘의 세 가지",
+  "short_name": "3픽",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b1020",
+  "theme_color": "#111827",
+  "description": "오늘 해야 할 일 딱 3개만 정하고 끝내는 초간단 PWA",
+  "icons": [
+    {"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
