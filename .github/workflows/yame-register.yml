@@ -1,0 +1,71 @@
+name: Register YAME.STORE app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/**/yame.json'
+
+permissions:
+  contents: read
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Register changed apps
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='https://mrdindoin.ddns.net/yame/api/community/projects'
+
+          BEFORE='${{ github.event.before }}'
+          AFTER='${{ github.sha }}'
+
+          if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            FILES=$(find apps -name yame.json -type f)
+          else
+            FILES=$(git diff --name-only "$BEFORE" "$AFTER" -- 'apps/**/yame.json' || true)
+          fi
+
+          if [ -z "$FILES" ]; then
+            echo "No changed yame.json files."
+            exit 0
+          fi
+
+          for file in $FILES; do
+            echo "Processing $file"
+            URL=$(jq -r '.url' "$file")
+            THUMB=$(jq -r '.thumbnail' "$file")
+
+            if [ -z "$URL" ] || [ "$URL" = "null" ] || [ -z "$THUMB" ] || [ "$THUMB" = "null" ]; then
+              echo "Invalid registration file: $file"
+              exit 1
+            fi
+
+            LIST=$(curl --fail --silent --show-error --retry 3 --connect-timeout 15 "$API")
+
+            if echo "$LIST" | jq -e --arg u "$URL" '
+              (if type=="array" then . else (.projects // []) end)
+              | any(.url == $u)
+            ' >/dev/null; then
+              echo "Already registered: $URL"
+              continue
+            fi
+
+            PAYLOAD=$(jq -nc --arg u "$URL" --arg t "$THUMB" '{url:$u,thumbnail:$t,company:""}')
+            curl --fail --silent --show-error --retry 3 --connect-timeout 15               -X POST "$API"               -H 'Content-Type: application/json'               --data "$PAYLOAD"
+
+            echo
+            VERIFY=$(curl --fail --silent --show-error --retry 3 --connect-timeout 15 "$API")
+            echo "$VERIFY" | jq -e --arg u "$URL" --arg t "$THUMB" '
+              (if type=="array" then . else (.projects // []) end)
+              | any(.url == $u and .thumbnail == $t)
+            ' >/dev/null
+
+            echo "Verified registration: $URL"
+          done
