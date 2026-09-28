@@ -1,0 +1,13 @@
+'use strict';
+const $=s=>document.querySelector(s),KEY='yame-time-sum-v1',fmt=n=>n.toLocaleString('ko-KR');
+const input=$('#durations'),remember=$('#remember');let current;
+try{const saved=JSON.parse(localStorage.getItem(KEY));if(saved&&typeof saved.text==='string'&&saved.text.length<=20000){input.value=saved.text;remember.checked=true;}}catch{}
+function save(){try{if(remember.checked)localStorage.setItem(KEY,JSON.stringify({text:input.value}));else localStorage.removeItem(KEY);$('#storage-note').textContent=remember.checked?'이 브라우저에 저장 중 · 기억하기를 끄면 저장 내용이 지워집니다.':'기억하기를 켜면 이 브라우저에만 저장됩니다.';}catch{$('#storage-note').textContent='브라우저 저장을 사용할 수 없습니다. 계산은 계속 사용할 수 있어요.';}}
+function update(){current=sumDurations(input.value);const {entries,errors,total}=current;$('#count').textContent=`${entries.length}개 항목${errors.length?' · 오류 '+errors.length+'줄':''}`;$('#errors').replaceChildren();$('#errors').hidden=!errors.length;$('#result').hidden=!!errors.length;errors.slice(0,30).forEach(e=>{const li=document.createElement('li');li.textContent=`${e.line}번째 줄: ${e.message}`;$('#errors').append(li);});if(errors.length>30){const li=document.createElement('li');li.textContent=`외 ${errors.length-30}개 오류. 앞의 오류부터 수정해주세요.`;$('#errors').append(li);}if(total!==null){$('#hours').textContent=fmt(Math.floor(total/60));$('#minutes').textContent=total%60;$('#total-min').textContent=fmt(total)+'분';$('#decimal').textContent=(total/60).toLocaleString('ko-KR',{minimumFractionDigits:2,maximumFractionDigits:2})+'시간';$('#hint').textContent=entries.length?'소수 시간은 소수점 둘째 자리로 반올림합니다.':'입력란에 시간을 한 줄씩 적어주세요.';}$('#copy').disabled=!!errors.length||!entries.length;$('#copy-status').textContent='';}
+input.addEventListener('input',()=>{update();save();});remember.addEventListener('change',save);
+$('#sample').onclick=()=>{input.value='1:30\n45\n2:15';update();save();};
+$('#clear').onclick=()=>{input.value='';update();save();input.focus();};
+$('#copy').onclick=async()=>{if(current.total===null||!current.entries.length)return;const total=current.total,text=`${current.entries.length}개 시간 합계: ${Math.floor(total/60)}시간 ${total%60}분 (총 ${total}분 / ${(total/60).toFixed(2)}시간)`;try{await navigator.clipboard.writeText(text);$('#copy-status').textContent='합계를 복사했습니다.';}catch{$('#copy-status').textContent='복사가 제한된 브라우저입니다. 화면의 합계를 직접 선택해 복사해주세요.';}};
+let deferred;addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('#install').hidden=false;});$('#install').onclick=async()=>{if(!deferred)return;await deferred.prompt();deferred=null;$('#install').hidden=true;};addEventListener('appinstalled',()=>$('#install').hidden=true);
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+update();
