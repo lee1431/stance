@@ -1,0 +1,15 @@
+'use strict';
+const $=id=>document.getElementById(id),key='yame-line-dedupe-v1';
+function persist(){try{if($('remember').checked)localStorage.setItem(key,JSON.stringify({text:$('input').value,trim:$('trim').checked,skipBlank:$('skipBlank').checked}));else localStorage.removeItem(key);$('storageStatus').textContent=$('remember').checked?'이 브라우저에 저장했습니다. 공용 기기에서는 해제해 주세요.':'';}catch(e){$('storageStatus').textContent='기기 저장을 사용할 수 없어요. 정리 기능은 계속 사용할 수 있습니다.';}}
+function resetResult(){ $('output').value='';for(const id of ['kept','duplicates','blanks'])$(id).textContent='—';$('copy').disabled=true;$('status').className=''; }
+function run(){resetResult();try{const r=dedupeLines($('input').value,{trim:$('trim').checked,skipBlank:$('skipBlank').checked});$('output').value=r.text;for(const id of ['kept','duplicates','blanks'])$(id).textContent=r[id].toLocaleString('ko-KR');$('copy').disabled=!r.text;$('status').textContent=!r.total?'목록을 먼저 입력해 주세요.':!r.kept?'빈 줄만 있어 남은 항목이 없습니다.':`${r.total.toLocaleString('ko-KR')}줄을 확인했습니다. 처음 나온 순서대로 정리했어요.`;}catch(e){$('status').className='error';$('status').textContent=e.message;}persist();}
+$('run').addEventListener('click',run);
+$('input').addEventListener('input',()=>{resetResult();$('status').textContent='입력이 바뀌었습니다. 정리 버튼을 눌러 주세요.';persist();});
+for(const id of ['trim','skipBlank'])$(id).addEventListener('change',()=>{resetResult();$('status').textContent='설정이 바뀌었습니다. 다시 정리해 주세요.';persist();});
+$('remember').addEventListener('change',persist);
+$('example').addEventListener('click',()=>{$('input').value='우유\n달걀\n우유\n  사과  \n\n달걀\n빵';$('trim').checked=true;$('skipBlank').checked=true;run();});
+$('clear').addEventListener('click',()=>{$('input').value='';resetResult();$('status').textContent='비웠습니다. 새 목록을 넣어 주세요.';persist();$('input').focus();});
+$('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('output').value);$('status').textContent='결과를 복사했습니다.';}catch(e){$('output').focus();$('output').select();$('status').textContent='자동 복사가 차단됐어요. 선택된 결과를 직접 복사해 주세요.';}});
+try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved&&typeof saved.text==='string'&&saved.text.length<=200000){$('input').value=saved.text;$('trim').checked=saved.trim!==false;$('skipBlank').checked=saved.skipBlank!==false;$('remember').checked=true;run();}}catch(e){$('storageStatus').textContent='저장한 입력을 읽지 못했어요. 새 목록을 넣어 주세요.';}
+let prompt;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();prompt=e;$('install').hidden=false;});$('install').addEventListener('click',async()=>{if(!prompt)return;await prompt.prompt();prompt=null;$('install').hidden=true;});window.addEventListener('appinstalled',()=>{$('install').hidden=true;});
+if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js',{scope:'./'}).then(()=>navigator.serviceWorker.ready).then(()=>{$('offline').textContent='오프라인 준비 완료 · 다음 방문에도 정리할 수 있어요.';}).catch(()=>{$('offline').textContent='오프라인 준비에 실패했어요. 연결 후 다시 방문해 주세요.';});}else{$('offline').textContent='이 브라우저는 오프라인 저장을 지원하지 않습니다.';}
