@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>전송몇분 · 파일 전송시간 계산기</title>
+  <meta name="description" content="파일 크기와 인터넷 속도, 실제 효율을 넣어 업로드·다운로드 예상 시간을 계산합니다.">
+  <meta name="theme-color" content="#18324a">
+  <link rel="canonical" href="https://llsshh.com/apps/transfer-time/">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon-192.png">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="전송몇분 · 파일 전송시간 계산기">
+  <meta property="og:description" content="용량과 회선 속도로 실제 파일 전송시간을 빠르게 계산하세요.">
+  <meta property="og:url" content="https://llsshh.com/apps/transfer-time/">
+  <meta property="og:image" content="https://llsshh.com/apps/transfer-time/thumbnail.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="전송몇분 · 파일 전송시간 계산기">
+  <meta name="twitter:description" content="용량·Mbps·효율을 넣으면 예상 완료 시간을 계산합니다.">
+  <meta name="twitter:image" content="https://llsshh.com/apps/transfer-time/thumbnail.svg">
+  <link rel="stylesheet" href="./style.css">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9382191250873184" crossorigin="anonymous"></script>
+  <script defer src="./core.js"></script>
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a href="https://yame.store/" aria-label="YAME.STORE 도구 목록">YAME / 전송 도구</a>
+    <button id="install" class="ghost" hidden>앱 설치</button>
+  </header>
+  <main>
+    <section class="hero">
+      <p class="eyebrow">TRANSFER ESTIMATOR</p>
+      <h1>이 파일, <em>몇 분이면 갈까?</em></h1>
+      <p>용량과 회선 속도를 넣으면 업로드·다운로드 예상 시간을 계산합니다.</p>
+    </section>
+
+    <section class="calculator" aria-label="전송시간 계산기">
+      <form id="form" novalidate>
+        <h2><span>01</span> 파일과 회선</h2>
+        <div class="field-pair">
+          <label>파일 크기<input id="size" inputmode="decimal" placeholder="10" autocomplete="off"></label>
+          <label>용량 단위<select id="sizeUnit"><option>MB</option><option selected>GB</option><option>TB</option></select></label>
+        </div>
+        <div class="field-pair">
+          <label>회선 속도<input id="speed" inputmode="decimal" placeholder="100" autocomplete="off"></label>
+          <label>속도 단위<select id="speedUnit"><option selected>Mbps</option><option>Gbps</option></select></label>
+        </div>
+        <label>실제 전송 효율 <span class="muted">(와이파이·서버 손실 반영)</span><div class="suffix"><input id="efficiency" inputmode="decimal" value="80"><span>%</span></div></label>
+        <div class="presets" aria-label="속도 빠른 선택"><button type="button" data-speed="100">100M</button><button type="button" data-speed="500">500M</button><button type="button" data-speed="1000">1G</button></div>
+        <p class="hint">표시 속도 그대로라면 100%, 일반적인 환경은 70~90%를 권장합니다.</p>
+        <div class="actions"><button type="button" id="sample" class="secondary">예시 넣기</button><button type="button" id="clear" class="secondary">비우기</button></div>
+        <button type="submit" class="primary">전송시간 계산하기 ↗</button>
+        <label class="remember"><input type="checkbox" id="remember"> 이 기기에 조건 기억하기</label>
+        <p id="storage" class="status" aria-live="polite"></p>
+      </form>
+
+      <section class="result" aria-labelledby="resultTitle">
+        <h2 id="resultTitle"><span>02</span> 예상 결과</h2>
+        <div id="empty" class="empty"><b>↗</b><h3>언제 끝날까요?</h3><p>파일 크기와 회선 속도를 입력해 주세요.</p></div>
+        <div id="output" hidden>
+          <p class="label">예상 전송시간</p>
+          <strong id="duration">-</strong>
+          <div class="bar"><i id="bar"></i></div>
+          <dl><div><dt>파일 크기</dt><dd id="fileLabel">-</dd></div><div><dt>실효 속도</dt><dd id="effective">-</dd></div><div><dt>예상 완료</dt><dd id="finish">-</dd></div></dl>
+          <p id="summary" class="summary"></p>
+          <button type="button" id="copy" class="secondary">결과 복사</button><p id="copyStatus" class="status" aria-live="polite"></p>
+        </div>
+        <p id="error" class="error" role="alert"></p>
+      </section>
+    </section>
+
+    <section class="guide"><article><b>속도 단위 주의</b><p>인터넷 속도의 Mbps는 초당 메가비트입니다. 파일의 MB와는 8배 차이가 납니다.</p></article><article><b>효율을 낮춰 계산</b><p>무선 환경이나 서버가 느리다면 60~80%로 잡으면 더 현실적입니다.</p></article><article><b>대용량 백업</b><p>수십 GB 사진·영상 백업 전에 걸리는 시간을 미리 가늠할 수 있습니다.</p></article></section>
+    <p id="offlineStatus" class="offline" aria-live="polite">오프라인 준비 중…</p>
+  </main>
+  <footer>전송몇분 · 기다릴 시간을 먼저 알기 <a href="https://yame.store/">다른 도구 보기 ↗</a></footer>
+</body>
+</html>
