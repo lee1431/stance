@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#102a27">
+  <meta name="description" content="JSON을 브라우저에서 바로 검증하고 보기 좋게 정렬하거나 한 줄로 압축합니다.">
+  <link rel="canonical" href="https://llsshh.com/apps/json-pretty/">
+  <meta property="og:type" content="website"><meta property="og:title" content="JSON정리 — 오프라인 JSON 포맷터"><meta property="og:description" content="붙여 넣은 JSON을 검증하고 정렬·압축하며 오류 위치까지 확인하세요."><meta property="og:url" content="https://llsshh.com/apps/json-pretty/"><meta property="og:image" content="https://llsshh.com/apps/json-pretty/thumbnail.svg">
+  <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="JSON정리 — 오프라인 JSON 포맷터"><meta name="twitter:description" content="서버 전송 없이 JSON 검증·정렬·압축"><meta name="twitter:image" content="https://llsshh.com/apps/json-pretty/thumbnail.svg">
+  <title>JSON정리 — 오프라인 JSON 포맷터</title>
+  <link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="stylesheet" href="style.css">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9382191250873184" crossorigin="anonymous"></script>
+</head>
+<body>
+  <main class="shell">
+    <header><a class="brand" href="https://llsshh.com/" aria-label="llsshh.com 홈"><span aria-hidden="true">{ }</span><b>JSON정리</b></a><p>LOCAL JSON WORKBENCH</p></header>
+    <section class="hero"><div><p class="eyebrow">붙여 넣고, 바로 정리</p><h1>뒤엉킨 JSON을<br><em>반듯하게.</em></h1></div><p>서버로 보내지 않고 브라우저에서 검증합니다.<br>문법 오류 위치를 찾고 정렬하거나 한 줄로 압축하세요.</p></section>
+
+    <section class="toolbar" aria-label="JSON 작업 도구">
+      <div class="actions"><button id="format" class="primary" type="button">보기 좋게 정렬</button><button id="minify" type="button">한 줄로 압축</button><button id="sample" type="button">예시 불러오기</button><button id="clear" type="button">비우기</button></div>
+      <label>들여쓰기 <select id="indent"><option value="2">공백 2칸</option><option value="4">공백 4칸</option><option value="tab">탭</option></select></label>
+    </section>
+    <p id="error" class="error" role="alert" aria-live="assertive"></p>
+
+    <section class="workspace">
+      <article class="editor input-panel"><div class="panel-head"><div><span>01</span><h2>원본 JSON</h2></div><small>여기에 붙여 넣으세요</small></div><textarea id="input" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder='{"name":"YAME","active":true}' aria-label="원본 JSON"></textarea></article>
+      <article class="editor output-panel"><div class="panel-head inverse"><div><span>02</span><h2>정리 결과</h2></div><button id="copy" type="button" disabled>결과 복사</button></div><div class="output-wrap"><textarea id="output" readonly spellcheck="false" aria-label="정리된 JSON"></textarea><div id="empty" class="empty"><b>{ }</b><strong>결과를 기다리고 있어요</strong><p id="empty-message">왼쪽에 JSON을 붙여 넣어 주세요.</p></div></div><div id="summary" class="summary" hidden><p id="result-label">보기 좋게 정렬한 결과</p><div><span>루트 <b id="root-type">-</b></span><span>키 <b id="key-count">0</b></span><span>배열 항목 <b id="item-count">0</b></span><span>깊이 <b id="depth">0</b></span><span><b id="byte-count">0 byte</b></span></div></div></article>
+    </section>
+
+    <section class="save"><label><input id="remember" type="checkbox"> 입력 내용을 이 기기에 임시 저장</label><p id="save-status" aria-live="polite"></p></section>
+    <section class="guide"><article><b>1. 붙여 넣기</b><p>JSON 텍스트를 입력합니다. 빈 입력은 처리하지 않습니다.</p></article><article><b>2. 정렬 또는 압축</b><p>사람이 읽기 좋게 펼치거나 전송용 한 줄로 줄입니다.</p></article><article><b>3. 오류 고치기</b><p>잘못된 JSON이면 가능한 오류 행과 열을 알려드립니다.</p></article></section>
+    <footer><p>JSON정리 · 입력 내용은 서버로 보내지 않습니다</p><a href="https://llsshh.com/">다른 도구 보기 ↗</a></footer>
+  </main>
+  <script src="core.js"></script><script src="app.js"></script>
+</body>
+</html>
