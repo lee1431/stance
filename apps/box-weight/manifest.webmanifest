@@ -1,0 +1,16 @@
+{
+  "id": "/apps/box-weight/",
+  "name": "박스무게 — 부피무게 계산기",
+  "short_name": "박스무게",
+  "description": "박스 크기와 실제 무게를 비교해 부피무게와 적용 무게를 계산합니다.",
+  "lang": "ko-KR",
+  "start_url": "/apps/box-weight/",
+  "scope": "/apps/box-weight/",
+  "display": "standalone",
+  "background_color": "#f2efe7",
+  "theme_color": "#0b3b39",
+  "icons": [
+    {"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}

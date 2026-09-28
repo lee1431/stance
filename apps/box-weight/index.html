@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b3b39">
+  <meta name="description" content="박스 크기와 실제 무게를 비교해 부피무게, 운임 적용 무게와 수량 합계를 계산합니다.">
+  <link rel="canonical" href="https://llsshh.com/apps/box-weight/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="박스무게 — 부피무게 계산기">
+  <meta property="og:description" content="가로·세로·높이와 실제 무게를 입력해 어떤 무게가 운임 기준이 되는지 확인하세요.">
+  <meta property="og:url" content="https://llsshh.com/apps/box-weight/">
+  <meta property="og:image" content="https://llsshh.com/apps/box-weight/thumbnail.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="박스무게 — 부피무게 계산기">
+  <meta name="twitter:description" content="박스 치수와 실측 무게를 비교해 적용 무게를 바로 계산합니다.">
+  <meta name="twitter:image" content="https://llsshh.com/apps/box-weight/thumbnail.svg">
+  <title>박스무게 — 부피무게 계산기</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9382191250873184" crossorigin="anonymous"></script>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <a class="brand" href="https://llsshh.com/" aria-label="llsshh.com 홈"><span aria-hidden="true"><i></i></span><b>박스무게</b></a>
+      <p>DIMENSIONAL WEIGHT</p>
+    </header>
+
+    <section class="hero">
+      <div><p class="eyebrow">크기와 무게, 한 번에 비교</p><h1>이 박스,<br><em>몇 kg로 잡힐까?</em></h1></div>
+      <p>부피무게와 실제 무게 중 더 큰 값을 비교하고<br>수량별 합계까지 한 화면에서 확인하세요.</p>
+    </section>
+
+    <section class="calculator" aria-label="박스 부피무게 계산기">
+      <div class="form-panel">
+        <div class="panel-head"><div><span>01</span><h2>박스 정보</h2></div><div><button id="sample" type="button">예시</button><button id="clear" type="button">비우기</button></div></div>
+
+        <fieldset>
+          <legend>박스 크기 <small>cm</small></legend>
+          <div class="dimensions">
+            <label><span>가로</span><input id="length" type="number" inputmode="decimal" min="0.01" max="10000" step="0.01" placeholder="40"><b>cm</b></label>
+            <i aria-hidden="true">×</i>
+            <label><span>세로</span><input id="width" type="number" inputmode="decimal" min="0.01" max="10000" step="0.01" placeholder="30"><b>cm</b></label>
+            <i aria-hidden="true">×</i>
+            <label><span>높이</span><input id="height" type="number" inputmode="decimal" min="0.01" max="10000" step="0.01" placeholder="20"><b>cm</b></label>
+          </div>
+        </fieldset>
+
+        <div class="form-grid">
+          <label><span>실제 무게 <small>박스 1개</small></span><span class="input-wrap"><input id="actual-weight" type="number" inputmode="decimal" min="0.01" max="100000" step="0.01" placeholder="3"><b>kg</b></span></label>
+          <label><span>박스 수량</span><span class="input-wrap"><input id="quantity" type="number" inputmode="numeric" min="1" max="10000" step="1" value="1"><b>개</b></span></label>
+          <label><span>부피무게 제수</span><select id="divisor"><option value="4000">4,000</option><option value="5000" selected>5,000</option><option value="6000">6,000</option></select></label>
+          <label><span>무게 올림 단위</span><select id="rounding"><option value="0">올림 없음</option><option value="0.1" selected>0.1kg</option><option value="0.5">0.5kg</option><option value="1">1kg</option></select></label>
+        </div>
+
+        <p id="error" class="error" role="alert" aria-live="assertive"></p>
+        <label class="remember"><input id="remember" type="checkbox"> 입력값을 이 기기에 기억하기</label>
+        <p id="storage-status" class="status" aria-live="polite"></p>
+      </div>
+
+      <div class="result-panel">
+        <div class="panel-head inverse"><div><span>02</span><h2>계산 결과</h2></div><button id="copy" type="button" disabled>결과 복사</button></div>
+        <div id="empty" class="empty"><div aria-hidden="true">□</div><strong>치수를 기다리고 있어요</strong><p id="empty-message">가로·세로·높이와 실제 무게를 입력하면 바로 계산합니다.</p></div>
+        <div id="result" hidden>
+          <div class="main-result"><span>운임 비교 적용 무게 · 1개</span><strong id="billable">0</strong><b>kg</b></div>
+          <div class="total-card"><span><small>수량 합계</small><strong><i id="quantity-result">1</i>개 기준</strong></span><b><i id="total-billable">0</i> kg</b></div>
+          <div class="stat-grid">
+            <div><span>부피무게</span><strong id="volume-weight">0</strong><small>kg / 개</small></div>
+            <div><span>실제 무게</span><strong id="actual-result">0</strong><small>kg / 개</small></div>
+            <div><span>전체 부피</span><strong id="volume-liters">0</strong><small>L</small></div>
+          </div>
+          <div class="comparison">
+            <strong id="dominant">무게를 비교합니다</strong>
+            <p id="explanation"></p>
+            <div class="compare-row"><span>실제</span><div><i id="actual-bar"></i></div><b id="actual-bar-value">0kg</b></div>
+            <div class="compare-row volume"><span>부피</span><div><i id="volume-bar"></i></div><b id="volume-bar-value">0kg</b></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="guide">
+      <article><b>계산식</b><p>가로 × 세로 × 높이 ÷ 선택한 제수로 부피무게를 계산합니다.</p></article>
+      <article><b>비교 방식</b><p>실제 무게와 부피무게 중 큰 값을 선택한 뒤 올림 단위를 적용합니다.</p></article>
+      <article><b>확인 사항</b><p>제수와 최종 청구 방식은 운송사·서비스마다 다르므로 발송 전에 확인하세요.</p></article>
+    </section>
+    <footer><p>박스무게 · 계산은 이 기기 안에서</p><a href="https://llsshh.com/">다른 도구 보기 ↗</a></footer>
+  </main>
+  <script src="core.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

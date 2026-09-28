@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <rect width="1200" height="675" fill="#f2efe7"/>
+  <circle cx="1080" cy="25" r="245" fill="#bcece4"/>
+  <circle cx="90" cy="650" r="180" fill="#d9f873" opacity=".55"/>
+  <rect x="70" y="65" width="1060" height="545" rx="44" fill="#0b3b39"/>
+  <g transform="translate(120 136)">
+    <path d="m0 74 118-60 118 60v138l-118 62L0 212Z" fill="#d9f873" stroke="#122727" stroke-width="14" stroke-linejoin="round"/>
+    <path d="m0 74 118 63 118-63M118 137v137M68 39l119 64" fill="none" stroke="#122727" stroke-width="14" stroke-linejoin="round"/>
+    <rect x="38" y="149" width="66" height="45" rx="8" fill="#ff765b" stroke="#122727" stroke-width="9"/>
+    <text x="118" y="335" text-anchor="middle" fill="#b7cbc8" font-family="Arial, sans-serif" font-size="25" font-weight="700">40 × 30 × 20 cm</text>
+  </g>
+  <g font-family="Arial, 'Noto Sans KR', sans-serif">
+    <text x="430" y="205" fill="#d9f873" font-size="35" font-weight="800" letter-spacing="5">DIMENSIONAL WEIGHT</text>
+    <text x="430" y="320" fill="#fff" font-size="96" font-weight="900" letter-spacing="-7">박스무게</text>
+    <text x="430" y="395" fill="#b7cbc8" font-size="31" font-weight="600">실제 무게와 부피무게를 한 번에 비교</text>
+    <rect x="430" y="445" width="500" height="74" rx="18" fill="#d9f873"/>
+    <text x="460" y="496" fill="#122727" font-size="33" font-weight="900">3kg  vs  4.8kg  →  4.8kg</text>
+  </g>
+</svg>
