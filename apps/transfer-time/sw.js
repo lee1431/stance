@@ -1,5 +1,5 @@
 'use strict';
-const CACHE='stance-transfer-time-v1';
+const CACHE='stance-transfer-time-v2';
 const ASSETS=['./','./index.html','./style.css','./core.js','./app.js','./manifest.webmanifest','./icon-192.png','./icon-512.png','./thumbnail.svg'];
 const allowed=new Set(ASSETS.map(path=>new URL(path,self.registration.scope).href));
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
