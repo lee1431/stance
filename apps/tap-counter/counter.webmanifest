@@ -1,1 +1,0 @@
-{"name":"탭 카운터","short_name":"카운터","start_url":"./pwa.html","scope":"./","display":"standalone","background_color":"#f4f1e8","theme_color":"#f4f1e8","description":"물건과 반복 작업을 빠르게 세는 탭 카운터","icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
