@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#17202b">
+  <meta name="description" content="붙여 넣은 글의 글자·단어·줄·문단·UTF-8 바이트와 목표 글자 수 진행률을 즉시 계산합니다.">
+  <link rel="canonical" href="https://llsshh.com/apps/text-stats/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="글자몇개 — 실시간 글자수 세기">
+  <meta property="og:description" content="글을 붙여 넣고 글자·단어·줄·문단·바이트를 한눈에 확인하세요.">
+  <meta property="og:url" content="https://llsshh.com/apps/text-stats/">
+  <meta property="og:image" content="https://llsshh.com/apps/text-stats/thumbnail.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="글자몇개 — 실시간 글자수 세기">
+  <meta name="twitter:description" content="자기소개서부터 게시물까지, 목표 분량과 글 통계를 바로 확인합니다.">
+  <meta name="twitter:image" content="https://llsshh.com/apps/text-stats/thumbnail.svg">
+  <title>글자몇개 — 실시간 글자수 세기</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9382191250873184" crossorigin="anonymous"></script>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <a class="brand" href="https://llsshh.com/" aria-label="llsshh.com 홈"><span aria-hidden="true">가<span>42</span></span><b>글자몇개</b></a>
+      <p>TEXT STATS, INSTANTLY</p>
+    </header>
+
+    <section class="hero">
+      <div><p class="eyebrow">글의 분량을 숫자로</p><h1>쓰는 동안,<br><em>바로 셉니다.</em></h1></div>
+      <p>자기소개서, 원고, 게시물의 분량을<br>서버 전송 없이 이 기기에서 확인하세요.</p>
+    </section>
+
+    <section class="workspace" aria-label="글자수 계산기">
+      <div class="editor">
+        <div class="panel-head"><div><span>01</span><h2>텍스트 입력</h2></div><div><button id="sample" type="button">예시</button><button id="clear" type="button">비우기</button></div></div>
+        <textarea id="text" maxlength="500000" spellcheck="true" placeholder="여기에 글을 직접 쓰거나 붙여 넣으세요." aria-describedby="input-help"></textarea>
+        <div class="under-editor"><p id="input-help">최대 500,000자 · 입력 내용은 외부로 전송되지 않습니다.</p><span id="live-count">0자</span></div>
+        <div class="target-row">
+          <label for="target">목표 글자 수 <small>선택 사항</small></label>
+          <span><input id="target" type="number" inputmode="numeric" min="1" max="1000000" step="1" placeholder="예: 1000"><b>자</b></span>
+        </div>
+        <p id="error" class="error" role="alert" aria-live="assertive"></p>
+        <label class="remember"><input id="remember" type="checkbox"> 입력과 목표를 이 기기에 기억하기</label>
+        <p id="storage-status" class="status" aria-live="polite"></p>
+      </div>
+
+      <div class="stats-panel">
+        <div class="panel-head inverse"><div><span>02</span><h2>글 통계</h2></div><button id="copy" type="button" disabled>통계 복사</button></div>
+        <div id="empty" class="empty"><div aria-hidden="true">Aa</div><strong>글을 기다리고 있어요</strong><p>한 글자만 입력해도 바로 계산합니다.</p></div>
+        <div id="results" hidden>
+          <div class="main-stat"><span>전체 글자</span><strong id="characters">0</strong><b>자</b></div>
+          <div class="grid-stats">
+            <div><span>공백 제외</span><strong id="no-space">0</strong><small>자</small></div>
+            <div><span>단어</span><strong id="words">0</strong><small>개</small></div>
+            <div><span>줄</span><strong id="lines">0</strong><small>줄</small></div>
+            <div><span>문단</span><strong id="paragraphs">0</strong><small>개</small></div>
+            <div><span>UTF-8</span><strong id="bytes">0</strong><small>byte</small></div>
+            <div><span>예상 읽기</span><strong id="reading">0초</strong><small>한글 300자/분</small></div>
+          </div>
+          <div id="goal" class="goal" hidden><div><span>목표 진행률</span><strong id="goal-percent">0%</strong></div><div class="bar"><i id="goal-bar"></i></div><p id="goal-message"></p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="guide"><article><b>공백 제외</b><p>띄어쓰기·줄바꿈·탭을 모두 빼고 셉니다.</p></article><article><b>단어 수</b><p>공백으로 나뉜 덩어리를 한 단어로 계산합니다.</p></article><article><b>예상 읽기</b><p>공백 제외 한글 300자/분 기준의 참고값입니다.</p></article></section>
+    <footer><p>글자몇개 · 내 글은 내 기기 안에서</p><a href="https://llsshh.com/">다른 도구 보기 ↗</a></footer>
+  </main>
+  <script src="core.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

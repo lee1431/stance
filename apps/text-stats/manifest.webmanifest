@@ -1,0 +1,16 @@
+{
+  "id": "/apps/text-stats/",
+  "name": "글자몇개 — 실시간 글자수 세기",
+  "short_name": "글자몇개",
+  "description": "글자·단어·줄·문단·UTF-8 바이트와 목표 진행률을 계산합니다.",
+  "lang": "ko-KR",
+  "start_url": "/apps/text-stats/",
+  "scope": "/apps/text-stats/",
+  "display": "standalone",
+  "background_color": "#f4f0e7",
+  "theme_color": "#17202b",
+  "icons": [
+    {"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}
