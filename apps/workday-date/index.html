@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#33236d">
+  <meta name="description" content="기준일에서 주말과 직접 지정한 휴일을 제외하고 N영업일 전·후 날짜를 계산합니다.">
+  <link rel="canonical" href="https://llsshh.com/apps/workday-date/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="영업일끝 — 영업일 날짜 계산기">
+  <meta property="og:description" content="주말과 지정 휴일을 빼고 납기일·정산일을 계산하세요.">
+  <meta property="og:url" content="https://llsshh.com/apps/workday-date/">
+  <meta property="og:image" content="https://llsshh.com/apps/workday-date/thumbnail.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="영업일끝 — 영업일 날짜 계산기">
+  <meta name="twitter:description" content="N영업일 전·후 날짜를 빠르게 계산합니다.">
+  <meta name="twitter:image" content="https://llsshh.com/apps/workday-date/thumbnail.svg">
+  <title>영업일끝 — 영업일 날짜 계산기</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9382191250873184" crossorigin="anonymous"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div class="title-block">
+        <span class="logo" aria-hidden="true"><b>월</b><i></i></span>
+        <div><p class="eyebrow">BUSINESS DAY FINDER</p><h1>영업일끝</h1></div>
+      </div>
+      <p class="lead">주말과 쉬는 날은 건너뛰고,<br><strong>실제로 일하는 날짜</strong>만 셉니다.</p>
+    </header>
+
+    <section class="tool" aria-labelledby="form-title">
+      <div class="form-side">
+        <div class="section-title"><span>01</span><div><p>계산 조건</p><h2 id="form-title">언제부터 며칠을 셀까요?</h2></div><button id="sample" type="button">예시</button></div>
+        <form id="workday-form" novalidate>
+          <label class="field"><span>기준일</span><input id="start" type="date" min="1900-01-01" max="2200-12-31"></label>
+          <div class="field"><span>계산 방향</span><div class="segmented" role="group" aria-label="계산 방향"><label><input type="radio" name="direction" value="after" checked><b>이후 날짜</b></label><label><input type="radio" name="direction" value="before"><b>이전 날짜</b></label></div></div>
+          <label class="field"><span>영업일 수</span><span class="number-wrap"><input id="days" type="number" inputmode="numeric" min="0" max="5000" step="1" placeholder="예: 5"><b>일</b></span><small>0일은 기준일 그대로 표시합니다.</small></label>
+
+          <div class="holiday-field">
+            <div><span>추가로 제외할 휴일</span><small>공휴일·회사 휴무일을 직접 넣으세요.</small></div>
+            <div class="holiday-add"><input id="holiday" type="date" min="1900-01-01" max="2200-12-31" aria-label="제외할 휴일"><button id="add-holiday" type="button">추가</button></div>
+            <div id="holiday-list" class="holiday-list" aria-live="polite"><p>지정한 휴일이 없습니다.</p></div>
+          </div>
+
+          <label class="check"><input id="include-start" type="checkbox"><span><strong>기준일도 1일로 포함</strong><small>기준일이 평일이고 지정 휴일이 아닐 때만 셉니다.</small></span></label>
+          <p id="error" class="error" role="alert" aria-live="assertive"></p>
+          <div class="actions"><button class="primary" type="submit">목표 날짜 찾기</button><button id="clear" class="secondary" type="button">초기화</button></div>
+          <label class="remember"><input id="remember" type="checkbox"> 이 기기에 조건 기억하기</label>
+          <p id="storage-status" class="status" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div class="result-side" id="result-panel">
+        <div class="section-title light"><span>02</span><div><p>계산 결과</p><h2>목표 날짜</h2></div></div>
+        <div id="empty" class="empty"><div class="empty-calendar" aria-hidden="true"><span>?</span></div><strong>아직 날짜를 세지 않았어요</strong><p>기준일과 영업일 수를 입력해 주세요.</p></div>
+        <div id="result" hidden>
+          <p id="direction-label" class="direction-label"></p>
+          <strong id="target-date" class="target-date"></strong>
+          <p id="target-weekday" class="target-weekday"></p>
+          <dl class="summary"><div><dt>센 영업일</dt><dd id="counted-days"></dd></div><div><dt>건너뛴 주말</dt><dd id="weekends"></dd></div><div><dt>건너뛴 휴일</dt><dd id="holidays"></dd></div><div><dt>달력상 이동</dt><dd id="calendar-days"></dd></div></dl>
+          <p id="range-note" class="range-note"></p>
+          <button id="copy" class="copy" type="button">결과 복사</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="guide"><h2>사용 전에 확인하세요</h2><div><article><span>1</span><p><strong>토·일요일</strong>은 자동으로 제외합니다.</p></article><article><span>2</span><p><strong>법정 공휴일은 자동 수집하지 않습니다.</strong> 지역과 회사마다 달라 직접 추가해야 정확합니다.</p></article><article><span>3</span><p>시작일 포함 여부에 따라 결과가 <strong>하루 이상 달라질 수 있습니다.</strong></p></article></div></section>
+    <footer><p>계산은 이 기기 안에서만 처리됩니다.</p><a href="https://llsshh.com/">다른 도구 보기 ↗</a></footer>
+  </main>
+  <script src="core.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "id": "/apps/workday-date/",
+  "name": "영업일끝 — 영업일 날짜 계산기",
+  "short_name": "영업일끝",
+  "description": "주말과 지정 휴일을 제외한 N영업일 전·후 날짜를 계산합니다.",
+  "lang": "ko-KR",
+  "start_url": "/apps/workday-date/",
+  "scope": "/apps/workday-date/",
+  "display": "standalone",
+  "background_color": "#faf8f1",
+  "theme_color": "#33236d",
+  "icons": [
+    {"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}
