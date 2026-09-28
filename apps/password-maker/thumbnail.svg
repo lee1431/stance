@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <rect width="1200" height="675" fill="#f1eee6"/><circle cx="1070" cy="30" r="250" fill="#dcd6ff"/><circle cx="75" cy="670" r="195" fill="#f5df69" opacity=".58"/>
+  <rect x="70" y="65" width="1060" height="545" rx="44" fill="#17152b"/>
+  <g transform="translate(125 134)"><circle cx="132" cy="132" r="116" fill="#8471ff" stroke="#0d0c18" stroke-width="14"/><path d="M82 128V97c0-34 20-59 50-59s50 25 50 59v31" fill="none" stroke="#f5df69" stroke-width="21" stroke-linecap="round"/><rect x="51" y="116" width="162" height="124" rx="28" fill="#8cead7" stroke="#0d0c18" stroke-width="14"/><circle cx="132" cy="168" r="17" fill="#17152b"/><path d="M132 184v26" stroke="#17152b" stroke-width="14" stroke-linecap="round"/></g>
+  <g font-family="Arial, 'Noto Sans KR', sans-serif"><text x="440" y="200" fill="#8cead7" font-size="34" font-weight="800" letter-spacing="5">LOCAL PASSWORD MAKER</text><text x="440" y="318" fill="#fff" font-size="96" font-weight="900" letter-spacing="-7">암호뚝딱</text><text x="440" y="390" fill="#b9b4ce" font-size="31" font-weight="600">저장·전송 없이 이 기기에서 생성</text><rect x="440" y="443" width="505" height="78" rx="18" fill="#f5df69"/><text x="472" y="496" fill="#17152b" font-size="34" font-family="monospace" font-weight="900">rX8! mQ2# vL7@ kP5?</text></g>
+</svg>

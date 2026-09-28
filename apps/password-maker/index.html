@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#17152b">
+  <meta name="description" content="서버 전송 없이 브라우저에서 안전한 난수로 비밀번호를 생성하고 강도 참고값을 확인합니다.">
+  <link rel="canonical" href="https://llsshh.com/apps/password-maker/">
+  <meta property="og:type" content="website"><meta property="og:title" content="암호뚝딱 — 오프라인 비밀번호 생성기"><meta property="og:description" content="길이와 문자 종류를 고르고 이 기기에서 바로 안전한 임의 암호를 만드세요."><meta property="og:url" content="https://llsshh.com/apps/password-maker/"><meta property="og:image" content="https://llsshh.com/apps/password-maker/thumbnail.svg">
+  <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="암호뚝딱 — 오프라인 비밀번호 생성기"><meta name="twitter:description" content="생성된 암호를 저장하거나 서버로 전송하지 않는 비밀번호 생성기"><meta name="twitter:image" content="https://llsshh.com/apps/password-maker/thumbnail.svg">
+  <title>암호뚝딱 — 오프라인 비밀번호 생성기</title>
+  <link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="stylesheet" href="style.css">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9382191250873184" crossorigin="anonymous"></script>
+</head>
+<body>
+  <main class="shell">
+    <header><a class="brand" href="https://llsshh.com/" aria-label="llsshh.com 홈"><span aria-hidden="true">*</span><b>암호뚝딱</b></a><p>LOCAL PASSWORD MAKER</p></header>
+    <section class="hero"><div><p class="eyebrow">기억하지 말고, 새로 만들기</p><h1>강한 암호를<br><em>이 기기에서.</em></h1></div><p>입력도 전송도 없이 브라우저가 직접 생성합니다.<br>설정을 저장해도 만들어진 암호는 남기지 않습니다.</p></section>
+
+    <section class="workspace" aria-label="비밀번호 생성기">
+      <div class="settings-panel">
+        <div class="panel-head"><div><span>01</span><h2>생성 설정</h2></div><div><button id="recommended" type="button">권장 설정</button><button id="clear-types" type="button">모두 해제</button></div></div>
+        <label class="length-row" for="length"><span><b>암호 길이</b><small>8~128자</small></span><strong id="length-value">20자</strong></label>
+        <input id="length" type="range" min="8" max="128" step="1" value="20">
+        <fieldset><legend>포함할 문자</legend><div class="types">
+          <label><input id="lower" type="checkbox" checked><span><b>소문자</b><small>abc</small></span></label>
+          <label><input id="upper" type="checkbox" checked><span><b>대문자</b><small>ABC</small></span></label>
+          <label><input id="numbers" type="checkbox" checked><span><b>숫자</b><small>123</small></span></label>
+          <label><input id="symbols" type="checkbox" checked><span><b>기호</b><small>!@#</small></span></label>
+        </div></fieldset>
+        <label class="toggle"><input id="exclude-ambiguous" type="checkbox" checked><span><b>헷갈리는 문자 제외</b><small>0, O, 1, I, l, | 제외</small></span></label>
+        <p id="error" class="error" role="alert" aria-live="assertive"></p>
+        <button id="generate" class="generate" type="button"><span>새 암호 만들기</span><b aria-hidden="true">↻</b></button>
+        <label class="remember"><input id="remember" type="checkbox"> 이 설정을 기기에 기억하기</label><p id="storage-status" class="status" aria-live="polite"></p>
+      </div>
+
+      <div class="result-panel">
+        <div class="panel-head inverse"><div><span>02</span><h2>생성 결과</h2></div><button id="copy" type="button" disabled>암호 복사</button></div>
+        <div id="empty" class="empty" hidden><div aria-hidden="true">••••</div><strong>설정을 기다리고 있어요</strong><p id="empty-message">문자 종류를 선택하면 새 암호를 만들 수 있습니다.</p></div>
+        <div id="result">
+          <div class="password-box"><span>GENERATED LOCALLY</span><code id="password"></code></div>
+          <div class="meter"><div><span>조합 강도 참고값</span><strong id="strength">-</strong></div><div class="bar"><i id="meter-bar"></i></div><p>문자 종류와 길이로 계산한 이론적 상한입니다.</p></div>
+          <div class="stats"><div><span>추정 엔트로피</span><strong id="entropy">0 bit</strong></div><div><span>문자 풀</span><strong id="pool-size">0자</strong></div><div><span>길이</span><strong id="result-length">0자</strong></div></div>
+          <div class="privacy"><b>암호는 저장하지 않습니다</b><p>복사한 뒤 필요한 곳에 바로 사용하세요. 사이트마다 다른 암호와 2단계 인증을 권장합니다.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="guide"><article><b>안전한 난수</b><p>브라우저의 <code>crypto.getRandomValues</code>로 문자를 고릅니다.</p></article><article><b>종류 보장</b><p>선택한 소문자·대문자·숫자·기호가 각각 최소 한 번 포함됩니다.</p></article><article><b>로컬 처리</b><p>암호 생성과 강도 계산은 네트워크 전송 없이 이 기기에서 끝납니다.</p></article></section>
+    <footer><p>암호뚝딱 · 암호는 서버로 보내지 않습니다</p><a href="https://llsshh.com/">다른 도구 보기 ↗</a></footer>
+  </main>
+  <script src="core.js"></script><script src="app.js"></script>
+</body>
+</html>
