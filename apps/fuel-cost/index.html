@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#173d35">
+  <meta name="description" content="거리, 차량 연비, 유가를 입력해 편도·왕복 예상 주유비와 필요한 연료를 계산하는 무료 도구입니다.">
+  <link rel="canonical" href="https://llsshh.com/apps/fuel-cost/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="주유얼마 — 이동 주유비 계산기">
+  <meta property="og:description" content="거리·연비·유가만으로 필요한 연료와 예상 주유비를 바로 계산하세요.">
+  <meta property="og:url" content="https://llsshh.com/apps/fuel-cost/">
+  <meta property="og:image" content="https://llsshh.com/apps/fuel-cost/thumbnail.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="주유얼마 — 이동 주유비 계산기">
+  <meta name="twitter:description" content="편도와 왕복 예상 주유비를 빠르게 계산합니다.">
+  <meta name="twitter:image" content="https://llsshh.com/apps/fuel-cost/thumbnail.svg">
+  <title>주유얼마 — 이동 주유비 계산기</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9382191250873184" crossorigin="anonymous"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div class="brand" aria-hidden="true">
+        <svg viewBox="0 0 64 64"><path d="M16 8h26v48H16z"/><path d="M22 14h14v13H22z"/><path d="M42 18h6l5 7v22a5 5 0 0 1-10 0V33"/><circle cx="29" cy="43" r="5"/></svg>
+      </div>
+      <div>
+        <p class="eyebrow">TRIP FUEL ESTIMATOR</p>
+        <h1>주유얼마</h1>
+        <p class="lead">가려는 거리의 기름값, 출발 전에 가늠하세요.</p>
+      </div>
+    </header>
+
+    <section class="calculator" aria-labelledby="form-title">
+      <div class="section-heading">
+        <div>
+          <p class="step">01 · 운행 조건</p>
+          <h2 id="form-title">세 가지 숫자만 입력하세요</h2>
+        </div>
+        <button type="button" class="text-button" id="example">예시 채우기</button>
+      </div>
+
+      <form id="fuel-form" novalidate>
+        <div class="fields">
+          <label>
+            <span>편도 거리</span>
+            <span class="input-wrap"><input id="distance" name="distance" type="number" inputmode="decimal" min="0.1" max="100000" step="0.1" placeholder="예: 250" aria-describedby="distance-help"><b>km</b></span>
+            <small id="distance-help">지도에 표시된 실제 이동 거리</small>
+          </label>
+          <label>
+            <span>차량 평균 연비</span>
+            <span class="input-wrap"><input id="efficiency" name="efficiency" type="number" inputmode="decimal" min="0.1" max="100" step="0.1" placeholder="예: 12.5"><b>km/L</b></span>
+            <small>차량 계기판 또는 공인 복합 연비</small>
+          </label>
+          <label>
+            <span>연료 가격</span>
+            <span class="input-wrap"><input id="price" name="price" type="number" inputmode="numeric" min="1" max="100000" step="1" placeholder="예: 1700"><b>원/L</b></span>
+            <small>이용할 주유소의 리터당 가격</small>
+          </label>
+        </div>
+
+        <div class="quick" aria-label="거리 빠른 선택">
+          <span>빠른 거리</span>
+          <button type="button" data-distance="50">50 km</button>
+          <button type="button" data-distance="100">100 km</button>
+          <button type="button" data-distance="300">300 km</button>
+        </div>
+
+        <label class="toggle-row">
+          <span><strong>왕복으로 계산</strong><small>입력한 편도 거리를 두 배로 계산합니다.</small></span>
+          <input id="round-trip" name="roundTrip" type="checkbox" role="switch">
+        </label>
+
+        <p class="error" id="error" role="alert" aria-live="assertive"></p>
+        <div class="actions">
+          <button class="primary" type="submit">주유비 계산하기</button>
+          <button class="secondary" type="button" id="clear">초기화</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="result" id="result" aria-labelledby="result-title">
+      <div class="section-heading">
+        <div>
+          <p class="step">02 · 예상 결과</p>
+          <h2 id="result-title">계산 결과</h2>
+        </div>
+        <span class="trip-badge" id="trip-badge">편도</span>
+      </div>
+      <div class="empty" id="empty">
+        <span aria-hidden="true">↗</span>
+        <p>운행 조건을 입력하면<br>필요한 연료와 비용을 보여드려요.</p>
+      </div>
+      <div class="result-content" id="result-content" hidden>
+        <div class="total">
+          <span>예상 주유비</span>
+          <strong id="total-cost">0원</strong>
+        </div>
+        <dl class="metrics">
+          <div><dt>총 운행 거리</dt><dd id="total-distance">0 km</dd></div>
+          <div><dt>필요한 연료</dt><dd id="liters">0 L</dd></div>
+          <div><dt>1 km당 비용</dt><dd id="cost-km">0원</dd></div>
+        </dl>
+        <button type="button" class="copy" id="copy">결과 복사</button>
+      </div>
+    </section>
+
+    <section class="settings" aria-label="설정 및 안내">
+      <label class="remember"><input id="remember" type="checkbox"> <span><strong>입력값 기억하기</strong><small>이 기기에만 저장됩니다.</small></span></label>
+      <p id="storage-status" class="status" aria-live="polite"></p>
+      <details>
+        <summary>어떻게 계산하나요?</summary>
+        <p>필요 연료는 총 거리 ÷ 연비, 예상 비용은 필요 연료 × 리터당 가격으로 계산합니다. 교통 정체, 공회전, 적재량, 날씨에 따라 실제 비용은 달라질 수 있습니다.</p>
+      </details>
+    </section>
+
+    <footer>
+      <p>모든 계산은 이 기기에서 처리되며 서버로 전송되지 않습니다.</p>
+      <a href="https://llsshh.com/">다른 도구 보기</a>
+    </footer>
+  </main>
+  <script src="core.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
