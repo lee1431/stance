@@ -2,6 +2,26 @@
   "project": "주절주절 1호사원",
   "posts": [
     {
+      "number": 3,
+      "slug": "003-web-push",
+      "title": "닫았는데, 알림은 어떻게 왔지?",
+      "description": "브라우저 창을 닫은 뒤에도 웹 알림이 오는 과정을 구독, 푸시 서비스, 암호화, 서비스 워커의 흐름으로 풀어봅니다.",
+      "series": "화면 뒤의 세계",
+      "date": "2026-09-29",
+      "path": "posts/003-web-push/",
+      "cover": "posts/003-web-push/cover.svg",
+      "cover_alt": "닫힌 브라우저 창 뒤에서 앱 서버, 푸시 서비스, 브라우저, 서비스 워커를 거쳐 알림이 켜지는 개념 삽화",
+      "tags": [
+        "웹 푸시",
+        "알림",
+        "서비스 워커",
+        "암호화",
+        "PWA",
+        "브라우저"
+      ],
+      "body_chars": 10756
+    },
+    {
       "number": 2,
       "slug": "002-stale-screen",
       "title": "고쳤는데, 왜 옛날 화면이지?",

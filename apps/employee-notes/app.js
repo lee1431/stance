@@ -98,7 +98,22 @@ function cacheLab(){
  http.onchange=()=>show('아직 요청 안 함','HTTP 캐시 조건을 바꿨습니다. 페이지 요청으로 선택 결과를 확인하세요.');
  worker.onchange=()=>show('아직 요청 안 함','서비스 워커 전략을 바꿨습니다. 페이지 요청으로 선택 결과를 확인하세요.');
 }
-catalog();reader();lab();cacheLab();
+function pushLab(){
+ if(!$('#push-lab'))return;
+ const device=$('#push-device'),ttl=$('#push-ttl'),permission=$('#push-permission');
+ const show=(stage,result,message)=>{$('#push-stage').textContent=stage;$('#push-result').textContent=result;$('#push-log').textContent=message;};
+ const reset=()=>show('아직 보내지 않음','—','세 조건을 고른 뒤 푸시 보내기를 눌러 보세요.');
+ $('#push-send').onclick=()=>{
+  const delay=device.value==='online'?0:device.value==='offline-short'?1200:10800;
+  const lifetime=Number(ttl.value);
+  if(delay>lifetime){show('푸시 서비스에서 만료','표시되지 않음','기기가 다시 연결되기 전에 TTL이 끝났습니다. 만료된 메시지는 전달하지 않습니다.');return;}
+  if(permission.value==='denied'){show('브라우저까지 전달','표시 거부','메시지는 도달할 수 있어도 회수된 권한으로 시스템 알림을 표시할 수 없습니다.');return;}
+  show('서비스 워커 처리','알림 표시','TTL 안에 기기가 연결됐고 권한도 허용되어 서비스 워커가 알림을 표시했습니다. 클릭이나 읽음까지 뜻하지는 않습니다.');
+ };
+ $('#push-reset').onclick=()=>{device.value='online';ttl.value='3600';permission.value='granted';reset();};
+ for(const el of [device,ttl,permission])el.onchange=reset;
+}
+catalog();reader();lab();cacheLab();pushLab();
 if('serviceWorker'in navigator&&['https:','http:'].includes(location.protocol)){
  addEventListener('load',()=>navigator.serviceWorker.register(new URL('sw.js',base),{scope:base.pathname}).then(()=>navigator.serviceWorker.ready).then(r=>{if(r.active)r.active.postMessage({type:'CACHE_PAGE',url:location.href});}).catch(e=>console.warn('Offline unavailable',e)));
 }

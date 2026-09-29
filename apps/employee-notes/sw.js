@@ -1,5 +1,5 @@
-const PREFIX='employee-notes-',CACHE=PREFIX+'v2',ROOT=new URL('./',self.location.href);
-const CORE=['./','index.html','style.css','app.js','posts.json','cover.svg','posts/002-stale-screen/','posts/002-stale-screen/cover.svg','thumbnail.svg','icon.svg','icon-192.png','icon-512.png','manifest.webmanifest'];
+const PREFIX='employee-notes-',CACHE=PREFIX+'v3',ROOT=new URL('./',self.location.href);
+const CORE=['./','index.html','style.css','app.js','posts.json','cover.svg','posts/002-stale-screen/','posts/002-stale-screen/cover.svg','posts/003-web-push/','posts/003-web-push/cover.svg','thumbnail.svg','icon.svg','icon-192.png','icon-512.png','manifest.webmanifest'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE.map(p=>new URL(p,ROOT).href)))));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith(PREFIX)&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{

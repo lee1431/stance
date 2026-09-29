@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="780" viewBox="0 0 1200 780" role="img" aria-labelledby="title desc">
+  <title id="title">닫힌 창 뒤로 도착한 웹 푸시 알림</title>
+  <desc id="desc">앱 서버가 암호화한 메시지가 푸시 서비스와 브라우저를 지나 잠든 서비스 워커를 깨우고 알림 불빛을 켜는 개념 삽화</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#11262d"/><stop offset="1" stop-color="#23464c"/></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="14"/></filter>
+  </defs>
+  <rect width="1200" height="780" fill="url(#bg)"/>
+  <g fill="none" stroke="#54747a" stroke-width="2" opacity=".38"><path d="M0 130h1200M0 260h1200M0 390h1200M0 520h1200M0 650h1200M150 0v780M300 0v780M450 0v780M600 0v780M750 0v780M900 0v780M1050 0v780"/></g>
+  <text x="70" y="84" fill="#a9c0bf" font-family="ui-monospace,monospace" font-size="22" letter-spacing="5">ISSUE 03 · WEB PUSH</text>
+  <g transform="translate(75 175)">
+    <rect width="245" height="355" rx="22" fill="#f5f2eb"/>
+    <rect x="22" y="27" width="201" height="36" rx="8" fill="#d6dcd6"/>
+    <circle cx="45" cy="45" r="7" fill="#c74d2d"/><path d="M70 45h122" stroke="#607075" stroke-width="7" stroke-linecap="round"/>
+    <rect x="22" y="88" width="201" height="218" rx="10" fill="#172c32"/>
+    <path d="M75 145l95 103M170 145L75 248" stroke="#607075" stroke-width="7" stroke-linecap="round"/>
+    <text x="122.5" y="335" text-anchor="middle" fill="#172c32" font-family="sans-serif" font-weight="700" font-size="20">CLOSED TAB</text>
+  </g>
+  <g transform="translate(416 226)">
+    <path d="M0 0h215l55 48v170H0z" fill="#dce9e4" stroke="#8caaa6" stroke-width="3"/>
+    <path d="M215 0v48h55" fill="#b9d0ca"/>
+    <rect x="42" y="55" width="182" height="92" rx="12" fill="#172c32"/>
+    <path d="M62 78l72 48 71-48" fill="none" stroke="#e8b55b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="135" y="184" text-anchor="middle" fill="#172c32" font-family="ui-monospace,monospace" font-size="18">ENCRYPTED</text>
+  </g>
+  <g opacity=".9" stroke="#e8b55b" stroke-width="5" stroke-linecap="round" fill="none"><path d="M330 350h68"/><path d="M698 350h70"/><path d="M382 336l16 14-16 14M752 336l16 14-16 14"/></g>
+  <g transform="translate(790 142)">
+    <rect width="330" height="485" rx="44" fill="#0b171b" stroke="#789894" stroke-width="5"/>
+    <rect x="22" y="54" width="286" height="377" rx="20" fill="#ede9df"/>
+    <rect x="107" y="20" width="116" height="12" rx="6" fill="#607075"/>
+    <circle cx="165" cy="692" r="78" fill="#e8b55b" opacity=".22" filter="url(#glow)" transform="translate(0 -260)"/>
+    <g transform="translate(49 115)">
+      <rect width="232" height="150" rx="22" fill="#fffdf8" stroke="#c9d1cb" stroke-width="3"/>
+      <circle cx="43" cy="44" r="23" fill="#c74d2d"/>
+      <path d="M36 45l6 7 11-17" fill="none" stroke="#fffdf8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="79" y="42" fill="#172c32" font-family="sans-serif" font-size="19" font-weight="800">책소식</text>
+      <text x="79" y="68" fill="#607075" font-family="sans-serif" font-size="14">예약 도서가 도착했어요</text>
+      <path d="M28 100h176M28 122h112" stroke="#d6dcd6" stroke-width="8" stroke-linecap="round"/>
+    </g>
+    <g transform="translate(118 315)" fill="none" stroke="#e8b55b" stroke-width="7" stroke-linecap="round"><path d="M0 48c0-43 21-72 47-72s47 29 47 72"/><path d="M-10 48h114"/><path d="M34 68h26"/></g>
+  </g>
+  <g transform="translate(420 555)">
+    <rect width="278" height="90" rx="45" fill="#c74d2d"/>
+    <circle cx="50" cy="45" r="23" fill="#fffdf8"/>
+    <path d="M41 45l7 8 13-19" fill="none" stroke="#c74d2d" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="88" y="54" fill="#fffdf8" font-family="sans-serif" font-size="22" font-weight="800">WORKER AWAKE</text>
+  </g>
+  <text x="70" y="708" fill="#f5f2eb" font-family="sans-serif" font-size="44" font-weight="800" letter-spacing="-2">닫힌 것은 창, 남아 있는 것은 구독.</text>
+  <text x="70" y="748" fill="#a9c0bf" font-family="sans-serif" font-size="19">APP SERVER → PUSH SERVICE → BROWSER → SERVICE WORKER → NOTIFICATION</text>
+</svg>
