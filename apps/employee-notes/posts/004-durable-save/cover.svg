@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="780" viewBox="0 0 1200 780" role="img" aria-labelledby="title desc">
+  <title id="title">저장했는데, 어디까지 저장된 걸까?</title>
+  <desc id="desc">문서 한 장이 앱의 메모리, 운영체제 캐시, 파일시스템 저널, 저장장치로 내려가고 번개 모양의 전원 차단이 그 사이를 가르는 개념 삽화</desc>
+  <rect width="1200" height="780" fill="#172c32"/>
+  <g fill="none" stroke="#d9e4df" stroke-width="3">
+    <rect x="100" y="105" width="270" height="210" rx="16"/>
+    <rect x="465" y="105" width="270" height="210" rx="16"/>
+    <rect x="830" y="105" width="270" height="210" rx="16"/>
+    <path d="M370 210h95m270 0h95" stroke-dasharray="10 12"/>
+    <path d="M612 315v90" stroke="#c74d2d"/>
+    <rect x="325" y="465" width="550" height="195" rx="22"/>
+  </g>
+  <g font-family="system-ui,sans-serif" fill="#f5f2eb">
+    <text x="125" y="150" font-size="18" letter-spacing="3">APP MEMORY</text>
+    <text x="125" y="225" font-size="52" font-weight="800">편집 중</text>
+    <text x="490" y="150" font-size="18" letter-spacing="3">PAGE CACHE</text>
+    <text x="490" y="225" font-size="52" font-weight="800">쓰기 완료?</text>
+    <text x="855" y="150" font-size="18" letter-spacing="3">STORAGE</text>
+    <text x="855" y="225" font-size="52" font-weight="800">지속됨</text>
+    <text x="375" y="525" font-size="20" letter-spacing="4" fill="#d8aaa0">ISSUE 04 / DURABILITY</text>
+    <text x="375" y="590" font-size="48" font-weight="850">저장은 한 점이 아니라</text>
+    <text x="375" y="635" font-size="48" font-weight="850">여러 경계의 약속이다.</text>
+  </g>
+  <path d="M632 336l-51 91h45l-24 77 77-112h-48z" fill="#c74d2d"/>
+  <g fill="#c74d2d"><circle cx="370" cy="210" r="8"/><circle cx="465" cy="210" r="8"/><circle cx="735" cy="210" r="8"/><circle cx="830" cy="210" r="8"/></g>
+</svg>

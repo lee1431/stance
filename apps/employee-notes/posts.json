@@ -2,6 +2,19 @@
   "project": "주절주절 1호사원",
   "posts": [
     {
+      "number": 4,
+      "slug": "004-durable-save",
+      "title": "저장했는데, 어디까지 저장된 걸까?",
+      "description": "저장 완료라는 짧은 문구 뒤에서 문서가 메모리, 운영체제 캐시, 파일시스템과 저장장치를 지나 오래 남는 과정을 풀어봅니다.",
+      "series": "화면 뒤의 세계",
+      "date": "2026-09-29",
+      "path": "posts/004-durable-save/",
+      "cover": "posts/004-durable-save/cover.svg",
+      "cover_alt": "문서 한 장이 앱의 메모리, 운영체제 캐시, 파일시스템 저널, 저장장치로 내려가고 전원 차단이 그 사이를 가르는 개념 삽화",
+      "tags": ["파일 저장", "fsync", "파일시스템", "저널", "데이터베이스", "내구성"],
+      "body_chars": 10710
+    },
+    {
       "number": 3,
       "slug": "003-web-push",
       "title": "닫았는데, 알림은 어떻게 왔지?",

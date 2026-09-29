@@ -113,7 +113,22 @@ function pushLab(){
  $('#push-reset').onclick=()=>{device.value='online';ttl.value='3600';permission.value='granted';reset();};
  for(const el of [device,ttl,permission])el.onchange=reset;
 }
-catalog();reader();lab();cacheLab();pushLab();
+function saveLab(){
+ if(!$('#save-lab'))return;
+ let stage=0;
+ const screen=$('#save-screen'),disk=$('#save-disk'),log=$('#save-log');
+ const buttons=()=>{$('#save-write').disabled=stage<1;$('#save-sync').disabled=stage<2;};
+ $('#save-edit').onclick=()=>{stage=1;screen.textContent='초안 B';log.textContent='최신 문장은 아직 앱 메모리에만 있습니다. 앱이 지금 종료되면 초안 A가 남습니다.';buttons();};
+ $('#save-write').onclick=()=>{if(stage<1)return;stage=2;log.textContent='write가 성공해 운영체제 페이지 캐시에 들어갔습니다. 전원 차단 뒤 생존은 아직 약속하지 않습니다.';buttons();};
+ $('#save-sync').onclick=()=>{if(stage<2)return;stage=3;disk.textContent='초안 B';log.textContent='fsync가 성공한 상태를 단순화했습니다. 최신 문장이 지속 저장 경계를 넘었습니다.';buttons();};
+ $('#save-crash').onclick=()=>{
+  if(stage<3){screen.textContent='초안 A';disk.textContent='초안 A';log.textContent=stage===2?'전원 차단으로 페이지 캐시의 변경이 사라졌다고 가정했습니다. 재부팅 뒤 초안 A가 보입니다.':'지속 저장 전의 변경이 사라져 초안 A가 보입니다.';}
+  else{screen.textContent='초안 B';disk.textContent='초안 B';log.textContent='동기화 성공 뒤 전원이 끊겨도 이 모형에서는 초안 B가 남습니다.';}
+  stage=0;buttons();
+ };
+ $('#save-reset').onclick=()=>{stage=0;screen.textContent='초안 A';disk.textContent='초안 A';log.textContent='아직 변경하지 않았습니다. 저장장치에는 초안 A가 있습니다.';buttons();};
+}
+catalog();reader();lab();cacheLab();pushLab();saveLab();
 if('serviceWorker'in navigator&&['https:','http:'].includes(location.protocol)){
  addEventListener('load',()=>navigator.serviceWorker.register(new URL('sw.js',base),{scope:base.pathname}).then(()=>navigator.serviceWorker.ready).then(r=>{if(r.active)r.active.postMessage({type:'CACHE_PAGE',url:location.href});}).catch(e=>console.warn('Offline unavailable',e)));
 }
