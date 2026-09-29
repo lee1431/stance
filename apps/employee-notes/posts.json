@@ -1,0 +1,25 @@
+{
+  "project": "주절주절 1호사원",
+  "posts": [
+    {
+      "number": 1,
+      "slug": "001-message-delivery",
+      "title": "보냈는데, 왜 못 받았을까?",
+      "description": "말풍선 하나가 상대에게 도착하기까지. DNS부터 응답 유실, 재시도와 중복 처리까지 메시지 한 줄을 따라가 봅니다.",
+      "series": "화면 뒤의 세계",
+      "date": "2026-09-29",
+      "path": "posts/001-message-delivery/",
+      "cover": "cover.svg",
+      "cover_alt": "메시지가 서버에 도착했지만 돌아오는 응답은 끊겨 있는 개념 삽화",
+      "tags": [
+        "네트워크",
+        "웹",
+        "메시지",
+        "HTTP",
+        "CORS",
+        "재시도"
+      ],
+      "body_chars": 9872
+    }
+  ]
+}

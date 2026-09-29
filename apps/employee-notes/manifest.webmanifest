@@ -1,0 +1,24 @@
+{
+  "id": "/apps/employee-notes/",
+  "name": "주절주절 1호사원",
+  "short_name": "1호사원",
+  "description": "화면 뒤의 세계를 읽는 기술 아티클 게시판",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f2eb",
+  "theme_color": "#172c32",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
