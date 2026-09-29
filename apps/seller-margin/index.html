@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>마진얼마 — 판매 순이익·마진율 계산기</title>
+  <meta name="description" content="판매가와 원가, 플랫폼·결제 수수료, 배송비를 입력해 예상 순이익과 마진율, 정산액, 손익분기 판매가를 계산합니다.">
+  <meta name="theme-color" content="#113f3a">
+  <link rel="canonical" href="https://llsshh.com/apps/seller-margin/">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="마진얼마 — 판매 순이익·마진율 계산기">
+  <meta property="og:description" content="팔면 얼마가 남을까? 수수료와 배송비까지 넣어 실제 마진을 확인하세요.">
+  <meta property="og:url" content="https://llsshh.com/apps/seller-margin/">
+  <meta property="og:image" content="https://llsshh.com/apps/seller-margin/thumbnail.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="마진얼마">
+  <meta name="twitter:description" content="판매 순이익과 손익분기 판매가를 기기 안에서 계산합니다.">
+  <meta name="twitter:image" content="https://llsshh.com/apps/seller-margin/thumbnail.svg">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9382191250873184" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <a href="https://llsshh.com/" class="brand">LLSSHH <span>SELLER TOOL</span></a>
+      <p>금액은 서버로 전송하지 않습니다.</p>
+    </header>
+
+    <section class="hero">
+      <div>
+        <span class="eyebrow">PROFIT BEFORE LISTING</span>
+        <h1>팔면 얼마가<br><em>남을까?</em></h1>
+      </div>
+      <p>판매가에서 원가, 플랫폼·결제 수수료와 배송비를 차감해 실제로 남는 금액을 확인하세요.</p>
+    </section>
+
+    <section class="calculator">
+      <form id="form" novalidate>
+        <div class="section-title"><span>01</span><h2>판매 조건</h2></div>
+        <div class="money-pair">
+          <label>판매가 · 원<input id="price" type="text" inputmode="decimal" autocomplete="off" placeholder="30000"></label>
+          <label>상품 원가 · 원<input id="cost" type="text" inputmode="decimal" autocomplete="off" placeholder="12000"></label>
+        </div>
+        <div class="money-pair">
+          <label>플랫폼 수수료 · %<input id="platform-fee" type="text" inputmode="decimal" autocomplete="off" value="0"></label>
+          <label>결제 수수료 · %<input id="payment-fee" type="text" inputmode="decimal" autocomplete="off" value="0"></label>
+        </div>
+        <div class="money-pair">
+          <label>배송·포장비 · 원<input id="shipping" type="text" inputmode="decimal" autocomplete="off" placeholder="3500"></label>
+          <label>기타 비용 · 원<input id="other" type="text" inputmode="decimal" autocomplete="off" placeholder="500"></label>
+        </div>
+        <p class="hint">세금·광고비 등 추가 비용은 기타 비용에 포함하세요.</p>
+        <p id="error" class="error" role="alert" aria-live="assertive"></p>
+        <div class="button-row"><button id="sample" type="button">예시</button><button id="clear" type="button">비우기</button></div>
+        <button class="primary" type="submit">마진 계산하기 <span>↗</span></button>
+        <label class="remember"><input id="remember" type="checkbox"> 이 기기에 판매 조건 기억하기</label>
+      </form>
+
+      <section class="output" aria-live="polite">
+        <div class="output-head"><div class="section-title"><span>02</span><h2>예상 결과</h2></div><button id="copy" type="button" disabled>결과 복사</button></div>
+        <div id="empty" class="empty"><div>₩</div><h3>판매 조건을 기다리고 있어요</h3><p>판매 조건을 입력하면 결과가 여기에 표시됩니다.</p></div>
+        <div id="result" hidden>
+          <p class="label">예상 순이익</p>
+          <strong id="profit" class="profit"></strong>
+          <p id="status" class="neutral"></p>
+          <div class="metrics">
+            <article><span>마진율</span><b id="margin-rate"></b></article>
+            <article><span>예상 정산액</span><b id="settlement"></b></article>
+            <article><span>총 수수료</span><b id="fee-amount"></b><small id="fee-rate"></small></article>
+            <article><span>손익분기 판매가</span><b id="break-even"></b></article>
+          </div>
+          <p class="markup">원가 대비 이익률 <b id="markup-rate"></b></p>
+        </div>
+      </section>
+    </section>
+
+    <section class="guide">
+      <article><b>마진율</b><p>순이익을 판매가로 나눈 비율입니다. 판매가 3만원에 1만원이 남으면 33.33%입니다.</p></article>
+      <article><b>예상 정산액</b><p>판매가에서 수수료와 배송·기타 비용을 뺀 금액입니다. 여기서 상품 원가를 빼면 순이익입니다.</p></article>
+      <article><b>손익분기 판매가</b><p>입력한 비용과 수수료를 기준으로 손실이 나지 않는 최소 판매가를 1원 단위로 올림합니다.</p></article>
+    </section>
+    <p class="notice">실제 정산 규칙·세금·반품 비용은 플랫폼과 사업자 조건에 따라 다를 수 있습니다.</p>
+  </main>
+  <footer>마진얼마 · 올리기 전에 남는 돈부터</footer>
+  <script src="./core.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

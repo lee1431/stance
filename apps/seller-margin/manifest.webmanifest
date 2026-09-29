@@ -1,0 +1,16 @@
+{
+  "name": "마진얼마 — 판매 순이익 계산기",
+  "short_name": "마진얼마",
+  "description": "판매가와 비용을 입력해 순이익, 마진율, 정산액과 손익분기 판매가를 계산합니다.",
+  "id": "/apps/seller-margin/",
+  "start_url": "/apps/seller-margin/",
+  "scope": "/apps/seller-margin/",
+  "display": "standalone",
+  "background_color": "#f6f1e7",
+  "theme_color": "#113f3a",
+  "lang": "ko",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
