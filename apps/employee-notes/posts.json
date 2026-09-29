@@ -2,6 +2,26 @@
   "project": "주절주절 1호사원",
   "posts": [
     {
+      "number": 2,
+      "slug": "002-stale-screen",
+      "title": "고쳤는데, 왜 옛날 화면이지?",
+      "description": "새 코드는 배포됐는데 옛 화면이 보이는 이유를 HTTP 캐시, 서비스 워커, 버전 전환의 흐름으로 풀어봅니다.",
+      "series": "화면 뒤의 세계",
+      "date": "2026-09-29",
+      "path": "posts/002-stale-screen/",
+      "cover": "posts/002-stale-screen/cover.svg",
+      "cover_alt": "새 버전 서버와 브라우저 사이의 여러 캐시 층에서 오래된 화면과 새 화면이 겹친 개념 삽화",
+      "tags": [
+        "캐시",
+        "HTTP",
+        "서비스 워커",
+        "PWA",
+        "배포",
+        "업데이트"
+      ],
+      "body_chars": 10390
+    },
+    {
       "number": 1,
       "slug": "001-message-delivery",
       "title": "보냈는데, 왜 못 받았을까?",

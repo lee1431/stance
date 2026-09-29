@@ -73,7 +73,32 @@ function lab(){
   show('서버 저장 확인',duplicate?'연결 복구 후 같은 요청 42를 보냈습니다. 이전 결과를 반환하므로 추가 저장되지 않았습니다.':count>1?'연결 복구 후 요청을 다시 처리하여 중복 메시지가 생겼습니다.':'연결 복구 후 이번에 처음 저장되었습니다.');
  };
 }
-catalog();reader();lab();
+function cacheLab(){
+ if(!$('#cache-lab'))return;
+ let server=2;
+ const http=$('#http-cache-state'),worker=$('#worker-strategy');
+ const show=(screen,message)=>{$('#server-version').textContent='v'+server;$('#screen-version').textContent=screen;$('#cache-log').textContent=message;};
+ $('#cache-request').onclick=()=>{
+  if(worker.value==='cache-first'){
+   show('v1','서비스 워커가 Cache Storage의 v1 응답을 먼저 반환했습니다. 네트워크와 현재 서버는 확인하지 않았습니다.');
+   return;
+  }
+  if(http.value==='fresh-old'){
+   show('v1','네트워크 경로를 선택했지만 HTTP 캐시의 v1 응답이 아직 신선해 원본 서버에 재검증하지 않았습니다.');
+   return;
+  }
+  if(http.value==='stale-old'){
+   show('v'+server,'HTTP 캐시가 v1 검증을 요청했고 서버의 버전이 달라 새 본문 v'+server+'를 받았습니다.');
+   return;
+  }
+  show('v'+server,'저장된 응답이 없어 원본 서버의 현재 본문 v'+server+'를 받았습니다.');
+ };
+ $('#cache-deploy').onclick=()=>{server=3;show($('#screen-version').textContent,'서버는 v3로 바뀌었습니다. 이미 저장된 v1 응답과 현재 화면은 저절로 교체되지 않습니다.');};
+ $('#cache-reset').onclick=()=>{server=2;http.value='fresh-old';worker.value='cache-first';show('아직 요청 안 함','서버는 v2지만, 앞선 저장 층이 먼저 답할 수 있습니다.');};
+ http.onchange=()=>show('아직 요청 안 함','HTTP 캐시 조건을 바꿨습니다. 페이지 요청으로 선택 결과를 확인하세요.');
+ worker.onchange=()=>show('아직 요청 안 함','서비스 워커 전략을 바꿨습니다. 페이지 요청으로 선택 결과를 확인하세요.');
+}
+catalog();reader();lab();cacheLab();
 if('serviceWorker'in navigator&&['https:','http:'].includes(location.protocol)){
  addEventListener('load',()=>navigator.serviceWorker.register(new URL('sw.js',base),{scope:base.pathname}).then(()=>navigator.serviceWorker.ready).then(r=>{if(r.active)r.active.postMessage({type:'CACHE_PAGE',url:location.href});}).catch(e=>console.warn('Offline unavailable',e)));
 }

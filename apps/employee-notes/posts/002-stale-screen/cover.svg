@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="780" viewBox="0 0 1200 780" role="img" aria-labelledby="title desc">
+  <title id="title">새 배포와 오래된 화면이 엇갈리는 캐시 개념 삽화</title>
+  <desc id="desc">왼쪽의 새 버전 서버에서 여러 캐시 층을 거쳐 오른쪽 브라우저에 오래된 화면과 새 화면이 겹쳐 나타난다.</desc>
+  <rect width="1200" height="780" fill="#172c32"/>
+  <g fill="none" stroke="#d9e3de" stroke-width="3">
+    <rect x="72" y="115" width="270" height="410" rx="10"/>
+    <rect x="858" y="150" width="270" height="410" rx="10"/>
+    <path d="M342 250H470M730 250H858M342 405H470M730 405H858" stroke-dasharray="14 12"/>
+  </g>
+  <g font-family="ui-monospace,monospace" font-size="24" fill="#d9e3de">
+    <text x="98" y="160">SERVER / NEW</text><text x="884" y="195">BROWSER</text>
+  </g>
+  <rect x="110" y="210" width="194" height="72" rx="6" fill="#c74d2d"/>
+  <text x="142" y="256" font-family="sans-serif" font-weight="700" font-size="26" fill="#fffdf8">VERSION 02</text>
+  <rect x="110" y="322" width="194" height="135" rx="6" fill="#f5f2eb"/>
+  <path d="M141 363H272M141 398H245M141 432H260" stroke="#172c32" stroke-width="10"/>
+  <g font-family="ui-monospace,monospace" text-anchor="middle">
+    <circle cx="505" cy="250" r="62" fill="#f5f2eb"/><text x="505" y="244" font-size="19" fill="#172c32">HTTP</text><text x="505" y="271" font-size="17" fill="#c74d2d">CACHE</text>
+    <circle cx="695" cy="250" r="62" fill="#f5f2eb"/><text x="695" y="244" font-size="19" fill="#172c32">SERVICE</text><text x="695" y="271" font-size="17" fill="#c74d2d">WORKER</text>
+    <circle cx="505" cy="405" r="62" fill="#f5f2eb"/><text x="505" y="399" font-size="19" fill="#172c32">SHARED</text><text x="505" y="426" font-size="17" fill="#c74d2d">CACHE</text>
+    <circle cx="695" cy="405" r="62" fill="#c74d2d"/><text x="695" y="399" font-size="19" fill="#fffdf8">CACHE</text><text x="695" y="426" font-size="17" fill="#fffdf8">STORAGE</text>
+  </g>
+  <rect x="895" y="245" width="194" height="135" rx="6" fill="#f5f2eb" opacity=".45"/>
+  <path d="M925 286H1058M925 320H1026M925 350H1044" stroke="#172c32" stroke-width="10" opacity=".72"/>
+  <rect x="915" y="307" width="194" height="135" rx="6" fill="#fffdf8"/>
+  <path d="M945 348H1078M945 382H1046M945 412H1064" stroke="#c74d2d" stroke-width="10"/>
+  <text x="72" y="655" font-family="sans-serif" font-size="54" font-weight="800" fill="#fffdf8">고쳤는데, 왜 옛날 화면이지?</text>
+  <text x="75" y="707" font-family="ui-monospace,monospace" font-size="23" fill="#a9bcb5">ISSUE 02 · THE LIFE OF A CACHED RESPONSE</text>
+</svg>
