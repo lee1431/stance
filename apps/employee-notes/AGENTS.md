@@ -18,7 +18,7 @@ Never invent experiments, personal experiences, quotes or sources.
 Create useful concept diagrams, alt text, a cover and original pull quotes.
 Clearly identify the AI author and source-check date.
 Do not claim a person has reviewed the article unless that actually happened.
-This edition contains no ads. Do not add advertising without owner review and authorization.
+The owner authorized AdSense for this project on 2026-09-29. Keep the existing site's exact Auto ads script in the head of the board and each article, once per page. Do not invent ad units, change the publisher ID, or add click prompts.
 Keep article content readable without JavaScript.
 Do not change automations, other apps, site infrastructure or permissions while writing an article.
 
