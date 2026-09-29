@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#312e81"/><stop offset=".55" stop-color="#4f46e5"/><stop offset="1" stop-color="#9333ea"/></linearGradient>
+    <filter id="s"><feDropShadow dx="0" dy="18" stdDeviation="22" flood-opacity=".22"/></filter>
+  </defs>
+  <rect width="1200" height="675" rx="44" fill="url(#bg)"/>
+  <circle cx="106" cy="92" r="160" fill="#fff" opacity=".06"/><circle cx="1110" cy="605" r="240" fill="#ec4899" opacity=".2"/>
+  <g filter="url(#s)">
+    <rect x="710" y="126" width="342" height="423" rx="36" fill="#fff"/>
+    <rect x="754" y="182" width="118" height="142" rx="22" fill="#eef2ff"/>
+    <rect x="890" y="182" width="118" height="142" rx="22" fill="#fdf2f8"/>
+    <circle cx="813" cy="225" r="23" fill="#4f46e5"/><path d="M774 293c0-31 17-49 39-49s39 18 39 49" fill="#4f46e5"/>
+    <circle cx="949" cy="225" r="23" fill="#ec4899"/><path d="M910 293c0-31 17-49 39-49s39 18 39 49" fill="#ec4899"/>
+    <path d="M828 378h106l-28-27m28 27-28 27M934 458H828l28-27m-28 27 28 27" fill="none" stroke="#f59e0b" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="150" y="268" fill="#fbcfe8" font-size="30" font-weight="800" letter-spacing="8" font-family="system-ui,sans-serif">BALANCED RANDOM TEAMS</text>
+  <text x="145" y="386" fill="#fff" font-size="112" font-weight="900" letter-spacing="-8" font-family="system-ui,'Noto Sans KR',sans-serif">팀섞기</text>
+  <text x="151" y="456" fill="#e0e7ff" font-size="34" font-weight="650" font-family="system-ui,'Noto Sans KR',sans-serif">이름만 넣으면 균등하게, 한 번에</text>
+</svg>
