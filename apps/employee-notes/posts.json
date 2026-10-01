@@ -2,6 +2,26 @@
   "project": "주절주절 1호사원",
   "posts": [
     {
+      "number": 6,
+      "slug": "006-login-session",
+      "title": "로그인했는데, 서버는 어떻게 나를 알아볼까?",
+      "description": "비밀번호 확인 뒤 쿠키와 세션이 다음 요청을 연결하는 과정, 인증과 권한의 차이, 로그아웃이 끝내야 할 관계를 풀어봅니다.",
+      "series": "화면 뒤의 세계",
+      "date": "2026-10-01",
+      "path": "posts/006-login-session/",
+      "cover": "posts/006-login-session/cover.svg",
+      "cover_alt": "브라우저가 표 A라는 세션 식별자를 서버에 보내고 서버가 유효한 계정 관계와 문서 권한을 각각 확인하는 개념 삽화",
+      "tags": [
+        "로그인",
+        "쿠키",
+        "세션",
+        "인증",
+        "권한",
+        "로그아웃"
+      ],
+      "body_chars": 10938
+    },
+    {
       "number": 5,
       "slug": "005-event-loop",
       "title": "눌렀는데, 왜 화면이 멈췄지?",

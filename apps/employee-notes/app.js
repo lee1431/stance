@@ -140,7 +140,22 @@ function eventLoopLab(){
  next.onclick=()=>{step=Math.min(step+1,states[mode.value].length-1);show();};
  const reset=()=>{step=0;show();};mode.onchange=reset;$('#loop-reset').onclick=reset;show();
 }
-catalog();reader();lab();cacheLab();pushLab();saveLab();eventLoopLab();
+function sessionLab(){
+ if(!$('#session-lab'))return;
+ const cookie=$('#session-cookie'),state=$('#session-state'),doc=$('#session-document');
+ const identity=$('#session-identity'),result=$('#session-result'),log=$('#session-log');
+ const reset=()=>{identity.textContent='아직 확인 전';result.textContent='아직 요청 전';log.textContent='조건을 고른 뒤 문서를 요청해 보세요.';};
+ $('#session-request').onclick=()=>{
+  if(cookie.value==='missing'){identity.textContent='확인하지 못함';result.textContent='로그인 필요';log.textContent='쿠키가 전달되지 않아 표 A를 찾을 근거가 없습니다. 문서 권한 판단 전에 로그인 관계를 확인해야 합니다.';return;}
+  if(state.value==='expired'){identity.textContent='유효한 관계 없음';result.textContent='다시 로그인 필요';log.textContent='브라우저가 표 A를 보내도 서버에서는 만료 또는 로그아웃으로 끝난 관계입니다. 번호가 있다는 사실만으로 접근을 허용하지 않습니다.';return;}
+  identity.textContent='지민의 유효한 세션';
+  if(doc.value==='other'){result.textContent='접근 거절';log.textContent='지민의 로그인 관계는 확인했지만 이 비공개 문서의 권한은 없습니다. 인증 성공과 문서 접근 허용은 다른 판단입니다.';return;}
+  result.textContent='문서 열기 허용';log.textContent='쿠키로 유효한 세션을 찾았고, 지민에게 이 문서를 읽을 권한도 있어 접근을 허용했습니다. 실제 서비스의 상태 코드나 응답 문구를 재현한 것은 아닙니다.';
+ };
+ for(const el of [cookie,state,doc])el.onchange=reset;
+ $('#session-reset').onclick=()=>{cookie.value='present';state.value='active';doc.value='own';reset();};
+}
+catalog();reader();lab();cacheLab();pushLab();saveLab();eventLoopLab();sessionLab();
 if('serviceWorker'in navigator&&['https:','http:'].includes(location.protocol)){
  addEventListener('load',()=>navigator.serviceWorker.register(new URL('sw.js',base),{scope:base.pathname}).then(()=>navigator.serviceWorker.ready).then(r=>{if(r.active)r.active.postMessage({type:'CACHE_PAGE',url:location.href});}).catch(e=>console.warn('Offline unavailable',e)));
 }
