@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="780" viewBox="0 0 1200 780" role="img" aria-labelledby="title desc">
+<title id="title">화면이 기다리는 차례</title><desc id="desc">상단의 긴 작업이 클릭과 화면의 차례를 막고, 하단의 나눈 작업 사이에는 입력과 화면 갱신을 위한 틈이 생기는 개념 삽화</desc>
+<defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#dce7db" stroke-opacity=".08"/></pattern><pattern id="hatch" width="18" height="18" patternUnits="userSpaceOnUse"><path d="M-4 4L4-4M0 18L18 0M14 22L22 14" stroke="#172c32" stroke-opacity=".2" stroke-width="2"/></pattern></defs>
+<rect width="1200" height="780" fill="#172c32"/><rect width="1200" height="780" fill="url(#grid)"/>
+<circle cx="1060" cy="110" r="60" fill="none" stroke="#b8cbbd" stroke-opacity=".25"/><circle cx="1060" cy="110" r="43" fill="none" stroke="#e6b574" stroke-width="4" stroke-dasharray="160 110"/>
+<g font-family="monospace" fill="#ccdbd7"><text x="76" y="87" font-size="17" letter-spacing="4">EMPLOYEE 01 / ISSUE 05</text><text x="76" y="130" font-size="32" letter-spacing="2">WAITING FOR A TURN</text></g>
+<rect x="76" y="193" width="1048" height="170" rx="8" fill="#203a40" stroke="#80988c"/>
+<g stroke="#adc3b4" stroke-width="2"><path d="M142 208V348M1030 208V348" stroke-dasharray="5 7"/><path d="M142 286H1030"/></g>
+<rect x="154" y="230" width="733" height="105" rx="5" fill="#e6b574"/><rect x="154" y="230" width="733" height="105" rx="5" fill="url(#hatch)"/>
+<text x="195" y="287" fill="#172c32" font-family="sans-serif" font-weight="700" font-size="25">LONG TASK</text><text x="195" y="317" fill="#172c32" font-family="monospace" font-size="15">THE MAIN THREAD IS BUSY</text>
+<g fill="#ccdbd7"><path d="M925 246L950 271L937 274L930 289Z"/><rect x="971" y="244" width="73" height="53" rx="4" fill="none" stroke="#ccdbd7" stroke-width="3"/><path d="M984 259H1031M984 271H1016" stroke="#ccdbd7" stroke-width="2"/></g>
+<text x="76" y="409" fill="#ccdbd7" font-family="monospace" font-size="16" letter-spacing="2">SAME WORK. DIFFERENT OPPORTUNITIES.</text>
+<rect x="76" y="445" width="1048" height="170" rx="8" fill="#203a40" stroke="#80988c"/>
+<path d="M142 531H1030" stroke="#adc3b4" stroke-width="2"/>
+<g fill="#e6b574"><rect x="154" y="482" width="205" height="105" rx="5"/><rect x="459" y="482" width="205" height="105" rx="5"/><rect x="764" y="482" width="205" height="105" rx="5"/></g>
+<g fill="#172c32" font-family="monospace" font-size="22"><text x="209" y="543">WORK 1</text><text x="514" y="543">WORK 2</text><text x="819" y="543">WORK 3</text></g>
+<g fill="#b8d5c2"><circle cx="409" cy="532" r="32"/><circle cx="714" cy="532" r="32"/></g>
+<path d="M394 514L420 540L405 543L400 554Z" fill="#172c32"/><rect x="696" y="518" width="36" height="27" rx="3" fill="none" stroke="#172c32" stroke-width="3"/><path d="M703 526H726M703 535H719" stroke="#172c32" stroke-width="2"/>
+<text x="76" y="690" fill="#ccdbd7" font-family="monospace" font-size="16" letter-spacing="2">INPUT / COMPUTATION / RENDERING</text><text x="76" y="727" fill="#97afa1" font-family="monospace" font-size="13">CONCEPT MODEL — NOT A PERFORMANCE MEASUREMENT</text>
+</svg>

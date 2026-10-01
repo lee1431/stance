@@ -128,7 +128,19 @@ function saveLab(){
  };
  $('#save-reset').onclick=()=>{stage=0;screen.textContent='초안 A';disk.textContent='초안 A';log.textContent='아직 변경하지 않았습니다. 저장장치에는 초안 A가 있습니다.';buttons();};
 }
-catalog();reader();lab();cacheLab();pushLab();saveLab();
+function eventLoopLab(){
+ if(!$('#event-loop-lab'))return;
+ const mode=$('#loop-mode'),next=$('#loop-next');let step=0;
+ const states={
+  long:[['0 / 3','검색 전','긴 태스크 방식입니다. 다음 단계에서 클릭 처리를 시작합니다.'],['0 / 3','검색 전','DOM에는 찾는 중을 적었지만, 긴 계산이 같은 태스크를 점유합니다. 모형에서는 아직 화면을 갱신하지 않았습니다.'],['3 / 3','검색 전','계산과 완료 DOM 변경까지 끝났습니다. 화면 출력은 별도의 기회를 기다립니다.'],['3 / 3','검색 완료','이 모형이 선택한 렌더링 기회에서 최종 상태를 표시했습니다. 중간 문장은 보이지 않았습니다.']],
+  micro:[['0 / 3','검색 전','마이크로태스크 사슬 방식입니다.'],['1 / 3','검색 전','클릭 처리 뒤 후속 계산을 마이크로태스크에 넣었습니다. 화면은 아직 검색 전입니다.'],['2 / 3','검색 전','후속 작업이 또 마이크로태스크를 추가합니다. 체크포인트가 이어져 이 모형에서는 화면 차례가 오지 않습니다.'],['3 / 3','검색 전','계산 사슬이 끝났고 DOM은 완료 상태입니다. 다음 단계에서 화면 기회를 선택합니다.'],['3 / 3','검색 완료','마이크로태스크가 비워진 뒤 이 모형의 화면 갱신 기회에서 결과를 표시했습니다.']],
+  split:[['0 / 3','검색 전','미래 태스크로 나누는 방식입니다.'],['1 / 3','찾는 중 · 1 / 3','첫 묶음을 마치고 다음 태스크로 양보했습니다. 이 모형에서는 그 사이 화면 갱신 기회를 선택했습니다. 실제 렌더링이 매번 보장되는 것은 아닙니다.'],['2 / 3','찾는 중 · 2 / 3','다음 묶음 사이에도 입력과 화면을 처리할 기회를 열었습니다. 총 계산량은 그대로입니다.'],['3 / 3','검색 완료','마지막 묶음과 화면 반영이 끝났습니다. 취소나 조건 변경은 묶음 사이에 확인하도록 설계할 수 있습니다.']]
+ };
+ function show(){const list=states[mode.value],s=list[step];$('#loop-work').textContent=s[0];$('#loop-screen').textContent=s[1];$('#loop-log').textContent=s[2];next.disabled=step===list.length-1;}
+ next.onclick=()=>{step=Math.min(step+1,states[mode.value].length-1);show();};
+ const reset=()=>{step=0;show();};mode.onchange=reset;$('#loop-reset').onclick=reset;show();
+}
+catalog();reader();lab();cacheLab();pushLab();saveLab();eventLoopLab();
 if('serviceWorker'in navigator&&['https:','http:'].includes(location.protocol)){
  addEventListener('load',()=>navigator.serviceWorker.register(new URL('sw.js',base),{scope:base.pathname}).then(()=>navigator.serviceWorker.ready).then(r=>{if(r.active)r.active.postMessage({type:'CACHE_PAGE',url:location.href});}).catch(e=>console.warn('Offline unavailable',e)));
 }

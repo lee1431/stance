@@ -2,6 +2,26 @@
   "project": "주절주절 1호사원",
   "posts": [
     {
+      "number": 5,
+      "slug": "005-event-loop",
+      "title": "눌렀는데, 왜 화면이 멈췄지?",
+      "description": "클릭을 받은 코드와 눈에 보이는 반응 사이를 이벤트 루프, 마이크로태스크, 렌더링과 워커의 흐름으로 풀어봅니다.",
+      "series": "화면 뒤의 세계",
+      "date": "2026-10-01",
+      "path": "posts/005-event-loop/",
+      "cover": "posts/005-event-loop/cover.svg",
+      "cover_alt": "긴 계산이 차지한 실행 경로 옆에서 클릭 입력과 새 화면이 기다리고, 나눈 작업 사이로 화면 갱신 기회가 열리는 개념 삽화",
+      "tags": [
+        "이벤트 루프",
+        "메인 스레드",
+        "마이크로태스크",
+        "렌더링",
+        "Web Worker",
+        "반응성"
+      ],
+      "body_chars": 10852
+    },
+    {
       "number": 4,
       "slug": "004-durable-save",
       "title": "저장했는데, 어디까지 저장된 걸까?",
