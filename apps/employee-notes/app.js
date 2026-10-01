@@ -128,7 +128,32 @@ function saveLab(){
  };
  $('#save-reset').onclick=()=>{stage=0;screen.textContent='초안 A';disk.textContent='초안 A';log.textContent='아직 변경하지 않았습니다. 저장장치에는 초안 A가 있습니다.';buttons();};
 }
-catalog();reader();lab();cacheLab();pushLab();saveLab();
+function raceLab(){
+ if(!$('#race-lab'))return;
+ const mode=$('#race-mode'),order=$('#race-order'),step=$('#race-step');
+ let remaining=1,booked=0,index=0,seen={A:null,B:null},result={A:'',B:''};
+ const sequences={overlap:[['A','read'],['B','read'],['A','confirm'],['B','confirm']],serial:[['A','read'],['A','confirm'],['B','read'],['B','confirm']]};
+ function render(message){
+  $('#race-remaining').textContent=remaining;$('#race-booked').textContent=booked;
+  for(const actor of ['A','B'])$('#race-'+actor.toLowerCase()).textContent=seen[actor]===null?'아직 읽지 않음':'관찰 '+seen[actor]+(result[actor]?' · '+result[actor]:'');
+  $('#race-log').textContent=message;step.disabled=index===4;
+ }
+ function reset(){remaining=1;booked=0;index=0;seen={A:null,B:null};result={A:'',B:''};render('두 요청이 시작하기 전입니다. 남은 한 자리를 나눠 가질 수는 없습니다.');}
+ mode.addEventListener('change',reset);order.addEventListener('change',reset);$('#race-reset').onclick=reset;
+ step.onclick=()=>{
+  if(index>=4)return;
+  const [actor,action]=sequences[order.value][index++];let message;
+  if(action==='read'){seen[actor]=remaining;message=actor+'가 남은 수량 '+remaining+'을 읽었습니다. 관찰만으로 자리를 확보하지는 않았습니다.';}
+  else{
+   const available=mode.value==='atomic'?remaining:seen[actor];
+   if(available>0){remaining=available-1;booked++;result[actor]='예약 확정';message=actor+'가 '+(mode.value==='atomic'?'현재 수량을 검사하고 감소를 함께 처리했습니다.':'앞서 읽은 값에서 1을 빼 저장했습니다.');}
+   else{result[actor]='매진';message=actor+'는 '+(mode.value==='atomic'?'변경 시점의 현재 수량':'읽었을 때의 수량')+'이 0이므로 예약하지 못했습니다.';}
+  }
+  if(index===4)message+=' 최종: 남은 수량 '+remaining+', 예약 '+booked+'건. '+(booked>1?'한 자리를 두 사람에게 약속해 규칙이 깨졌습니다.':'한 자리에는 한 예약만 확정되었습니다.');
+  render(message);
+ };
+}
+catalog();reader();lab();cacheLab();pushLab();saveLab();raceLab();
 if('serviceWorker'in navigator&&['https:','http:'].includes(location.protocol)){
  addEventListener('load',()=>navigator.serviceWorker.register(new URL('sw.js',base),{scope:base.pathname}).then(()=>navigator.serviceWorker.ready).then(r=>{if(r.active)r.active.postMessage({type:'CACHE_PAGE',url:location.href});}).catch(e=>console.warn('Offline unavailable',e)));
 }
