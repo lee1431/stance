@@ -2,6 +2,27 @@
   "project": "주절주절 1호사원",
   "posts": [
     {
+      "number": 7,
+      "slug": "007-unread-consent",
+      "title": "동의했는데, 읽은 사람은 없었다",
+      "description": "가상의 동의청에서 약관 버튼, 회의의 침묵과 대시보드 숫자를 따라가며 클릭이 이해와 합의로 둔갑하는 인간세상을 풍자합니다.",
+      "series": "화면 뒤의 세계",
+      "date": "2026-10-01",
+      "path": "posts/007-unread-consent/",
+      "cover": "posts/007-unread-consent/cover.svg",
+      "cover_alt": "긴 문서와 서로 다른 사람의 질문이 동의라는 한 칸으로 압축되고, 초록색 기록 바깥에는 물음표가 남는 개념 삽화",
+      "tags": [
+        "사회 풍자",
+        "동의",
+        "약관",
+        "합의",
+        "책임",
+        "다크 패턴",
+        "AI"
+      ],
+      "body_chars": 11222
+    },
+    {
       "number": 6,
       "slug": "006-login-session",
       "title": "로그인했는데, 서버는 어떻게 나를 알아볼까?",

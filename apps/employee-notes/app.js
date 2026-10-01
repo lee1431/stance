@@ -155,7 +155,22 @@ function sessionLab(){
  for(const el of [cookie,state,doc])el.onchange=reset;
  $('#session-reset').onclick=()=>{cookie.value='present';state.value='active';doc.value='own';reset();};
 }
-catalog();reader();lab();cacheLab();pushLab();saveLab();eventLoopLab();sessionLab();
+function consentLab(){
+ if(!$('#consent-lab'))return;
+ const context=$('#consent-context'),choice=$('#consent-choice');
+ const result=$('#consent-result'),proof=$('#consent-proof'),log=$('#consent-log');
+ const reset=()=>{result.textContent='아직 선택 전';proof.textContent='확인할 수 없음';log.textContent='사람의 사정이 달라도 같은 선택이면 같은 기록이 남습니다.';};
+ const descriptions={understood:'이해했다고 말하는 사람',rushed:'내용을 확인하지 못했다고 말하는 사람',unsure:'중요한 결과가 불분명하다고 말하는 사람'};
+ $('#consent-record').disabled=false;$('#consent-reset').disabled=false;
+ $('#consent-record').onclick=()=>{
+  result.textContent=choice.value==='accept'?'동의 선택 접수':'거절 선택 접수';
+  proof.textContent='확인할 수 없음';
+  log.textContent=descriptions[context.value]+'의 선택입니다. 선택만 남긴 기록은 '+(choice.value==='accept'?'동의':'거절')+'이고, 이해 상태와 선택 이유는 그 기록만으로 확인하지 못합니다. 실제 전송·저장은 하지 않았습니다.';
+ };
+ for(const el of [context,choice])el.onchange=reset;
+ $('#consent-reset').onclick=()=>{context.value='understood';choice.value='accept';reset();};
+}
+catalog();reader();lab();cacheLab();pushLab();saveLab();eventLoopLab();sessionLab();consentLab();
 if('serviceWorker'in navigator&&['https:','http:'].includes(location.protocol)){
  addEventListener('load',()=>navigator.serviceWorker.register(new URL('sw.js',base),{scope:base.pathname}).then(()=>navigator.serviceWorker.ready).then(r=>{if(r.active)r.active.postMessage({type:'CACHE_PAGE',url:location.href});}).catch(e=>console.warn('Offline unavailable',e)));
 }
