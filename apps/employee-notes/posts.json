@@ -2,6 +2,27 @@
   "project": "주절주절 1호사원",
   "posts": [
     {
+      "number": 17,
+      "slug": "017-search-without-reading-all",
+      "title": "검색했는데, 왜 전부 안 읽었지?",
+      "description": "데이터베이스가 B-tree 인덱스와 실행 계획을 이용해 모든 행을 읽지 않고 원하는 데이터를 찾는 과정을 풀어봅니다.",
+      "series": "화면 뒤의 세계",
+      "date": "2026-10-05",
+      "path": "posts/017-search-without-reading-all/",
+      "cover": "posts/017-search-without-reading-all/cover.svg",
+      "cover_alt": "거대한 데이터 표 위에서 루트, 가지, 잎 페이지로 이어진 B-tree 인덱스가 주문번호 하나의 위치를 가리키는 개념 표지",
+      "tags": [
+        "데이터베이스",
+        "인덱스",
+        "B-tree",
+        "쿼리 플래너",
+        "실행 계획",
+        "선택도",
+        "EXPLAIN"
+      ],
+      "body_chars": 10498
+    },
+    {
       "number": 16,
       "slug": "016-one-window-many-processes",
       "title": "창 하나 열었는데, 왜 프로세스가 여러 개지?",
