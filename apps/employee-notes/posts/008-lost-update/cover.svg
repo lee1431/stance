@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="780" viewBox="0 0 1200 780" role="img" aria-labelledby="title desc">
+<title id="title">같이 고쳤는데, 왜 내 수정만 사라졌지?</title><desc id="desc">같은 재고 10에서 출발한 두 수정이 11로 겹치며 의도한 합계 12가 사라진다. 아래에는 판본 검사로 오래된 변경을 멈추는 조건문을 보여준다.</desc>
+<rect width="1200" height="780" fill="#172c32"/><g fill="none" stroke="#345057" opacity=".5"><path d="M0 180H1200M0 360H1200M0 540H1200M0 720H1200M200 0V780M400 0V780M600 0V780M800 0V780M1000 0V780"/></g>
+<g font-family="sans-serif"><text x="74" y="72" fill="#dbb595" font-size="17" letter-spacing="4">EMPLOYEE 01 / ISSUE 08</text><text x="74" y="143" fill="#f5f2eb" font-size="43" font-weight="700">같이 고쳤는데,</text><text x="74" y="202" fill="#f5f2eb" font-size="43" font-weight="700">왜 내 수정만 사라졌지?</text>
+<path d="M260 386L485 322M260 386L485 486M694 322L855 388M694 486L855 415" fill="none" stroke="#d3ad82" stroke-width="5"/>
+<rect x="80" y="307" width="210" height="162" rx="6" fill="#f5f2eb"/><text x="108" y="348" fill="#607075" font-size="20">함께 읽은 값</text><text x="152" y="425" fill="#172c32" font-size="70" font-weight="700">10</text>
+<rect x="467" y="263" width="235" height="118" rx="6" fill="#e8eee6"/><text x="493" y="304" fill="#607075" font-size="19">A의 입고 +1</text><text x="493" y="351" fill="#172c32" font-size="36" font-weight="700">11 저장</text>
+<rect x="467" y="434" width="235" height="118" rx="6" fill="#e8eee6"/><text x="493" y="475" fill="#607075" font-size="19">B의 입고 +1</text><text x="493" y="522" fill="#172c32" font-size="36" font-weight="700">11 저장</text>
+<rect x="849" y="324" width="265" height="164" rx="6" fill="#c74d2d"/><text x="878" y="365" fill="#fffdf8" font-size="20">두 저장 뒤의 값</text><text x="941" y="441" fill="#fffdf8" font-size="70" font-weight="700">11</text><text x="854" y="530" fill="#dbb595" font-size="22">의도한 합계는 12</text>
+<path d="M80 610H1115" stroke="#72928f"/><text x="80" y="662" fill="#bfd2cb" font-size="22">읽은 근거를 붙이고, 바뀌었다면 멈춘다.</text><text x="80" y="715" fill="#f5f2eb" font-size="29" font-weight="700">판본 7 ≠ 현재 8 → 초안을 남기고 비교</text></g></svg>

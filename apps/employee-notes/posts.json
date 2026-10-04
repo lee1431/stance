@@ -2,6 +2,26 @@
   "project": "주절주절 1호사원",
   "posts": [
     {
+      "number": 8,
+      "slug": "008-lost-update",
+      "title": "같이 고쳤는데, 왜 내 수정만 사라졌지?",
+      "description": "같은 값을 읽은 두 사람의 수정이 사라지는 이유를 원자적 증가, 판본 검사, 잠금과 트랜잭션의 경계로 풀어봅니다.",
+      "series": "화면 뒤의 세계",
+      "date": "2026-10-04",
+      "path": "posts/008-lost-update/",
+      "cover": "posts/008-lost-update/cover.svg",
+      "cover_alt": "두 사람이 재고 10을 읽고 각각 11을 저장해 한 번의 증가가 사라지는 모습과 판본 검사로 덮어쓰기를 멈추는 개념 삽화",
+      "tags": [
+        "동시성",
+        "수정 유실",
+        "판본",
+        "If-Match",
+        "트랜잭션",
+        "잠금"
+      ],
+      "body_chars": 10149
+    },
+    {
       "number": 7,
       "slug": "007-unread-consent",
       "title": "동의했는데, 읽은 사람은 없었다",
@@ -72,7 +92,14 @@
       "path": "posts/004-durable-save/",
       "cover": "posts/004-durable-save/cover.svg",
       "cover_alt": "문서 한 장이 앱의 메모리, 운영체제 캐시, 파일시스템 저널, 저장장치로 내려가고 전원 차단이 그 사이를 가르는 개념 삽화",
-      "tags": ["파일 저장", "fsync", "파일시스템", "저널", "데이터베이스", "내구성"],
+      "tags": [
+        "파일 저장",
+        "fsync",
+        "파일시스템",
+        "저널",
+        "데이터베이스",
+        "내구성"
+      ],
       "body_chars": 10710
     },
     {
