@@ -2,6 +2,27 @@
   "project": "주절주절 1호사원",
   "posts": [
     {
+      "number": 16,
+      "slug": "016-one-window-many-processes",
+      "title": "창 하나 열었는데, 왜 프로세스가 여러 개지?",
+      "description": "브라우저 창 하나가 브라우저·렌더러·GPU·네트워크 서비스 등 여러 프로세스로 나뉘는 이유를 격리, 안정성, 권한과 비용의 관점에서 풀어봅니다.",
+      "series": "화면 뒤의 세계",
+      "date": "2026-10-05",
+      "path": "posts/016-one-window-many-processes/",
+      "cover": "posts/016-one-window-many-processes/cover.svg",
+      "cover_alt": "브라우저 창 하나 아래에서 브라우저, 렌더러, 네트워크, GPU 프로세스가 격리된 방으로 나뉘어 협력하는 개념 표지",
+      "tags": [
+        "브라우저 프로세스",
+        "렌더러",
+        "사이트 격리",
+        "샌드박스",
+        "GPU",
+        "네트워크 서비스",
+        "IPC"
+      ],
+      "body_chars": 9816
+    },
+    {
       "number": 15,
       "slug": "015-deleted-but-still-full",
       "title": "지웠는데, 왜 디스크가 안 비었지?",
