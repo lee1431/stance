@@ -2,6 +2,27 @@
   "project": "주절주절 1호사원",
   "posts": [
     {
+      "number": 14,
+      "slug": "014-who-woke-the-os",
+      "title": "전원을 켰는데, 누가 운영체제를 깨웠지?",
+      "description": "전원 버튼 뒤에서 펌웨어, 부트 관리자, 부트로더, 커널, initramfs와 PID 1이 차례로 제어권을 넘겨받는 부팅 사슬을 풀어봅니다.",
+      "series": "화면 뒤의 세계",
+      "date": "2026-10-05",
+      "path": "posts/014-who-woke-the-os/",
+      "cover": "posts/014-who-woke-the-os/cover.svg",
+      "cover_alt": "전원 버튼에서 펌웨어, 부트로더, 커널, 초기 사용자 공간과 서비스로 빛나는 제어권 토큰이 전달되는 개념 표지",
+      "tags": [
+        "부팅",
+        "UEFI",
+        "부트로더",
+        "Linux 커널",
+        "initramfs",
+        "PID 1",
+        "systemd"
+      ],
+      "body_chars": 10683
+    },
+    {
       "number": 13,
       "slug": "013-back-button-kept-it",
       "title": "뒤로 갔는데, 왜 쓰던 내용이 그대로지?",
