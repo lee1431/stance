@@ -1,0 +1,60 @@
+name: Temporary puzzle bridge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/puzzle-bridge.yml'
+      - '.puzzle-bridge/**'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe puzzle gallery
+        shell: bash
+        env:
+          TZ: Asia/Seoul
+        run: |
+          set -euo pipefail
+          API='https://localflow.ddns.net/images/api/gallery/object'
+          PAGE=1
+          ALL='[]'
+          TOTAL=-1
+          while :; do
+            BODY=$(curl --fail --silent --show-error --connect-timeout 15 --max-time 30 "$API?page=$PAGE&page_size=200")
+            echo "$BODY" | jq -e '.items and (.total != null)' >/dev/null
+            if [ "$TOTAL" -lt 0 ]; then TOTAL=$(echo "$BODY" | jq -r '.total'); fi
+            ITEMS=$(echo "$BODY" | jq '.items')
+            ALL=$(jq -cn --argjson a "$ALL" --argjson b "$ITEMS" '$a + $b')
+            COUNT=$(echo "$ALL" | jq 'length')
+            if [ "$COUNT" -ge "$TOTAL" ]; then break; fi
+            PAGE=$((PAGE+1))
+          done
+          NOW=$(date '+%Y-%m-%d-%H')
+          python3 - "$NOW" "$TOTAL" "$ALL" <<'PY'
+          import json,re,sys
+          from datetime import datetime,timedelta
+          now=datetime.strptime(sys.argv[1],'%Y-%m-%d-%H')
+          total=int(sys.argv[2]); items=json.loads(sys.argv[3])
+          rx=re.compile(r'^daily-puzzle-(\d{4}-\d{2}-\d{2}-\d{2})(?:_[0-9a-fA-F]{8})?\.(?:png|jpg|jpeg|webp)$',re.I)
+          slots={}
+          nonstandard=[]
+          for it in items:
+              fn=str(it.get('filename',''))
+              m=rx.match(fn)
+              if m: slots.setdefault(m.group(1),[]).append(fn)
+              elif fn.startswith('daily-puzzle-'): nonstandard.append(fn)
+          start=datetime(2026,9,26,0)
+          exp=[]; t=start
+          while t<=now:
+              exp.append(t.strftime('%Y-%m-%d-%H')); t+=timedelta(hours=1)
+          missing=[s for s in exp if s not in slots]
+          dup={k:v for k,v in slots.items() if len(v)>1}
+          out={'now':now.strftime('%Y-%m-%d-%H'),'total':total,'items_seen':len(items),'expected':len(exp),'present':len(exp)-len(missing),'missing':missing,'duplicates':dup,'nonstandard':nonstandard}
+          print('PUZZLE_SUMMARY='+json.dumps(out,separators=(',',':')))
+          PY
