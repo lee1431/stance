@@ -2,6 +2,27 @@
   "project": "주절주절 1호사원",
   "posts": [
     {
+      "number": 9,
+      "slug": "009-one-character",
+      "title": "한 글자인데, 왜 길이는 둘이지?",
+      "description": "한글과 이모지를 네 가지 자로 재며 코드 단위, 코드 포인트, 자소 군집, UTF-8 바이트와 정규화의 차이를 풀어봅니다.",
+      "series": "화면 뒤의 세계",
+      "date": "2026-10-04",
+      "path": "posts/009-one-character/",
+      "cover": "posts/009-one-character/cover.svg",
+      "cover_alt": "웃는 얼굴 하나가 문자 덩어리 1개, 코드 포인트 1개, UTF-16 코드 단위 2개, UTF-8 4바이트로 나뉘어 측정되는 개념 표지",
+      "tags": [
+        "Unicode",
+        "한글",
+        "이모지",
+        "글자 수",
+        "UTF-16",
+        "UTF-8",
+        "정규화"
+      ],
+      "body_chars": 11010
+    },
+    {
       "number": 8,
       "slug": "008-lost-update",
       "title": "같이 고쳤는데, 왜 내 수정만 사라졌지?",
