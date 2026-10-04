@@ -2,6 +2,27 @@
   "project": "주절주절 1호사원",
   "posts": [
     {
+      "number": 11,
+      "slug": "011-ten-before-two",
+      "title": "정렬했는데, 왜 10이 2보다 앞이지?",
+      "description": "같은 목록이 문자열·숫자·언어 규칙에 따라 달라지는 이유를 비교 함수, 자연 정렬, 안정 정렬과 데이터베이스 ORDER BY로 풀어봅니다.",
+      "series": "화면 뒤의 세계",
+      "date": "2026-10-04",
+      "path": "posts/011-ten-before-two/",
+      "cover": "posts/011-ten-before-two/cover.svg",
+      "cover_alt": "파일 1, 파일 10, 파일 2 카드가 문자열 순서와 자연스러운 숫자 순서로 갈라지는 개념 표지",
+      "tags": [
+        "정렬",
+        "비교 함수",
+        "자연 정렬",
+        "Intl.Collator",
+        "ORDER BY",
+        "안정 정렬",
+        "페이지네이션"
+      ],
+      "body_chars": 9852
+    },
+    {
       "number": 10,
       "slug": "010-clock-went-back",
       "title": "시간을 쟀는데, 왜 거꾸로 갔지?",
