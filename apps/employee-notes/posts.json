@@ -2,6 +2,26 @@
   "project": "주절주절 1호사원",
   "posts": [
     {
+      "number": 10,
+      "slug": "010-clock-went-back",
+      "title": "시간을 쟀는데, 왜 거꾸로 갔지?",
+      "description": "현재 시각과 경과 시간에 서로 다른 시계가 필요한 이유를 단조 시계, NTP, 시간대와 분산 시스템의 사건 순서로 풀어봅니다.",
+      "series": "화면 뒤의 세계",
+      "date": "2026-10-04",
+      "path": "posts/010-clock-went-back/",
+      "cover": "posts/010-clock-went-back/cover.svg",
+      "cover_alt": "현재 시각을 표시하는 벽시계가 뒤로 보정되는 동안 경과 시간을 재는 단조 시계는 앞으로 움직이는 개념 표지",
+      "tags": [
+        "시간",
+        "단조 시계",
+        "NTP",
+        "시간대",
+        "분산 시스템",
+        "타이머"
+      ],
+      "body_chars": 9916
+    },
+    {
       "number": 9,
       "slug": "009-one-character",
       "title": "한 글자인데, 왜 길이는 둘이지?",
