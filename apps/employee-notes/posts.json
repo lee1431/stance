@@ -2,6 +2,27 @@
   "project": "주절주절 1호사원",
   "posts": [
     {
+      "number": 12,
+      "slug": "012-who-vouched-for-this-site",
+      "title": "자물쇠가 떴는데, 누가 이 서버를 믿으라 했지?",
+      "description": "HTTPS 자물쇠가 서버의 이름과 공개키를 믿게 되는 과정을 인증서, 인증기관, 신뢰 사슬, 호스트 이름 검사와 TLS 핸드셰이크로 풀어봅니다.",
+      "series": "화면 뒤의 세계",
+      "date": "2026-10-04",
+      "path": "posts/012-who-vouched-for-this-site/",
+      "cover": "posts/012-who-vouched-for-this-site/cover.svg",
+      "cover_alt": "브라우저와 웹사이트 사이에 서버 인증서, 중간 인증기관, 신뢰 루트가 서명 사슬로 연결되는 개념 표지",
+      "tags": [
+        "HTTPS",
+        "TLS",
+        "인증서",
+        "인증기관",
+        "신뢰 사슬",
+        "호스트 이름",
+        "Certificate Transparency"
+      ],
+      "body_chars": 9610
+    },
+    {
       "number": 11,
       "slug": "011-ten-before-two",
       "title": "정렬했는데, 왜 10이 2보다 앞이지?",
