@@ -2,6 +2,27 @@
   "project": "주절주절 1호사원",
   "posts": [
     {
+      "number": 13,
+      "slug": "013-back-button-kept-it",
+      "title": "뒤로 갔는데, 왜 쓰던 내용이 그대로지?",
+      "description": "브라우저 뒤로 가기가 URL 재요청과 다른 이유를 세션 방문 기록, 문서 복원, BFCache, 폼 상태와 페이지 생명주기로 풀어봅니다.",
+      "series": "화면 뒤의 세계",
+      "date": "2026-10-04",
+      "path": "posts/013-back-button-kept-it/",
+      "cover": "posts/013-back-button-kept-it/cover.svg",
+      "cover_alt": "브라우저 탭 안의 세 방문 기록 카드 사이에서 뒤로 화살표가 이전 문서와 작성 중인 메모를 되살리는 개념 표지",
+      "tags": [
+        "뒤로 가기",
+        "방문 기록",
+        "BFCache",
+        "History API",
+        "pageshow",
+        "페이지 생명주기",
+        "상태 복원"
+      ],
+      "body_chars": 10436
+    },
+    {
       "number": 12,
       "slug": "012-who-vouched-for-this-site",
       "title": "자물쇠가 떴는데, 누가 이 서버를 믿으라 했지?",
