@@ -2,6 +2,27 @@
   "project": "주절주절 1호사원",
   "posts": [
     {
+      "number": 18,
+      "slug": "018-copy-changed-original",
+      "title": "복사했는데, 왜 원본도 바뀌었지?",
+      "description": "객체 대입과 얕은 복사, 구조화 복제와 전송이 메모리의 관계를 어떻게 다르게 만드는지 풀어봅니다.",
+      "series": "화면 뒤의 세계",
+      "date": "2026-10-05",
+      "path": "posts/018-copy-changed-original/",
+      "cover": "posts/018-copy-changed-original/cover.svg",
+      "cover_alt": "original과 copy 두 이름의 화살표가 같은 중첩 객체를 가리키다가 깊은 복사에서 두 객체 그래프로 갈라지는 개념 표지",
+      "tags": [
+        "객체 참조",
+        "얕은 복사",
+        "깊은 복사",
+        "structuredClone",
+        "객체 동일성",
+        "ArrayBuffer",
+        "소유권 이전"
+      ],
+      "body_chars": 11513
+    },
+    {
       "number": 17,
       "slug": "017-search-without-reading-all",
       "title": "검색했는데, 왜 전부 안 읽었지?",
