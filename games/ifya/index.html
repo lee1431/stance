@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07090d">
+  <title>IFYA — 선택을 심고, 시간을 본다</title>
+  <link rel="stylesheet" href="./styles.css?v=1">
+</head>
+<body>
+  <main id="app" class="app-shell">
+    <section class="room" aria-label="IFYA investment lounge">
+      <div class="room-glow"></div>
+
+      <header class="brandbar">
+        <div>
+          <div class="brand">IFYA</div>
+          <div class="tagline">선택을 심고, 시간을 본다</div>
+        </div>
+        <nav class="topnav">
+          <button id="openPortfolio" class="ghost">내 포지션</button>
+          <a class="ghost linkbtn" href="./ranking.html">랭킹</a>
+        </nav>
+      </header>
+
+      <aside class="season-card glass">
+        <div class="eyebrow">CURRENT SEASON</div>
+        <div id="seasonName" class="season-name">Season 1</div>
+        <div class="season-copy">시장은 차트에서 움직이고,<br>세계는 TV에서 말한다.</div>
+        <div id="serverTime" class="server-time">--:--:--</div>
+      </aside>
+
+      <section class="tv-wrap" aria-label="IFYA TV">
+        <div class="antenna antenna-a"></div>
+        <div class="antenna antenna-b"></div>
+        <div id="tv" class="tv">
+          <div class="tv-bezel">
+            <div class="tv-screen">
+              <div class="scanlines"></div>
+              <div id="noise" class="noise"></div>
+              <div class="broadcast-top">
+                <span id="channelLabel">IFYA TV</span>
+                <span id="liveBadge">ON AIR</span>
+              </div>
+              <div class="broadcast-center">
+                <div id="tvKicker" class="tv-kicker">MARKET WATCH</div>
+                <h1 id="tvHeadline">시장을 관찰하세요</h1>
+                <p id="tvSubline">실시간 가격과 세계의 징후가 이곳에서 만납니다.</p>
+              </div>
+              <div id="ticker" class="ticker">가격 정보 불러오는 중...</div>
+            </div>
+            <div class="tv-controls">
+              <span></span><span></span><i></i><i></i>
+            </div>
+          </div>
+          <div class="tv-shadow"></div>
+        </div>
+      </section>
+
+      <aside class="account-card glass">
+        <div class="eyebrow">PLAYER</div>
+        <div id="nickname" class="account-name">게스트</div>
+        <div class="account-grid">
+          <div><span>총 자산</span><strong id="equity">-</strong></div>
+          <div><span>수익률</span><strong id="returnPct">-</strong></div>
+          <div><span>현금</span><strong id="cash">-</strong></div>
+          <div><span>포지션</span><strong id="positionCount">0</strong></div>
+        </div>
+        <button id="joinBtn" class="primary">참가 / 닉네임 설정</button>
+      </aside>
+
+      <section class="asset-shelf" aria-label="investment assets">
+        <button class="asset-object" data-symbol="BTC">
+          <span class="object-icon coin">₿</span>
+          <span class="symbol">BTC</span>
+          <strong class="price" data-price="BTC">-</strong>
+          <em data-change="BTC">-</em>
+        </button>
+        <button class="asset-object" data-symbol="GOLD">
+          <span class="object-icon goldbar">▰</span>
+          <span class="symbol">GOLD</span>
+          <strong class="price" data-price="GOLD">-</strong>
+          <em data-change="GOLD">-</em>
+        </button>
+        <button class="asset-object" data-symbol="OIL">
+          <span class="object-icon barrel">◉</span>
+          <span class="symbol">OIL</span>
+          <strong class="price" data-price="OIL">-</strong>
+          <em data-change="OIL">-</em>
+        </button>
+        <button class="asset-object" data-symbol="NVDA">
+          <span class="object-icon chip">▦</span>
+          <span class="symbol">NVDA</span>
+          <strong class="price" data-price="NVDA">-</strong>
+          <em data-change="NVDA">-</em>
+        </button>
+        <button class="asset-object" data-symbol="USD">
+          <span class="object-icon cashicon">$</span>
+          <span class="symbol">USD</span>
+          <strong class="price" data-price="USD">-</strong>
+          <em data-change="USD">-</em>
+        </button>
+      </section>
+
+      <section class="sofa">
+        <div class="cushion left"></div>
+        <div class="cushion right"></div>
+        <div class="remote">
+          <span>IFYA</span>
+          <button id="tvStatic" aria-label="TV static">●</button>
+        </div>
+      </section>
+
+      <div id="statusBar" class="statusbar glass">백엔드 연결 중...</div>
+    </section>
+  </main>
+
+  <dialog id="tradeDialog" class="dialog">
+    <form method="dialog" class="dialog-card" id="tradeForm">
+      <button class="x" value="cancel" aria-label="닫기">×</button>
+      <div class="eyebrow">PLANT A TIMELINE</div>
+      <h2><span id="tradeSymbol">BTC</span> 선택</h2>
+      <div id="tradeMeta" class="muted">-</div>
+      <div id="tradePrice" class="trade-price">-</div>
+
+      <div class="segmented">
+        <button type="button" class="side-btn long" data-side="LONG">LONG</button>
+        <button type="button" class="side-btn short" data-side="SHORT">SHORT</button>
+      </div>
+
+      <label>레버리지
+        <div id="leverageGroup" class="leverage-group"></div>
+      </label>
+
+      <label>투입 비중
+        <input id="allocation" type="range" min="10" max="100" step="10" value="20">
+        <div class="range-row"><span>10%</span><strong id="allocationValue">20%</strong><span>100%</span></div>
+      </label>
+
+      <button id="plantBtn" type="button" class="primary wide">이 선택을 심는다</button>
+      <div id="tradeMessage" class="dialog-message"></div>
+    </form>
+  </dialog>
+
+  <dialog id="joinDialog" class="dialog">
+    <form method="dialog" class="dialog-card" id="joinForm">
+      <button class="x" value="cancel">×</button>
+      <div class="eyebrow">PLAYER REGISTRATION</div>
+      <h2>IFYA 참가</h2>
+      <p class="muted">닉네임은 랭킹에 공개됩니다.</p>
+      <input id="nicknameInput" class="text-input" maxlength="24" minlength="2" placeholder="닉네임" autocomplete="off">
+      <button id="joinSubmit" type="button" class="primary wide">시작하기</button>
+      <div id="joinMessage" class="dialog-message"></div>
+    </form>
+  </dialog>
+
+  <dialog id="portfolioDialog" class="dialog">
+    <section class="dialog-card portfolio-card">
+      <button id="portfolioClose" class="x">×</button>
+      <div class="eyebrow">MY TIMELINES</div>
+      <h2>현재 포지션</h2>
+      <div id="positions" class="positions"></div>
+    </section>
+  </dialog>
+
+  <script src="./app.js?v=1" defer></script>
+</body>
+</html>
