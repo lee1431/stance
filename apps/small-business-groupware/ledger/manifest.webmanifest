@@ -1,0 +1,1 @@
+{"name": "일손장부 — 사무·총무·경리", "short_name": "일손장부", "lang": "ko", "start_url": "./workspace.html", "scope": "./", "display": "standalone", "background_color": "#f4f3ed", "theme_color": "#183e37", "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"}, {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}]}
