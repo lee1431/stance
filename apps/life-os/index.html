@@ -24,10 +24,9 @@
 'use strict';
 const KEY='life-os-canvas-v1';
 const states={idea:['구상','#94a3b8'],plan:['계획','#60a5fa'],doing:['진행 중','#34d399'],hold:['보류','#fbbf24'],done:['완료','#a78bfa'],drop:['폐기','#fb7185']};
-const seed=[{id:'root',title:'나의 인생',note:'내 삶의 전체 지도',x:100,y:80,parent:null,status:'doing'},{id:'business',title:'사업과 수익',note:'',x:-190,y:270,parent:'root',status:'plan'},{id:'life',title:'생활과 목표',note:'',x:410,y:270,parent:'root',status:'idea'},{id:'gacha',title:'온라인 라이브 뽑기방',note:'집게형 · 봉 밀기형 · 유튜브 라이브',x:-250,y:470,parent:'business',status:'doing'},{id:'fund',title:'창업지원 자금',note:'',x:20,y:480,parent:'business',status:'plan'}];
 const $=id=>document.getElementById(id);
 const viewport=$('viewport'),world=$('world'),nodesEl=$('nodes'),edges=$('edges'),menu=$('menu'),editor=$('editor');
-let data;try{data=JSON.parse(localStorage.getItem(KEY))}catch{}if(!data||!Array.isArray(data.nodes))data={nodes:seed,view:{x:innerWidth/2-200,y:60,scale:.85}};
+let data;try{data=JSON.parse(localStorage.getItem(KEY))}catch{}if(!data||!Array.isArray(data.nodes))data={nodes:[],view:{x:innerWidth/2-200,y:60,scale:.85}};
 let expanded=new Set(),selected=null,active=null,pointers=new Map(),gesture=null,holdTimer=null,held=false,saveTimer=null;
 function persist(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(data));queueCloud()}catch(e){console.warn('저장 실패',e)}},200)}
 let vault=null,cloudTimer=null,cloudBusy=false,cloudPending=false,cloudBlocked=false;
