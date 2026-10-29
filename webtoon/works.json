@@ -4,11 +4,52 @@
       "id": "sword-of-darkness",
       "title": "흑기의 검",
       "author": "STANCE",
-      "description": "카타 평야와 에카라 숲을 배경으로 펼쳐지는 검의 이야기. 첫 화 제작 준비 중.",
+      "description": "카타 평야와 에카라 숲을 배경으로 펼쳐지는 검의 이야기.",
       "status": "준비중",
       "published": true,
       "cover": "",
       "episodes": []
+    },
+    {
+      "id": "sword-fragrance",
+      "title": "검향만리(劍香萬里)",
+      "author": "원고 제공: Google Drive",
+      "description": "청풍검문 멸문의 마지막 후예 백운혁. 십 년간 필사공으로 숨어 지내던 그의 검향이 다시 강호에 퍼진다.",
+      "status": "작화 준비중",
+      "published": true,
+      "cover": "",
+      "source": {
+        "type": "google-docs",
+        "documentId": "1fN5SBx2U35VuyyrR468rTb49lAPdgpzBLMCKmj2x6jg",
+        "sync": "manual",
+        "note": "원고는 비공개로 유지. 배포 사이트에 인증 토큰 또는 원고 전체를 포함하지 않음."
+      },
+      "episodes": [
+        {
+          "id": "episode-001",
+          "number": 1,
+          "title": "백의의 필사공, 검을 쥐다",
+          "published": false,
+          "date": "",
+          "images": []
+        },
+        {
+          "id": "episode-002",
+          "number": 2,
+          "title": "젓가락에 깃든 검향",
+          "published": false,
+          "date": "",
+          "images": []
+        },
+        {
+          "id": "episode-003",
+          "number": 3,
+          "title": "흑철 가면의 그림자",
+          "published": false,
+          "date": "",
+          "images": []
+        }
+      ]
     }
   ]
 }
