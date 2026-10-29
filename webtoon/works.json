@@ -13,30 +13,37 @@
     {
       "id": "sword-fragrance",
       "title": "검향만리(劍香萬里)",
-      "author": "원고 제공: Google Drive",
+      "author": "STANCE",
       "description": "청풍검문 멸문의 마지막 후예 백운혁. 십 년간 필사공으로 숨어 지내던 그의 검향이 다시 강호에 퍼진다.",
-      "status": "작화 준비중",
+      "status": "1화 준비중",
       "published": true,
       "cover": "",
-      "source": {
-        "type": "google-docs",
-        "documentId": "1fN5SBx2U35VuyyrR468rTb49lAPdgpzBLMCKmj2x6jg",
-        "sync": "manual",
-        "note": "원고는 비공개로 유지. 배포 사이트에 인증 토큰 또는 원고 전체를 포함하지 않음."
-      },
       "episodes": [
         {
           "id": "episode-001",
           "number": 1,
-          "title": "백의의 필사공, 검을 쥐다",
+          "title": "십 년의 침묵",
           "published": false,
           "date": "",
-          "images": []
+          "images": [
+            "./assets/sword-fragrance/001/001.png",
+            "./assets/sword-fragrance/001/002.png",
+            "./assets/sword-fragrance/001/003.png",
+            "./assets/sword-fragrance/001/004.png",
+            "./assets/sword-fragrance/001/005.png",
+            "./assets/sword-fragrance/001/006.png",
+            "./assets/sword-fragrance/001/007.png",
+            "./assets/sword-fragrance/001/008.png",
+            "./assets/sword-fragrance/001/009.png",
+            "./assets/sword-fragrance/001/010.png",
+            "./assets/sword-fragrance/001/011.png",
+            "./assets/sword-fragrance/001/012.png"
+          ]
         },
         {
           "id": "episode-002",
           "number": 2,
-          "title": "젓가락에 깃든 검향",
+          "title": "2화",
           "published": false,
           "date": "",
           "images": []
@@ -44,7 +51,7 @@
         {
           "id": "episode-003",
           "number": 3,
-          "title": "흑철 가면의 그림자",
+          "title": "3화",
           "published": false,
           "date": "",
           "images": []
