@@ -3,7 +3,7 @@
 const $ = (id) => document.getElementById(id);
 const CHUNGJU = {lat:36.991, lng:127.926};
 const state = {stops:[], map:null, sdkReady:false, sdkLoading:false, markers:[], markerById:new Map(),
-  activeRun:0, running:false, busyToggles:new Set(), tilesLoaded:false, resizeObserver:null, sdkScript:null, tileFailures:0};
+  activeRun:0, running:false, busyToggles:new Set(), tilesLoaded:false, resizeObserver:null, sdkScript:null, tileFailures:0,csrfToken:"",user:null,filter:"all",search:""};
 
 function esc(value) {
   return String(value??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -17,11 +17,17 @@ function errMessage(e) { return e?.message || String(e); }
 function getSavedClientId(){try{return localStorage.getItem('deliveryMapClientId')||'';}catch(_){return '';}}
 function saveClientId(id){try{localStorage.setItem('deliveryMapClientId',id);}catch(_){}}
 const APP_BASE = window.location.pathname.replace(/[^/]*$/, '');
-async function api(path, options={}) {
-  const resp=await fetch(APP_BASE + String(path).replace(/^\/+/, ''),{...options, headers:{...(options.body?{'Content-Type':'application/json'}:{}), ...(options.headers||{})}});
-  const body=await resp.json().catch(()=>({}));
-  if (!resp.ok) throw new Error(body.error || `서버 오류: HTTP ${resp.status}`);
-  return body;
+async function api(path,options={}) {
+ const method=(options.method||'GET').toUpperCase();
+ const response=await fetch(APP_BASE+String(path).replace(/^\/+/,''),{
+  ...options,credentials:'same-origin',
+  headers:{...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{}),
+   ...(method!=='GET'?{'X-CSRF-Token':state.csrfToken}:{})}
+ });
+ if(response.status===401)throw new Error('LOGIN_REQUIRED');
+ const body=await response.json().catch(()=>({}));
+ if(!response.ok)throw new Error(body.error||('HTTP '+response.status));
+ return body;
 }
 function normalize(s) { return String(s||'').trim().replace(/\s+/g,' '); }
 function newStop(name,address,extras={}) {
@@ -71,11 +77,17 @@ function updateCounts() {
   $('completedCount').textContent=state.stops.filter(s=>s.completed).length;
   $('failCount').textContent=state.stops.filter(s=>s.status==='failed').length;
   $('plotBtn').disabled=!state.sdkReady||!total||state.running;
+  $('clearBtn').disabled=!state.stops.some(s=>s.completed)||state.running;
 }
 function renderStops() {
   const list=$('stopList'), y=list.scrollTop;
   if(!state.stops.length) {list.innerHTML='<div class="empty-list">고객 이름과 주소를 입력해 주세요.</div>';updateCounts();return;}
-  list.innerHTML=state.stops.slice(0,1000).map((s,i)=>`<div class="stop-row ${esc(s.status)} ${s.completed?'completed':''}">
+  list.innerHTML=state.stops.filter(s=>{
+ const keyword=(s.name+' '+s.address+' '+(s.location||'')).toLowerCase();
+ return (!state.search||keyword.includes(state.search))&&
+  (state.filter==='all'||(state.filter==='pending'&&!s.completed)||
+   (state.filter==='completed'&&s.completed)||(state.filter==='failed'&&s.status==='failed'));
+}).slice(0,1000).map((s,i)=>`<div class="stop-row ${esc(s.status)} ${s.completed?'completed':''}">
     <span class="stop-no">${i+1}</span>
     <div class="stop-main"><span class="stop-name">${esc(s.name)}</span>
       <span class="stop-address">${esc(s.address)}${s.location?' · '+esc(s.location):''}</span>
@@ -190,15 +202,17 @@ async function addStops(items,source='직접 입력') {
     return true;
   } catch(e) {status(`저장 실패: ${errMessage(e)}`,true);return false;}
 }
-async function clearAll() {
-  if(!state.stops.length)return;
-  if(!confirm(`배송지 ${state.stops.length}곳을 S21 서버에서 전부 삭제할까요?`))return;
-  try {
-    state.activeRun++;state.running=false;
-    await api('/api/stops',{method:'DELETE'});state.stops=[];
-    $('addressText').value=''; resetMarkers();renderStops();refreshBadge();
-    status('모든 배송지를 삭제했습니다.');$('plotText').textContent='지도에 전체 표시';
-  } catch(e) {status('삭제 실패: '+errMessage(e),true);}
+async function clearAll(){
+ const n=state.stops.filter(s=>s.completed).length,pending=state.stops.length-n;
+ if(!n){status('완료된 배송이 없습니다. 미배송은 모두 유지됩니다.');return;}
+ if(!confirm('완료 '+n+'건만 삭제할까요?\n미배송 '+pending+'건은 유지됩니다.'))return;
+ $('clearBtn').disabled=true;
+ try{
+  const result=await api('/api/stops/completed',{method:'DELETE'});
+  state.stops=result.stops;renderStops();
+  if(state.sdkReady)drawMarkers();else{resetMarkers();refreshBadge();}
+  status('완료 '+result.deleted+'건 삭제 · 미배송 '+result.remaining+'건 보존');
+ }catch(e){status('완료건 삭제 실패: '+errMessage(e),true);updateCounts();}
 }
 async function deleteOne(id) {
   const s=state.stops.find(v=>v.id===id); if(!s)return;
@@ -264,7 +278,7 @@ function focusStop(id) {
   const s=state.stops.find(v=>v.id===id);
   if(!s||!hasGeo(s)||!state.sdkReady)return;
   state.map.setCenter(new naver.maps.LatLng(s.lat,s.lng));state.map.setZoom(17);
-  if(window.innerWidth<=680)document.querySelector('.map-area').scrollIntoView({behavior:'smooth'});
+  if(window.innerWidth<=740)closeWorkspace();
 }
 function geocode(address) {
   return new Promise((resolve,reject)=>{
@@ -312,7 +326,7 @@ async function plotAll() {
   state.running=false;$('plotText').textContent='지도에 전체 표시';$('progressTrack').hidden=true;
   drawMarkers();renderStops();
   status(`지도 마커 ${state.markers.length}곳 표시 · 좌표 오류 ${failed}개. 마커 터치로 완료 처리.`,failed>0);
-  if(window.innerWidth<=680&&state.markers.length)document.querySelector('.map-area').scrollIntoView({behavior:'smooth'});
+  if(window.innerWidth<=740&&state.markers.length)closeWorkspace();
 }
 function connectNaver(clientId) {
   if(!/^[a-zA-Z0-9_-]{5,100}$/.test(clientId)) {
@@ -390,7 +404,7 @@ function connectNaver(clientId) {
 async function loadSample() {
   if(state.stops.length&&!confirm('예제 배송지 100개를 현재 배송지에 추가할까요?'))return;
   try {
-    const r=await fetch(APP_BASE + 'static/data/chungju_100_delivery_stops.csv',{cache:'no-store'});
+    const r=await fetch(APP_BASE + 'data/chungju_100_delivery_stops.csv',{cache:'no-store'});
     if(!r.ok)throw new Error('예제 CSV 파일을 읽을 수 없습니다.');
     const items=parseCsv(await r.text());
     if(items.length!==100)throw new Error(`예제 ${items.length}개 발견 (100개 아님)`);
@@ -411,7 +425,84 @@ function selectTab(which) {
   $('pasteTab').classList.toggle('is-active',paste);$('fileTab').classList.toggle('is-active',!paste);
   $('pasteTab').setAttribute('aria-selected',String(paste));$('fileTab').setAttribute('aria-selected',String(!paste));
 }
+
+function setWorkspace(view){
+ if(!['list','add','settings'].includes(view))return;
+ document.querySelectorAll('[data-panel]').forEach(x=>x.hidden=x.dataset.panel!==view);
+ document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view===view));
+ document.querySelectorAll('[data-mobile-view]').forEach(x=>x.classList.toggle('active',x.dataset.mobileView===view));
+ if(window.innerWidth<=740)document.body.classList.add('drawer-open');
+}
+function closeWorkspace(){
+ document.body.classList.remove('drawer-open');
+ document.querySelectorAll('[data-mobile-view]').forEach(x=>x.classList.toggle('active',x.dataset.mobileView==='map'));
+ if(state.sdkReady)requestAnimationFrame(resizeMap);
+}
+function setupWorkspace(){
+ document.querySelectorAll('[data-view]').forEach(x=>x.addEventListener('click',()=>setWorkspace(x.dataset.view)));
+ document.querySelectorAll('[data-mobile-view]').forEach(x=>x.addEventListener('click',()=>{
+  if(x.dataset.mobileView==='map')closeWorkspace();else setWorkspace(x.dataset.mobileView);
+ }));
+ $('stopSearch').addEventListener('input',e=>{state.search=e.target.value.toLowerCase().trim();renderStops();});
+ document.querySelectorAll('[data-stop-filter]').forEach(x=>x.addEventListener('click',()=>{
+  state.filter=x.dataset.stopFilter;
+  document.querySelectorAll('[data-stop-filter]').forEach(y=>y.classList.toggle('active',y.dataset.stopFilter===state.filter));
+  renderStops();
+ }));
+}
+function adminMessage(message,failed=false){
+ $('adminMessage').textContent=message;
+ $('adminMessage').style.color=failed?'#b84a40':'#728198';
+}
+async function refreshUsers(){
+ if(state.user?.role!=='admin')return;
+ const data=await api('/api/users'),list=$('userList');
+ list.innerHTML='';
+ for(const u of data.users){
+  const card=document.createElement('div');card.className='user-row';
+  const head=document.createElement('div');head.className='user-main';
+  const title=document.createElement('strong');title.textContent=u.username;
+  const meta=document.createElement('span');meta.textContent=(u.role==='admin'?'관리자':'배송기사')+' · '+u.count+'건 · '+(u.active?'활성':'중지');
+  head.append(title,meta);card.append(head);
+  if(u.role!=='admin'){
+   const actions=document.createElement('div');actions.className='user-actions';
+   const activeBtn=document.createElement('button');activeBtn.type='button';activeBtn.textContent=u.active?'계정 중지':'활성화';
+   activeBtn.onclick=async()=>{
+    const active=!u.active;if(!confirm(active?'계정을 활성화할까요?':'계정을 중지할까요?'))return;
+    try{await api('/api/users/'+u.id,{method:'PATCH',body:JSON.stringify({active})});await refreshUsers();}
+    catch(e){adminMessage(errMessage(e),true);}
+   };
+   const pwd=document.createElement('input');pwd.type='password';pwd.placeholder='새 비밀번호 12자 이상';pwd.autocomplete='new-password';
+   const resetBtn=document.createElement('button');resetBtn.type='button';resetBtn.textContent='비밀번호 변경';
+   resetBtn.onclick=async()=>{
+    if(pwd.value.length<12){adminMessage('비밀번호를 12자 이상 입력하세요.',true);return;}
+    try{await api('/api/users/'+u.id,{method:'PATCH',body:JSON.stringify({password:pwd.value})});pwd.value='';adminMessage('비밀번호 변경 완료');}
+    catch(e){adminMessage(errMessage(e),true);}
+   };
+   actions.append(activeBtn,pwd,resetBtn);card.append(actions);
+  }
+  list.append(card);
+ }
+}
+async function initAccount(){
+ const info=await api('/api/auth/me');
+ state.user=info.user;state.csrfToken=info.csrfToken;
+ $('currentUser').textContent=info.user.username;
+ $('userBadge').textContent=info.user.role==='admin'?'관리자':'배송기사';
+ if(info.user.role==='admin'){$('adminPanel').hidden=false;await refreshUsers();}
+ $('logoutBtn').addEventListener('click',async()=>{
+  try{await api('/api/auth/logout',{method:'POST'});location.href=APP_BASE+'login';}
+  catch(e){status('로그아웃 오류: '+errMessage(e),true);}
+ });
+ $('createUserBtn').addEventListener('click',async()=>{
+  try{
+   await api('/api/users',{method:'POST',body:JSON.stringify({username:$('newUsername').value.trim(),password:$('newPassword').value})});
+   $('newUsername').value='';$('newPassword').value='';await refreshUsers();adminMessage('사용자를 추가했습니다.');
+  }catch(e){adminMessage('사용자 추가 실패: '+errMessage(e),true);}
+ });
+}
 async function init() {
+  setupWorkspace();
   $('pasteTab').addEventListener('click',()=>selectTab('paste'));
   $('fileTab').addEventListener('click',()=>selectTab('file'));
   $('applyTextBtn').addEventListener('click',async()=>{
@@ -446,10 +537,11 @@ async function init() {
   for(const eventName of ['dragleave','drop'])$('dropZone').addEventListener(eventName,e=>{e.preventDefault();$('dropZone').classList.remove('is-dragging');});
   $('dropZone').addEventListener('drop',e=>readFile(e.dataTransfer?.files?.[0]));
   try {
+    await initAccount();
     await refreshStops(false);status(`${state.stops.length}곳의 배송지가 S21 서버에서 불러와졌습니다.`);
     const server=await api('/api/config');
     const clientId=getSavedClientId()||server.clientId;
     if(clientId){$('clientId').value=clientId;connectNaver(clientId);}
-  }catch(e){status('S21 Flask 서버 연결 실패: '+errMessage(e),true);}
+  }catch(e){if(errMessage(e)==='LOGIN_REQUIRED')location.href=APP_BASE+'login';else status('S21 연결 실패: '+errMessage(e),true);}
 }
 window.addEventListener('DOMContentLoaded',init);
