@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1830">
+  <title>배송지도 S21 | Flask · NAVER Map</title>
+  <link rel="stylesheet" href="static/style.css?v=0.4.0">
+  <script src="static/app.js?v=0.4.0" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="배송지 설정">
+      <header class="brand">
+        <span class="brand-symbol" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        <div><strong>배송지도</strong><small>S21 FLASK SERVER / STEP 01</small></div>
+        <span class="stage">S21</span>
+      </header>
+      <div class="sidebar-scroll">
+        <div class="heading-block">
+          <span class="eyebrow">STEP 01 / 위치 표시</span>
+          <h1>배송지를<br><em>한눈에.</em></h1>
+          <p>고객 이름이 붙은 마커를 지도에 표시합니다. 배송한 곳을 터치하면 초록색으로 바뀝니다. 주소와 완료 상태는 갤럭시 S21 서버에 저장됩니다. 경로선은 표시하지 않습니다.</p>
+        </div>
+
+        <section class="panel api-panel" aria-labelledby="api-label">
+          <div class="panel-title-row"><h2 id="api-label"><span class="step-num">01</span> 네이버지도 연결</h2><span id="apiState" class="api-state">연결 전</span></div>
+          <label class="field-label" for="clientId">NAVER CLOUD Client ID</label>
+          <div class="api-control">
+            <input id="clientId" type="text" autocomplete="off" spellcheck="false" placeholder="Client ID 입력" aria-describedby="apiNote">
+            <button id="connectBtn" type="button" class="button button-dark">연결</button>
+          </div>
+          <p id="apiNote" class="field-note">Client Secret은 입력하지 마세요. Dynamic Map과 Geocoding 권한이 필요합니다.</p>
+          <a class="small-link" href="https://guide.ncloud-docs.com/docs/maps-app" target="_blank" rel="noopener noreferrer">발급 안내 보기 ↗</a>
+        </section>
+
+        <section class="panel" aria-labelledby="address-title">
+          <div class="panel-title-row"><h2 id="address-title"><span class="step-num">02</span> 배송 주소</h2><span class="inline-count" id="inputCount">0건</span></div>
+          <div class="quick-entry">
+            <label class="field-label" for="quickName">고객 1명 빠르게 추가</label>
+            <div class="quick-fields"><input id="quickName" placeholder="고객명 (예: 홍길동)" autocomplete="off"><input id="quickAddress" placeholder="주소 (예: 충주시 으뜸로 21)" autocomplete="off"></div>
+            <button id="quickAddBtn" type="button" class="button button-subtle quick-add-btn">+ 고객 주소 저장</button>
+          </div>
+          <div class="tab-row" role="tablist" aria-label="주소 입력 방법">
+            <button type="button" id="pasteTab" class="tab is-active" role="tab" aria-selected="true" aria-controls="pastePanel">직접 입력</button>
+            <button type="button" id="fileTab" class="tab" role="tab" aria-selected="false" aria-controls="filePanel">CSV 업로드</button>
+          </div>
+          <div id="pastePanel" role="tabpanel" aria-labelledby="pasteTab">
+            <label class="field-label" for="addressText">한 줄에 한 배송지</label>
+            <textarea id="addressText" rows="7" spellcheck="false" placeholder="충청북도 충주시 으뜸로 21&#10;충청북도 충주시 계명대로 32&#10;홍길동 | 충청북도 충주시 형설로 106"></textarea>
+            <p class="field-note">입력한 주소는 S21 SQLite에 저장됩니다. 주소만 입력하거나 <code>고객명 | 주소</code>로 입력해도 됩니다. 한 줄은 한 고객입니다. 여러 줄을 한 번에 추가하고 S21에 저장할 수 있습니다.</p>
+            <div class="action-row"><button id="applyTextBtn" type="button" class="button button-subtle">주소 추가 · 저장</button><button id="clearBtn" type="button" class="button button-link">전체 삭제</button></div>
+          </div>
+          <div id="filePanel" role="tabpanel" aria-labelledby="fileTab" hidden>
+            <label for="csvFile" class="file-zone" id="dropZone"><span class="file-icon" aria-hidden="true">↥</span><strong>CSV / TXT 파일 선택</strong><small>또는 파일을 여기에 놓으세요</small></label>
+            <input id="csvFile" type="file" accept=".csv,.txt,text/csv,text/plain" hidden>
+            <p class="field-note">지원 열: <code>주소</code> 또는 <code>도로명주소</code> / 이름: <code>고객명</code>, <code>수령인</code>, <code>상호명</code> 등. UTF-8 권장.</p>
+          </div>
+          <button id="sampleBtn" type="button" class="sample-button"><span aria-hidden="true">▤</span> 충주시 상가 100곳 예제 불러오기 <span aria-hidden="true">→</span></button>
+        </section>
+
+        <section class="panel locations-panel" aria-labelledby="location-title">
+          <div class="panel-title-row"><h2 id="location-title"><span class="step-num">03</span> 배송지 목록</h2><span class="inline-count" id="listCount">0건</span></div>
+          <div class="mini-stats"><div><span>전체</span><strong id="totalCount">0</strong></div><div><span>미배송</span><strong id="pendingCount">0</strong></div><div><span>배송 완료</span><strong id="completedCount">0</strong></div><div><span>주소 오류</span><strong id="failCount">0</strong></div></div>
+          <div id="stopList" class="stop-list" aria-live="polite"><div class="empty-list">주소를 추가하거나 예제를 불러오세요.</div></div>
+        </section>
+      </div>
+      <footer class="sidebar-footer">
+        <button id="plotBtn" class="button button-primary" type="button" disabled><span aria-hidden="true">◎</span> <span id="plotText">지도에 전체 표시</span> <span aria-hidden="true">→</span></button>
+        <div id="statusText" class="status-line" role="status" aria-live="polite">주소를 입력해 주세요.</div>
+        <div class="progress-track" id="progressTrack" hidden><span id="progressBar"></span></div>
+      </footer>
+    </aside>
+
+    <main class="map-area" aria-label="네이버 지도 영역">
+      <div id="map" class="map-frame"></div>
+      <div class="map-toolbar"><span class="map-tag"><span class="dot"></span> 고객 이름 마커 · 터치하면 완료 전환</span><div class="map-tools"><button id="diagnoseBtn" type="button" class="map-tool" title="지도 상태 확인">지도 진단</button><button id="fitBtn" type="button" class="map-tool" title="전체 위치 보기" disabled>⌖ 전체 보기</button></div></div>
+      <div id="mapHealth" class="map-health" role="status" aria-live="polite">네이버지도 미연결</div>
+      <section id="mapDiagnostics" class="map-diagnostics" hidden aria-label="지도 표시 진단">
+        <div class="diag-head"><strong>지도 연결 진단</strong><button id="closeDiagBtn" class="diag-close" type="button" aria-label="진단 닫기">✕</button></div>
+        <pre id="diagnosticText">진단 대기 중</pre>
+        <button id="retryMapBtn" type="button" class="button button-subtle">지도 크기·위치 다시 맞추기</button>
+        <p>지도 SDK가 연결되어도 타일 이미지가 보이지 않는다면 네이버 클라우드에서 Dynamic Map 권한과 Web 서비스 URL을 확인하세요.</p>
+      </section>
+      <div id="mapCover" class="map-cover"><div class="map-cover-icon" aria-hidden="true">⌖</div><h2>지도를 연결하세요</h2><p>네이버 클라우드 Client ID를 입력하면<br>이곳에 실제 네이버지도가 나타납니다.</p><div class="cover-hint">① Client ID 입력 → ② 주소 불러오기 → ③ 전체 표시</div></div>
+      <div class="map-bottom"><span id="mapBadge">S21 서버 연결 중</span><span class="legend"><span class="legend-item"><i class="legend-dot pending-dot"></i> 미배송</span><span class="legend-item"><i class="legend-dot completed-dot"></i> 완료</span></span></div>
+    </main>
+  </div>
+</body>
+</html>
