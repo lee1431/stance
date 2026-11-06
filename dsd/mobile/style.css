@@ -4,3 +4,15 @@
 .scan-toggle{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:800;cursor:pointer}
 .scan-toggle input{width:19px;height:19px;accent-color:#11885b}
 .scan-options small{font-size:11px;line-height:1.45;color:#416759}
+
+/* Supported camera focus/lens controls. Hidden when the camera API lacks capability. */
+.camera-tools{display:flex;flex-direction:column;gap:9px;padding:10px 13px;background:#f1f5f9;border-bottom:1px solid #dbe4ee}
+.camera-tools-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.camera-tools-top button{white-space:nowrap;padding:10px 12px;font-size:12px;border:1px solid #bfd0dc}
+.camera-tools-top small,#cameraInfo{font-size:11px;color:#52667c;line-height:1.4}
+.camera-device{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;font-weight:700}
+.camera-device select{max-width:68%;min-width:0;padding:8px;border-radius:8px;border:1px solid #c2cedb;background:white}
+.zoom-control{display:flex;align-items:center;gap:12px}
+.zoom-control label{font-size:12px;white-space:nowrap}
+.zoom-control input{flex:1;min-width:0;accent-color:#2472eb}
+.camera-tools [hidden]{display:none!important}
