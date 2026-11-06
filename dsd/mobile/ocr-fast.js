@@ -3,7 +3,7 @@
 
   // Keep OCR on the phone. Only a confirmed recipient/address is sent to DSD.
   const SCAN_DELAY_MS = 750;
-  const MAX_OCR_WIDTH = 1150;
+  const MAX_OCR_WIDTH = 1500;
   const MIN_CONFIDENCE = 80;
 
   function create(options) {
@@ -92,27 +92,47 @@
       return canvas;
     }
 
+    // The live camera's fine lettering is often only 1-2 physical pixels.
+    // Enlarging and increasing contrast can help OCR; it cannot fix bad focus.
+    // Preserve the full captured source and avoid hard thresholding fine strokes.
+    function prepareForOCR(source) {
+      if (!options.thinText || !options.thinText()) return source;
+      const targetWidth = Math.max(source.width, Math.min(2000, Math.round(source.width * 1.55)));
+      const width = Math.round(targetWidth);
+      const height = Math.round(source.height * width / source.width);
+      const output = document.createElement('canvas');
+      output.width = width;
+      output.height = height;
+      const ctx = output.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      if ('filter' in ctx) ctx.filter = 'grayscale(1) contrast(1.5) brightness(1.08)';
+      ctx.drawImage(source, 0, 0, width, height);
+      return output;
+    }
+
     function stableEnough(canvas) {
       const sampleCanvas = document.createElement('canvas');
-      sampleCanvas.width = 64;
-      sampleCanvas.height = 36;
+      sampleCanvas.width = 128;
+      sampleCanvas.height = 72;
       const ctx = sampleCanvas.getContext('2d', { willReadFrequently: true });
-      ctx.drawImage(canvas, 0, 0, 64, 36);
-      const rgba = ctx.getImageData(0, 0, 64, 36).data;
-      const pixels = new Uint8Array(64 * 36);
+      ctx.drawImage(canvas, 0, 0, 128, 72);
+      const rgba = ctx.getImageData(0, 0, 128, 72).data;
+      const pixels = new Uint8Array(128 * 72);
       let edges = 0, movement = 0;
       for (let i = 0; i < pixels.length; i++) {
         const offset = i * 4;
         const value = Math.round((rgba[offset] * 3 + rgba[offset + 1] * 6 + rgba[offset + 2]) / 10);
         pixels[i] = value;
-        if (i % 64 !== 0) edges += Math.abs(value - pixels[i - 1]);
+        if (i % 128 !== 0) edges += Math.abs(value - pixels[i - 1]);
         if (previousSample) movement += Math.abs(value - previousSample[i]);
       }
-      const edgeScore = edges / (36 * 63);
+      const edgeScore = edges / (72 * 127);
       const motionScore = previousSample ? movement / pixels.length : 0;
       previousSample = pixels;
-      if (edgeScore < 4.5) { status('글자가 흐립니다 · 송장을 가까이 고정하세요'); return false; }
-      if (motionScore > 29) { status('움직임 감지 · 잠시 고정하세요'); return false; }
+      // Do not reject faint, thin print solely because its edge score is low.
+      if (edgeScore < 2.3) { status('글자가 흐립니다 · 초점을 맞추거나 고화질 촬영을 이용하세요'); return false; }
+      if (motionScore > 23) { status('움직임 감지 · 송장을 잠시 고정하세요'); return false; }
       return true;
     }
 
@@ -149,7 +169,7 @@
         const ocr = await prewarm();
         if (!manual && (!enabled || !visible || reviewBlocked)) return;
         const started = performance.now();
-        const result = await ocr.recognize(canvas);
+        const result = await ocr.recognize(prepareForOCR(canvas));
         const time = Math.round(performance.now() - started);
         const raw = result.data.text || '';
         const parsed = options.parse(raw);
@@ -232,7 +252,7 @@
         try {
           const width = image.width || image.naturalWidth;
           const height = image.height || image.naturalHeight;
-          const ratio = Math.min(1, 1550 / width);
+          const ratio = Math.min(1, 2200 / width);
           const canvas = document.createElement('canvas');
           canvas.width = Math.round(width * ratio);
           canvas.height = Math.round(height * ratio);
