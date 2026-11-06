@@ -25,7 +25,8 @@
     .brand b{font-size:19px;letter-spacing:-.7px}
     .brand small{font-size:12px;color:#738097}
     .count{padding:12px 15px;font-size:13px;font-weight:800;color:#2865d7;border-radius:13px;white-space:nowrap}
-    .round{pointer-events:auto;margin-left:auto;border-radius:13px;width:45px;height:45px;font-size:22px}
+    .round{pointer-events:auto;border-radius:13px;width:45px;height:45px;font-size:22px}
+    .fit-all{margin-left:auto;font-size:23px}
     .fab{position:fixed;z-index:5;right:22px;bottom:calc(28px + env(safe-area-inset-bottom));width:68px;height:68px;border:none;border-radius:22px;background:#246bfa;color:white;font-size:42px;line-height:1;box-shadow:0 8px 24px #246bfa55}
     .fab:hover{background:#1556db}
     .cover{position:fixed;z-index:4;top:50%;left:50%;transform:translate(-50%,-50%);width:min(92vw,360px);background:#fff;border:1px solid #e0e7ef;border-radius:19px;padding:27px 22px;text-align:center;box-shadow:0 16px 45px #28395024}
@@ -65,6 +66,7 @@
   <header class="topbar">
     <div class="brand"><b>DSD</b><small>배송 지도</small></div>
     <div id="count" class="count" aria-live="polite">0곳</div>
+    <button id="fitAllBtn" class="round fit-all" type="button" title="전체 마커 보기" aria-label="전체 마커 보기" disabled>⌖</button>
     <button id="settingsBtn" class="round" type="button" title="네이버 지도 설정" aria-label="네이버 지도 설정">⚙</button>
   </header>
   <section id="cover" class="cover" role="status">
@@ -165,6 +167,20 @@
         $('selection').hidden = false;
         if (map) map.panTo(new naver.maps.LatLng(stop.lat, stop.lng));
       }
+      function fitAllMarkers() {
+        if (!map || !stops.length) return;
+        closeSelection();
+        const first = stops[0];
+        const uniqueLocations = new Set(stops.map((stop) => stop.lat + ',' + stop.lng));
+        if (uniqueLocations.size === 1) {
+          map.setCenter(new naver.maps.LatLng(first.lat, first.lng));
+          map.setZoom(16);
+        } else {
+          const bounds = new naver.maps.LatLngBounds();
+          stops.forEach((stop) => bounds.extend(new naver.maps.LatLng(stop.lat, stop.lng)));
+          map.fitBounds(bounds, {top:90,right:70,bottom:100,left:70});
+        }
+      }
       function drawMarkers(fit) {
         if (!map) return;
         markers.forEach((marker) => marker.setMap(null));
@@ -179,15 +195,8 @@
           markers.push(marker);
         });
         $('count').textContent = stops.length + '곳';
-        if (!fit || !stops.length) return;
-        if (stops.length === 1) {
-          map.setCenter(new naver.maps.LatLng(stops[0].lat, stops[0].lng));
-          map.setZoom(16);
-        } else {
-          const bounds = new naver.maps.LatLngBounds();
-          stops.forEach((stop) => bounds.extend(new naver.maps.LatLng(stop.lat, stop.lng)));
-          map.fitBounds(bounds, {top:90,right:70,bottom:100,left:70});
-        }
+        $('fitAllBtn').disabled = stops.length === 0;
+        if (fit) fitAllMarkers();
       }
       function geocode(address) {
         return new Promise((resolve, reject) => {
@@ -259,6 +268,7 @@
         document.head.appendChild(script);
       }
       $('connectBtn').addEventListener('click', () => $('settingsBtn').click());
+      $('fitAllBtn').addEventListener('click', fitAllMarkers);
       $('settingsBtn').addEventListener('click', () => {
         $('clientIdInput').value = readStored(CLIENT_ID_KEY, '');
         $('settingsDialog').showModal();
