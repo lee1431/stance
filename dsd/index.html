@@ -27,6 +27,11 @@
     .count{padding:12px 15px;font-size:13px;font-weight:800;color:#2865d7;border-radius:13px;white-space:nowrap}
     .round{pointer-events:auto;border-radius:13px;width:45px;height:45px;font-size:22px}
     .fit-all{margin-left:auto;font-size:23px}
+    .my-location-btn{position:relative;color:#246bfa;font-size:25px}
+    .my-location-btn.is-tracking{background:#246bfa;border-color:#246bfa;color:#fff}
+    .my-location-btn.is-tracking::after{content:"";position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:#adffda}
+    .my-location-dot{position:relative;width:22px;height:22px;border:4px solid #fff;border-radius:50%;background:#246bfa;box-shadow:0 0 0 2px #1a63e0,0 2px 10px #153b6355;pointer-events:none}
+    .my-location-dot::after{content:"";position:absolute;inset:-8px;border:1px solid #246bfa88;border-radius:50%}
     .fab{position:fixed;z-index:5;right:22px;bottom:calc(28px + env(safe-area-inset-bottom));width:68px;height:68px;border:none;border-radius:22px;background:#246bfa;color:white;font-size:42px;line-height:1;box-shadow:0 8px 24px #246bfa55}
     .fab:hover{background:#1556db}
     .cover{position:fixed;z-index:4;top:50%;left:50%;transform:translate(-50%,-50%);width:min(92vw,360px);background:#fff;border:1px solid #e0e7ef;border-radius:19px;padding:27px 22px;text-align:center;box-shadow:0 16px 45px #28395024}
@@ -71,6 +76,7 @@
     <div class="brand"><b>DSD</b><small>배송 지도</small></div>
     <div id="count" class="count" aria-live="polite">0곳</div>
     <button id="fitAllBtn" class="round fit-all" type="button" title="전체 마커 보기" aria-label="전체 마커 보기" disabled>⌖</button>
+    <button id="myLocationBtn" class="round my-location-btn" type="button" title="내 위치 실시간 추적 시작" aria-label="내 위치 실시간 추적 시작" aria-pressed="false" disabled>◎</button>
     <button id="settingsBtn" class="round" type="button" title="네이버 지도 설정" aria-label="네이버 지도 설정">⚙</button>
   </header>
   <section id="cover" class="cover" role="status">
@@ -132,6 +138,11 @@
       let selectedId = null;
       let sdkTimeout = null;
       let messageTimeout = null;
+      let locationWatchId = null;
+      let locationMarker = null;
+      let accuracyCircle = null;
+      let followLocation = false;
+      let receivedLocation = false;
 
       function readStored(key, fallback) {
         try { return localStorage.getItem(key) || fallback; } catch (_) { return fallback; }
@@ -174,6 +185,112 @@
         $('selectedAddress').textContent = stop.address;
         $('selection').hidden = false;
         if (map) map.panTo(new naver.maps.LatLng(stop.lat, stop.lng));
+      }
+      function setLocationButton(active) {
+        const button = $('myLocationBtn');
+        button.classList.toggle('is-tracking', active);
+        button.setAttribute('aria-pressed', String(active));
+        const title = active ? '실시간 위치 추적 중 · 누르면 종료' : '내 위치 실시간 추적 시작';
+        button.title = title;
+        button.setAttribute('aria-label', title);
+        button.textContent = active ? '●' : '◎';
+      }
+      function clearLocationMarkers() {
+        if (locationMarker) { locationMarker.setMap(null); locationMarker = null; }
+        if (accuracyCircle) { accuracyCircle.setMap(null); accuracyCircle = null; }
+      }
+      function stopLocationTracking(showMessage) {
+        if (locationWatchId !== null && navigator.geolocation) {
+          navigator.geolocation.clearWatch(locationWatchId);
+        }
+        locationWatchId = null;
+        followLocation = false;
+        receivedLocation = false;
+        clearLocationMarkers();
+        setLocationButton(false);
+        if (showMessage) notify('실시간 위치 추적을 종료했습니다.');
+      }
+      function onLocationUpdate(position) {
+        if (!map || locationWatchId === null) return;
+        const latitude = Number(position.coords.latitude);
+        const longitude = Number(position.coords.longitude);
+        const accuracy = Number(position.coords.accuracy);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+        const point = new naver.maps.LatLng(latitude, longitude);
+        if (!locationMarker) {
+          locationMarker = new naver.maps.Marker({
+            map: map, position: point, title: '현재 위치',
+            clickable: false, zIndex: 1000,
+            icon: {
+              content: '<div class="my-location-dot"></div>',
+              size: new naver.maps.Size(22, 22),
+              anchor: new naver.maps.Point(11, 11)
+            }
+          });
+        } else {
+          locationMarker.setPosition(point);
+        }
+        if (Number.isFinite(accuracy) && accuracy > 0) {
+          if (!accuracyCircle) {
+            accuracyCircle = new naver.maps.Circle({
+              map: map, center: point, radius: accuracy,
+              clickable: false, fillColor: '#246bfa', fillOpacity: 0.1,
+              strokeColor: '#246bfa', strokeOpacity: 0.4, strokeWeight: 1,
+              zIndex: 999
+            });
+          } else {
+            accuracyCircle.setCenter(point);
+            accuracyCircle.setRadius(accuracy);
+          }
+        }
+        if (followLocation) {
+          if (!receivedLocation) map.setZoom(17);
+          map.panTo(point);
+        }
+        if (!receivedLocation) {
+          notify('실시간 GPS 위치 연결됨' + (Number.isFinite(accuracy) ? ' · 정확도 약 ' + Math.round(accuracy) + 'm' : ''));
+        }
+        receivedLocation = true;
+      }
+      function onLocationError(error) {
+        if (locationWatchId === null) return;
+        if (error.code === 1) {
+          stopLocationTracking(false);
+          notify('위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해 주세요.');
+        } else if (error.code === 2) {
+          notify('현재 GPS 신호를 찾지 못했습니다. 위치 서비스를 켜고 다시 확인해 주세요.');
+        } else if (error.code === 3) {
+          notify('위치 수신 시간이 초과되었습니다. GPS 신호를 기다리는 중입니다.');
+        } else {
+          notify('GPS 오류: ' + (error.message || '위치를 확인할 수 없습니다.'));
+        }
+      }
+      function toggleLocationTracking() {
+        if (locationWatchId !== null) {
+          stopLocationTracking(true);
+          return;
+        }
+        if (!map) {
+          notify('네이버 지도가 연결된 후 위치 추적을 시작할 수 있습니다.');
+          return;
+        }
+        if (!window.isSecureContext || !navigator.geolocation) {
+          notify('위치 추적은 HTTPS와 위치 기능을 지원하는 브라우저에서 사용할 수 있습니다.');
+          return;
+        }
+        receivedLocation = false;
+        followLocation = true;
+        try {
+          locationWatchId = navigator.geolocation.watchPosition(
+            onLocationUpdate, onLocationError,
+            {enableHighAccuracy: true, maximumAge: 1000, timeout: 20000}
+          );
+          setLocationButton(true);
+          notify('GPS 위치를 확인 중입니다. 위치 권한을 허용해 주세요.');
+        } catch (error) {
+          stopLocationTracking(false);
+          notify('GPS 시작 실패: ' + error.message);
+        }
       }
       function fitAllMarkers() {
         if (!map || !stops.length) return;
@@ -264,6 +381,7 @@
           });
           $('cover').hidden = true;
           $('addBtn').disabled = false;
+          $('myLocationBtn').disabled = false;
           naver.maps.Event.addListener(map, 'click', closeSelection);
           drawMarkers(true);
         } catch (error) {
@@ -291,6 +409,8 @@
       }
       $('connectBtn').addEventListener('click', () => $('settingsBtn').click());
       $('fitAllBtn').addEventListener('click', fitAllMarkers);
+      $('myLocationBtn').addEventListener('click', toggleLocationTracking);
+      window.addEventListener('pagehide', () => stopLocationTracking(false));
       $('settingsBtn').addEventListener('click', () => {
         $('clientIdInput').value = readStored(CLIENT_ID_KEY, '');
         $('settingsDialog').showModal();
