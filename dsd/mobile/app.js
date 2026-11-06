@@ -15,6 +15,7 @@ function scanner(){
   state.ocr=DoroFastOCR.create({
     video:$('video'),guide:document.querySelector('.target'),
     parse:parseWaybill,
+    thinText:()=>$('thinText').checked,
     onStatus:scannerStatus,
     onMetric:message=>{$('progress').textContent=message;},
     onBusy:busy=>{state.ocrBusy=busy;$('progress').hidden=!busy;$('shutter').disabled=busy||!state.stream;},
@@ -88,6 +89,8 @@ function updateFocusControls(){
     }
   }
   cameraEl('refocus').disabled=false;
+  cameraEl('torch').hidden=!(caps.torch===true);
+  cameraEl('torch').textContent='손전등 켜기';
   cameraEl('focusSupport').textContent=modes.includes('continuous')?
     '연속 자동초점 사용 가능':'초점 조절은 기기·브라우저에서 제한될 수 있습니다';
 }
@@ -125,6 +128,18 @@ async function refocus(){
     button.disabled=false;
     state.ocr?.setVisible(!$('scanView').hidden);
   }
+}
+async function toggleTorch(){
+  const track=state.cameraTrack;
+  if(!track||state.cameraCaps.torch!==true)return;
+  const button=$('torch');
+  const next=button.dataset.on!=='true';
+  try{
+    await cameraConstraint({torch:next});
+    button.dataset.on=String(next);
+    button.textContent=next?'손전등 끄기':'손전등 켜기';
+    cameraMessage(next?'조명 켜짐 · 빛 반사가 심하면 꺼주세요':'조명 꺼짐');
+  }catch(e){cameraMessage('이 브라우저는 손전등 전환을 지원하지 않습니다');}
 }
 async function setZoom(){
   const slider=cameraEl('zoomSlider');
@@ -193,4 +208,4 @@ function tab(which){$('scanView').hidden=which!=='scan';$('mapView').hidden=whic
 function loadMap(){if(state.map){drawMarkers();return}if(state.mapLoading)return;if(!state.clientId){$('mapFallback').textContent='네이버지도 Client ID가 없습니다. 기존 DSD 설정에서 연결해 주세요.';return}state.mapLoading=true;const s=document.createElement('script');s.src='https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId='+encodeURIComponent(state.clientId);s.onload=()=>{state.mapLoading=false;if(!window.naver?.maps?.Map){$('mapFallback').textContent='지도 SDK 로드 실패';return}state.map=new naver.maps.Map('map',{center:new naver.maps.LatLng(36.991,127.926),zoom:13});$('mapFallback').hidden=true;drawMarkers()};s.onerror=()=>{state.mapLoading=false;$('mapFallback').textContent='지도 연결 실패: 도메인과 Client ID를 확인하세요'};document.head.appendChild(s)}
 function drawMarkers(){if(!state.map)return;state.markers.forEach(m=>m.setMap(null));state.markers=[];state.stops.filter(s=>Number.isFinite(s.lat)&&Number.isFinite(s.lng)&&s.status==='mapped').forEach(s=>{const marker=new naver.maps.Marker({map:state.map,position:new naver.maps.LatLng(s.lat,s.lng),icon:{content:'<div class="marker '+(s.completed?'done':'')+'">'+esc(s.name)+'</div>',anchor:new naver.maps.Point(15,32)}});naver.maps.Event.addListener(marker,'click',()=>openDetail(s.id));state.markers.push(marker)});fitMap();const missing=state.stops.filter(s=>!Number.isFinite(s.lat)||!Number.isFinite(s.lng)).length;if(missing)toast(missing+'건은 좌표 미등록으로 지도에 표시되지 않습니다. 기존 DSD에서 좌표 변환하세요.')}
 function fitMap(){if(!state.map)return;const valid=state.stops.filter(s=>Number.isFinite(s.lat)&&Number.isFinite(s.lng));if(!valid.length)return;if(valid.length===1){state.map.setCenter(new naver.maps.LatLng(valid[0].lat,valid[0].lng));state.map.setZoom(17);return}const bounds=new naver.maps.LatLngBounds();valid.forEach(s=>bounds.extend(new naver.maps.LatLng(s.lat,s.lng)));state.map.fitBounds(bounds)}
-$('startCamera').onclick=()=>startCamera();$('refocus').onclick=refocus;$('cameraSelect').onchange=e=>startCamera(e.target.value);$('zoomSlider').oninput=e=>{$('zoomValue').textContent=Number(e.target.value).toFixed(1)+'×';};$('zoomSlider').onchange=setZoom;$('shutter').onclick=capture;$('photo').onchange=e=>{const f=e.target.files[0];if(f)recognize(f);e.target.value=''};$('saveStop').onclick=saveStop;$('cancelReview').onclick=()=>{$('review').hidden=true;state.ocr?.resume();};$('autoScan').onchange=e=>{try{scanner().setEnabled(e.target.checked);}catch(err){toast(err.message);}};$('tabMap').onclick=()=>tab('map');$('tabScan').onclick=()=>tab('scan');$('closeModal').onclick=()=>$('modal').hidden=true;$('markPending').onclick=()=>mark(false);$('markDone').onclick=()=>mark(true);$('fitMap').onclick=fitMap;$('retryMap').onclick=()=>{state.mapLoading=false;loadMap()};window.addEventListener('pagehide',()=>{state.ocr?.dispose();state.stream?.getTracks().forEach(t=>t.stop());});init();
+$('startCamera').onclick=()=>startCamera();$('refocus').onclick=refocus;$('torch').onclick=toggleTorch;$('cameraSelect').onchange=e=>startCamera(e.target.value);$('zoomSlider').oninput=e=>{$('zoomValue').textContent=Number(e.target.value).toFixed(1)+'×';};$('zoomSlider').onchange=setZoom;$('shutter').onclick=capture;$('photo').onchange=e=>{const f=e.target.files[0];if(f)recognize(f);e.target.value=''};$('saveStop').onclick=saveStop;$('cancelReview').onclick=()=>{$('review').hidden=true;state.ocr?.resume();};$('autoScan').onchange=e=>{try{scanner().setEnabled(e.target.checked);}catch(err){toast(err.message);}};$('tabMap').onclick=()=>tab('map');$('tabScan').onclick=()=>tab('scan');$('closeModal').onclick=()=>$('modal').hidden=true;$('markPending').onclick=()=>mark(false);$('markDone').onclick=()=>mark(true);$('fitMap').onclick=fitMap;$('retryMap').onclick=()=>{state.mapLoading=false;loadMap()};window.addEventListener('pagehide',()=>{state.ocr?.dispose();state.stream?.getTracks().forEach(t=>t.stop());});init();
