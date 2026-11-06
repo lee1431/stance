@@ -1,116 +1,320 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#101d31">
-<title>배송지도 · 내 배송 작업 공간</title>
-<link rel="stylesheet" href="./style.css?v=ui-1">
-<script src="./app.js?v=ui-1" defer></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <title>DSD · 배송 지도</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;color:#18263c;background:#e9eef3}
+    *{box-sizing:border-box}
+    html,body{width:100%;height:100%;margin:0;overflow:hidden}
+    button,input{font:inherit}
+    button{cursor:pointer}
+    button:disabled{opacity:.55;cursor:wait}
+    button:focus-visible,input:focus-visible{outline:3px solid #8db6ff;outline-offset:2px}
+    #map{position:fixed;inset:0;width:100%;height:100%;height:100dvh;background:#e9eef3}
+    #map img{max-width:none}
+    .topbar{position:fixed;z-index:5;top:14px;left:14px;right:14px;display:flex;align-items:center;gap:12px;pointer-events:none}
+    .brand,.count,.round{background:#fff;box-shadow:0 3px 16px #1d315024;border:1px solid #e3e9f1}
+    .brand{pointer-events:auto;display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:15px}
+    .brand b{font-size:19px;letter-spacing:-.7px}
+    .brand small{font-size:12px;color:#738097}
+    .count{padding:12px 15px;font-size:13px;font-weight:800;color:#2865d7;border-radius:13px;white-space:nowrap}
+    .round{pointer-events:auto;margin-left:auto;border-radius:13px;width:45px;height:45px;font-size:22px}
+    .fab{position:fixed;z-index:5;right:22px;bottom:calc(28px + env(safe-area-inset-bottom));width:68px;height:68px;border:none;border-radius:22px;background:#246bfa;color:white;font-size:42px;line-height:1;box-shadow:0 8px 24px #246bfa55}
+    .fab:hover{background:#1556db}
+    .cover{position:fixed;z-index:4;top:50%;left:50%;transform:translate(-50%,-50%);width:min(92vw,360px);background:#fff;border:1px solid #e0e7ef;border-radius:19px;padding:27px 22px;text-align:center;box-shadow:0 16px 45px #28395024}
+    .cover h2{font-size:21px;margin:0 0 12px}
+    .cover p{font-size:13px;line-height:1.65;color:#68788e;margin:0 0 18px}
+    .primary{border:0;border-radius:12px;background:#246bfa;color:white;font-weight:750;padding:13px 17px}
+    .secondary{border:0;border-radius:12px;background:#eef2f7;color:#3b4f6b;font-weight:700;padding:13px 17px}
+    .message{position:fixed;z-index:6;left:50%;bottom:calc(110px + env(safe-area-inset-bottom));transform:translateX(-50%);width:max-content;max-width:calc(100vw - 30px);padding:11px 16px;border-radius:12px;background:#172844ed;color:white;font-size:13px;line-height:1.4;box-shadow:0 6px 22px #1a2b4040;text-align:center}
+    .message[hidden],.cover[hidden],.selection[hidden]{display:none}
+    .selection{position:fixed;z-index:4;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(400px,calc(100vw - 112px));background:white;border-radius:17px;box-shadow:0 6px 25px #1c2f5040;padding:15px}
+    .selection strong{display:block;font-size:13px;color:#65748a;margin-bottom:5px}
+    .selection p{margin:0 0 12px;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+    .selection-actions{display:flex;gap:8px}
+    .selection-actions button{padding:9px 12px;border:0;border-radius:9px;background:#eff3f9;color:#415775;font-size:12px;font-weight:700}
+    .selection-actions .danger{color:#c13c43;background:#fff0f0}
+    dialog{border:0;border-radius:22px;background:#fff;color:#1c2b40;box-shadow:0 18px 60px #071d3d55;width:min(420px,calc(100vw - 28px));padding:23px}
+    dialog::backdrop{background:#0e22376b}
+    dialog h2{margin:0 0 7px;font-size:21px}
+    dialog p{font-size:13px;color:#6e7b8e;line-height:1.6;margin:0 0 17px}
+    dialog label{display:block;font-size:13px;font-weight:800;margin:17px 0 7px}
+    dialog input{width:100%;min-height:49px;border:1px solid #cfd8e5;border-radius:11px;padding:12px 13px;font-size:16px;background:#fff}
+    .dialog-actions{display:flex;gap:9px;margin-top:20px}
+    .dialog-actions button{flex:1}
+    .hint{font-size:12px;margin-top:12px;color:#8b6872}
+    @media(max-width:600px){
+      .topbar{top:calc(10px + env(safe-area-inset-top));left:10px;right:10px;gap:7px}
+      .brand{padding:9px 11px;gap:6px}.brand b{font-size:18px}.brand small{font-size:11px}
+      .count{font-size:12px;padding:11px}.round{height:41px;width:41px}
+      .fab{right:15px;bottom:calc(20px + env(safe-area-inset-bottom));width:64px;height:64px}
+      .selection{left:12px;bottom:calc(20px + env(safe-area-inset-bottom));transform:none;width:calc(100vw - 105px)}
+      .message{bottom:calc(94px + env(safe-area-inset-bottom))}
+    }
+  </style>
 </head>
 <body>
-<div class="app-shell">
-<aside class="sidebar" aria-label="배송 작업">
-  <header class="brand">
-    <span class="brand-symbol" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-    <div><strong>배송지도</strong><small>DELIVERY WORKSPACE</small></div>
-    <span class="stage">● S21</span>
+  <main id="map" aria-label="네이버 배송 지도"></main>
+  <header class="topbar">
+    <div class="brand"><b>DSD</b><small>배송 지도</small></div>
+    <div id="count" class="count" aria-live="polite">0곳</div>
+    <button id="settingsBtn" class="round" type="button" title="네이버 지도 설정" aria-label="네이버 지도 설정">⚙</button>
   </header>
-  <div class="overview">
-    <div class="overview-tag">MY DELIVERY <span>실시간 현황</span></div>
-    <h1>오늘의 배송</h1>
-    <p>지도에서 고객을 터치하면 완료 상태가 저장됩니다.</p>
-    <div class="mini-stats"><div><span>전체</span><strong id="totalCount">0</strong></div><div><span>미배송</span><strong id="pendingCount">0</strong></div><div><span>배송 완료</span><strong id="completedCount">0</strong></div><div><span>주소 오류</span><strong id="failCount">0</strong></div></div>
-  </div>
-  <nav class="view-tabs" aria-label="배송 작업 메뉴">
-    <button class="view-tab active" type="button" data-view="list">☷ <span>배송 목록</span></button>
-    <button class="view-tab" type="button" data-view="add">＋ <span>주소 등록</span></button>
-    <button class="view-tab" type="button" data-view="settings">⚙ <span>설정</span></button>
-  </nav>
-  <div class="sidebar-scroll">
-    <div class="view-panel" data-panel="list"><section class="panel locations-panel" aria-labelledby="location-title">
-          <div class="panel-title-row"><h2 id="location-title"><span class="step-num">03</span> 배송지 목록</h2><span class="inline-count" id="listCount">0건</span></div>
-          
-          <div class="list-search">
-  <input id="stopSearch" type="search" placeholder="고객명 · 배송 주소 검색" aria-label="배송지 검색">
-  <div class="filter-pills" role="group" aria-label="배송 상태">
-    <button class="filter-pill active" type="button" data-stop-filter="all">전체</button>
-    <button class="filter-pill" type="button" data-stop-filter="pending">미배송</button>
-    <button class="filter-pill" type="button" data-stop-filter="completed">완료</button>
-    <button class="filter-pill" type="button" data-stop-filter="failed">주소 오류</button>
-  </div>
-</div><div id="stopList" class="stop-list" aria-live="polite"><div class="empty-list">주소를 추가하거나 예제를 불러오세요.</div></div>
-        </section></div>
-    <div class="view-panel" data-panel="add" hidden><section class="panel" aria-labelledby="address-title">
-          <div class="panel-title-row"><h2 id="address-title"><span class="step-num">02</span> 배송 주소</h2><span class="inline-count" id="inputCount">0건</span></div>
-          <div class="quick-entry">
-            <label class="field-label" for="quickName">고객 빠른 등록</label>
-            <div class="quick-fields"><input id="quickName" placeholder="고객명 (예: 홍길동)" autocomplete="off"><input id="quickAddress" placeholder="주소 (예: 충주시 으뜸로 21)" autocomplete="off"></div>
-            <button id="quickAddBtn" type="button" class="button button-subtle quick-add-btn">+ 고객 주소 저장</button>
-          </div>
-          <div class="tab-row" role="tablist" aria-label="주소 입력 방법">
-            <button type="button" id="pasteTab" class="tab is-active" role="tab" aria-selected="true" aria-controls="pastePanel">직접 입력</button>
-            <button type="button" id="fileTab" class="tab" role="tab" aria-selected="false" aria-controls="filePanel">CSV 업로드</button>
-          </div>
-          <div id="pastePanel" role="tabpanel" aria-labelledby="pasteTab">
-            <label class="field-label" for="addressText">한 줄에 한 배송지</label>
-            <textarea id="addressText" rows="7" spellcheck="false" placeholder="충청북도 충주시 으뜸로 21&#10;충청북도 충주시 계명대로 32&#10;홍길동 | 충청북도 충주시 형설로 106"></textarea>
-            <p class="field-note">입력한 주소는 S21 SQLite에 저장됩니다. 주소만 입력하거나 <code>고객명 | 주소</code>로 입력해도 됩니다. 한 줄은 한 고객입니다. 여러 줄을 한 번에 추가하고 S21에 저장할 수 있습니다.</p>
-            <div class="action-row"><button id="applyTextBtn" type="button" class="button button-subtle">주소 추가 · 저장</button><button id="clearBtn" title="완료건만 삭제하고 미배송은 유지합니다." type="button" class="button button-link">완료건 일괄 삭제</button></div>
-          </div>
-          <div id="filePanel" role="tabpanel" aria-labelledby="fileTab" hidden>
-            <label for="csvFile" class="file-zone" id="dropZone"><span class="file-icon" aria-hidden="true">↥</span><strong>CSV / TXT 파일 선택</strong><small>또는 파일을 여기에 놓으세요</small></label>
-            <input id="csvFile" type="file" accept=".csv,.txt,text/csv,text/plain" hidden>
-            <p class="field-note">지원 열: <code>주소</code> 또는 <code>도로명주소</code> / 이름: <code>고객명</code>, <code>수령인</code>, <code>상호명</code> 등. UTF-8 권장.</p>
-          </div>
-          <button id="sampleBtn" type="button" class="sample-button"><span aria-hidden="true">▤</span> 충주시 상가 100곳 예제 불러오기 <span aria-hidden="true">→</span></button>
-        </section></div>
-    <div class="view-panel" data-panel="settings" hidden><section class="panel account-panel" aria-label="내 계정">
- <div class="panel-title-row"><h2>로그인 계정</h2><span id="userBadge" class="api-state">확인 중</span></div>
- <div class="account-row"><strong id="currentUser">연결 확인 중</strong><button id="logoutBtn" type="button" class="button button-subtle">로그아웃</button></div>
- <p class="field-note">배송지와 완료 상태는 사용자별로 분리됩니다.</p>
-</section><section id="adminPanel" class="panel" hidden aria-label="관리자 사용자 관리">
- <div class="panel-title-row"><h2>배송기사 계정 관리</h2></div>
- <div class="quick-entry">
- <label for="newUsername" class="field-label">신규 사용자</label>
- <div class="quick-fields"><input id="newUsername" placeholder="아이디 (3~32자)" autocomplete="off"><input id="newPassword" type="password" autocomplete="new-password" placeholder="비밀번호 12자 이상"></div>
- <button id="createUserBtn" type="button" class="button button-dark quick-add-btn">사용자 추가</button>
- </div>
- <div id="userList" class="user-list"></div><p id="adminMessage" class="field-note">관리자 계정은 사용자만 관리합니다.</p>
-</section><section class="panel api-panel" aria-labelledby="api-label">
-          <div class="panel-title-row"><h2 id="api-label"><span class="step-num">01</span> 네이버지도 연결</h2><span id="apiState" class="api-state">연결 전</span></div>
-          <label class="field-label" for="clientId">NAVER CLOUD Client ID</label>
-          <div class="api-control">
-            <input id="clientId" type="text" autocomplete="off" spellcheck="false" placeholder="Client ID 입력" aria-describedby="apiNote">
-            <button id="connectBtn" type="button" class="button button-dark">연결</button>
-          </div>
-          <p id="apiNote" class="field-note">Client Secret은 입력하지 마세요. Dynamic Map과 Geocoding 권한이 필요합니다.</p>
-          <a class="small-link" href="https://guide.ncloud-docs.com/docs/maps-app" target="_blank" rel="noopener noreferrer">발급 안내 보기 ↗</a>
-        </section></div>
-  </div>
-  <footer class="sidebar-footer">
-    <button id="plotBtn" class="button button-primary" type="button" disabled><span aria-hidden="true">◎</span><span id="plotText">지도에 전체 표시</span><span aria-hidden="true">→</span></button>
-    <div id="statusText" class="status-line" role="status" aria-live="polite">서버 연결을 확인하고 있습니다.</div>
-    <div class="progress-track" id="progressTrack" hidden><span id="progressBar"></span></div>
-  </footer>
-</aside>
-<main class="map-area" aria-label="네이버 지도 영역">
-      <div id="map" class="map-frame"></div>
-      <div class="map-toolbar"><span class="map-tag"><span class="dot"></span> 고객명 마커를 터치하면 배송 완료</span><div class="map-tools"><button id="diagnoseBtn" type="button" class="map-tool" title="지도 상태 확인">지도 진단</button><button id="fitBtn" type="button" class="map-tool" title="전체 위치 보기" disabled>⌖ 전체 보기</button></div></div>
-      <div id="mapHealth" class="map-health" role="status" aria-live="polite">네이버지도 미연결</div>
-      <section id="mapDiagnostics" class="map-diagnostics" hidden aria-label="지도 표시 진단">
-        <div class="diag-head"><strong>지도 연결 진단</strong><button id="closeDiagBtn" class="diag-close" type="button" aria-label="진단 닫기">✕</button></div>
-        <pre id="diagnosticText">진단 대기 중</pre>
-        <button id="retryMapBtn" type="button" class="button button-subtle">지도 크기·위치 다시 맞추기</button>
-        <p>지도 SDK가 연결되어도 타일 이미지가 보이지 않는다면 네이버 클라우드에서 Dynamic Map 권한과 Web 서비스 URL을 확인하세요.</p>
-      </section>
-      <div id="mapCover" class="map-cover"><div class="map-cover-icon" aria-hidden="true">⌖</div><h2>지도를 연결하세요</h2><p>네이버 클라우드 Client ID를 입력하면<br>이곳에 실제 네이버지도가 나타납니다.</p><div class="cover-hint">① Client ID 입력 → ② 주소 불러오기 → ③ 전체 표시</div></div>
-      <div class="map-bottom"><span id="mapBadge">S21 서버 연결 중</span><span class="legend"><span class="legend-item"><i class="legend-dot pending-dot"></i> 미배송</span><span class="legend-item"><i class="legend-dot completed-dot"></i> 완료</span></span></div>
-    </main>
-<nav class="mobile-dock" aria-label="모바일 메뉴">
-  <button type="button" class="dock-tab active" data-mobile-view="map">⌖ <span>지도</span></button>
-  <button type="button" class="dock-tab" data-mobile-view="list">☷ <span>목록</span></button>
-  <button type="button" class="dock-tab" data-mobile-view="add">＋ <span>주소 추가</span></button>
-  <button type="button" class="dock-tab" data-mobile-view="settings">⚙ <span>설정</span></button>
-</nav>
-</div>
-</body></html>
+  <section id="cover" class="cover" role="status">
+    <h2 id="coverTitle">네이버 지도 연결</h2>
+    <p id="coverText">NAVER Maps Client ID를 한 번 입력하면 지도가 나타납니다.</p>
+    <button id="connectBtn" class="primary" type="button">지도 설정</button>
+  </section>
+  <section id="selection" class="selection" hidden>
+    <strong>등록된 배송지</strong>
+    <p id="selectedAddress"></p>
+    <div class="selection-actions">
+      <button type="button" id="closeSelection">닫기</button>
+      <button type="button" id="deleteStop" class="danger">이 마커 삭제</button>
+    </div>
+  </section>
+  <button id="addBtn" class="fab" type="button" aria-label="배송 주소 추가" title="배송 주소 추가" disabled>+</button>
+  <div id="message" class="message" role="status" aria-live="polite" hidden></div>
+
+  <dialog id="addressDialog" aria-labelledby="addressTitle">
+    <form id="addressForm">
+      <h2 id="addressTitle">배송 주소 등록</h2>
+      <p>주소를 입력하면 지도에서 위치를 찾아 마커를 표시합니다.</p>
+      <label for="addressInput">배송지 주소</label>
+      <input id="addressInput" type="text" placeholder="예: 충주시 으뜸로 21" autocomplete="street-address" required maxlength="250">
+      <div class="dialog-actions">
+        <button id="cancelAddress" class="secondary" type="button">취소</button>
+        <button id="saveAddress" class="primary" type="submit">마커 추가</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="settingsDialog" aria-labelledby="settingsTitle">
+    <form id="settingsForm">
+      <h2 id="settingsTitle">네이버 지도 설정</h2>
+      <p>네이버 클라우드의 Maps JavaScript API용 Client ID를 입력하세요. Client Secret은 필요하지 않습니다.</p>
+      <label for="clientIdInput">Client ID (ncpKeyId)</label>
+      <input id="clientIdInput" type="text" placeholder="Client ID" autocomplete="off" spellcheck="false" required>
+      <div class="hint">네이버 클라우드에서 접속 도메인을 Web 서비스 URL로 등록해야 합니다.</div>
+      <div class="dialog-actions">
+        <button id="cancelSettings" class="secondary" type="button">취소</button>
+        <button class="primary" type="submit">연결하기</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    'use strict';
+    (function () {
+      const $ = (id) => document.getElementById(id);
+      const STOPS_KEY = 'dsd:vanilla:stops:v1';
+      const CLIENT_ID_KEY = 'deliveryMapClientId'; // 기존 DSD의 저장된 Client ID 재사용
+      const CHUNGJU = {lat:36.991, lng:127.926};
+      let map = null;
+      let stops = [];
+      let markers = [];
+      let selectedId = null;
+      let sdkTimeout = null;
+      let messageTimeout = null;
+
+      function readStored(key, fallback) {
+        try { return localStorage.getItem(key) || fallback; } catch (_) { return fallback; }
+      }
+      function writeStored(key, value) {
+        try { localStorage.setItem(key, value); return true; } catch (_) { return false; }
+      }
+      function loadStops() {
+        try {
+          const list = JSON.parse(readStored(STOPS_KEY, '[]'));
+          if (!Array.isArray(list)) return [];
+          return list.filter((s) => s && typeof s.address === 'string' &&
+            Number.isFinite(s.lat) && Number.isFinite(s.lng) && typeof s.id === 'string');
+        } catch (_) { return []; }
+      }
+      function notify(text) {
+        clearTimeout(messageTimeout);
+        $('message').textContent = text;
+        $('message').hidden = false;
+        messageTimeout = setTimeout(() => { $('message').hidden = true; }, 4000);
+      }
+      function showCover(title, description) {
+        $('coverTitle').textContent = title;
+        $('coverText').textContent = description;
+        $('cover').hidden = false;
+      }
+      function saveStops() {
+        $('count').textContent = stops.length + '곳';
+        if (!writeStored(STOPS_KEY, JSON.stringify(stops))) {
+          notify('브라우저 저장에 실패했습니다. 데이터를 유지할 수 없습니다.');
+        }
+      }
+      function closeSelection() {
+        selectedId = null;
+        $('selection').hidden = true;
+      }
+      function selectStop(stop) {
+        selectedId = stop.id;
+        $('selectedAddress').textContent = stop.address;
+        $('selection').hidden = false;
+        if (map) map.panTo(new naver.maps.LatLng(stop.lat, stop.lng));
+      }
+      function drawMarkers(fit) {
+        if (!map) return;
+        markers.forEach((marker) => marker.setMap(null));
+        markers = [];
+        stops.forEach((stop) => {
+          const marker = new naver.maps.Marker({
+            map: map,
+            position: new naver.maps.LatLng(stop.lat, stop.lng),
+            title: stop.address
+          });
+          naver.maps.Event.addListener(marker, 'click', () => selectStop(stop));
+          markers.push(marker);
+        });
+        $('count').textContent = stops.length + '곳';
+        if (!fit || !stops.length) return;
+        if (stops.length === 1) {
+          map.setCenter(new naver.maps.LatLng(stops[0].lat, stops[0].lng));
+          map.setZoom(16);
+        } else {
+          const bounds = new naver.maps.LatLngBounds();
+          stops.forEach((stop) => bounds.extend(new naver.maps.LatLng(stop.lat, stop.lng)));
+          map.fitBounds(bounds, {top:90,right:70,bottom:100,left:70});
+        }
+      }
+      function geocode(address) {
+        return new Promise((resolve, reject) => {
+          if (!window.naver || !naver.maps.Service || !naver.maps.Service.geocode) {
+            reject(new Error('주소 검색 기능을 불러오지 못했습니다.')); return;
+          }
+          let finished = false;
+          const timer = setTimeout(() => {
+            if (!finished) { finished = true; reject(new Error('주소 검색 시간이 초과되었습니다.')); }
+          }, 12000);
+          try {
+            naver.maps.Service.geocode({query: address}, (status, response) => {
+              if (finished) return;
+              finished = true;
+              clearTimeout(timer);
+              if (status !== naver.maps.Service.Status.OK) {
+                reject(new Error('네이버 주소 검색에 실패했습니다.')); return;
+              }
+              const found = response && response.v2 && response.v2.addresses && response.v2.addresses[0];
+              const lat = found ? Number(found.y) : NaN;
+              const lng = found ? Number(found.x) : NaN;
+              if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                reject(new Error('주소를 찾지 못했습니다. 도로명이나 번지를 확인하세요.')); return;
+              }
+              resolve({lat:lat,lng:lng});
+            });
+          } catch (error) {
+            clearTimeout(timer);
+            reject(error);
+          }
+        });
+      }
+      window.dsdMapReady = function () {
+        clearTimeout(sdkTimeout);
+        try {
+          if (!window.naver || !naver.maps.Map) throw new Error('지도 SDK를 불러오지 못했습니다.');
+          map = new naver.maps.Map('map', {
+            center: new naver.maps.LatLng(CHUNGJU.lat, CHUNGJU.lng),
+            zoom: 13,
+            mapTypeId: naver.maps.MapTypeId.NORMAL,
+            zoomControl: true,
+            zoomControlOptions: {position: naver.maps.Position.TOP_RIGHT}
+          });
+          $('cover').hidden = true;
+          $('addBtn').disabled = false;
+          naver.maps.Event.addListener(map, 'click', closeSelection);
+          drawMarkers(true);
+        } catch (error) {
+          showCover('지도 초기화 실패', error.message);
+        }
+      };
+      function loadMap() {
+        const id = readStored(CLIENT_ID_KEY, '').trim();
+        if (!id) {
+          showCover('네이버 지도 연결', '⚙ 설정에서 네이버 지도 Client ID를 입력해 주세요.');
+          return;
+        }
+        showCover('지도 불러오는 중', '네이버 지도에 연결하고 있습니다.');
+        const script = document.createElement('script');
+        script.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=' +
+          encodeURIComponent(id) + '&submodules=geocoder&callback=dsdMapReady';
+        script.onerror = () => {
+          clearTimeout(sdkTimeout);
+          showCover('지도 연결 실패', 'Client ID, Maps 사용 권한 및 Web 서비스 URL을 확인하세요.');
+        };
+        sdkTimeout = setTimeout(() => {
+          if (!map) showCover('지도 연결 시간 초과', '네트워크 또는 네이버 지도 API 설정을 확인하세요.');
+        }, 15000);
+        document.head.appendChild(script);
+      }
+      $('connectBtn').addEventListener('click', () => $('settingsBtn').click());
+      $('settingsBtn').addEventListener('click', () => {
+        $('clientIdInput').value = readStored(CLIENT_ID_KEY, '');
+        $('settingsDialog').showModal();
+      });
+      $('cancelSettings').addEventListener('click', () => $('settingsDialog').close());
+      $('settingsForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const id = $('clientIdInput').value.trim();
+        if (!/^[a-zA-Z0-9_-]{5,100}$/.test(id)) {
+          notify('올바른 Client ID를 입력하세요.'); return;
+        }
+        if (!writeStored(CLIENT_ID_KEY, id)) {
+          notify('Client ID를 저장할 수 없습니다.'); return;
+        }
+        location.reload();
+      });
+      $('addBtn').addEventListener('click', () => {
+        $('addressDialog').showModal();
+        $('addressInput').focus();
+      });
+      $('cancelAddress').addEventListener('click', () => $('addressDialog').close());
+      $('addressForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const address = $('addressInput').value.trim().replace(/\s+/g, ' ');
+        if (!address || !map) return;
+        $('saveAddress').disabled = true;
+        $('saveAddress').textContent = '주소 검색 중...';
+        try {
+          const position = await geocode(address);
+          stops.push({id: String(Date.now()) + '-' + Math.random().toString(36).slice(2),
+            address: address, lat: position.lat, lng: position.lng});
+          saveStops();
+          drawMarkers(false);
+          map.setCenter(new naver.maps.LatLng(position.lat, position.lng));
+          map.setZoom(16);
+          $('addressInput').value = '';
+          $('addressDialog').close();
+          closeSelection();
+          notify('배송지 마커를 추가했습니다.');
+        } catch (error) {
+          notify(error.message || '주소 등록에 실패했습니다.');
+        } finally {
+          $('saveAddress').disabled = false;
+          $('saveAddress').textContent = '마커 추가';
+        }
+      });
+      $('closeSelection').addEventListener('click', closeSelection);
+      $('deleteStop').addEventListener('click', () => {
+        const target = stops.find((s) => s.id === selectedId);
+        if (!target || !confirm('이 배송지 마커를 삭제할까요?\n' + target.address)) return;
+        stops = stops.filter((s) => s.id !== selectedId);
+        closeSelection();
+        saveStops();
+        drawMarkers(false);
+        notify('배송지 마커를 삭제했습니다.');
+      });
+      stops = loadStops();
+      $('count').textContent = stops.length + '곳';
+      loadMap();
+    }());
+  </script>
+</body>
+</html>
