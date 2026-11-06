@@ -75,8 +75,8 @@
   <header class="topbar">
     <div class="brand"><b>DSD</b><small>배송 지도</small></div>
     <div id="count" class="count" aria-live="polite">0곳</div>
-    <button id="fitAllBtn" class="round fit-all" type="button" title="전체 마커 보기" aria-label="전체 마커 보기" disabled>⌖</button>
-    <button id="myLocationBtn" class="round my-location-btn" type="button" title="내 위치 실시간 추적 시작" aria-label="내 위치 실시간 추적 시작" aria-pressed="false" disabled>◎</button>
+    <button id="fitAllBtn" class="round fit-all" type="button" title="전체 마커 보기" aria-label="전체 마커 보기" disabled>◎</button>
+    <button id="myLocationBtn" class="round my-location-btn" type="button" title="내 위치 실시간 추적 시작" aria-label="내 위치 실시간 추적 시작" aria-pressed="false" disabled>⌖</button>
     <button id="settingsBtn" class="round" type="button" title="네이버 지도 설정" aria-label="네이버 지도 설정">⚙</button>
   </header>
   <section id="cover" class="cover" role="status">
@@ -193,7 +193,7 @@
         const title = active ? '실시간 위치 추적 중 · 누르면 종료' : '내 위치 실시간 추적 시작';
         button.title = title;
         button.setAttribute('aria-label', title);
-        button.textContent = active ? '●' : '◎';
+        button.textContent = active ? '●' : '⌖';
       }
       function clearLocationMarkers() {
         if (locationMarker) { locationMarker.setMap(null); locationMarker = null; }
