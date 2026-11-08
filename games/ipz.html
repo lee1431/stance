@@ -295,6 +295,9 @@
     });
 
     loadImages(1);
-  </script>
+  
+// Launch the image chosen in the standalone gallery.
+(function(){const p=new URLSearchParams(location.search),image=p.get('image');if(!image)return;try{const u=new URL(image);if(!/^https?:$/.test(u.protocol))return;window.addEventListener('load',()=>startGame(u.href),{once:true})}catch(e){console.warn('Invalid gallery image',e)}})();
+</script>
 </body>
 </html>
