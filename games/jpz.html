@@ -93,4 +93,7 @@ const originalStartGame=startGame;startGame=function(url){document.getElementByI
 const originalHandleEnd=handleEnd;handleEnd=function(){originalHandleEnd();updateHud();if(!completed&&pieces.length&&pieces.every(p=>p.isLocked)){completed=true;timerText.textContent=formattedTime();document.getElementById('finish-time').textContent=pieces.length+'조각 · '+timerText.textContent;launchConfetti();playVictoryFanfare();finishTimer=setTimeout(()=>finishCard.classList.add('show'),700)}};
 if(new URLSearchParams(location.search).has('record')){document.body.classList.add('shorts');shortsToggle.classList.add('active');shortsToggle.textContent='전체 화면'}
 const originalBackToGallery=backToGallery;backToGallery=function(){clearTimeout(finishTimer);stopConfetti();originalBackToGallery();finishCard.classList.remove('show')};
+
+// Launch the image chosen in the standalone gallery without loading its list.
+(function(){const p=new URLSearchParams(location.search),image=p.get('image');if(!image)return;try{const u=new URL(image);if(!/^https?:$/.test(u.protocol))return;window.addEventListener('load',()=>openPuzzleSetup(encodeURIComponent(u.href),encodeURIComponent(p.get('name')||'퍼즐 이미지')),{once:true})}catch(e){console.warn('Invalid gallery image',e)}})();
 </script></body></html>
