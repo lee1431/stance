@@ -104,6 +104,14 @@
     .named-marker.is-course .marker-label{background:#12685f}
     body.course-open #addBtn,body.course-open .course-launch{display:none}
     @media(max-width:600px){.course-launch{left:12px;bottom:calc(21px + env(safe-area-inset-bottom));padding:15px 13px;font-size:13px}.course-panel{left:8px;right:8px;top:calc(64px + env(safe-area-inset-top));bottom:calc(8px + env(safe-area-inset-bottom));width:auto;border-radius:15px}.course-head{padding-top:12px}.course-tools button{font-size:11px;padding:9px 6px}}
+    .center-bar{position:fixed;z-index:5;top:82px;left:14px;display:flex;gap:5px;max-width:calc(100vw - 28px);padding:5px;background:#fff;border-radius:12px;border:1px solid #d8e7e5;box-shadow:0 3px 15px #112b3f22}
+    .center-bar select{min-width:0;width:130px;border:0;background:#fff;color:#126c62;font-size:12px;font-weight:800;padding:7px 4px}
+    .center-bar button{border:0;border-radius:8px;background:#edf7f5;color:#176d63;font-size:11px;font-weight:800;padding:9px}
+    .center-course-label{font-size:12px;font-weight:850;color:#11685e;margin:0 15px 8px}
+    .course-picker{display:flex;gap:5px;margin:0 15px 10px}
+    .course-picker select{flex:1;min-width:0;border:1px solid #d8e3ed;border-radius:8px;padding:9px 5px;background:#fff;font-size:12px}
+    .course-picker button{white-space:nowrap;border:1px solid #d8e3ed;border-radius:8px;background:#f6f8fc;padding:8px 5px;font-size:10px;font-weight:800}
+    @media(max-width:600px){.center-bar{top:calc(63px + env(safe-area-inset-top));left:10px}.center-bar select{width:116px}.course-picker button{font-size:9px;padding:8px 4px}}
   </style>
 </head>
 <body>
@@ -116,10 +124,13 @@
     <button id="settingsBtn" class="round" type="button" title="네이버 지도 설정" aria-label="네이버 지도 설정">⚙</button>
   </header>
 
+  <div class="center-bar"><select id="centerSelect" aria-label="현재 배송 센터"></select><button id="centerAddBtn" type="button" title="센터 추가">+ 센터</button><button id="centerRenameBtn" type="button" title="센터 이름 수정">수정</button></div>
   <button id="courseBtn" class="course-launch" type="button">↗ 코스 만들기</button>
   <section id="coursePanel" class="course-panel" hidden aria-label="배송 코스 편성">
     <div class="course-head"><h2>배송 코스 편성</h2><button id="closeCourseBtn" type="button" aria-label="코스 편성 닫기">✕</button></div>
     <p class="course-note">배송지를 선택하고 ↑↓로 방문 순서를 바꾸세요. 추천 순서는 직선거리 기준이며 도로·일방통행·교통 상황은 반영하지 않습니다.</p>
+    <div class="center-course-label" id="courseCenterLabel">센터별 독립 코스</div>
+    <div class="course-picker"><select id="routeSelect" aria-label="현재 코스"></select><button id="routeAddBtn" type="button">+ 코스</button><button id="routeRenameBtn" type="button">이름 수정</button><button id="routeDeleteBtn" type="button">삭제</button></div>
     <div id="courseSummary" class="course-summary" aria-live="polite">코스를 준비하고 있습니다.</div>
     <div class="course-tools">
       <button id="courseAllBtn" type="button">전체 추가</button>
@@ -180,7 +191,7 @@
     'use strict';
     (function () {
       const $ = (id) => document.getElementById(id);
-      const STOPS_KEY = 'dsd:vanilla:stops:v1';
+      let STOPS_KEY = 'dsd:vanilla:stops:v1';
       const CLIENT_ID_KEY = 'deliveryMapClientId'; // 기존 DSD의 저장된 Client ID 재사용
       const CHUNGJU = {lat:36.991, lng:127.926};
       let map = null;
@@ -196,7 +207,7 @@
       let receivedLocation = false;
 
       // Courses refer to stop IDs; stop records stay in their existing storage.
-      const COURSE_KEY = 'dsd:vanilla:course:v1';
+      let COURSE_KEY = 'dsd:vanilla:course:v1';
       let courseIds = [];
       let draftCourseIds = [];
       let coursePolyline = null;
@@ -220,8 +231,83 @@
           courseIds = next;
           writeStored(COURSE_KEY, JSON.stringify({ids:courseIds}));
         }
+        cleanupCenterRoutes();
         draftCourseIds = validCourseIds(draftCourseIds);
         if (!$('coursePanel').hidden) renderCourse();
+      }
+
+      const REGISTRY_KEY='dsd:centers:v1';
+      let centerRegistry=null;
+      const makeId=(p)=>p+'-'+(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2));
+      const stopKey=(cid)=>'dsd:center:'+cid+':stops';
+      const routeKey=(cid,rid)=>'dsd:center:'+cid+':route:'+rid;
+      function currentCenter(){return centerRegistry.centers.find(c=>c.id===centerRegistry.activeId);}
+      function currentRoute(){const c=currentCenter();return c.routes.find(r=>r.id===c.activeRouteId);}
+      function saveRegistry(){return writeStored(REGISTRY_KEY,JSON.stringify(centerRegistry));}
+      function loadRegistry(){
+        try{
+          const data=JSON.parse(readStored(REGISTRY_KEY,'null'));
+          if(data && Array.isArray(data.centers) && data.centers.length &&
+             data.centers.every(c=>c && typeof c.id==='string' && typeof c.name==='string' &&
+              Array.isArray(c.routes) && c.routes.length &&
+              c.routes.every(r=>typeof r.id==='string'&&typeof r.name==='string'))){
+            if(!data.centers.some(c=>c.id===data.activeId))data.activeId=data.centers[0].id;
+            for(const c of data.centers)if(!c.routes.some(r=>r.id===c.activeRouteId))c.activeRouteId=c.routes[0].id;
+            return data;
+          }
+        }catch(_){}
+        const c={id:makeId('center'),name:'기본 센터',routes:[{id:makeId('course'),name:'기본 코스'}]};
+        c.activeRouteId=c.routes[0].id;
+        // One-time copy of legacy browser data; originals remain as backup.
+        writeStored(stopKey(c.id),readStored('dsd:vanilla:stops:v1','[]'));
+        const old=readStored('dsd:vanilla:course:v1','');
+        if(old)writeStored(routeKey(c.id,c.activeRouteId),old);
+        return {activeId:c.id,centers:[c]};
+      }
+      function renderCenterSelect(){
+        const sel=$('centerSelect');sel.replaceChildren();
+        for(const c of centerRegistry.centers){const o=document.createElement('option');o.value=c.id;o.textContent=c.name;sel.append(o);}
+        sel.value=centerRegistry.activeId;
+        $('courseCenterLabel').textContent=currentCenter().name+' · 코스별 저장';
+      }
+      function renderRouteSelect(){
+        const sel=$('routeSelect');sel.replaceChildren();
+        for(const r of currentCenter().routes){const o=document.createElement('option');o.value=r.id;o.textContent=r.name;sel.append(o);}
+        sel.value=currentCenter().activeRouteId;
+        $('routeDeleteBtn').disabled=currentCenter().routes.length<2;
+      }
+      function dirtyCourse(){return !$('coursePanel').hidden&&JSON.stringify(validCourseIds(draftCourseIds))!==JSON.stringify(courseIds);}
+      function chooseCenter(id,force=false){
+        if(!force&&dirtyCourse()&&!confirm('저장하지 않은 코스 변경 내용을 버릴까요?')){renderCenterSelect();return false;}
+        const c=centerRegistry.centers.find(x=>x.id===id);if(!c)return false;
+        centerRegistry.activeId=id;
+        $('coursePanel').hidden=true;document.body.classList.remove('course-open');courseStartPoint=null;closeSelection();
+        STOPS_KEY=stopKey(c.id);COURSE_KEY=routeKey(c.id,c.activeRouteId);
+        stops=loadStops();courseIds=validCourseIds(loadCourse());draftCourseIds=[];
+        $('count').textContent=stops.length+'곳';renderCenterSelect();renderRouteSelect();saveRegistry();
+        if(map)drawMarkers(true);
+        return true;
+      }
+      function chooseRoute(id,force=false){
+        if(!force&&dirtyCourse()&&!confirm('저장하지 않은 코스 변경 내용을 버릴까요?')){renderRouteSelect();return false;}
+        const c=currentCenter(),r=c.routes.find(x=>x.id===id);if(!r)return false;
+        c.activeRouteId=id;COURSE_KEY=routeKey(c.id,id);
+        courseIds=validCourseIds(loadCourse());draftCourseIds=courseIds.slice();
+        saveRegistry();renderRouteSelect();
+        if(!$('coursePanel').hidden)renderCourse();
+        if(map)drawMarkers(false);
+        return true;
+      }
+      function cleanupCenterRoutes(){
+        const c=currentCenter();
+        for(const r of c.routes){
+          const key=routeKey(c.id,r.id);
+          try{
+            const saved=JSON.parse(readStored(key,'{"ids":[]}'));
+            const ids=validCourseIds(saved.ids);
+            if(JSON.stringify(ids)!==JSON.stringify(saved.ids||[]))writeStored(key,JSON.stringify({...saved,ids}));
+          }catch(_){}
+        }
       }
       function coursePoint(id) { return stops.find(s => s.id === id); }
       function airDistance(a,b) {
@@ -282,6 +368,7 @@
         closeSelection();
         const hasSaved=readStored(COURSE_KEY,'')!=='';
         draftCourseIds=hasSaved?validCourseIds(courseIds):stops.map(s=>s.id);
+        renderRouteSelect();
         $('coursePanel').hidden=false;
         document.body.classList.add('course-open');
         renderCourse();
@@ -685,6 +772,46 @@
         notify('배송지 마커를 삭제했습니다.');
       });
 
+
+      $('centerSelect').addEventListener('change',e=>chooseCenter(e.target.value));
+      $('centerAddBtn').addEventListener('click',()=>{
+        const name=prompt('센터 이름 (예: 충주 센터)');if(name===null)return;
+        const value=name.trim().replace(/\s+/g,' ');
+        if(!value||value.length>40||centerRegistry.centers.some(c=>c.name===value)){notify('센터 이름이 비었거나 중복되었습니다.');return;}
+        const c={id:makeId('center'),name:value,routes:[{id:makeId('course'),name:'기본 코스'}]};
+        c.activeRouteId=c.routes[0].id;
+        centerRegistry.centers.push(c);writeStored(stopKey(c.id),'[]');saveRegistry();
+        chooseCenter(c.id);notify(value+' 센터가 생성되었습니다.');
+      });
+      $('centerRenameBtn').addEventListener('click',()=>{
+        const c=currentCenter();const name=prompt('센터 이름 수정',c.name);if(name===null)return;
+        const value=name.trim().replace(/\s+/g,' ');
+        if(!value||value.length>40||centerRegistry.centers.some(x=>x.id!==c.id&&x.name===value)){notify('센터 이름을 확인하세요.');return;}
+        c.name=value;saveRegistry();renderCenterSelect();
+      });
+      $('routeSelect').addEventListener('change',e=>chooseRoute(e.target.value));
+      $('routeAddBtn').addEventListener('click',()=>{
+        if(dirtyCourse()&&!confirm('저장하지 않은 코스 변경 내용을 버리고 새 코스를 만들까요?'))return;
+        const c=currentCenter();const name=prompt('새 코스 이름','코스 '+(c.routes.length+1));if(name===null)return;
+        const value=name.trim().replace(/\s+/g,' ');
+        if(!value||value.length>45||c.routes.some(r=>r.name===value)){notify('코스 이름이 비었거나 중복되었습니다.');return;}
+        const r={id:makeId('course'),name:value};c.routes.push(r);
+        chooseRoute(r.id,true);draftCourseIds=[];renderCourse();if(map)drawMarkers(false);
+      });
+      $('routeRenameBtn').addEventListener('click',()=>{
+        const c=currentCenter(),r=currentRoute();const name=prompt('코스 이름 수정',r.name);if(name===null)return;
+        const value=name.trim().replace(/\s+/g,' ');
+        if(!value||value.length>45||c.routes.some(x=>x.id!==r.id&&x.name===value)){notify('코스 이름을 확인하세요.');return;}
+        r.name=value;saveRegistry();renderRouteSelect();
+      });
+      $('routeDeleteBtn').addEventListener('click',()=>{
+        const c=currentCenter(),r=currentRoute();if(c.routes.length<2)return;
+        if(!confirm(r.name+' 코스를 삭제할까요? 배송지는 유지됩니다.'))return;
+        chooseRoute(c.routes.find(x=>x.id!==r.id).id,true);
+        c.routes=c.routes.filter(x=>x.id!==r.id);saveRegistry();renderRouteSelect();
+        try{localStorage.removeItem(routeKey(c.id,r.id));}catch(_){}
+        notify('코스만 삭제했습니다. 배송지 정보는 유지됩니다.');
+      });
       $('courseBtn').addEventListener('click',showCourse);
       $('closeCourseBtn').addEventListener('click',hideCourse);
       $('cancelCourseBtn').addEventListener('click',hideCourse);
@@ -725,8 +852,8 @@
         drawMarkers(false);
         notify('방문 순서를 저장했습니다. 초록색 숫자와 연결선으로 코스가 표시됩니다.');
       });
-      stops = loadStops();
-      courseIds = validCourseIds(loadCourse());
+      centerRegistry=loadRegistry();
+      chooseCenter(centerRegistry.activeId,true);
       $('count').textContent = stops.length + '곳';
       loadMap();
     }());
