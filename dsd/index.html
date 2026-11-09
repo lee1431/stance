@@ -68,6 +68,42 @@
       .selection{left:12px;bottom:calc(20px + env(safe-area-inset-bottom));transform:none;width:calc(100vw - 105px)}
       .message{bottom:calc(94px + env(safe-area-inset-bottom))}
     }
+
+    /* Delivery course planner: manual stop order + aerial-distance suggestion */
+    .course-launch{position:fixed;z-index:5;left:17px;bottom:calc(27px + env(safe-area-inset-bottom));padding:15px 18px;border:0;border-radius:15px;background:#0b766d;color:#fff;font-weight:800;box-shadow:0 7px 22px #16413f4d}
+    .course-panel{position:fixed;z-index:7;right:15px;top:78px;bottom:16px;width:min(400px,calc(100vw - 30px));display:flex;flex-direction:column;background:#fff;border:1px solid #dce5ef;border-radius:19px;box-shadow:0 15px 48px #102d4050;overflow:hidden}
+    .course-panel[hidden]{display:none}
+    .course-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:17px 18px 8px}
+    .course-head h2{font-size:20px;margin:0}
+    .course-head button{border:0;background:#eff3f6;border-radius:9px;padding:8px 12px;font-weight:800}
+    .course-note{font-size:12px;line-height:1.55;color:#61748d;margin:0;padding:0 18px 11px}
+    .course-summary{font-size:13px;font-weight:800;background:#f0f8f7;color:#116b62;margin:0 15px 10px;padding:11px;border-radius:10px}
+    .course-tools{display:flex;gap:6px;flex-wrap:wrap;margin:0 15px 10px}
+    .course-tools button{flex:1;min-width:max-content;border:1px solid #d7e1eb;background:#f7fafd;border-radius:9px;padding:10px 8px;color:#3b526b;font-size:12px;font-weight:800}
+    .course-tools button:disabled{opacity:.5}
+    .course-gps{display:flex;align-items:center;gap:8px;margin:0 15px 11px;font-size:12px;color:#64758b}
+    .course-gps button{padding:8px 10px;border:1px solid #a3d9d1;border-radius:9px;background:#eafff8;color:#12645e;font-weight:800;font-size:11px;white-space:nowrap}
+    .course-rows{flex:1;min-height:0;overflow-y:auto;padding:0 14px 10px}
+    .course-section-label{margin:12px 2px 7px;font-size:12px;font-weight:850;color:#576b83}
+    .course-row{display:flex;gap:8px;align-items:center;border:1px solid #e2e9ef;border-radius:12px;background:#fff;padding:9px 7px;margin-bottom:7px}
+    .course-row.unassigned{background:#f6f8fb}
+    .course-index{flex:0 0 26px;display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:#0c8c7b;color:#fff;font-size:12px;font-weight:850}
+    .course-index.empty{background:#dfe7ef;color:#728399}
+    .course-details{flex:1;min-width:0;cursor:pointer}
+    .course-details strong{display:block;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#283b53}
+    .course-details small{display:block;font-size:10px;color:#74869a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px}
+    .course-actions{display:flex;gap:3px;align-items:center}
+    .course-actions button{border:0;border-radius:7px;background:#eaf0f6;color:#344d6c;padding:7px 8px;font-weight:900}
+    .course-actions button.remove{background:#fff1ed;color:#b4483b}
+    .course-actions button.add{background:#e0f8ed;color:#187953}
+    .course-bottom{border-top:1px solid #e6ecf2;padding:11px 15px 14px;display:flex;gap:8px}
+    .course-bottom button{flex:1;padding:13px 9px;border:0;border-radius:11px;font-weight:850}
+    .course-bottom .save-course{background:#0c897a;color:white}
+    .course-bottom .cancel-course{background:#edf2f7;color:#46566c}
+    .named-marker.is-course .marker-pin{background:#088b79}
+    .named-marker.is-course .marker-label{background:#12685f}
+    body.course-open #addBtn,body.course-open .course-launch{display:none}
+    @media(max-width:600px){.course-launch{left:12px;bottom:calc(21px + env(safe-area-inset-bottom));padding:15px 13px;font-size:13px}.course-panel{left:8px;right:8px;top:calc(64px + env(safe-area-inset-top));bottom:calc(8px + env(safe-area-inset-bottom));width:auto;border-radius:15px}.course-head{padding-top:12px}.course-tools button{font-size:11px;padding:9px 6px}}
   </style>
 </head>
 <body>
@@ -79,6 +115,21 @@
     <button id="myLocationBtn" class="round my-location-btn" type="button" title="내 위치 실시간 추적 시작" aria-label="내 위치 실시간 추적 시작" aria-pressed="false" disabled>⌖</button>
     <button id="settingsBtn" class="round" type="button" title="네이버 지도 설정" aria-label="네이버 지도 설정">⚙</button>
   </header>
+
+  <button id="courseBtn" class="course-launch" type="button">↗ 코스 만들기</button>
+  <section id="coursePanel" class="course-panel" hidden aria-label="배송 코스 편성">
+    <div class="course-head"><h2>배송 코스 편성</h2><button id="closeCourseBtn" type="button" aria-label="코스 편성 닫기">✕</button></div>
+    <p class="course-note">배송지를 선택하고 ↑↓로 방문 순서를 바꾸세요. 추천 순서는 직선거리 기준이며 도로·일방통행·교통 상황은 반영하지 않습니다.</p>
+    <div id="courseSummary" class="course-summary" aria-live="polite">코스를 준비하고 있습니다.</div>
+    <div class="course-tools">
+      <button id="courseAllBtn" type="button">전체 추가</button>
+      <button id="courseClearBtn" type="button">전체 제외</button>
+      <button id="courseRecommendBtn" type="button">가까운 순 추천</button>
+    </div>
+    <div class="course-gps"><button id="courseGpsBtn" type="button">⌖ 내 위치 출발</button><span id="courseStartText">첫 배송지 기준</span></div>
+    <div id="courseRows" class="course-rows"></div>
+    <div class="course-bottom"><button id="cancelCourseBtn" class="cancel-course" type="button">취소</button><button id="saveCourseBtn" class="save-course" type="button">코스 저장</button></div>
+  </section>
   <section id="cover" class="cover" role="status">
     <h2 id="coverTitle">네이버 지도 연결</h2>
     <p id="coverText">NAVER Maps Client ID를 한 번 입력하면 지도가 나타납니다.</p>
@@ -144,6 +195,150 @@
       let followLocation = false;
       let receivedLocation = false;
 
+      // Courses refer to stop IDs; stop records stay in their existing storage.
+      const COURSE_KEY = 'dsd:vanilla:course:v1';
+      let courseIds = [];
+      let draftCourseIds = [];
+      let coursePolyline = null;
+      let courseStartPoint = null; // GPS start is temporary and never persisted.
+      function loadCourse() {
+        try {
+          const saved = JSON.parse(readStored(COURSE_KEY, '{"ids":[]}'));
+          return Array.isArray(saved.ids) ? saved.ids.filter(id => typeof id === 'string') : [];
+        } catch (_) { return []; }
+      }
+      function activeCourseIds() {
+        return $('coursePanel').hidden ? courseIds : draftCourseIds;
+      }
+      function validCourseIds(ids) {
+        const known = new Set(stops.map(s => s.id));
+        return [...new Set(ids.filter(id => known.has(id)))];
+      }
+      function syncCourseOnStopsChange() {
+        const next = validCourseIds(courseIds);
+        if (next.length !== courseIds.length) {
+          courseIds = next;
+          writeStored(COURSE_KEY, JSON.stringify({ids:courseIds}));
+        }
+        draftCourseIds = validCourseIds(draftCourseIds);
+        if (!$('coursePanel').hidden) renderCourse();
+      }
+      function coursePoint(id) { return stops.find(s => s.id === id); }
+      function airDistance(a,b) {
+        if (!a || !b) return 0;
+        const rad = Math.PI / 180, dlat=(b.lat-a.lat)*rad, dlng=(b.lng-a.lng)*rad;
+        const h=Math.sin(dlat/2)**2+Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dlng/2)**2;
+        return 6371.0088 * 2 * Math.asin(Math.min(1,Math.sqrt(h)));
+      }
+      function courseDistance(ids) {
+        let previous=courseStartPoint, total=0;
+        ids.forEach(id => {
+          const point=coursePoint(id);
+          if (point && previous) total+=airDistance(previous,point);
+          if (point) previous=point;
+        });
+        return total;
+      }
+      function drawCourseLine() {
+        if (coursePolyline) { coursePolyline.setMap(null); coursePolyline=null; }
+        if (!map) return;
+        const points=activeCourseIds().map(coursePoint).filter(Boolean)
+          .map(s => new naver.maps.LatLng(s.lat,s.lng));
+        if (!$('coursePanel').hidden && courseStartPoint) points.unshift(new naver.maps.LatLng(courseStartPoint.lat,courseStartPoint.lng));
+        if (points.length < 2) return;
+        coursePolyline = new naver.maps.Polyline({
+          map:map,path:points,strokeColor:'#069b8b',strokeOpacity:0.9,strokeWeight:4,strokeStyle:'shortdash',
+          clickable:false,zIndex:1
+        });
+      }
+      function renderCourse() {
+        const ids=validCourseIds(draftCourseIds);
+        draftCourseIds=ids;
+        const selected=new Set(ids);
+        const rest=stops.filter(s => !selected.has(s.id));
+        const total=courseDistance(ids);
+        $('courseSummary').textContent=ids.length+'곳 편성 · 직선 연결 약 '+total.toFixed(1)+'km · 미편성 '+rest.length+'곳';
+        $('courseStartText').textContent=courseStartPoint?'현재 GPS 기준 (임시)':'첫 배송지 기준';
+        $('courseRecommendBtn').disabled=ids.length<2;
+        let html='<div class="course-section-label">방문 순서 ('+ids.length+')</div>';
+        ids.forEach((id,index) => {
+          const s=coursePoint(id);if(!s)return;
+          html+='<div class="course-row"><span class="course-index">'+(index+1)+'</span>'+
+            '<div class="course-details" data-course-focus="'+escapeHtml(id)+'" role="button" tabindex="0"><strong>'+escapeHtml(s.company||'배송지 '+(index+1))+'</strong><small>'+escapeHtml(s.address)+'</small></div>'+
+            '<div class="course-actions"><button type="button" data-course-action="up" data-course-id="'+escapeHtml(id)+'" aria-label="앞으로 이동" '+(index===0?'disabled':'')+'>↑</button>'+
+            '<button type="button" data-course-action="down" data-course-id="'+escapeHtml(id)+'" aria-label="뒤로 이동" '+(index===ids.length-1?'disabled':'')+'>↓</button>'+
+            '<button type="button" class="remove" data-course-action="remove" data-course-id="'+escapeHtml(id)+'" aria-label="코스에서 제외">−</button></div></div>';
+        });
+        html+='<div class="course-section-label">미편성 배송지 ('+rest.length+')</div>';
+        rest.forEach(s => {
+          html+='<div class="course-row unassigned"><span class="course-index empty">·</span>'+
+            '<div class="course-details" data-course-focus="'+escapeHtml(s.id)+'" role="button" tabindex="0"><strong>'+escapeHtml(s.company||'배송지')+'</strong><small>'+escapeHtml(s.address)+'</small></div>'+
+            '<div class="course-actions"><button type="button" class="add" data-course-action="add" data-course-id="'+escapeHtml(s.id)+'" aria-label="코스에 추가">+</button></div></div>';
+        });
+        if (!stops.length) html='<p class="course-note">먼저 배송지를 등록해 주세요.</p>';
+        $('courseRows').innerHTML=html;
+      }
+      function showCourse() {
+        closeSelection();
+        const hasSaved=readStored(COURSE_KEY,'')!=='';
+        draftCourseIds=hasSaved?validCourseIds(courseIds):stops.map(s=>s.id);
+        $('coursePanel').hidden=false;
+        document.body.classList.add('course-open');
+        renderCourse();
+        drawMarkers(false);
+      }
+      function hideCourse() {
+        if (JSON.stringify(draftCourseIds)!==JSON.stringify(courseIds) &&
+            !confirm('코스 편성 내용을 저장하지 않고 닫을까요?')) return;
+        $('coursePanel').hidden=true;
+        document.body.classList.remove('course-open');
+        courseStartPoint=null;
+        drawMarkers(false);
+      }
+      function updateDraft(action,id) {
+        const index=draftCourseIds.indexOf(id);
+        if (action==='add' && index<0) draftCourseIds.push(id);
+        if (action==='remove' && index>=0) draftCourseIds.splice(index,1);
+        if (action==='up' && index>0) [draftCourseIds[index-1],draftCourseIds[index]]=[draftCourseIds[index],draftCourseIds[index-1]];
+        if (action==='down' && index>=0 && index<draftCourseIds.length-1) [draftCourseIds[index+1],draftCourseIds[index]]=[draftCourseIds[index],draftCourseIds[index+1]];
+        renderCourse();
+        drawMarkers(false);
+      }
+      function recommendCourse() {
+        if (draftCourseIds.length<2) return;
+        const remaining=new Set(draftCourseIds);
+        const result=[];
+        let cursor=courseStartPoint;
+        if (!cursor) {const first=draftCourseIds[0];result.push(first);remaining.delete(first);cursor=coursePoint(first);}
+        while (remaining.size) {
+          let closest=null,best=Infinity;
+          for (const id of remaining) {
+            const dist=airDistance(cursor,coursePoint(id));
+            if (dist<best) {best=dist;closest=id;}
+          }
+          result.push(closest);remaining.delete(closest);cursor=coursePoint(closest);
+        }
+        // Local 2-opt improvement, keeping the first stop fixed when GPS is not used.
+        const firstMutable=courseStartPoint?0:1;
+        for(let pass=0;pass<2;pass++){
+          let improved=false;
+          for(let i=firstMutable;i<result.length-1;i++){
+            for(let j=i+1;j<result.length;j++){
+              const candidate=result.slice();
+              candidate.splice(i,j-i+1,...result.slice(i,j+1).reverse());
+              if(courseDistance(candidate)+0.00001<courseDistance(result)){
+                result.splice(0,result.length,...candidate);improved=true;
+              }
+            }
+          }
+          if(!improved)break;
+        }
+        draftCourseIds=result;
+        renderCourse();drawMarkers(false);
+        notify('직선거리 기준으로 방문 순서를 추천했습니다. 실제 도로는 반영하지 않습니다.');
+      }
+
+
       function readStored(key, fallback) {
         try { return localStorage.getItem(key) || fallback; } catch (_) { return fallback; }
       }
@@ -174,6 +369,7 @@
         if (!writeStored(STOPS_KEY, JSON.stringify(stops))) {
           notify('브라우저 저장에 실패했습니다. 데이터를 유지할 수 없습니다.');
         }
+        syncCourseOnStopsChange();
       }
       function closeSelection() {
         selectedId = null;
@@ -315,17 +511,19 @@
         if (!map) return;
         markers.forEach((marker) => marker.setMap(null));
         markers = [];
+        const numbering = activeCourseIds();
         stops.forEach((stop) => {
           const company = typeof stop.company === 'string' ? stop.company.trim() : '';
+          const positionInCourse = numbering.indexOf(stop.id);
           const options = {
             map: map,
             position: new naver.maps.LatLng(stop.lat, stop.lng),
             title: (company ? company + ' · ' : '') + stop.address
           };
-          if (company) {
+          if (company || positionInCourse >= 0) {
             options.icon = {
-              content: '<div class="named-marker"><span class="marker-pin"><span>+</span></span><span class="marker-label">' +
-                escapeHtml(company) + '</span></div>',
+              content: '<div class="named-marker '+(positionInCourse>=0?'is-course':'')+'"><span class="marker-pin"><span>'+(positionInCourse>=0?positionInCourse+1:'+')+'</span></span><span class="marker-label">' +
+                escapeHtml(company || '배송지') + '</span></div>',
               size: new naver.maps.Size(210, 44),
               anchor: new naver.maps.Point(14, 22)
             };
@@ -336,6 +534,7 @@
         });
         $('count').textContent = stops.length + '곳';
         $('fitAllBtn').disabled = stops.length === 0;
+        drawCourseLine();
         if (fit) fitAllMarkers();
       }
       function geocode(address) {
@@ -485,7 +684,49 @@
         drawMarkers(false);
         notify('배송지 마커를 삭제했습니다.');
       });
+
+      $('courseBtn').addEventListener('click',showCourse);
+      $('closeCourseBtn').addEventListener('click',hideCourse);
+      $('cancelCourseBtn').addEventListener('click',hideCourse);
+      $('courseAllBtn').addEventListener('click',()=>{draftCourseIds=stops.map(s=>s.id);renderCourse();drawMarkers(false);});
+      $('courseClearBtn').addEventListener('click',()=>{draftCourseIds=[];renderCourse();drawMarkers(false);});
+      $('courseRecommendBtn').addEventListener('click',recommendCourse);
+      $('courseRows').addEventListener('click',event=>{
+        const button=event.target.closest('button[data-course-action]');
+        if(button){updateDraft(button.dataset.courseAction,button.dataset.courseId);return;}
+        const focus=event.target.closest('[data-course-focus]');
+        if(focus&&map){const s=coursePoint(focus.dataset.courseFocus);if(s){map.panTo(new naver.maps.LatLng(s.lat,s.lng));map.setZoom(16);}}
+      });
+      $('courseRows').addEventListener('keydown',event=>{
+        if((event.key==='Enter'||event.key===' ')&&event.target.matches('[data-course-focus]')){
+          event.preventDefault();event.target.click();
+        }
+      });
+      $('courseGpsBtn').addEventListener('click',()=>{
+        if(!navigator.geolocation||!window.isSecureContext){notify('GPS 출발점은 HTTPS와 위치 권한이 필요합니다.');return;}
+        $('courseGpsBtn').disabled=true;
+        navigator.geolocation.getCurrentPosition(p=>{
+          courseStartPoint={lat:p.coords.latitude,lng:p.coords.longitude};
+          $('courseGpsBtn').disabled=false;
+          renderCourse();drawCourseLine();notify('이번 편성에만 현재 위치를 출발점으로 적용했습니다.');
+        },err=>{
+          $('courseGpsBtn').disabled=false;notify('출발점 위치를 확인하지 못했습니다: '+(err.message||'위치 권한 확인'));
+        },{enableHighAccuracy:true,timeout:15000,maximumAge:15000});
+      });
+      $('saveCourseBtn').addEventListener('click',()=>{
+        const ordered=validCourseIds(draftCourseIds);
+        if(!writeStored(COURSE_KEY,JSON.stringify({ids:ordered,updatedAt:new Date().toISOString()}))){
+          notify('코스 저장에 실패했습니다.');return;
+        }
+        courseIds=ordered;
+        $('coursePanel').hidden=true;
+        document.body.classList.remove('course-open');
+        courseStartPoint=null;
+        drawMarkers(false);
+        notify('방문 순서를 저장했습니다. 초록색 숫자와 연결선으로 코스가 표시됩니다.');
+      });
       stops = loadStops();
+      courseIds = validCourseIds(loadCourse());
       $('count').textContent = stops.length + '곳';
       loadMap();
     }());
