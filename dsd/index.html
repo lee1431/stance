@@ -112,6 +112,19 @@
     .course-picker select{flex:1;min-width:0;border:1px solid #d8e3ed;border-radius:8px;padding:9px 5px;background:#fff;font-size:12px}
     .course-picker button{white-space:nowrap;border:1px solid #d8e3ed;border-radius:8px;background:#f6f8fc;padding:8px 5px;font-size:10px;font-weight:800}
     @media(max-width:600px){.center-bar{top:calc(63px + env(safe-area-inset-top));left:10px}.center-bar select{width:116px}.course-picker button{font-size:9px;padding:8px 4px}}
+    /* Local driving knowledge */
+    .course-row.fixed-last{background:#fffaf0;border-color:#e8bf6a}.course-row.fixed-last .course-index{background:#bb8a20}
+    .course-actions .pin{background:#fff1cf;color:#936515}.course-actions .pin.active{background:#b98a22;color:white}
+    .course-actions .detail{background:#dff7f0;color:#087262;font-size:10px}
+    .course-details small.hint{color:#8e6a1b}
+    .access-form select,.access-form textarea{width:100%;border:1px solid #cddbe8;border-radius:10px;padding:10px;background:white;font:inherit;font-size:13px}
+    .access-form textarea{resize:vertical;min-height:80px}
+    .access-form .parking-info{font-size:12px;color:#536b81;margin:9px 0}
+    .access-form .parking-tools{display:flex;gap:8px}.access-form .parking-tools button{flex:1;border:0;padding:11px 7px;border-radius:10px;background:#e6f5f0;color:#13675d;font-size:12px;font-weight:800}
+    .parking-pick{position:fixed;z-index:8;top:135px;left:50%;transform:translateX(-50%);max-width:calc(100vw - 20px);display:flex;align-items:center;gap:8px;padding:11px;background:#fffbeb;border:1px solid #edd59b;border-radius:10px;box-shadow:0 5px 20px #10213b35;font-size:12px;color:#795615}
+    .parking-pick[hidden]{display:none}.parking-pick button{border:0;padding:7px;background:#f5dfb4;border-radius:7px}
+    .parking-pin{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#eeb64a;border:3px solid #fff;font-weight:900;box-shadow:0 3px 9px #22354d66}
+    @media(max-width:600px){.parking-pick{top:calc(118px + env(safe-area-inset-top));left:7px;right:7px;transform:none}.course-actions{gap:2px}.course-actions button{padding:7px 5px}.course-row{gap:5px;padding:8px 5px}}
   </style>
 </head>
 <body>
@@ -148,13 +161,24 @@
   </section>
   <section id="selection" class="selection" hidden>
     <strong id="selectedCompany">등록된 배송지</strong>
-    <p id="selectedAddress"></p>
+    <p id="selectedAddress"></p><p id="selectedAccess" hidden></p>
     <div class="selection-actions">
       <button type="button" id="closeSelection">닫기</button>
-      <button type="button" id="editCompany">업체명 수정</button>
+      <button type="button" id="editCompany">업체명 수정</button><button type="button" id="accessBtn">현장정보</button>
       <button type="button" id="deleteStop" class="danger">삭제</button>
     </div>
   </section>
+  <div id="parkingPick" class="parking-pick" hidden>지도에서 차량 정차점을 클릭하세요. 주정차 가능 여부는 별도 확인이 필요합니다. <button type="button" id="cancelParkingPick">취소</button></div>
+  <dialog id="accessDialog" aria-labelledby="accessTitle"><form id="accessForm" class="access-form">
+    <h2 id="accessTitle">배송지 현장 정보</h2><p id="accessAddress"></p>
+    <label for="approachSelect">도로·진입 정보</label>
+    <select id="approachSelect"><option value="">특이사항 없음</option><option value="opposite">길 건너편</option><option value="same">진행 방향 도로변</option><option value="uturn">유턴 후 진입</option><option value="oneway">일방통행 주의</option><option value="rear">후문·별도 출입구</option></select>
+    <label for="accessMemo">기사 현장 메모</label><textarea id="accessMemo" rows="3" maxlength="300" placeholder="예: 파란전기는 반대편 차선이라 마지막에 방문"></textarea>
+    <label>차량 정차점</label><p id="parkingInfo" class="parking-info">정차점 미설정</p>
+    <div class="parking-tools"><button id="setParkingBtn" type="button">지도에서 정차점 선택</button><button id="clearParkingBtn" type="button">정차점 해제</button></div>
+    <p class="hint">선택한 정차점은 경로 계산을 위한 참고 좌표입니다. 실제 도로 접근·주차 적법성은 검증되지 않습니다.</p>
+    <div class="dialog-actions"><button id="cancelAccessBtn" type="button" class="secondary">취소</button><button type="submit" class="primary">저장</button></div>
+  </form></dialog>
   <button id="addBtn" class="fab" type="button" aria-label="배송 주소 추가" title="배송 주소 추가" disabled>+</button>
   <div id="message" class="message" role="status" aria-live="polite" hidden></div>
 
@@ -211,12 +235,33 @@
       let courseIds = [];
       let draftCourseIds = [];
       let coursePolyline = null;
+      let parkingMarkers = [],parkingPickStopId = null,accessStopId = null;
+      let pinnedLastIds = [],draftPinnedLastIds = [];
       let courseStartPoint = null; // GPS start is temporary and never persisted.
       function loadCourse() {
         try {
           const saved = JSON.parse(readStored(COURSE_KEY, '{"ids":[]}'));
           return Array.isArray(saved.ids) ? saved.ids.filter(id => typeof id === 'string') : [];
         } catch (_) { return []; }
+      }
+      function readPinnedLast() {
+        try{const record=JSON.parse(readStored(COURSE_KEY,'{}'));return Array.isArray(record.pinnedLastIds)?record.pinnedLastIds:[];}
+        catch(_){return [];}
+      }
+      function validPins(pins,ids) {
+        const set=new Set(ids);return [...new Set((Array.isArray(pins)?pins:[]).filter(x=>set.has(x)))];
+      }
+      function lastOrder(ids,pins){
+        const locked=new Set(validPins(pins,ids));
+        return ids.filter(x=>!locked.has(x)).concat(ids.filter(x=>locked.has(x)));
+      }
+      function accessName(hint){
+        return ({opposite:'길 건너편',same:'진행 방향 도로변',uturn:'유턴 후 진입',oneway:'일방통행 주의',rear:'후문·별도 출입구'})[hint]||'';
+      }
+      function vehiclePoint(stop){
+        if(!stop)return null;
+        const p=stop.parking;
+        return p&&Number.isFinite(p.lat)&&Number.isFinite(p.lng)?p:stop;
       }
       function activeCourseIds() {
         return $('coursePanel').hidden ? courseIds : draftCourseIds;
@@ -232,7 +277,9 @@
           writeStored(COURSE_KEY, JSON.stringify({ids:courseIds}));
         }
         cleanupCenterRoutes();
+        pinnedLastIds=validPins(pinnedLastIds,courseIds);
         draftCourseIds = validCourseIds(draftCourseIds);
+        draftPinnedLastIds=validPins(draftPinnedLastIds,draftCourseIds);
         if (!$('coursePanel').hidden) renderCourse();
       }
 
@@ -276,14 +323,16 @@
         sel.value=currentCenter().activeRouteId;
         $('routeDeleteBtn').disabled=currentCenter().routes.length<2;
       }
-      function dirtyCourse(){return !$('coursePanel').hidden&&JSON.stringify(validCourseIds(draftCourseIds))!==JSON.stringify(courseIds);}
+      function dirtyCourse(){return !$('coursePanel').hidden&&(JSON.stringify(validCourseIds(draftCourseIds))!==JSON.stringify(courseIds)||JSON.stringify(validPins(draftPinnedLastIds,draftCourseIds))!==JSON.stringify(pinnedLastIds));}
       function chooseCenter(id,force=false){
         if(!force&&dirtyCourse()&&!confirm('저장하지 않은 코스 변경 내용을 버릴까요?')){renderCenterSelect();return false;}
         const c=centerRegistry.centers.find(x=>x.id===id);if(!c)return false;
         centerRegistry.activeId=id;
+        cancelParkingPick();
         $('coursePanel').hidden=true;document.body.classList.remove('course-open');courseStartPoint=null;closeSelection();
         STOPS_KEY=stopKey(c.id);COURSE_KEY=routeKey(c.id,c.activeRouteId);
-        stops=loadStops();courseIds=validCourseIds(loadCourse());draftCourseIds=[];
+        stops=loadStops();courseIds=validCourseIds(loadCourse());pinnedLastIds=validPins(readPinnedLast(),courseIds);
+        draftCourseIds=[];draftPinnedLastIds=[];
         $('count').textContent=stops.length+'곳';renderCenterSelect();renderRouteSelect();saveRegistry();
         if(map)drawMarkers(true);
         return true;
@@ -292,7 +341,8 @@
         if(!force&&dirtyCourse()&&!confirm('저장하지 않은 코스 변경 내용을 버릴까요?')){renderRouteSelect();return false;}
         const c=currentCenter(),r=c.routes.find(x=>x.id===id);if(!r)return false;
         c.activeRouteId=id;COURSE_KEY=routeKey(c.id,id);
-        courseIds=validCourseIds(loadCourse());draftCourseIds=courseIds.slice();
+        courseIds=validCourseIds(loadCourse());pinnedLastIds=validPins(readPinnedLast(),courseIds);
+        draftCourseIds=courseIds.slice();draftPinnedLastIds=pinnedLastIds.slice();
         saveRegistry();renderRouteSelect();
         if(!$('coursePanel').hidden)renderCourse();
         if(map)drawMarkers(false);
@@ -304,8 +354,9 @@
           const key=routeKey(c.id,r.id);
           try{
             const saved=JSON.parse(readStored(key,'{"ids":[]}'));
-            const ids=validCourseIds(saved.ids);
-            if(JSON.stringify(ids)!==JSON.stringify(saved.ids||[]))writeStored(key,JSON.stringify({...saved,ids}));
+            const ids=validCourseIds(saved.ids),pins=validPins(saved.pinnedLastIds,ids);
+            if(JSON.stringify(ids)!==JSON.stringify(saved.ids||[])||JSON.stringify(pins)!==JSON.stringify(saved.pinnedLastIds||[]))
+              writeStored(key,JSON.stringify({...saved,ids,pinnedLastIds:pins}));
           }catch(_){}
         }
       }
@@ -319,7 +370,7 @@
       function courseDistance(ids) {
         let previous=courseStartPoint, total=0;
         ids.forEach(id => {
-          const point=coursePoint(id);
+          const point=vehiclePoint(coursePoint(id));
           if (point && previous) total+=airDistance(previous,point);
           if (point) previous=point;
         });
@@ -328,8 +379,8 @@
       function drawCourseLine() {
         if (coursePolyline) { coursePolyline.setMap(null); coursePolyline=null; }
         if (!map) return;
-        const points=activeCourseIds().map(coursePoint).filter(Boolean)
-          .map(s => new naver.maps.LatLng(s.lat,s.lng));
+        const points=activeCourseIds().map(coursePoint).filter(Boolean).map(vehiclePoint)
+          .map(p => new naver.maps.LatLng(p.lat,p.lng));
         if (!$('coursePanel').hidden && courseStartPoint) points.unshift(new naver.maps.LatLng(courseStartPoint.lat,courseStartPoint.lng));
         if (points.length < 2) return;
         coursePolyline = new naver.maps.Polyline({
@@ -338,36 +389,40 @@
         });
       }
       function renderCourse() {
-        const ids=validCourseIds(draftCourseIds);
-        draftCourseIds=ids;
-        const selected=new Set(ids);
-        const rest=stops.filter(s => !selected.has(s.id));
-        const total=courseDistance(ids);
-        $('courseSummary').textContent=ids.length+'곳 편성 · 직선 연결 약 '+total.toFixed(1)+'km · 미편성 '+rest.length+'곳';
+        draftCourseIds=lastOrder(validCourseIds(draftCourseIds),draftPinnedLastIds);
+        draftPinnedLastIds=validPins(draftPinnedLastIds,draftCourseIds);
+        const ids=draftCourseIds,locked=new Set(draftPinnedLastIds),selected=new Set(ids);
+        const rest=stops.filter(x=>!selected.has(x.id));
+        $('courseSummary').textContent=ids.length+'곳 · 정차점 기준 직선 '+courseDistance(ids).toFixed(1)+'km · 마지막 고정 '+locked.size+'곳 · 미편성 '+rest.length+'곳';
         $('courseStartText').textContent=courseStartPoint?'현재 GPS 기준 (임시)':'첫 배송지 기준';
         $('courseRecommendBtn').disabled=ids.length<2;
         let html='<div class="course-section-label">방문 순서 ('+ids.length+')</div>';
-        ids.forEach((id,index) => {
-          const s=coursePoint(id);if(!s)return;
-          html+='<div class="course-row"><span class="course-index">'+(index+1)+'</span>'+
-            '<div class="course-details" data-course-focus="'+escapeHtml(id)+'" role="button" tabindex="0"><strong>'+escapeHtml(s.company||'배송지 '+(index+1))+'</strong><small>'+escapeHtml(s.address)+'</small></div>'+
-            '<div class="course-actions"><button type="button" data-course-action="up" data-course-id="'+escapeHtml(id)+'" aria-label="앞으로 이동" '+(index===0?'disabled':'')+'>↑</button>'+
-            '<button type="button" data-course-action="down" data-course-id="'+escapeHtml(id)+'" aria-label="뒤로 이동" '+(index===ids.length-1?'disabled':'')+'>↓</button>'+
-            '<button type="button" class="remove" data-course-action="remove" data-course-id="'+escapeHtml(id)+'" aria-label="코스에서 제외">−</button></div></div>';
+        ids.forEach((id,i)=>{
+          const stop=coursePoint(id);if(!stop)return;
+          const fixed=locked.has(id),hints=[fixed?'📌 마지막 고정':'',accessName(stop.approachHint),stop.parking?'정차점 있음':''].filter(Boolean).join(' · ');
+          const up=i>0 && fixed===locked.has(ids[i-1]),down=i<ids.length-1 && fixed===locked.has(ids[i+1]);
+          html+='<div class="course-row '+(fixed?'fixed-last':'')+'"><span class="course-index">'+(i+1)+'</span>'+
+            '<div class="course-details" data-course-focus="'+escapeHtml(id)+'" role="button" tabindex="0"><strong>'+escapeHtml(stop.company||'배송지 '+(i+1))+'</strong><small>'+escapeHtml(stop.address)+'</small>'+(hints?'<small class="hint">'+escapeHtml(hints)+'</small>':'')+'</div>'+
+            '<div class="course-actions"><button type="button" class="detail" data-access-id="'+escapeHtml(id)+'">상세</button>'+
+            '<button type="button" data-course-action="up" data-course-id="'+escapeHtml(id)+'" '+(up?'':'disabled')+'>↑</button>'+
+            '<button type="button" data-course-action="down" data-course-id="'+escapeHtml(id)+'" '+(down?'':'disabled')+'>↓</button>'+
+            '<button type="button" class="pin '+(fixed?'active':'')+'" data-course-action="pin" data-course-id="'+escapeHtml(id)+'" title="'+(fixed?'마지막 고정 해제':'마지막 방문 고정')+'" aria-pressed="'+fixed+'">📌</button>'+
+            '<button type="button" class="remove" data-course-action="remove" data-course-id="'+escapeHtml(id)+'">−</button></div></div>';
         });
         html+='<div class="course-section-label">미편성 배송지 ('+rest.length+')</div>';
-        rest.forEach(s => {
+        rest.forEach(stop=>{
           html+='<div class="course-row unassigned"><span class="course-index empty">·</span>'+
-            '<div class="course-details" data-course-focus="'+escapeHtml(s.id)+'" role="button" tabindex="0"><strong>'+escapeHtml(s.company||'배송지')+'</strong><small>'+escapeHtml(s.address)+'</small></div>'+
-            '<div class="course-actions"><button type="button" class="add" data-course-action="add" data-course-id="'+escapeHtml(s.id)+'" aria-label="코스에 추가">+</button></div></div>';
+            '<div class="course-details" data-course-focus="'+escapeHtml(stop.id)+'" role="button" tabindex="0"><strong>'+escapeHtml(stop.company||'배송지')+'</strong><small>'+escapeHtml(stop.address)+'</small></div>'+
+            '<div class="course-actions"><button type="button" class="detail" data-access-id="'+escapeHtml(stop.id)+'">상세</button>'+
+            '<button type="button" class="add" data-course-action="add" data-course-id="'+escapeHtml(stop.id)+'">+</button></div></div>';
         });
-        if (!stops.length) html='<p class="course-note">먼저 배송지를 등록해 주세요.</p>';
-        $('courseRows').innerHTML=html;
+        $('courseRows').innerHTML=stops.length?html:'<p class="course-note">먼저 배송지를 등록해 주세요.</p>';
       }
       function showCourse() {
         closeSelection();
         const hasSaved=readStored(COURSE_KEY,'')!=='';
         draftCourseIds=hasSaved?validCourseIds(courseIds):stops.map(s=>s.id);
+        draftPinnedLastIds=validPins(pinnedLastIds,draftCourseIds);
         renderRouteSelect();
         $('coursePanel').hidden=false;
         document.body.classList.add('course-open');
@@ -375,56 +430,55 @@
         drawMarkers(false);
       }
       function hideCourse() {
-        if (JSON.stringify(draftCourseIds)!==JSON.stringify(courseIds) &&
-            !confirm('코스 편성 내용을 저장하지 않고 닫을까요?')) return;
+        if(dirtyCourse()&&!confirm('코스 편성 내용을 저장하지 않고 닫을까요?'))return;
         $('coursePanel').hidden=true;
         document.body.classList.remove('course-open');
         courseStartPoint=null;
         drawMarkers(false);
       }
-      function updateDraft(action,id) {
-        const index=draftCourseIds.indexOf(id);
-        if (action==='add' && index<0) draftCourseIds.push(id);
-        if (action==='remove' && index>=0) draftCourseIds.splice(index,1);
-        if (action==='up' && index>0) [draftCourseIds[index-1],draftCourseIds[index]]=[draftCourseIds[index],draftCourseIds[index-1]];
-        if (action==='down' && index>=0 && index<draftCourseIds.length-1) [draftCourseIds[index+1],draftCourseIds[index]]=[draftCourseIds[index],draftCourseIds[index+1]];
-        renderCourse();
-        drawMarkers(false);
-      }
-      function recommendCourse() {
-        if (draftCourseIds.length<2) return;
-        const remaining=new Set(draftCourseIds);
-        const result=[];
-        let cursor=courseStartPoint;
-        if (!cursor) {const first=draftCourseIds[0];result.push(first);remaining.delete(first);cursor=coursePoint(first);}
-        while (remaining.size) {
-          let closest=null,best=Infinity;
-          for (const id of remaining) {
-            const dist=airDistance(cursor,coursePoint(id));
-            if (dist<best) {best=dist;closest=id;}
-          }
-          result.push(closest);remaining.delete(closest);cursor=coursePoint(closest);
+      function updateDraft(action,id){
+        const index=draftCourseIds.indexOf(id),fixed=draftPinnedLastIds.includes(id);
+        if(action==='add'&&index<0){
+          const split=draftCourseIds.findIndex(x=>draftPinnedLastIds.includes(x));
+          draftCourseIds.splice(split<0?draftCourseIds.length:split,0,id);
         }
-        // Local 2-opt improvement, keeping the first stop fixed when GPS is not used.
+        if(action==='remove'&&index>=0){draftCourseIds.splice(index,1);draftPinnedLastIds=draftPinnedLastIds.filter(x=>x!==id);}
+        if(action==='pin'&&index>=0){
+          draftPinnedLastIds=fixed?draftPinnedLastIds.filter(x=>x!==id):draftPinnedLastIds.concat(id);
+          draftCourseIds=lastOrder(draftCourseIds,draftPinnedLastIds);
+        }
+        if(action==='up'&&index>0&&fixed===draftPinnedLastIds.includes(draftCourseIds[index-1]))
+          [draftCourseIds[index-1],draftCourseIds[index]]=[draftCourseIds[index],draftCourseIds[index-1]];
+        if(action==='down'&&index>=0&&index<draftCourseIds.length-1&&fixed===draftPinnedLastIds.includes(draftCourseIds[index+1]))
+          [draftCourseIds[index+1],draftCourseIds[index]]=[draftCourseIds[index],draftCourseIds[index+1]];
+        renderCourse();drawMarkers(false);
+      }
+      function recommendCourse(){
+        if(draftCourseIds.length<2)return;
+        const locked=new Set(draftPinnedLastIds),pinned=draftCourseIds.filter(id=>locked.has(id));
+        const free=draftCourseIds.filter(id=>!locked.has(id)),remaining=new Set(free),result=[];
+        let cursor=courseStartPoint;
+        if(!cursor&&free.length){const first=free[0];result.push(first);remaining.delete(first);cursor=vehiclePoint(coursePoint(first));}
+        while(remaining.size){
+          let closest=null,best=Infinity;
+          for(const id of remaining){const distance=airDistance(cursor,vehiclePoint(coursePoint(id)));if(distance<best){best=distance;closest=id;}}
+          result.push(closest);remaining.delete(closest);cursor=vehiclePoint(coursePoint(closest));
+        }
         const firstMutable=courseStartPoint?0:1;
         for(let pass=0;pass<2;pass++){
           let improved=false;
-          for(let i=firstMutable;i<result.length-1;i++){
-            for(let j=i+1;j<result.length;j++){
-              const candidate=result.slice();
-              candidate.splice(i,j-i+1,...result.slice(i,j+1).reverse());
-              if(courseDistance(candidate)+0.00001<courseDistance(result)){
-                result.splice(0,result.length,...candidate);improved=true;
-              }
+          for(let i=firstMutable;i<result.length-1;i++)for(let j=i+1;j<result.length;j++){
+            const candidate=result.slice();candidate.splice(i,j-i+1,...result.slice(i,j+1).reverse());
+            if(courseDistance(candidate.concat(pinned))+0.00001<courseDistance(result.concat(pinned))){
+              result.splice(0,result.length,...candidate);improved=true;
             }
           }
           if(!improved)break;
         }
-        draftCourseIds=result;
+        draftCourseIds=result.concat(pinned);
         renderCourse();drawMarkers(false);
-        notify('직선거리 기준으로 방문 순서를 추천했습니다. 실제 도로는 반영하지 않습니다.');
+        notify('📌 마지막 고정을 유지하여 정차점 직선거리로 추천했습니다. 실제 도로는 미반영입니다.');
       }
-
 
       function readStored(key, fallback) {
         try { return localStorage.getItem(key) || fallback; } catch (_) { return fallback; }
@@ -466,8 +520,40 @@
         selectedId = stop.id;
         $('selectedCompany').textContent = stop.company || '등록된 배송지';
         $('selectedAddress').textContent = stop.address;
+        const summary=[accessName(stop.approachHint),stop.parking?'정차점 지정됨':'',stop.accessNote||''].filter(Boolean).join(' · ');
+        $('selectedAccess').textContent=summary;$('selectedAccess').hidden=!summary;
         $('selection').hidden = false;
         if (map) map.panTo(new naver.maps.LatLng(stop.lat, stop.lng));
+      }
+      function cancelParkingPick(){parkingPickStopId=null;$('parkingPick').hidden=true;}
+      function accessDetails(id){
+        const stop=coursePoint(id);if(!stop)return;
+        accessStopId=id;
+        $('accessTitle').textContent=(stop.company||'배송지')+' · 현장정보';
+        $('accessAddress').textContent=stop.address;
+        $('approachSelect').value=accessName(stop.approachHint)?stop.approachHint:'';
+        $('accessMemo').value=stop.accessNote||'';
+        updateParkingInfo(stop);$('accessDialog').showModal();
+      }
+      function updateParkingInfo(stop){
+        const p=stop?.parking;
+        $('parkingInfo').textContent=p&&Number.isFinite(p.lat)&&Number.isFinite(p.lng)?'정차점: '+p.lat.toFixed(6)+', '+p.lng.toFixed(6):'정차점 미설정 (건물 좌표 사용)';
+        $('clearParkingBtn').disabled=!(p&&Number.isFinite(p.lat)&&Number.isFinite(p.lng));
+      }
+      function saveAccessForm(){
+        const stop=coursePoint(accessStopId);if(!stop)return false;
+        stop.approachHint=$('approachSelect').value;
+        stop.accessNote=$('accessMemo').value.trim().slice(0,300);
+        saveStops();drawMarkers(false);
+        if(selectedId===stop.id)selectStop(stop);
+        return true;
+      }
+      function handleParkingMapClick(event){
+        const stop=coursePoint(parkingPickStopId),p=event?.coord;
+        const lat=p?.lat?.(),lng=p?.lng?.();
+        if(!stop||!Number.isFinite(lat)||!Number.isFinite(lng)){notify('지도 위치를 다시 선택해 주세요.');return;}
+        stop.parking={lat,lng};cancelParkingPick();saveStops();drawMarkers(false);selectStop(stop);
+        notify('차량 정차점 저장 완료 (주정차 적합성은 직접 확인)');
       }
       function setLocationButton(active) {
         const button = $('myLocationBtn');
@@ -585,7 +671,11 @@
           map.setZoom(16);
         } else {
           const bounds = new naver.maps.LatLngBounds();
-          stops.forEach((stop) => bounds.extend(new naver.maps.LatLng(stop.lat, stop.lng)));
+          stops.forEach((stop) => {
+            bounds.extend(new naver.maps.LatLng(stop.lat,stop.lng));
+            if(stop.parking&&Number.isFinite(stop.parking.lat)&&Number.isFinite(stop.parking.lng))
+              bounds.extend(new naver.maps.LatLng(stop.parking.lat,stop.parking.lng));
+          });
           map.fitBounds(bounds, {top:90,right:180,bottom:100,left:70});
         }
       }
@@ -597,7 +687,8 @@
       function drawMarkers(fit) {
         if (!map) return;
         markers.forEach((marker) => marker.setMap(null));
-        markers = [];
+        parkingMarkers.forEach((marker)=>marker.setMap(null));
+        markers = [];parkingMarkers=[];
         const numbering = activeCourseIds();
         stops.forEach((stop) => {
           const company = typeof stop.company === 'string' ? stop.company.trim() : '';
@@ -618,6 +709,11 @@
           const marker = new naver.maps.Marker(options);
           naver.maps.Event.addListener(marker, 'click', () => selectStop(stop));
           markers.push(marker);
+          if(stop.parking&&Number.isFinite(stop.parking.lat)&&Number.isFinite(stop.parking.lng)){
+            parkingMarkers.push(new naver.maps.Marker({map:map,position:new naver.maps.LatLng(stop.parking.lat,stop.parking.lng),
+              clickable:false,title:(company||'배송지')+' 차량 정차점',
+              icon:{content:'<div class="parking-pin">P</div>',size:new naver.maps.Size(28,28),anchor:new naver.maps.Point(14,14)}}));
+          }
         });
         $('count').textContent = stops.length + '곳';
         $('fitAllBtn').disabled = stops.length === 0;
@@ -668,7 +764,10 @@
           $('cover').hidden = true;
           $('addBtn').disabled = false;
           $('myLocationBtn').disabled = false;
-          naver.maps.Event.addListener(map, 'click', closeSelection);
+          naver.maps.Event.addListener(map, 'click', event=>{
+            if(parkingPickStopId){handleParkingMapClick(event);return;}
+            closeSelection();
+          });
           drawMarkers(true);
         } catch (error) {
           showCover('지도 초기화 실패', error.message);
@@ -746,6 +845,23 @@
         }
       });
       $('closeSelection').addEventListener('click', closeSelection);
+      $('accessBtn').addEventListener('click',()=>{if(selectedId)accessDetails(selectedId);});
+      $('cancelAccessBtn').addEventListener('click',()=>$('accessDialog').close());
+      $('accessForm').addEventListener('submit',event=>{event.preventDefault();if(saveAccessForm()){$('accessDialog').close();notify('센터별 현장 정보 저장 완료');}});
+      $('setParkingBtn').addEventListener('click',()=>{
+        if(!map){notify('지도를 먼저 연결해 주세요.');return;}
+        if(!saveAccessForm())return;
+        parkingPickStopId=accessStopId;$('accessDialog').close();$('parkingPick').hidden=false;
+        notify('지도에서 차량 정차점을 지정하세요.');
+      });
+      $('clearParkingBtn').addEventListener('click',()=>{
+        if(!saveAccessForm())return;
+        const stop=coursePoint(accessStopId);if(!stop)return;
+        stop.parking=null;saveStops();drawMarkers(false);updateParkingInfo(stop);
+        if(selectedId===stop.id)selectStop(stop);
+        notify('정차점 지정 해제');
+      });
+      $('cancelParkingPick').addEventListener('click',cancelParkingPick);
       $('editCompany').addEventListener('click', () => {
         const stop = stops.find((s) => s.id === selectedId);
         if (!stop) return;
@@ -815,10 +931,12 @@
       $('courseBtn').addEventListener('click',showCourse);
       $('closeCourseBtn').addEventListener('click',hideCourse);
       $('cancelCourseBtn').addEventListener('click',hideCourse);
-      $('courseAllBtn').addEventListener('click',()=>{draftCourseIds=stops.map(s=>s.id);renderCourse();drawMarkers(false);});
-      $('courseClearBtn').addEventListener('click',()=>{draftCourseIds=[];renderCourse();drawMarkers(false);});
+      $('courseAllBtn').addEventListener('click',()=>{draftCourseIds=lastOrder(stops.map(s=>s.id),draftPinnedLastIds);renderCourse();drawMarkers(false);});
+      $('courseClearBtn').addEventListener('click',()=>{draftCourseIds=[];draftPinnedLastIds=[];renderCourse();drawMarkers(false);});
       $('courseRecommendBtn').addEventListener('click',recommendCourse);
       $('courseRows').addEventListener('click',event=>{
+        const detail=event.target.closest('button[data-access-id]');
+        if(detail){accessDetails(detail.dataset.accessId);return;}
         const button=event.target.closest('button[data-course-action]');
         if(button){updateDraft(button.dataset.courseAction,button.dataset.courseId);return;}
         const focus=event.target.closest('[data-course-focus]');
@@ -842,15 +960,16 @@
       });
       $('saveCourseBtn').addEventListener('click',()=>{
         const ordered=validCourseIds(draftCourseIds);
-        if(!writeStored(COURSE_KEY,JSON.stringify({ids:ordered,updatedAt:new Date().toISOString()}))){
+        const fixed=validPins(draftPinnedLastIds,ordered);
+        if(!writeStored(COURSE_KEY,JSON.stringify({ids:ordered,pinnedLastIds:fixed,updatedAt:new Date().toISOString()}))){
           notify('코스 저장에 실패했습니다.');return;
         }
-        courseIds=ordered;
+        courseIds=ordered;pinnedLastIds=fixed;
         $('coursePanel').hidden=true;
         document.body.classList.remove('course-open');
         courseStartPoint=null;
         drawMarkers(false);
-        notify('방문 순서를 저장했습니다. 초록색 숫자와 연결선으로 코스가 표시됩니다.');
+        notify('방문 순서·마지막 고정을 저장했습니다. 센터별 정차점·현장 정보는 계속 유지됩니다.');
       });
       centerRegistry=loadRegistry();
       chooseCenter(centerRegistry.activeId,true);
