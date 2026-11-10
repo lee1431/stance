@@ -48,7 +48,6 @@
   }
   function bestColumn(headings,id){
     const names=labels[id],keys=headings.map(key);
-    const excluded=id==='excelAddressCol'?/발송|보내는|송하인|출발|반송|상세|청구/.test.bind(null):null;
     for(const expected of names){
       const target=key(expected);
       const exact=keys.findIndex((v,i)=>v===target&&!(id==='excelAddressCol'&&/발송|보내는|송하인|출발|반송|상세|청구/.test(keys[i])));
@@ -169,7 +168,7 @@
       });
       failures=parsed.invalid.concat(result.failures||[]);
       const done='엑셀 '+result.added+'건 등록 · 중복 송장 '+(result.skipped||0)+'건 건너뜀 · 실패 '+failures.length+'건';
-      $('excelResult').textContent=done+' · '+target.roundNo+'회차 코스가 저장되었습니다.';
+      $('excelResult').textContent=done+(result.added?' · '+target.roundNo+'회차 코스 저장 완료.':' · 새로 등록된 배송지는 없습니다.');
       $('excelResult').hidden=false;$('excelDownloadErrors').hidden=!failures.length;
       status(failures.length?'실패한 행은 [실패 목록 CSV]에서 확인하고 원본을 수정하세요.':'등록이 완료되었습니다. 왼쪽 저장된 코스에서 확인하세요.');
     }catch(e){status('등록 실패: '+e.message+' · 기존 배송지는 그대로 유지됩니다.');}
