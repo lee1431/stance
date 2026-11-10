@@ -255,6 +255,7 @@
       let accuracyCircle = null;
       let followLocation = false;
       let receivedLocation = false;
+      let startupLocationCancelled = false;
 
       // Courses refer to stop IDs; stop records stay in their existing storage.
       let COURSE_KEY = 'dsd:vanilla:course:v1';
@@ -910,6 +911,7 @@
         $('selection').hidden = true;
       }
       function selectStop(stop) {
+        startupLocationCancelled = true;
         selectedId = stop.id;
         $('selectedCompany').textContent = stop.company || '등록된 배송지';
         $('selectedAddress').textContent = stop.address;
@@ -972,8 +974,8 @@
         setLocationButton(false);
         if (showMessage) notify('실시간 위치 추적을 종료했습니다.');
       }
-      function onLocationUpdate(position) {
-        if (!map || locationWatchId === null) return;
+      function onLocationUpdate(position, startup = false) {
+        if (!map || (locationWatchId === null && !startup)) return;
         const latitude = Number(position.coords.latitude);
         const longitude = Number(position.coords.longitude);
         const accuracy = Number(position.coords.accuracy);
@@ -1005,14 +1007,14 @@
             accuracyCircle.setRadius(accuracy);
           }
         }
-        if (followLocation) {
-          if (!receivedLocation) map.setZoom(17);
+        if (followLocation || startup) {
+          if (startup || !receivedLocation) map.setZoom(17);
           map.panTo(point);
         }
-        if (!receivedLocation) {
+        if (!startup && !receivedLocation) {
           notify('실시간 GPS 위치 연결됨' + (Number.isFinite(accuracy) ? ' · 정확도 약 ' + Math.round(accuracy) + 'm' : ''));
         }
-        receivedLocation = true;
+        if (!startup) receivedLocation = true;
       }
       function onLocationError(error) {
         if (locationWatchId === null) return;
@@ -1026,6 +1028,17 @@
         } else {
           notify('GPS 오류: ' + (error.message || '위치를 확인할 수 없습니다.'));
         }
+      }
+      function centerOnStartupLocation() {
+        if (!window.isSecureContext || !navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            if (!map || locationWatchId !== null || startupLocationCancelled) return;
+            onLocationUpdate(position, true);
+          },
+          () => { /* GPS not available: retain the existing map and delivery stops. */ },
+          {enableHighAccuracy: true, maximumAge: 60000, timeout: 12000}
+        );
       }
       function toggleLocationTracking() {
         if (locationWatchId !== null) {
@@ -1159,11 +1172,14 @@
           $('cover').hidden = true;
           $('addBtn').disabled = false;
           $('myLocationBtn').disabled = false;
+          naver.maps.Event.addListener(map, 'dragstart', () => { startupLocationCancelled = true; });
           naver.maps.Event.addListener(map, 'click', event=>{
+            startupLocationCancelled = true;
             if(parkingPickStopId){handleParkingMapClick(event);return;}
             closeSelection();
           });
           drawMarkers(true);
+          centerOnStartupLocation();
         } catch (error) {
           showCover('지도 초기화 실패', error.message);
         }
@@ -1188,8 +1204,8 @@
         document.head.appendChild(script);
       }
       $('connectBtn').addEventListener('click', () => $('settingsBtn').click());
-      $('fitAllBtn').addEventListener('click', fitAllMarkers);
-      $('myLocationBtn').addEventListener('click', toggleLocationTracking);
+      $('fitAllBtn').addEventListener('click', () => { startupLocationCancelled = true; fitAllMarkers(); });
+      $('myLocationBtn').addEventListener('click', () => { startupLocationCancelled = true; toggleLocationTracking(); });
       window.addEventListener('pagehide', () => stopLocationTracking(false));
       $('settingsBtn').addEventListener('click', () => {
         $('clientIdInput').value = readStored(CLIENT_ID_KEY, '');
@@ -1225,6 +1241,7 @@
             company: company, address: address, lat: position.lat, lng: position.lng});
           saveStops();
           drawMarkers(false);
+          startupLocationCancelled = true;
           map.setCenter(new naver.maps.LatLng(position.lat, position.lng));
           map.setZoom(16);
           $('addressInput').value = '';
@@ -1366,7 +1383,7 @@
         const button=event.target.closest('button[data-course-action]');
         if(button){updateDraft(button.dataset.courseAction,button.dataset.courseId);return;}
         const focus=event.target.closest('[data-course-focus]');
-        if(focus&&map){const s=coursePoint(focus.dataset.courseFocus);if(s){map.panTo(new naver.maps.LatLng(s.lat,s.lng));map.setZoom(16);}}
+        if(focus&&map){const s=coursePoint(focus.dataset.courseFocus);if(s){startupLocationCancelled=true;map.panTo(new naver.maps.LatLng(s.lat,s.lng));map.setZoom(16);}}
       });
       $('courseRows').addEventListener('keydown',event=>{
         if((event.key==='Enter'||event.key===' ')&&event.target.matches('[data-course-focus]')){
