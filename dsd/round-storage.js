@@ -93,5 +93,29 @@
    if(postError)throw postError;
    throw Error('UVB 저장 후 항목 재조회에 실패했습니다. 확인 전까지 저장 완료로 취급하지 않습니다.');
  }
- root.DsdRounds=Object.freeze({getAll,latest,unseal,save,dateOK,roundOK});
+
+ // Delete every stored revision for one center/date/round, never a different round.
+ // The server must authorize DELETE /items/:id. Unsupported endpoints must fail visibly.
+ async function removeRound({centerId,date,round}){
+   if(!centerId||!dateOK(date)||!roundOK(round))throw Error('삭제할 센터·날짜·회차를 확인하세요.');
+   const matches=rows=>rows.filter(row=>row.data?.center_id===centerId&&
+     row.data.date_key===date&&row.data.round_no===round);
+   const target=matches(await getAll());
+   let completed=0;
+   try{
+     for(const row of target){
+       const response=await fetch(API+'/'+encodeURIComponent(row.id),{method:'DELETE',cache:'no-store'});
+       if(!response.ok)throw Error('UVB 삭제 HTTP '+response.status+' (항목 '+row.id+')');
+       completed++;
+     }
+   }catch(error){
+     let remaining='확인 불가';
+     try{remaining=String(matches(await getAll()).length);}catch(_){}
+     throw Error('UVB 삭제 미완료 ('+completed+'/'+target.length+'건 처리, 남은 기록 '+remaining+'건): '+error.message);
+   }
+   const remaining=matches(await getAll());
+   if(remaining.length)throw Error('삭제 검증 실패: UVB에 '+remaining.length+'개 기록이 남았습니다. 브라우저 코스는 유지됩니다.');
+   return {deleted:completed};
+ }
+ root.DsdRounds=Object.freeze({getAll,latest,unseal,save,removeRound,dateOK,roundOK});
 }(window));
