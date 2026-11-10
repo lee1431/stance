@@ -455,11 +455,13 @@
         const restored=applySavedRoad(snapshot,id);
         if(map)drawMarkers(true);
         renderSavedRounds();
+        const work=snapshot||{date_key:r.date_key,round_no:r.round_no,ids:courseIds.slice(),
+          stops:JSON.parse(JSON.stringify(stops)),saved_at:null};
         if(restored)notify(r.date_key+' '+r.round_no+'회차 코스의 도로 경로까지 불러왔습니다.');
-        else if(snapshot&&snapshot.ids.length>1){
-          notify(r.date_key+' '+r.round_no+'회차 방문 순서를 불러왔습니다. 도로 경로를 조회합니다.');
-          void restoreSavedRoad(snapshot,c.id,id);
-        }else notify(r.date_key+' '+r.round_no+'회차 코스를 불러왔습니다.');
+        else if(work.ids.length>1){
+          notify(r.date_key+' '+r.round_no+'회차 도로 경로를 조회합니다.');
+          void restoreSavedRoad(work,c.id,id);
+        }else notify(r.date_key+' '+r.round_no+'회차 배송지를 불러왔습니다.');
       }
       let cloudRows=[],roundBusy=false;
       function roundStatus(text){$('roundState').textContent=text;}
@@ -586,6 +588,7 @@
         $('roundDate').value=currentRoute().date_key||todayKST();
         stops=loadStops();courseIds=validCourseIds(loadCourse());pinnedLastIds=validPins(readPinnedLast(),courseIds);
         draftCourseIds=[];draftPinnedLastIds=[];
+        applySavedRoad(snapshotFor(c.id,c.activeRouteId),c.activeRouteId);
         $('count').textContent=stops.length+'곳';renderCenterSelect();renderRouteSelect();saveRegistry();
         $('leftRoundDate').value=currentRoute().date_key||todayKST();renderSavedRounds();
         if(map)drawMarkers(true);
