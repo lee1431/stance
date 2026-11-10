@@ -352,13 +352,79 @@
           const btn=document.createElement('button');btn.type='button';btn.dataset.roundId=r.id;
           btn.className=r.id===c.activeRouteId?'active':'';
           const label=document.createElement('span');label.textContent=r.round_no+'회차 코스';
-          const status=document.createElement('small');status.textContent=count+'곳 · '+(snapshot?'저장됨':'임시');
+          const status=document.createElement('small');status.textContent=count+'곳 · '+(snapshot?(snapshot.road?.path?.length>1?'경로 저장됨':'저장됨'):'임시');
           btn.append(label,status);list.append(btn);
         }
         if(!rounds.length){
           const empty=document.createElement('p');empty.className='saved-round-empty';
           empty.textContent='해당 날짜에 회차가 없습니다.';list.append(empty);
         }
+      }
+      // A saved course is the ordered stops AND its drivable geometry, never just pins.
+      function validRoadGeometry(road,ids){
+        return !!(road&&Array.isArray(road.ids)&&
+          JSON.stringify(road.ids)===JSON.stringify(ids)&&
+          Array.isArray(road.path)&&road.path.length>=2&&road.path.length<=30000&&
+          road.path.every(p=>p&&Number.isFinite(p.lat)&&Number.isFinite(p.lng)&&
+            p.lat>=-90&&p.lat<=90&&p.lng>=-180&&p.lng<=180)&&
+          Number.isFinite(road.meters)&&road.meters>=0&&
+          Number.isFinite(road.seconds)&&road.seconds>=0);
+      }
+      function roadFromPreview(ids){
+        if(!roadCurrent(ids)||!validRoadGeometry(roadPreview,ids))return null;
+        return {version:1,source:'osrm',ids:ids.slice(),
+          path:roadPreview.path.map(p=>({lat:p.lat,lng:p.lng})),
+          meters:roadPreview.meters,seconds:roadPreview.seconds,
+          startPoint:roadPreview.historicalStartPoint||courseStartPoint||null};
+      }
+      function applySavedRoad(snapshot,id){
+        if(!snapshot||!validRoadGeometry(snapshot.road,snapshot.ids))return false;
+        const c=currentCenter(),road=snapshot.road;
+        roadPreview={ids:road.ids.slice(),centerId:c.id,routeId:id,
+          startPoint:courseStartPoint?{...courseStartPoint}:null,
+          historicalStartPoint:road.startPoint||null,
+          path:road.path.map(p=>({lat:p.lat,lng:p.lng})),
+          meters:road.meters,seconds:road.seconds};
+        return true;
+      }
+      async function restoreSavedRoad(snapshot,centerId,routeId){
+        if(!snapshot||snapshot.ids.length<2)return;
+        // Do not silently transfer address-derived coordinates to a public server.
+        if(!window.DsdRoad){notify('도로 경로 모듈을 불러오지 못했습니다.');return;}
+        if(snapshot.ids.length>DsdRoad.MAX_POINTS){
+          notify('현재 시험 도로 서버는 '+DsdRoad.MAX_POINTS+'곳 이하만 지원합니다. 경로선을 표시하지 못했습니다.');return;
+        }
+        if(!allowRoadCoordinates(true)){
+          notify('도로 좌표 전송이 허용되지 않아 경로선을 조회하지 않았습니다.');return;
+        }
+        const byId=new Map(snapshot.stops.map(stop=>[stop.id,vehiclePoint(stop)]));
+        const points=snapshot.ids.map(id=>byId.get(id));
+        if(points.some(p=>!p||!Number.isFinite(p.lat)||!Number.isFinite(p.lng))){
+          notify('코스에 잘못된 정차 좌표가 있어 경로선을 표시할 수 없습니다.');return;
+        }
+        const token=++roadToken,controller=new AbortController();
+        roadController=controller;
+        notify('저장된 '+snapshot.round_no+'회차 도로 경로를 불러오는 중...');
+        try{
+          const route=await DsdRoad.geometry(points,controller.signal);
+          if(token!==roadToken||centerRegistry.activeId!==centerId||currentRoute().id!==routeId||
+              JSON.stringify(courseIds)!==JSON.stringify(snapshot.ids))return;
+          const road={version:1,source:'osrm',ids:snapshot.ids.slice(),startPoint:null,
+            path:route.path,meters:route.meters,seconds:route.seconds};
+          if(!validRoadGeometry(road,snapshot.ids))throw Error('도로 경로 응답 형식이 잘못되었습니다.');
+          roadPreview={...road,centerId,routeId,startPoint:null};
+          const latest=snapshotFor(centerId,routeId);
+          if(latest&&latest.saved_at===snapshot.saved_at&&JSON.stringify(latest.ids)===JSON.stringify(snapshot.ids)){
+            if(writeStored(savedSnapshotKey(centerId,routeId),JSON.stringify({...latest,road})))renderSavedRounds();
+            else notify('도로는 표시했지만 경로 좌표를 저장하지 못했습니다. 저장 공간을 확인하세요.');
+          }
+          drawMarkers(false);
+          if(map)fitAllMarkers();
+          notify(snapshot.date_key+' '+snapshot.round_no+'회차 도로 코스를 표시했습니다.');
+        }catch(error){
+          if(token===roadToken&&error.name!=='AbortError')
+            notify('배송지 순서는 복원됐지만 도로 경로 조회 실패: '+error.message);
+        }finally{if(token===roadToken)roadController=null;}
       }
       function loadSavedRound(id){
         const c=currentCenter(),r=c.routes.find(x=>x.id===id);if(!r)return;
@@ -374,7 +440,6 @@
           }
           const originalStops=readStored(roundStopKey(c.id,id),'[]');
           const originalRoute=readStored(routeKey(c.id,id),'');
-          const oldRecords=snapshotFor(c.id,id);
           const record={ids:snapshot.ids,pinnedLastIds:snapshot.pinnedLastIds,orderMode:'manual',
              updatedAt:snapshot.saved_at||new Date().toISOString()};
           if(!writeStored(roundStopKey(c.id,id),JSON.stringify(snapshot.stops))||
@@ -387,9 +452,14 @@
         chooseRoute(id,true);
         $('coursePanel').hidden=true;document.body.classList.remove('course-open');
         courseStartPoint=null;invalidateRoad();closeSelection();
+        const restored=applySavedRoad(snapshot,id);
         if(map)drawMarkers(true);
         renderSavedRounds();
-        notify(r.date_key+' '+r.round_no+'회차 코스 '+(snapshot?'저장본':'임시본')+'을 불러왔습니다.');
+        if(restored)notify(r.date_key+' '+r.round_no+'회차 코스의 도로 경로까지 불러왔습니다.');
+        else if(snapshot&&snapshot.ids.length>1){
+          notify(r.date_key+' '+r.round_no+'회차 방문 순서를 불러왔습니다. 도로 경로를 조회합니다.');
+          void restoreSavedRoad(snapshot,c.id,id);
+        }else notify(r.date_key+' '+r.round_no+'회차 코스를 불러왔습니다.');
       }
       let cloudRows=[],roundBusy=false;
       function roundStatus(text){$('roundState').textContent=text;}
@@ -659,13 +729,17 @@
         draftOrderMode=savedOrderMode();
         renderRouteSelect();
         $('coursePanel').hidden=false;document.body.classList.add('course-open');
-        if(draftOrderMode==='manual'){invalidateRoad();renderCourse();drawMarkers(false);}
-        else autoOrderDraft();
+        if(draftOrderMode==='manual'){
+          invalidateRoad();applySavedRoad(snapshotFor(centerRegistry.activeId,currentRoute().id),currentRoute().id);
+          renderCourse();drawMarkers(false);
+        }else autoOrderDraft();
       }
       function hideCourse(){
         if(dirtyCourse()&&!confirm('코스 편성 내용을 저장하지 않고 닫을까요?'))return;
         invalidateRoad();$('coursePanel').hidden=true;
-        document.body.classList.remove('course-open');courseStartPoint=null;drawMarkers(false);
+        document.body.classList.remove('course-open');courseStartPoint=null;
+        applySavedRoad(snapshotFor(centerRegistry.activeId,currentRoute().id),currentRoute().id);
+        drawMarkers(false);
       }
       function updateDraft(action,id){
         const wasAuto=draftOrderMode!=='manual';
@@ -925,6 +999,8 @@
             if(stop.parking&&Number.isFinite(stop.parking.lat)&&Number.isFinite(stop.parking.lng))
               bounds.extend(new naver.maps.LatLng(stop.parking.lat,stop.parking.lng));
           });
+          if(roadCurrent(courseIds)&&validRoadGeometry(roadPreview,courseIds))
+            roadPreview.path.forEach(p=>bounds.extend(new naver.maps.LatLng(p.lat,p.lng)));
           map.fitBounds(bounds, {top:90,right:180,bottom:100,left:70});
         }
       }
@@ -1242,7 +1318,8 @@
         if(r.date_key!==date){roundStatus('먼저 저장할 날짜와 회차를 선택해 주세요.');return;}
         const ids=validCourseIds(draftCourseIds),pins=validPins(draftPinnedLastIds,ids),at=new Date().toISOString();
         const snapshot={schema_version:1,date_key:date,round_no:r.round_no,center_id:c.id,center_name:c.name,
-          stops:JSON.parse(JSON.stringify(stops)),ids,pinnedLastIds:pins,saved_at:at};
+          stops:JSON.parse(JSON.stringify(stops)),ids,pinnedLastIds:pins,saved_at:at,
+          road:roadFromPreview(ids)};
         const course={ids,pinnedLastIds:pins,orderMode:'manual',updatedAt:at};
         const key=savedSnapshotKey(c.id,r.id),oldSaved=readStored(key,''),oldCourse=readStored(COURSE_KEY,'');
         if(!writeStored(key,JSON.stringify(snapshot))||!writeStored(COURSE_KEY,JSON.stringify(course))){
@@ -1254,8 +1331,8 @@
         }
         courseIds=ids.slice();pinnedLastIds=pins.slice();draftOrderMode='manual';
         renderCourse();renderSavedRounds();
-        roundStatus(date+' '+r.round_no+'회차 '+snapshot.stops.length+'곳 저장했습니다. 왼쪽의 「'+r.round_no+'회차 코스」를 눌러 불러올 수 있습니다.');
-        notify(date+' '+r.round_no+'회차 코스를 저장했습니다.');
+        roundStatus(date+' '+r.round_no+'회차 '+snapshot.stops.length+'곳 저장'+(snapshot.road?' · 도로 경로 포함':' · 도로 경로는 불러올 때 조회')+'했습니다.');
+        notify(date+' '+r.round_no+'회차 코스를 저장했습니다'+(snapshot.road?' (도로 경로 포함)':' (도로 경로 조회는 불러올 때)')+'.');
       });
       $('uvbBackupBtn').addEventListener('click',async()=>{
         if(roundBusy)return;
