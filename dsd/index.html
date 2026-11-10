@@ -115,6 +115,10 @@
     .saved-rounds input{width:100%;min-width:0;border:1px solid #ccd9e4;border-radius:8px;padding:8px 6px;margin-bottom:9px;background:#fff;font-size:12px}
     .saved-round-list{display:flex;flex-direction:column;gap:6px}
     .saved-round-list button{display:flex;justify-content:space-between;align-items:center;gap:5px;width:100%;padding:10px 9px;text-align:left;border:1px solid #d9e5e6;border-radius:9px;background:#f7fbfb;color:#264f56;font-size:12px;font-weight:800}
+    .saved-round-entry{display:flex;gap:5px;align-items:stretch}
+    .saved-round-entry .saved-round-open{flex:1;min-width:0}
+    .saved-round-entry .saved-round-remove{flex:0 0 33px;width:33px;justify-content:center;padding:8px 5px;background:#fff4f1;color:#ac3c35;border-color:#f2cfca}
+    .saved-round-entry .saved-round-remove:hover{background:#fbe1db}
     .saved-round-list button.active{border-color:#149584;background:#e6f8f3;color:#0b665c}
     .saved-round-list small{display:block;font-size:10px;font-weight:500;color:#60798b}
     .saved-round-empty{margin:0;color:#718094;font-size:11px;line-height:1.5}
@@ -345,19 +349,38 @@
         if(!centerRegistry)return;
         const date=$('leftRoundDate').value||todayKST(),c=currentCenter(),list=$('leftRoundList');
         list.replaceChildren();
-        const rounds=c.routes.filter(r=>r.date_key===date).sort((a,b)=>a.round_no-b.round_no);
-        for(const r of rounds){
-          const snapshot=snapshotFor(c.id,r.id),count=snapshot?snapshot.stops.length:
-            (()=>{try{return JSON.parse(readStored(roundStopKey(c.id,r.id),'[]')).length}catch(_){return 0}})();
-          const btn=document.createElement('button');btn.type='button';btn.dataset.roundId=r.id;
-          btn.className=r.id===c.activeRouteId?'active':'';
-          const label=document.createElement('span');label.textContent=r.round_no+'회차 코스';
-          const status=document.createElement('small');status.textContent=count+'곳 · '+(snapshot?(snapshot.road?.path?.length>1?'경로 저장됨':'저장됨'):'임시');
-          btn.append(label,status);list.append(btn);
+        const locals=c.routes.filter(r=>r.date_key===date);
+        const byRound=new Map();
+        for(const r of locals)byRound.set(r.round_no,{local:r,cloud:false});
+        for(const row of cloudRows){
+          const data=row.data;
+          if(data?.date_key!==date||data.center_id!==c.id)continue;
+          const entry=byRound.get(data.round_no)||{local:null,cloud:false};
+          entry.cloud=true;byRound.set(data.round_no,entry);
         }
-        if(!rounds.length){
+        for(const [number,entry] of [...byRound].sort((a,b)=>a[0]-b[0])){
+          const r=entry.local,snapshot=r?snapshotFor(c.id,r.id):null;
+          const count=snapshot?snapshot.stops.length:r?
+            (()=>{try{return JSON.parse(readStored(roundStopKey(c.id,r.id),'[]')).length}catch(_){return 0}})():0;
+          // Hide untouched empty placeholders; the date/round picker can still create them.
+          if(!snapshot&&!entry.cloud&&!count)continue;
+          const item=document.createElement('div');item.className='saved-round-entry';
+          const btn=document.createElement('button');btn.type='button';btn.className='saved-round-open'+(r?.id===c.activeRouteId?' active':'');
+          if(r)btn.dataset.roundId=r.id;
+          else {btn.dataset.cloudRound=String(number);btn.dataset.cloudDate=date;}
+          const label=document.createElement('span');label.textContent=number+'회차 코스';
+          const status=document.createElement('small');
+          status.textContent=(r?count+'곳 · ':'')+(snapshot?(snapshot.road?.path?.length>1?'경로 저장됨':'저장됨'):r?'임시':'UVB 백업')+(entry.cloud?' · UVB':'');
+          btn.append(label,status);
+          const remove=document.createElement('button');remove.type='button';remove.className='saved-round-remove';
+          remove.textContent='🗑';remove.title=date+' '+number+'회차 코스 삭제';
+          remove.setAttribute('aria-label',date+' '+number+'회차 코스 삭제');
+          remove.dataset.removeRound=String(number);remove.dataset.removeDate=date;
+          item.append(btn,remove);list.append(item);
+        }
+        if(!list.children.length){
           const empty=document.createElement('p');empty.className='saved-round-empty';
-          empty.textContent='해당 날짜에 회차가 없습니다.';list.append(empty);
+          empty.textContent='해당 날짜에 저장된 코스가 없습니다.';list.append(empty);
         }
       }
       // A saved course is the ordered stops AND its drivable geometry, never just pins.
@@ -531,7 +554,7 @@
         const r=currentRoute();
         if(r?.date_key===day)select.value='local:'+r.id;
         if(select.selectedIndex<0)select.selectedIndex=0;
-        $('routeDeleteBtn').disabled=c.routes.length<2||r?.date_key!==day;
+        $('routeDeleteBtn').disabled=roundBusy||r?.date_key!==day;
       }
       async function refreshRoundList(){
         if(roundBusy)return;
@@ -576,6 +599,50 @@
           roundStatus(date+' '+n+'회차 UVB 저장본 '+validStops.length+'곳을 불러왔습니다. 편집 후 코스 저장을 누르세요.');
         }catch(error){roundStatus('UVB 불러오기 실패: '+error.message);}
         finally{roundBusy=false;renderRouteSelect();}
+      }
+      // Remove one round without ever touching a different date or center.
+      function removeLocalRound(c,r){
+        const remaining=c.routes.filter(x=>x.id!==r.id);
+        if(!remaining.length){
+          const replacement={id:makeId('course'),name:'1회차',date_key:todayKST(),round_no:1};
+          remaining.push(replacement);
+          writeStored(roundStopKey(c.id,replacement.id),'[]');
+        }
+        c.routes=remaining;
+        if(c.activeRouteId===r.id)chooseRoute(remaining[0].id,true);
+        else {saveRegistry();renderRouteSelect();renderSavedRounds();}
+        try{
+          localStorage.removeItem(routeKey(c.id,r.id));
+          localStorage.removeItem(roundStopKey(c.id,r.id));
+          localStorage.removeItem(savedSnapshotKey(c.id,r.id));
+        }catch(_){roundStatus('목록에서 삭제했지만 일부 브라우저 자료를 지우지 못했습니다.');}
+        renderSavedRounds();
+      }
+      async function deleteSavedRound(date,number){
+        if(roundBusy)return;
+        const c=currentCenter(),centerId=c.id;
+        const route=c.routes.find(r=>r.date_key===date&&r.round_no===number);
+        if(!route&&!cloudRows.some(x=>x.data?.center_id===centerId&&x.data.date_key===date&&x.data.round_no===number))return;
+        if(!confirm(date+' '+number+'회차 코스를 삭제할까요?\\n이 회차의 브라우저 자료 및 UVB 백업 전체 버전이 삭제됩니다. 다른 회차는 유지됩니다.'))return;
+        roundBusy=true;
+        const button=$('routeDeleteBtn');button.disabled=true;
+        roundStatus(date+' '+number+'회차 삭제 확인 중...');
+        try{
+          if(!window.DsdRounds)throw Error('UVB 연결 모듈을 찾지 못했습니다. 로컬 데이터는 그대로 유지됩니다.');
+          // Fresh server list is required: the cached list may not include recent backups.
+          const result=await DsdRounds.removeRound({centerId,date,round:number});
+          cloudRows=await DsdRounds.getAll();
+          if(centerRegistry.activeId!==centerId)throw Error('삭제 도중 센터가 변경되었습니다. 목록을 새로고침하세요.');
+          const local=currentCenter().routes.find(r=>r.date_key===date&&r.round_no===number);
+          if(local)removeLocalRound(currentCenter(),local);
+          renderRouteSelect();renderSavedRounds();
+          roundStatus(date+' '+number+'회차 삭제 완료 (UVB '+result.deleted+'건 포함).');
+          notify(date+' '+number+'회차 코스를 삭제했습니다.');
+        }catch(error){
+          roundStatus('삭제 실패 또는 확인 불가: '+error.message+' · 브라우저 코스는 유지됩니다.');
+          try{cloudRows=await DsdRounds.getAll();}catch(_){}
+          renderSavedRounds();
+        }finally{roundBusy=false;renderRouteSelect();}
       }
       function dirtyCourse(){return !$('coursePanel').hidden&&(JSON.stringify(validCourseIds(draftCourseIds))!==JSON.stringify(courseIds)||JSON.stringify(validPins(draftPinnedLastIds,draftCourseIds))!==JSON.stringify(pinnedLastIds));}
       function chooseCenter(id,force=false){
@@ -1235,8 +1302,18 @@
       });
       $('leftRoundDate').addEventListener('change',renderSavedRounds);
       $('leftRoundList').addEventListener('click',event=>{
+        const remove=event.target.closest('button[data-remove-round]');
+        if(remove){void deleteSavedRound(remove.dataset.removeDate,Number(remove.dataset.removeRound));return;}
         const button=event.target.closest('button[data-round-id]');
-        if(button)loadSavedRound(button.dataset.roundId);
+        if(button){loadSavedRound(button.dataset.roundId);return;}
+        const cloud=event.target.closest('button[data-cloud-round]');
+        if(cloud){
+          $('roundDate').value=cloud.dataset.cloudDate;
+          showCourse();
+          const matching=cloudRows.find(x=>x.data?.center_id===currentCenter().id&&
+            x.data.date_key===cloud.dataset.cloudDate&&x.data.round_no===Number(cloud.dataset.cloudRound));
+          if(matching){$('routeSelect').value='uvb:'+matching.id;roundStatus('UVB '+cloud.dataset.cloudRound+'회차입니다. 암호 입력 후 [선택 불러오기]를 누르세요.');}
+        }
       });
       $('roundDate').addEventListener('change',()=>{
         if(dirtyCourse()&&!confirm('저장하지 않은 방문 순서 변경을 버리고 날짜를 바꿀까요?')){
@@ -1275,14 +1352,7 @@
         roundStatus(date+' '+next+'회차를 만들었습니다. 주소를 등록한 후 [코스 저장]을 누르세요.');
       });
       $('routeDeleteBtn').addEventListener('click',()=>{
-        const c=currentCenter(),r=currentRoute();if(c.routes.length<2)return;
-        if(!confirm(r.date_key+' '+r.round_no+'회차의 브라우저 임시 자료만 삭제할까요? UVB 기록은 남습니다.'))return;
-        const other=c.routes.find(x=>x.id!==r.id);
-        c.routes=c.routes.filter(x=>x.id!==r.id);
-        chooseRoute(other.id,true);
-        try{localStorage.removeItem(routeKey(c.id,r.id));localStorage.removeItem(roundStopKey(c.id,r.id));}catch(_){}
-        try{localStorage.removeItem(savedSnapshotKey(c.id,r.id));}catch(_){}
-        renderRouteSelect();renderSavedRounds();roundStatus('브라우저 임시 회차만 삭제했습니다. UVB 저장 기록은 그대로입니다.');
+        const r=currentRoute();if(r)void deleteSavedRound(r.date_key,r.round_no);
       });
       $('courseBtn').addEventListener('click',()=>{showCourse();void refreshRoundList();});
       $('closeCourseBtn').addEventListener('click',hideCourse);
