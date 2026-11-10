@@ -141,14 +141,14 @@
   <button id="courseBtn" class="course-launch" type="button">↗ 코스 만들기</button>
   <section id="coursePanel" class="course-panel" hidden aria-label="배송 코스 편성">
     <div class="course-head"><h2>배송 코스 편성</h2><button id="closeCourseBtn" type="button" aria-label="코스 편성 닫기">✕</button></div>
-    <p class="course-note">배송지를 선택하고 ↑↓로 방문 순서를 바꾸세요. 도로망을 이용하는 시험 기능입니다. 실시간 교통·주정차 가능 여부는 반영되지 않습니다.</p>
+    <p class="course-note">배송지를 선택하고 ↑↓로 방문 순서를 바꾸세요. 코스를 열면 방문 순서를 자동 정리합니다. 도로망 추천은 좌표 전송 동의 후 자동 적용되며, 기사가 수동 수정한 순서는 보존합니다.</p>
     <div class="center-course-label" id="courseCenterLabel">센터별 독립 코스</div>
     <div class="course-picker"><select id="routeSelect" aria-label="현재 코스"></select><button id="routeAddBtn" type="button">+ 코스</button><button id="routeRenameBtn" type="button">이름 수정</button><button id="routeDeleteBtn" type="button">삭제</button></div>
     <div id="courseSummary" class="course-summary" aria-live="polite">코스를 준비하고 있습니다.</div>
     <div class="course-tools">
       <button id="courseAllBtn" type="button">전체 추가</button>
       <button id="courseClearBtn" type="button">전체 제외</button>
-      <button id="courseRecommendBtn" type="button">도로 기준 추천 (시험)</button>
+      <button id="courseRecommendBtn" type="button">도로 기준 재추천 (시험)</button>
     </div>
     <p class="course-note">공개 OSRM 도로 서버로 정차 좌표를 전송합니다. 출발점 포함 최대 16곳만 지원하며 운영용이 아닙니다.</p>
     <div class="course-gps"><button id="courseGpsBtn" type="button">⌖ 내 위치 출발</button><span id="courseStartText">첫 배송지 기준</span></div>
@@ -240,8 +240,28 @@
       let parkingMarkers = [],parkingPickStopId = null,accessStopId = null;
       let pinnedLastIds = [],draftPinnedLastIds = [];
       let courseStartPoint = null; // GPS start is temporary and never persisted.
-      let roadPreview=null,roadToken=0,roadBusy=false;
-      function invalidateRoad(){roadToken++;roadPreview=null;}
+      let roadPreview=null,roadToken=0,roadBusy=false,roadController=null;
+      const ROAD_CONSENT_KEY='dsd:road-coordinates-consent:v1';
+      let draftOrderMode='auto-air';
+      function invalidateRoad(){
+        roadToken++;roadPreview=null;
+        if(roadController){roadController.abort();roadController=null;}
+        roadBusy=false;
+        const button=$('courseRecommendBtn');
+        if(button){button.textContent='도로 기준 재추천 (시험)';button.disabled=false;}
+      }
+      function savedOrderMode(){
+        try{return JSON.parse(readStored(COURSE_KEY,'{}')).orderMode==='manual'?'manual':'auto-air';}
+        catch(_){return 'auto-air';}
+      }
+      function allowRoadCoordinates(explicit){
+        const prior=readStored(ROAD_CONSENT_KEY,'');
+        if(prior==='yes')return true;
+        if(prior==='no'&&!explicit)return false;
+        const accepted=confirm('도로 코스를 자동 계산하려면 공개 OSRM 시험 서버로 배송지/출발점 좌표를 전송해야 합니다. 이름과 주소 문자열은 전송하지 않지만 좌표로 배송지를 추정할 수 있습니다. 이 브라우저에서 이후 도로 추천에도 허용하시겠습니까?');
+        writeStored(ROAD_CONSENT_KEY,accepted?'yes':'no');
+        return accepted;
+      }
       function roadCurrent(ids){return roadPreview&&roadPreview.centerId===centerRegistry.activeId&&roadPreview.routeId===currentRoute().id&&JSON.stringify(ids)===JSON.stringify(roadPreview.ids)&&JSON.stringify(courseStartPoint)===JSON.stringify(roadPreview.startPoint);}
       function loadCourse() {
         try {
@@ -348,9 +368,12 @@
         invalidateRoad();c.activeRouteId=id;COURSE_KEY=routeKey(c.id,id);
         courseIds=validCourseIds(loadCourse());pinnedLastIds=validPins(readPinnedLast(),courseIds);
         draftCourseIds=courseIds.slice();draftPinnedLastIds=pinnedLastIds.slice();
+        draftOrderMode=savedOrderMode();
         saveRegistry();renderRouteSelect();
-        if(!$('coursePanel').hidden)renderCourse();
-        if(map)drawMarkers(false);
+        if(!$('coursePanel').hidden){
+          if(draftOrderMode!=='manual')autoOrderDraft();
+          else {renderCourse();drawMarkers(false);}
+        } else if(map)drawMarkers(false);
         return true;
       }
       function cleanupCenterRoutes(){
@@ -384,13 +407,13 @@
       function drawCourseLine() {
         if (coursePolyline) { coursePolyline.setMap(null); coursePolyline=null; }
         if (!map) return;
+        // Never draw a direct chord through buildings, rivers or prohibited roads.
+        // Without verified road geometry, numbered stop markers convey order instead.
         const ids=activeCourseIds(),path=roadCurrent(ids)?roadPreview.path:null;
-        const points=path?path.map(p=>new naver.maps.LatLng(p.lat,p.lng)):
-          ids.map(coursePoint).filter(Boolean).map(vehiclePoint).map(p=>new naver.maps.LatLng(p.lat,p.lng));
-        if (!path && !$('coursePanel').hidden && courseStartPoint) points.unshift(new naver.maps.LatLng(courseStartPoint.lat,courseStartPoint.lng));
-        if (points.length < 2) return;
+        if(!path||path.length<2)return;
+        const points=path.map(p=>new naver.maps.LatLng(p.lat,p.lng));
         coursePolyline = new naver.maps.Polyline({
-          map:map,path:points,strokeColor:'#069b8b',strokeOpacity:0.9,strokeWeight:4,strokeStyle:path?'solid':'shortdash',
+          map:map,path:points,strokeColor:'#069b8b',strokeOpacity:0.9,strokeWeight:4,strokeStyle:'solid',
           clickable:false,zIndex:1
         });
       }
@@ -399,7 +422,7 @@
         draftPinnedLastIds=validPins(draftPinnedLastIds,draftCourseIds);
         const ids=draftCourseIds,locked=new Set(draftPinnedLastIds),selected=new Set(ids);
         const rest=stops.filter(x=>!selected.has(x.id));
-        $('courseSummary').textContent=roadCurrent(ids)?ids.length+'곳 · 도로 '+(roadPreview.meters/1000).toFixed(1)+'km · 약 '+Math.ceil(roadPreview.seconds/60)+'분 (교통 미반영) · 마지막 고정 '+locked.size+'곳 · 미편성 '+rest.length+'곳':ids.length+'곳 · 직선 참고 '+courseDistance(ids).toFixed(1)+'km · 마지막 고정 '+locked.size+'곳 · 미편성 '+rest.length+'곳';
+        $('courseSummary').textContent=roadCurrent(ids)?ids.length+'곳 · 도로 '+(roadPreview.meters/1000).toFixed(1)+'km · 약 '+Math.ceil(roadPreview.seconds/60)+'분 (교통 미반영) · 마지막 고정 '+locked.size+'곳 · 미편성 '+rest.length+'곳':ids.length+'곳 · '+(draftOrderMode==='manual'?'수동 순서':'자동 근거리 순서')+' · 직선 참고 '+courseDistance(ids).toFixed(1)+'km (도로 미확인) · 마지막 고정 '+locked.size+'곳 · 미편성 '+rest.length+'곳';
         $('courseStartText').textContent=courseStartPoint?'현재 GPS 기준 (임시)':'첫 배송지 기준';
         $('courseRecommendBtn').disabled=ids.length<2||roadBusy;
         let html='<div class="course-section-label">방문 순서 ('+ids.length+')</div>';
@@ -424,25 +447,68 @@
         });
         $('courseRows').innerHTML=stops.length?html:'<p class="course-note">먼저 배송지를 등록해 주세요.</p>';
       }
-      function showCourse() {
+      // Initial/default ordering is generated locally, without any network transfer.
+      // Fixed-last stops keep their relative order; the first stop stays as anchor
+      // when the driver has not provided a GPS starting position.
+      function airOrder(ids,pins){
+        const locked=new Set(pins),tail=ids.filter(id=>locked.has(id));
+        const free=ids.filter(id=>!locked.has(id)),remaining=new Set(free),result=[];
+        let cursor=courseStartPoint;
+        if(!cursor&&free.length){
+          const first=free[0];result.push(first);remaining.delete(first);
+          cursor=vehiclePoint(coursePoint(first));
+        }
+        while(remaining.size){
+          let selected=null,best=Infinity;
+          for(const id of remaining){
+            const dist=airDistance(cursor,vehiclePoint(coursePoint(id)));
+            if(dist<best){best=dist;selected=id;}
+          }
+          result.push(selected);remaining.delete(selected);
+          cursor=vehiclePoint(coursePoint(selected));
+        }
+        const firstMutable=courseStartPoint?0:1;
+        for(let pass=0;pass<2;pass++){
+          let changed=false;
+          for(let i=firstMutable;i<result.length-1;i++)for(let j=i+1;j<result.length;j++){
+            const proposal=result.slice();
+            proposal.splice(i,j-i+1,...result.slice(i,j+1).reverse());
+            if(courseDistance(proposal.concat(tail))+0.000001<courseDistance(result.concat(tail))){
+              result.splice(0,result.length,...proposal);changed=true;
+            }
+          }
+          if(!changed)break;
+        }
+        return result.concat(tail);
+      }
+      function autoOrderDraft(){
+        invalidateRoad();
+        draftCourseIds=airOrder(validCourseIds(draftCourseIds),draftPinnedLastIds);
+        draftOrderMode='auto-air';
+        renderCourse();drawMarkers(false);
+        // Road evaluation is automatic when the user authorizes location sharing.
+        // Consent is requested once per browser, and no background request is sent otherwise.
+        if(draftCourseIds.length>=2)void recommendCourse(false);
+      }
+      function showCourse(){
         closeSelection();
         const hasSaved=readStored(COURSE_KEY,'')!=='';
         draftCourseIds=hasSaved?validCourseIds(courseIds):stops.map(s=>s.id);
-        invalidateRoad();draftPinnedLastIds=validPins(pinnedLastIds,draftCourseIds);
+        draftPinnedLastIds=validPins(pinnedLastIds,draftCourseIds);
+        draftOrderMode=savedOrderMode();
         renderRouteSelect();
-        $('coursePanel').hidden=false;
-        document.body.classList.add('course-open');
-        renderCourse();
-        drawMarkers(false);
+        $('coursePanel').hidden=false;document.body.classList.add('course-open');
+        if(draftOrderMode==='manual'){invalidateRoad();renderCourse();drawMarkers(false);}
+        else autoOrderDraft();
       }
-      function hideCourse() {
+      function hideCourse(){
         if(dirtyCourse()&&!confirm('코스 편성 내용을 저장하지 않고 닫을까요?'))return;
-        $('coursePanel').hidden=true;
-        document.body.classList.remove('course-open');
-        courseStartPoint=null;invalidateRoad();
-        drawMarkers(false);
+        invalidateRoad();$('coursePanel').hidden=true;
+        document.body.classList.remove('course-open');courseStartPoint=null;drawMarkers(false);
       }
-      function updateDraft(action,id){invalidateRoad();
+      function updateDraft(action,id){
+        const wasAuto=draftOrderMode!=='manual';
+        invalidateRoad();
         const index=draftCourseIds.indexOf(id),fixed=draftPinnedLastIds.includes(id);
         if(action==='add'&&index<0){
           const split=draftCourseIds.findIndex(x=>draftPinnedLastIds.includes(x));
@@ -457,33 +523,51 @@
           [draftCourseIds[index-1],draftCourseIds[index]]=[draftCourseIds[index],draftCourseIds[index-1]];
         if(action==='down'&&index>=0&&index<draftCourseIds.length-1&&fixed===draftPinnedLastIds.includes(draftCourseIds[index+1]))
           [draftCourseIds[index+1],draftCourseIds[index]]=[draftCourseIds[index],draftCourseIds[index+1]];
-        renderCourse();drawMarkers(false);
+        if(wasAuto&&['add','remove','pin'].includes(action))autoOrderDraft();
+        else {draftOrderMode='manual';renderCourse();drawMarkers(false);}
       }
-      async function recommendCourse(){
+      async function recommendCourse(explicit=false){
         if(roadBusy||draftCourseIds.length<2)return;
-        if(!window.DsdRoad){notify('도로 모듈 로딩 실패');return;}
-        if(!confirm('시험용 공개 OSRM 서버에 배송지/출발점 좌표를 보냅니다. 이름과 주소는 보내지 않지만 좌표로 위치를 추정할 수 있습니다. 진행할까요?'))return;
+        if(!window.DsdRoad){if(explicit)notify('도로 계산 모듈을 불러오지 못했습니다.');return;}
+        if(draftCourseIds.length+(courseStartPoint?1:0)>DsdRoad.MAX_POINTS){
+          if(explicit)notify('공개 도로 서버 시험판은 출발점 포함 '+DsdRoad.MAX_POINTS+'곳까지만 지원합니다.');
+          return;
+        }
+        if(!allowRoadCoordinates(explicit))return;
         const ids=draftCourseIds.slice(),pins=draftPinnedLastIds.slice();
         const byId=Object.fromEntries(ids.map(id=>[id,vehiclePoint(coursePoint(id))]));
         const startPoint=courseStartPoint?{...courseStartPoint}:null;
         const centerId=centerRegistry.activeId,routeId=currentRoute().id,token=++roadToken;
-        roadBusy=true;$('courseRecommendBtn').textContent='도로 계산 중...';renderCourse();
+        const controller=new AbortController();
+        roadController=controller;roadBusy=true;
+        $('courseRecommendBtn').textContent='도로 계산 중...';renderCourse();
         try{
-          const plan=await DsdRoad.recommend({ids,pinnedLastIds:pins,byId,startPoint});
+          const plan=await DsdRoad.recommend({ids,pinnedLastIds:pins,byId,startPoint,signal:controller.signal});
           if(token!==roadToken||centerId!==centerRegistry.activeId||routeId!==currentRoute().id||$('coursePanel').hidden)return;
-          draftCourseIds=plan.ids;
+          draftCourseIds=plan.ids;draftOrderMode='auto-road';
           roadPreview={ids:plan.ids.slice(),centerId,routeId,startPoint:courseStartPoint?{...courseStartPoint}:null,meters:plan.meters,seconds:plan.seconds,path:null};
           try{
-            const route=await DsdRoad.geometry(plan.points);
+            const route=await DsdRoad.geometry(plan.points,controller.signal);
             if(token!==roadToken||centerId!==centerRegistry.activeId||routeId!==currentRoute().id||$('coursePanel').hidden)return;
             roadPreview.path=route.path;roadPreview.meters=route.meters;roadPreview.seconds=route.seconds;
-          }catch(error){notify('도로 방문 순서는 계산했지만 도로 선 조회는 실패했습니다: '+error.message);}
+          }catch(error){
+            if(error.name==='AbortError')return;
+            notify('도로 순서는 계산했으나 실제 도로 선을 불러오지 못했습니다: '+error.message);
+          }
           renderCourse();drawMarkers(false);
-          notify('도로 기준 추천 완료. 교통 상황과 주정차 가능 여부는 직접 확인하세요.');
-        }catch(error){if(token===roadToken)notify('도로 추천 실패: '+error.message+' · 기존 순서 유지');}
-        finally{roadBusy=false;$('courseRecommendBtn').textContent='도로 기준 추천 (시험)';if(!$('coursePanel').hidden)renderCourse();}
+          if(roadPreview.path)notify('도로망 기준으로 방문 순서를 자동 정리했습니다.');
+        }catch(error){
+          if(token===roadToken&&error.name!=='AbortError')
+            notify('도로 계산 실패: '+error.message+' · 근거리 자동 순서 유지');
+        }finally{
+          if(token===roadToken){
+            roadBusy=false;roadController=null;
+            $('courseRecommendBtn').textContent='도로 기준 재추천 (시험)';
+            if(!$('coursePanel').hidden)renderCourse();
+          }
+        }
       }
-      
+
       function readStored(key, fallback) {
         try { return localStorage.getItem(key) || fallback; } catch (_) { return fallback; }
       }
@@ -935,9 +1019,9 @@
       $('courseBtn').addEventListener('click',showCourse);
       $('closeCourseBtn').addEventListener('click',hideCourse);
       $('cancelCourseBtn').addEventListener('click',hideCourse);
-      $('courseAllBtn').addEventListener('click',()=>{invalidateRoad();draftCourseIds=lastOrder(stops.map(s=>s.id),draftPinnedLastIds);renderCourse();drawMarkers(false);});
-      $('courseClearBtn').addEventListener('click',()=>{invalidateRoad();draftCourseIds=[];draftPinnedLastIds=[];renderCourse();drawMarkers(false);});
-      $('courseRecommendBtn').addEventListener('click',recommendCourse);
+      $('courseAllBtn').addEventListener('click',()=>{draftCourseIds=lastOrder(stops.map(s=>s.id),draftPinnedLastIds);autoOrderDraft();});
+      $('courseClearBtn').addEventListener('click',()=>{invalidateRoad();draftCourseIds=[];draftPinnedLastIds=[];draftOrderMode='auto-air';renderCourse();drawMarkers(false);});
+      $('courseRecommendBtn').addEventListener('click',()=>recommendCourse(true));
       $('courseRows').addEventListener('click',event=>{
         const detail=event.target.closest('button[data-access-id]');
         if(detail){accessDetails(detail.dataset.accessId);return;}
@@ -957,7 +1041,9 @@
         navigator.geolocation.getCurrentPosition(p=>{
           invalidateRoad();courseStartPoint={lat:p.coords.latitude,lng:p.coords.longitude};
           $('courseGpsBtn').disabled=false;
-          renderCourse();drawCourseLine();notify('이번 편성에만 현재 위치를 출발점으로 적용했습니다.');
+          if(draftOrderMode==='manual'){renderCourse();drawCourseLine();}
+          else autoOrderDraft();
+          notify('이번 편성에 현재 위치를 출발점으로 적용했습니다.');
         },err=>{
           $('courseGpsBtn').disabled=false;notify('출발점 위치를 확인하지 못했습니다: '+(err.message||'위치 권한 확인'));
         },{enableHighAccuracy:true,timeout:15000,maximumAge:15000});
@@ -965,7 +1051,7 @@
       $('saveCourseBtn').addEventListener('click',()=>{
         const ordered=validCourseIds(draftCourseIds);
         const fixed=validPins(draftPinnedLastIds,ordered);
-        if(!writeStored(COURSE_KEY,JSON.stringify({ids:ordered,pinnedLastIds:fixed,updatedAt:new Date().toISOString()}))){
+        if(!writeStored(COURSE_KEY,JSON.stringify({ids:ordered,pinnedLastIds:fixed,orderMode:draftOrderMode,updatedAt:new Date().toISOString()}))){
           notify('코스 저장에 실패했습니다.');return;
         }
         courseIds=ordered;pinnedLastIds=fixed;invalidateRoad();
