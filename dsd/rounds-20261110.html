@@ -109,7 +109,16 @@
     .center-bar button{border:0;border-radius:8px;background:#edf7f5;color:#176d63;font-size:11px;font-weight:800;padding:9px}
     .center-course-label{font-size:12px;font-weight:850;color:#11685e;margin:0 15px 8px}
     .round-date{display:flex;gap:8px;align-items:center;margin:0 15px 8px;font-size:12px;font-weight:800}.round-date input{flex:1;min-width:0;border:1px solid #cddbe8;border-radius:8px;padding:8px}
-    .round-secret{display:flex;gap:6px;margin:0 15px 8px}.round-secret input{flex:1;min-width:0;padding:9px;border:1px solid #cddbe8;border-radius:8px;font-size:12px}.round-state{margin:0 15px 9px;font-size:11px;color:#63748a;line-height:1.5}
+    .round-secret{display:flex;gap:6px;margin:0 15px 8px}.round-secret input{flex:1;min-width:0;padding:9px;border:1px solid #cddbe8;border-radius:8px;font-size:12px}.round-secret button{white-space:nowrap;padding:8px;border:1px solid #cddbe8;border-radius:8px;background:#f1f5fa;font-size:11px;font-weight:800}.round-state{margin:0 15px 9px;font-size:11px;color:#63748a;line-height:1.5}
+    .saved-rounds{position:fixed;z-index:5;left:14px;top:232px;width:194px;max-height:min(48vh,390px);overflow:auto;padding:12px;background:#fffffff2;border:1px solid #dae7e4;border-radius:14px;box-shadow:0 5px 21px #102d4024}
+    .saved-rounds h2{margin:0 0 9px;font-size:14px;color:#146d63}
+    .saved-rounds input{width:100%;min-width:0;border:1px solid #ccd9e4;border-radius:8px;padding:8px 6px;margin-bottom:9px;background:#fff;font-size:12px}
+    .saved-round-list{display:flex;flex-direction:column;gap:6px}
+    .saved-round-list button{display:flex;justify-content:space-between;align-items:center;gap:5px;width:100%;padding:10px 9px;text-align:left;border:1px solid #d9e5e6;border-radius:9px;background:#f7fbfb;color:#264f56;font-size:12px;font-weight:800}
+    .saved-round-list button.active{border-color:#149584;background:#e6f8f3;color:#0b665c}
+    .saved-round-list small{display:block;font-size:10px;font-weight:500;color:#60798b}
+    .saved-round-empty{margin:0;color:#718094;font-size:11px;line-height:1.5}
+    @media(max-width:600px){.saved-rounds{top:calc(205px + env(safe-area-inset-top));left:10px;width:160px;max-height:34vh;padding:9px}.saved-round-list button{padding:9px 6px}}
     .course-picker{display:flex;gap:5px;flex-wrap:wrap;margin:0 15px 10px}
     .course-picker select{flex:1;min-width:0;border:1px solid #d8e3ed;border-radius:8px;padding:9px 5px;background:#fff;font-size:12px}
     .course-picker button{white-space:nowrap;border:1px solid #d8e3ed;border-radius:8px;background:#f6f8fc;padding:8px 5px;font-size:10px;font-weight:800}
@@ -140,15 +149,20 @@
   </header>
 
   <div class="center-bar"><select id="centerSelect" aria-label="현재 배송 센터"></select><button id="centerAddBtn" type="button" title="센터 추가">+ 센터</button><button id="centerRenameBtn" type="button" title="센터 이름 수정">수정</button></div>
+  <section class="saved-rounds" aria-label="왼쪽 저장된 회차 코스">
+    <h2>저장된 코스</h2>
+    <input id="leftRoundDate" type="date" aria-label="저장된 코스 날짜 선택">
+    <div id="leftRoundList" class="saved-round-list" aria-live="polite"></div>
+  </section>
   <button id="courseBtn" class="course-launch" type="button">↗ 코스 만들기</button>
   <section id="coursePanel" class="course-panel" hidden aria-label="배송 코스 편성">
     <div class="course-head"><h2>배송 코스 편성</h2><button id="closeCourseBtn" type="button" aria-label="코스 편성 닫기">✕</button></div>
-    <p class="course-note">날짜별 1회차부터 N회차까지 별도 배송지를 관리합니다. 회차를 선택하면 저장된 순서를 불러오며, UVB에는 암호화해 저장합니다.</p>
+    <p class="course-note">날짜별 N회차를 관리합니다. 저장은 현재 코스를 기록만 하고 화면을 닫지 않습니다. 지도 왼쪽의 「1회차 코스」를 눌러 저장된 순서를 불러옵니다.</p>
     <div class="center-course-label" id="courseCenterLabel">센터별 독립 코스</div>
     <div class="round-date"><label for="roundDate">배송일</label><input id="roundDate" type="date"></div>
     <div class="course-picker"><select id="routeSelect" aria-label="현재 회차"></select><button id="routeAddBtn" type="button">+ 회차</button><button id="roundRefreshBtn" type="button">UVB 조회</button><button id="roundLoadBtn" type="button">선택 불러오기</button><button id="routeDeleteBtn" type="button">로컬 삭제</button></div>
-    <div class="round-secret"><input id="roundPassword" type="password" autocomplete="off" placeholder="UVB 암호화 비밀번호 (12자 이상)"></div>
-    <p id="roundState" class="round-state" aria-live="polite">UVB는 공개 읽기 서버입니다. 고객 정보는 암호화해 저장하고 비밀번호는 보관하지 않습니다.</p>
+    <div class="round-secret"><input id="roundPassword" type="password" autocomplete="off" placeholder="UVB 백업 암호 (12자 이상)"><button id="uvbBackupBtn" type="button">UVB 백업</button></div>
+    <p id="roundState" class="round-state" aria-live="polite">[코스 저장]은 브라우저에 저장됩니다. UVB 백업은 별도 선택 기능이며 현재 서버 등록은 검증되지 않았습니다.</p>
     <div id="courseSummary" class="course-summary" aria-live="polite">코스를 준비하고 있습니다.</div>
     <div class="course-tools">
       <button id="courseAllBtn" type="button">전체 추가</button>
@@ -158,7 +172,7 @@
     <p class="course-note">공개 OSRM 도로 서버로 정차 좌표를 전송합니다. 출발점 포함 최대 16곳만 지원하며 운영용이 아닙니다.</p>
     <div class="course-gps"><button id="courseGpsBtn" type="button">⌖ 내 위치 출발</button><span id="courseStartText">첫 배송지 기준</span></div>
     <div id="courseRows" class="course-rows"></div>
-    <div class="course-bottom"><button id="cancelCourseBtn" class="cancel-course" type="button">취소</button><button id="saveCourseBtn" class="save-course" type="button">UVB 저장</button></div>
+    <div class="course-bottom"><button id="cancelCourseBtn" class="cancel-course" type="button">취소</button><button id="saveCourseBtn" class="save-course" type="button">코스 저장</button></div>
   </section>
   <section id="cover" class="cover" role="status">
     <h2 id="coverTitle">네이버 지도 연결</h2>
@@ -318,6 +332,65 @@
       const REGISTRY_KEY='dsd:centers:v1';
       const todayKST=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
       const roundStopKey=(cid,rid)=>'dsd:center:'+cid+':round:'+rid+':stops';
+      const savedSnapshotKey=(cid,rid)=>'dsd:center:'+cid+':round:'+rid+':saved';
+      function snapshotFor(cid,rid){
+        try{
+          const raw=readStored(savedSnapshotKey(cid,rid),'');
+          const snap=raw?JSON.parse(raw):null;
+          if(!snap||!Array.isArray(snap.stops)||!Array.isArray(snap.ids)||!Array.isArray(snap.pinnedLastIds))return null;
+          return snap;
+        }catch(_){return null;}
+      }
+      function renderSavedRounds(){
+        if(!centerRegistry)return;
+        const date=$('leftRoundDate').value||todayKST(),c=currentCenter(),list=$('leftRoundList');
+        list.replaceChildren();
+        const rounds=c.routes.filter(r=>r.date_key===date).sort((a,b)=>a.round_no-b.round_no);
+        for(const r of rounds){
+          const snapshot=snapshotFor(c.id,r.id),count=snapshot?snapshot.stops.length:
+            (()=>{try{return JSON.parse(readStored(roundStopKey(c.id,r.id),'[]')).length}catch(_){return 0}})();
+          const btn=document.createElement('button');btn.type='button';btn.dataset.roundId=r.id;
+          btn.className=r.id===c.activeRouteId?'active':'';
+          const label=document.createElement('span');label.textContent=r.round_no+'회차 코스';
+          const status=document.createElement('small');status.textContent=count+'곳 · '+(snapshot?'저장됨':'임시');
+          btn.append(label,status);list.append(btn);
+        }
+        if(!rounds.length){
+          const empty=document.createElement('p');empty.className='saved-round-empty';
+          empty.textContent='해당 날짜에 회차가 없습니다.';list.append(empty);
+        }
+      }
+      function loadSavedRound(id){
+        const c=currentCenter(),r=c.routes.find(x=>x.id===id);if(!r)return;
+        if(dirtyCourse()&&!confirm('저장하지 않은 코스 순서를 버리고 '+r.round_no+'회차를 불러올까요?'))return;
+        const snapshot=snapshotFor(c.id,id);
+        if(snapshot){
+          const valid=snapshot.stops.every(x=>x&&typeof x.id==='string'&&typeof x.address==='string'&&
+            Number.isFinite(x.lat)&&Number.isFinite(x.lng));
+          const ids=new Set(snapshot.stops.map(x=>x.id));
+          if(!valid||ids.size!==snapshot.stops.length||
+             snapshot.ids.some(x=>!ids.has(x))||snapshot.pinnedLastIds.some(x=>!snapshot.ids.includes(x))){
+            notify('저장된 '+r.round_no+'회차 코스 형식이 올바르지 않습니다.');return;
+          }
+          const originalStops=readStored(roundStopKey(c.id,id),'[]');
+          const originalRoute=readStored(routeKey(c.id,id),'');
+          const oldRecords=snapshotFor(c.id,id);
+          const record={ids:snapshot.ids,pinnedLastIds:snapshot.pinnedLastIds,orderMode:'manual',
+             updatedAt:snapshot.saved_at||new Date().toISOString()};
+          if(!writeStored(roundStopKey(c.id,id),JSON.stringify(snapshot.stops))||
+             !writeStored(routeKey(c.id,id),JSON.stringify(record))){
+            writeStored(roundStopKey(c.id,id),originalStops);
+            if(originalRoute)writeStored(routeKey(c.id,id),originalRoute);
+            notify('브라우저에 저장된 코스를 불러오지 못했습니다.');return;
+          }
+        }
+        chooseRoute(id,true);
+        $('coursePanel').hidden=true;document.body.classList.remove('course-open');
+        courseStartPoint=null;invalidateRoad();closeSelection();
+        if(map)drawMarkers(true);
+        renderSavedRounds();
+        notify(r.date_key+' '+r.round_no+'회차 코스 '+(snapshot?'저장본':'임시본')+'을 불러왔습니다.');
+      }
       let cloudRows=[],roundBusy=false;
       function roundStatus(text){$('roundState').textContent=text;}
       function roundDate(){return $('roundDate').value||todayKST();}
@@ -426,7 +499,9 @@
           draftCourseIds=ids.slice();draftPinnedLastIds=pins.slice();draftOrderMode='manual';
           renderRouteSelect();renderCourse();drawMarkers(true);
           $('roundPassword').value='';
-          roundStatus(date+' '+n+'회차 UVB 저장본 '+validStops.length+'곳을 불러왔습니다. 편집 후 다시 UVB 저장할 수 있습니다.');
+          writeStored(savedSnapshotKey(c.id,route.id),JSON.stringify({...saved,ids,pinnedLastIds:pins}));
+          renderSavedRounds();
+          roundStatus(date+' '+n+'회차 UVB 저장본 '+validStops.length+'곳을 불러왔습니다. 편집 후 코스 저장을 누르세요.');
         }catch(error){roundStatus('UVB 불러오기 실패: '+error.message);}
         finally{roundBusy=false;renderRouteSelect();}
       }
@@ -442,6 +517,7 @@
         stops=loadStops();courseIds=validCourseIds(loadCourse());pinnedLastIds=validPins(readPinnedLast(),courseIds);
         draftCourseIds=[];draftPinnedLastIds=[];
         $('count').textContent=stops.length+'곳';renderCenterSelect();renderRouteSelect();saveRegistry();
+        $('leftRoundDate').value=currentRoute().date_key||todayKST();renderSavedRounds();
         if(map)drawMarkers(true);
         return true;
       }
@@ -449,11 +525,12 @@
         if(!force&&dirtyCourse()&&!confirm('저장하지 않은 코스 변경 내용을 버릴까요?')){renderRouteSelect();return false;}
         const c=currentCenter(),r=c.routes.find(x=>x.id===id);if(!r)return false;
         invalidateRoad();c.activeRouteId=id;STOPS_KEY=roundStopKey(c.id,id);COURSE_KEY=routeKey(c.id,id);
-        $('roundDate').value=r.date_key||todayKST();stops=loadStops();
+        $('roundDate').value=r.date_key||todayKST();$('leftRoundDate').value=r.date_key||todayKST();stops=loadStops();
+        $('count').textContent=stops.length+'곳';
         courseIds=validCourseIds(loadCourse());pinnedLastIds=validPins(readPinnedLast(),courseIds);
         draftCourseIds=courseIds.slice();draftPinnedLastIds=pinnedLastIds.slice();
         draftOrderMode=savedOrderMode();
-        saveRegistry();renderRouteSelect();
+        saveRegistry();renderRouteSelect();renderSavedRounds();
         if(!$('coursePanel').hidden){
           if(draftOrderMode!=='manual')autoOrderDraft();
           else {renderCourse();drawMarkers(false);}
@@ -1077,6 +1154,11 @@
         if(!value||value.length>40||centerRegistry.centers.some(x=>x.id!==c.id&&x.name===value)){notify('센터 이름을 확인하세요.');return;}
         c.name=value;saveRegistry();renderCenterSelect();
       });
+      $('leftRoundDate').addEventListener('change',renderSavedRounds);
+      $('leftRoundList').addEventListener('click',event=>{
+        const button=event.target.closest('button[data-round-id]');
+        if(button)loadSavedRound(button.dataset.roundId);
+      });
       $('roundDate').addEventListener('change',()=>{
         if(dirtyCourse()&&!confirm('저장하지 않은 방문 순서 변경을 버리고 날짜를 바꿀까요?')){
           $('roundDate').value=currentRoute().date_key;return;
@@ -1110,8 +1192,8 @@
         // Leave the route key absent so first opening includes all newly registered stops.
         chooseRoute(r.id,true);
         draftCourseIds=[];draftPinnedLastIds=[];draftOrderMode='manual';
-        renderCourse();drawMarkers(false);
-        roundStatus(date+' '+next+'회차를 만들었습니다. 주소를 등록한 후 UVB 저장하세요.');
+        renderCourse();drawMarkers(false);renderSavedRounds();
+        roundStatus(date+' '+next+'회차를 만들었습니다. 주소를 등록한 후 [코스 저장]을 누르세요.');
       });
       $('routeDeleteBtn').addEventListener('click',()=>{
         const c=currentCenter(),r=currentRoute();if(c.routes.length<2)return;
@@ -1120,7 +1202,8 @@
         c.routes=c.routes.filter(x=>x.id!==r.id);
         chooseRoute(other.id,true);
         try{localStorage.removeItem(routeKey(c.id,r.id));localStorage.removeItem(roundStopKey(c.id,r.id));}catch(_){}
-        renderRouteSelect();roundStatus('브라우저 임시 회차만 삭제했습니다. UVB 저장 기록은 그대로입니다.');
+        try{localStorage.removeItem(savedSnapshotKey(c.id,r.id));}catch(_){}
+        renderRouteSelect();renderSavedRounds();roundStatus('브라우저 임시 회차만 삭제했습니다. UVB 저장 기록은 그대로입니다.');
       });
       $('courseBtn').addEventListener('click',()=>{showCourse();void refreshRoundList();});
       $('closeCourseBtn').addEventListener('click',hideCourse);
@@ -1154,37 +1237,42 @@
           $('courseGpsBtn').disabled=false;notify('출발점 위치를 확인하지 못했습니다: '+(err.message||'위치 권한 확인'));
         },{enableHighAccuracy:true,timeout:15000,maximumAge:15000});
       });
-      $('saveCourseBtn').addEventListener('click',async()=>{
-        if(roundBusy)return;
+      $('saveCourseBtn').addEventListener('click',()=>{
         const c=currentCenter(),r=currentRoute(),date=roundDate();
-        if(r.date_key!==date){roundStatus('선택한 날짜에 활성 회차가 없습니다. 회차를 선택하거나 + 회차를 누르세요.');return;}
-        if(!window.DsdRounds){roundStatus('UVB 저장 모듈이 없어 저장하지 못했습니다.');return;}
-        const password=$('roundPassword').value;
-        if(password.length<12){roundStatus('UVB 암호화 비밀번호를 12자 이상 입력하세요. 잊어버리면 서버 자료를 복호화할 수 없습니다.');return;}
-        const ordered=validCourseIds(draftCourseIds),fixed=validPins(draftPinnedLastIds,ordered);
-        const record={ids:ordered,pinnedLastIds:fixed,orderMode:'manual',updatedAt:new Date().toISOString()};
-        if(!writeStored(COURSE_KEY,JSON.stringify(record))){roundStatus('브라우저 임시 코스 저장에 실패했습니다. UVB 전송을 취소했습니다.');return;}
-        courseIds=ordered.slice();pinnedLastIds=fixed.slice();draftOrderMode='manual';
-        const snapshot={date_key:date,round_no:r.round_no,center_id:c.id,center_name:c.name,
-          stops:JSON.parse(JSON.stringify(stops)),ids:ordered,pinnedLastIds:fixed,orderMode:'manual',saved_at:record.updatedAt};
-        roundBusy=true;$('saveCourseBtn').disabled=true;$('saveCourseBtn').textContent='UVB 확인 중...';
-        roundStatus(date+' '+r.round_no+'회차 암호화 및 서버 저장 중...');
-        try{
-          const row=await DsdRounds.save({password,centerId:c.id,centerName:c.name,date,round:r.round_no,data:snapshot});
-          // Leave the stop data in per-round local storage. Cloud is append-only revision history.
-          if(!cloudRows.some(x=>x.id===row.id))cloudRows.push(row);
-          invalidateRoad();$('coursePanel').hidden=true;
-          document.body.classList.remove('course-open');courseStartPoint=null;
-          $('roundPassword').value='';drawMarkers(false);
-          roundStatus(date+' '+r.round_no+'회차 '+stops.length+'곳 UVB 저장 및 재조회 확인 완료.');
-          notify(date+' '+r.round_no+'회차 UVB 저장 확인 완료');
-        }catch(error){
-          roundStatus('UVB 저장 미완료: '+error.message+' · 이 브라우저에만 임시 보관되었습니다.');
-          notify('UVB 저장 실패 · 서버에 저장됐다고 표시하지 않습니다.');
-        }finally{
-          roundBusy=false;$('saveCourseBtn').disabled=false;$('saveCourseBtn').textContent='UVB 저장';
-          renderRouteSelect();
+        if(r.date_key!==date){roundStatus('먼저 저장할 날짜와 회차를 선택해 주세요.');return;}
+        const ids=validCourseIds(draftCourseIds),pins=validPins(draftPinnedLastIds,ids),at=new Date().toISOString();
+        const snapshot={schema_version:1,date_key:date,round_no:r.round_no,center_id:c.id,center_name:c.name,
+          stops:JSON.parse(JSON.stringify(stops)),ids,pinnedLastIds:pins,saved_at:at};
+        const course={ids,pinnedLastIds:pins,orderMode:'manual',updatedAt:at};
+        const key=savedSnapshotKey(c.id,r.id),oldSaved=readStored(key,''),oldCourse=readStored(COURSE_KEY,'');
+        if(!writeStored(key,JSON.stringify(snapshot))||!writeStored(COURSE_KEY,JSON.stringify(course))){
+          try{
+            if(oldSaved)writeStored(key,oldSaved);else localStorage.removeItem(key);
+            if(oldCourse)writeStored(COURSE_KEY,oldCourse);else localStorage.removeItem(COURSE_KEY);
+          }catch(_){}
+          roundStatus('코스 저장에 실패했습니다. 브라우저 저장 공간을 확인하세요.');return;
         }
+        courseIds=ids.slice();pinnedLastIds=pins.slice();draftOrderMode='manual';
+        renderCourse();renderSavedRounds();
+        roundStatus(date+' '+r.round_no+'회차 '+snapshot.stops.length+'곳 저장했습니다. 왼쪽의 「'+r.round_no+'회차 코스」를 눌러 불러올 수 있습니다.');
+        notify(date+' '+r.round_no+'회차 코스를 저장했습니다.');
+      });
+      $('uvbBackupBtn').addEventListener('click',async()=>{
+        if(roundBusy)return;
+        const c=currentCenter(),r=currentRoute(),snapshot=snapshotFor(c.id,r.id);
+        if(!snapshot){roundStatus('먼저 [코스 저장]을 눌러 현재 코스를 저장하세요.');return;}
+        if(!window.DsdRounds){roundStatus('UVB 모듈이 없어 백업할 수 없습니다.');return;}
+        const password=$('roundPassword').value;
+        if(password.length<12){roundStatus('UVB 백업은 12자 이상의 암호가 필요합니다.');return;}
+        roundBusy=true;$('uvbBackupBtn').disabled=true;
+        roundStatus('UVB 암호화 백업 확인 중...');
+        try{
+          const row=await DsdRounds.save({password,centerId:c.id,centerName:c.name,
+            date:snapshot.date_key,round:snapshot.round_no,data:snapshot});
+          if(!cloudRows.some(x=>x.id===row.id))cloudRows.push(row);
+          $('roundPassword').value='';roundStatus('UVB 백업 확인 완료. 현재 코스 화면은 그대로 유지됩니다.');
+        }catch(error){roundStatus('UVB 백업 실패: '+error.message+' · 브라우저에 저장된 코스는 유지됩니다.');}
+        finally{roundBusy=false;$('uvbBackupBtn').disabled=false;renderRouteSelect();}
       });
       centerRegistry=loadRegistry();
       chooseCenter(centerRegistry.activeId,true);
