@@ -1101,7 +1101,7 @@
         const r={id:makeId('course'),name:next+'회차',date_key:date,round_no:next};
         c.routes.push(r);
         writeStored(roundStopKey(c.id,r.id),'[]');
-        writeStored(routeKey(c.id,r.id),JSON.stringify({ids:[],pinnedLastIds:[],orderMode:'manual'}));
+        // Leave the route key absent so first opening includes all newly registered stops.
         chooseRoute(r.id,true);
         draftCourseIds=[];draftPinnedLastIds=[];draftOrderMode='manual';
         renderCourse();drawMarkers(false);
