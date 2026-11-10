@@ -104,13 +104,13 @@
     .named-marker.is-course .marker-label{background:#12685f}
     body.course-open #addBtn,body.course-open .course-launch{display:none}
     @media(max-width:600px){.course-launch{left:12px;bottom:calc(21px + env(safe-area-inset-bottom));padding:15px 13px;font-size:13px}.course-panel{left:8px;right:8px;top:calc(64px + env(safe-area-inset-top));bottom:calc(8px + env(safe-area-inset-bottom));width:auto;border-radius:15px}.course-head{padding-top:12px}.course-tools button{font-size:11px;padding:9px 6px}}
-    .center-bar{position:fixed;z-index:5;top:82px;left:14px;display:flex;gap:5px;max-width:calc(100vw - 28px);padding:5px;background:#fff;border-radius:12px;border:1px solid #d8e7e5;box-shadow:0 3px 15px #112b3f22}
+    .center-bar{display:none!important} /* Legacy center controls retained only for JS compatibility; never displayed. */
     .center-bar select{min-width:0;width:130px;border:0;background:#fff;color:#126c62;font-size:12px;font-weight:800;padding:7px 4px}
     .center-bar button{border:0;border-radius:8px;background:#edf7f5;color:#176d63;font-size:11px;font-weight:800;padding:9px}
     .center-course-label{font-size:12px;font-weight:850;color:#11685e;margin:0 15px 8px}
     .round-date{display:flex;gap:8px;align-items:center;margin:0 15px 8px;font-size:12px;font-weight:800}.round-date input{flex:1;min-width:0;border:1px solid #cddbe8;border-radius:8px;padding:8px}
     .round-secret{display:flex;gap:6px;margin:0 15px 8px}.round-secret input{flex:1;min-width:0;padding:9px;border:1px solid #cddbe8;border-radius:8px;font-size:12px}.round-secret button{white-space:nowrap;padding:8px;border:1px solid #cddbe8;border-radius:8px;background:#f1f5fa;font-size:11px;font-weight:800}.round-state{margin:0 15px 9px;font-size:11px;color:#63748a;line-height:1.5}
-    .saved-rounds{position:fixed;z-index:5;left:14px;top:232px;width:194px;max-height:min(48vh,390px);overflow:auto;padding:12px;background:#fffffff2;border:1px solid #dae7e4;border-radius:14px;box-shadow:0 5px 21px #102d4024}
+    .saved-rounds{position:fixed;z-index:5;left:14px;top:82px;width:194px;max-height:min(48vh,390px);overflow:auto;padding:12px;background:#fffffff2;border:1px solid #dae7e4;border-radius:14px;box-shadow:0 5px 21px #102d4024}
     .saved-rounds h2{margin:0 0 9px;font-size:14px;color:#146d63}
     .saved-rounds input{width:100%;min-width:0;border:1px solid #ccd9e4;border-radius:8px;padding:8px 6px;margin-bottom:9px;background:#fff;font-size:12px}
     .saved-round-list{display:flex;flex-direction:column;gap:6px}
@@ -118,7 +118,7 @@
     .saved-round-list button.active{border-color:#149584;background:#e6f8f3;color:#0b665c}
     .saved-round-list small{display:block;font-size:10px;font-weight:500;color:#60798b}
     .saved-round-empty{margin:0;color:#718094;font-size:11px;line-height:1.5}
-    @media(max-width:600px){.saved-rounds{top:calc(205px + env(safe-area-inset-top));left:10px;width:160px;max-height:34vh;padding:9px}.saved-round-list button{padding:9px 6px}}
+    @media(max-width:600px){.saved-rounds{top:calc(63px + env(safe-area-inset-top));left:10px;width:160px;max-height:34vh;padding:9px}.saved-round-list button{padding:9px 6px}}
     .course-picker{display:flex;gap:5px;flex-wrap:wrap;margin:0 15px 10px}
     .course-picker select{flex:1;min-width:0;border:1px solid #d8e3ed;border-radius:8px;padding:9px 5px;background:#fff;font-size:12px}
     .course-picker button{white-space:nowrap;border:1px solid #d8e3ed;border-radius:8px;background:#f6f8fc;padding:8px 5px;font-size:10px;font-weight:800}
@@ -148,7 +148,7 @@
     <button id="settingsBtn" class="round" type="button" title="네이버 지도 설정" aria-label="네이버 지도 설정">⚙</button>
   </header>
 
-  <div class="center-bar"><select id="centerSelect" aria-label="현재 배송 센터"></select><button id="centerAddBtn" type="button" title="센터 추가">+ 센터</button><button id="centerRenameBtn" type="button" title="센터 이름 수정">수정</button></div>
+  <div class="center-bar" hidden aria-hidden="true"><select id="centerSelect" aria-label="현재 배송 센터"></select><button id="centerAddBtn" type="button" title="센터 추가">+ 센터</button><button id="centerRenameBtn" type="button" title="센터 이름 수정">수정</button></div>
   <section class="saved-rounds" aria-label="왼쪽 저장된 회차 코스">
     <h2>저장된 코스</h2>
     <input id="leftRoundDate" type="date" aria-label="저장된 코스 날짜 선택">
