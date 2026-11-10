@@ -64,26 +64,6 @@
             z-index: 100;
         }
 
-        .header-nav {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-
-        .header-nav a {
-            color: var(--text-color);
-            font-size: 0.9rem;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            text-decoration: none;
-            transition: color 0.2s ease;
-        }
-
-        .header-nav a:hover,
-        .header-nav a:focus-visible {
-            color: var(--accent-color);
-        }
-
         .logo {
             font-weight: 900;
             font-size: 1.5rem;
@@ -229,9 +209,6 @@
 
     <header>
         <div class="logo">STANCE</div>
-        <nav class="header-nav" aria-label="메인 메뉴">
-            <a href="./dsd/">DSD</a>
-        </nav>
     </header>
 
     <canvas id="bg-canvas"></canvas>
@@ -277,6 +254,11 @@
             <a href="./cs.html" class="card" target="_blank" rel="noopener noreferrer">
                 <h3>Support Board</h3>
                 <p>문의글을 남기고 답변을 확인하세요.</p>
+            </a>
+
+            <a href="./dsd/" class="card" target="_blank" rel="noopener noreferrer">
+                <h3>DSD - 배송 지도</h3>
+                <p>배송지 등록과 코스 편성·경로 관리 서비스.</p>
             </a>
         </div>
     </section>
