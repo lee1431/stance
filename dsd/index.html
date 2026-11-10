@@ -73,7 +73,9 @@
     .course-launch{position:fixed;z-index:5;left:17px;bottom:calc(27px + env(safe-area-inset-bottom));padding:15px 18px;border:0;border-radius:15px;background:#0b766d;color:#fff;font-weight:800;box-shadow:0 7px 22px #16413f4d}
     .course-panel{position:fixed;z-index:7;right:15px;top:78px;bottom:16px;width:min(400px,calc(100vw - 30px));display:flex;flex-direction:column;background:#fff;border:1px solid #dce5ef;border-radius:19px;box-shadow:0 15px 48px #102d4050;overflow:hidden}
     .course-panel[hidden]{display:none}
-    .course-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:17px 18px 8px}
+    .course-head{display:flex;flex:0 0 auto;justify-content:space-between;align-items:center;gap:12px;padding:17px 18px 8px}
+    /* Keep action buttons visible while date, Excel and route controls scroll. */
+    .course-scroll{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin}
     .course-head h2{font-size:20px;margin:0}
     .course-head button{border:0;background:#eff3f6;border-radius:9px;padding:8px 12px;font-weight:800}
     .course-note{font-size:12px;line-height:1.55;color:#61748d;margin:0;padding:0 18px 11px}
@@ -83,7 +85,7 @@
     .course-tools button:disabled{opacity:.5}
     .course-gps{display:flex;align-items:center;gap:8px;margin:0 15px 11px;font-size:12px;color:#64758b}
     .course-gps button{padding:8px 10px;border:1px solid #a3d9d1;border-radius:9px;background:#eafff8;color:#12645e;font-weight:800;font-size:11px;white-space:nowrap}
-    .course-rows{flex:1;min-height:0;overflow-y:auto;padding:0 14px 10px}
+    .course-rows{flex:none;min-height:0;overflow:visible;padding:0 14px 10px}
     .course-section-label{margin:12px 2px 7px;font-size:12px;font-weight:850;color:#576b83}
     .course-row{display:flex;gap:8px;align-items:center;border:1px solid #e2e9ef;border-radius:12px;background:#fff;padding:9px 7px;margin-bottom:7px}
     .course-row.unassigned{background:#f6f8fb}
@@ -96,7 +98,7 @@
     .course-actions button{border:0;border-radius:7px;background:#eaf0f6;color:#344d6c;padding:7px 8px;font-weight:900}
     .course-actions button.remove{background:#fff1ed;color:#b4483b}
     .course-actions button.add{background:#e0f8ed;color:#187953}
-    .course-bottom{border-top:1px solid #e6ecf2;padding:11px 15px 14px;display:flex;gap:8px}
+    .course-bottom{flex:0 0 auto;background:#fff;border-top:1px solid #e6ecf2;padding:11px 15px calc(14px + env(safe-area-inset-bottom));display:flex;gap:8px;box-shadow:0 -4px 14px #112b4314}
     .course-bottom button{flex:1;padding:13px 9px;border:0;border-radius:11px;font-weight:850}
     .course-bottom .save-course{background:#0c897a;color:white}
     .course-bottom .cancel-course{background:#edf2f7;color:#46566c}
@@ -183,7 +185,7 @@
   <button id="courseBtn" class="course-launch" type="button">↗ 코스 만들기</button>
   <section id="coursePanel" class="course-panel" hidden aria-label="배송 코스 편성">
     <div class="course-head"><h2>배송 코스 편성</h2><button id="closeCourseBtn" type="button" aria-label="코스 편성 닫기">✕</button></div>
-    <p class="course-note">날짜별 N회차를 관리합니다. 저장은 현재 코스를 기록만 하고 화면을 닫지 않습니다. 지도 왼쪽의 「1회차 코스」를 눌러 저장된 순서를 불러옵니다.</p>
+    <div class="course-scroll" tabindex="0" aria-label="코스 편성 설정 및 배송지 목록 스크롤"><p class="course-note">날짜별 N회차를 관리합니다. 저장은 현재 코스를 기록만 하고 화면을 닫지 않습니다. 지도 왼쪽의 「1회차 코스」를 눌러 저장된 순서를 불러옵니다.</p>
     <div class="center-course-label" id="courseCenterLabel">센터별 독립 코스</div>
     <div class="round-date"><label for="roundDate">배송일</label><input id="roundDate" type="date"></div>
     <div class="course-picker"><select id="routeSelect" aria-label="현재 회차"></select><button id="routeAddBtn" type="button">+ 회차</button><button id="roundRefreshBtn" type="button">UVB 조회</button><button id="roundLoadBtn" type="button">선택 불러오기</button><button id="routeDeleteBtn" type="button">로컬 삭제</button></div>
@@ -200,7 +202,7 @@
     </div>
     <p class="course-note">공개 OSRM 도로 서버로 정차 좌표를 전송합니다. 출발점 포함 최대 16곳만 지원하며 운영용이 아닙니다.</p>
     <div class="course-gps"><button id="courseGpsBtn" type="button">⌖ 내 위치 출발</button><span id="courseStartText">첫 배송지 기준</span></div>
-    <div id="courseRows" class="course-rows"></div>
+    <div id="courseRows" class="course-rows"></div></div>
     <div class="course-bottom"><button id="cancelCourseBtn" class="cancel-course" type="button">취소</button><button id="saveCourseBtn" class="save-course" type="button">코스 저장</button></div>
   </section>
   <section id="cover" class="cover" role="status">
