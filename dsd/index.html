@@ -104,6 +104,28 @@
     .named-marker.is-course .marker-label{background:#12685f}
     body.course-open #addBtn,body.course-open .course-launch{display:none}
     @media(max-width:600px){.course-launch{left:12px;bottom:calc(21px + env(safe-area-inset-bottom));padding:15px 13px;font-size:13px}.course-panel{left:8px;right:8px;top:calc(64px + env(safe-area-inset-top));bottom:calc(8px + env(safe-area-inset-bottom));width:auto;border-radius:15px}.course-head{padding-top:12px}.course-tools button{font-size:11px;padding:9px 6px}}
+    .excel-panel{margin:0 15px 12px;padding:10px;border:1px solid #d8e5ed;border-radius:11px;background:#f6faff}
+    .excel-panel button{width:100%;padding:11px 10px;border:1px solid #b4cdec;border-radius:9px;background:#e4efff;color:#2156a1;font-weight:850}
+    .excel-panel p{font-size:11px;line-height:1.5;color:#65768c;margin:7px 0 0}
+    .excel-dialog{width:min(94vw,720px);max-height:92vh;border:1px solid #d7e3ee;border-radius:18px;padding:18px;background:white;color:#23344d}
+    .excel-dialog::backdrop{background:#11243b99}
+    .excel-dialog h2{font-size:20px;margin:0 0 10px}
+    .excel-dialog p{font-size:12px;color:#65768b;line-height:1.6}
+    .excel-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+    .excel-grid label{display:block;min-width:0;font-size:12px;font-weight:700}
+    .excel-grid select,.excel-grid input{display:block;width:100%;margin-top:5px;border:1px solid #d5e0eb;border-radius:8px;padding:9px;background:white;color:#23344d}
+    .excel-grid .full{grid-column:1/-1}
+    .excel-preview{max-height:180px;overflow:auto;border:1px solid #e3eaf2;border-radius:8px}
+    .excel-preview table{width:100%;border-collapse:collapse;font-size:11px}
+    .excel-preview th,.excel-preview td{padding:7px;border-bottom:1px solid #e9edf3;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+    .excel-preview th{background:#f3f7fc;position:sticky;top:0}
+    .excel-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .excel-actions button{padding:11px 13px;border:0;border-radius:9px;font-weight:800}
+    .excel-actions .import{background:#2068e8;color:white}
+    .excel-actions .neutral{background:#eaf0f6;color:#3b516a}
+    .excel-actions button:disabled{opacity:.5}
+    #excelStatus,#excelResult{font-size:12px;line-height:1.5;white-space:pre-wrap}
+    @media(max-width:600px){.excel-grid{grid-template-columns:1fr}.excel-dialog{padding:13px}.excel-grid .full{grid-column:1}}
     .center-bar{display:none!important} /* Legacy center controls retained only for JS compatibility; never displayed. */
     .center-bar select{min-width:0;width:130px;border:0;background:#fff;color:#126c62;font-size:12px;font-weight:800;padding:7px 4px}
     .center-bar button{border:0;border-radius:8px;background:#edf7f5;color:#176d63;font-size:11px;font-weight:800;padding:9px}
@@ -168,6 +190,9 @@
     <div class="round-secret"><input id="roundPassword" type="password" autocomplete="off" placeholder="UVB 백업 암호 (12자 이상)"><button id="uvbBackupBtn" type="button">UVB 백업</button></div>
     <p id="roundState" class="round-state" aria-live="polite">[코스 저장]은 브라우저에 저장됩니다. UVB 백업은 별도 선택 기능이며 현재 서버 등록은 검증되지 않았습니다.</p>
     <div id="courseSummary" class="course-summary" aria-live="polite">코스를 준비하고 있습니다.</div>
+    <div class="excel-panel"><button id="excelUploadBtn" type="button">▤ 원본 엑셀 업로드 (.xlsx / .xls)</button>
+      <p>선택한 배송일·회차에 등록합니다. 원본 파일은 브라우저에서만 읽으며, 가져온 배송지는 코스에 저장됩니다.</p>
+      <input id="excelFileInput" type="file" accept=".xlsx,.xls,.xlsm" hidden></div>
     <div class="course-tools">
       <button id="courseAllBtn" type="button">전체 추가</button>
       <button id="courseClearBtn" type="button">전체 제외</button>
@@ -235,6 +260,26 @@
     </form>
   </dialog>
 
+  <dialog id="excelDialog" class="excel-dialog" aria-labelledby="excelDialogTitle">
+    <h2 id="excelDialogTitle">원본 엑셀 배송지 가져오기</h2>
+    <p id="excelFilename"></p>
+    <p>주소·고객명 열을 자동 탐색합니다. 실제 열이 다르면 아래에서 직접 선택하세요. 원본 파일 전체를 외부 서버에 보내지 않습니다.</p>
+    <div class="excel-grid">
+      <label>시트<select id="excelSheetSelect"></select></label>
+      <label>제목 행 번호<input id="excelHeaderRow" type="number" value="1" min="1" max="100"></label>
+      <label>배송 주소 열 (필수)<select id="excelAddressCol"></select></label>
+      <label>고객명·업체명 열<select id="excelNameCol"></select></label>
+      <label>상세 주소·메모 열<select id="excelDetailCol"></select></label>
+      <label>송장번호 열<select id="excelWaybillCol"></select></label>
+      <label>수량 열<select id="excelQtyCol"></select></label>
+    </div>
+    <p id="excelPreviewCount"></p>
+    <div class="excel-preview"><table><thead><tr><th>원본 행</th><th>고객/업체</th><th>배송지 주소</th><th>송장번호</th></tr></thead><tbody id="excelPreviewBody"></tbody></table></div>
+    <p id="excelStatus" role="status"></p>
+    <p id="excelResult" role="status" hidden></p>
+    <div class="excel-actions"><button id="excelImportBtn" class="import" type="button" disabled>선택 회차에 등록</button><button id="excelDownloadErrors" class="neutral" type="button" hidden>실패 목록 CSV</button><button id="excelCancelBtn" class="neutral" type="button">닫기</button></div>
+  </dialog>
+  <script src="./excel-import.js?v=1"></script>
   <script src="./road-routing.js"></script>
   <script src="./round-storage.js"></script>
   <script>
@@ -1371,6 +1416,82 @@
       $('routeDeleteBtn').addEventListener('click',()=>{
         const r=currentRoute();if(r)void deleteSavedRound(r.date_key,r.round_no);
       });
+
+      if(window.DsdExcel)DsdExcel.init({
+        notify,
+        context:()=>({centerId:currentCenter().id,routeId:currentRoute().id,
+          date:currentRoute().date_key,roundNo:currentRoute().round_no,
+          selectedDate:roundDate(),mapReady:!!(map&&window.naver?.maps?.Service?.geocode)}),
+        importStops:async(entries,job)=>{
+          const target=job.target;
+          if(target.centerId!==currentCenter().id||target.routeId!==currentRoute().id)
+            throw Error('선택 회차가 변경되었습니다. 업로드를 다시 시작하세요.');
+          const existingWaybills=new Set(stops.map(s=>s.waybill).filter(Boolean));
+          const pendingWaybills=new Set();
+          const added=[],errors=[],cache=new Map();
+          let skipped=0,processed=0;
+          for(const item of entries){
+            if(job.cancelled())break;
+            if(item.waybill&&(existingWaybills.has(item.waybill)||pendingWaybills.has(item.waybill))){
+              skipped++;processed++;job.progress(processed,entries.length,added.length,errors.length);continue;
+            }
+            try{
+              let position=cache.get(item.geoAddress);
+              if(!position){
+                try{position=await geocode(item.geoAddress);}
+                catch(err){
+                  if(item.geoAddress===item.address)throw err;
+                  position=await geocode(item.address);
+                }
+                cache.set(item.geoAddress,position);
+              }
+              added.push({id:makeId('stop'),company:item.company,address:item.address,
+                lat:position.lat,lng:position.lng,waybill:item.waybill,
+                qty:item.quantity,importSource:{file:item.filename,sheet:item.sheet,row:item.row}});
+              if(item.waybill)pendingWaybills.add(item.waybill);
+            }catch(error){errors.push({row:item.row,address:item.address,reason:error.message||'주소 검색 실패'});}
+            processed++;
+            job.progress(processed,entries.length,added.length,errors.length);
+            if(processed%15===0)await new Promise(resolve=>setTimeout(resolve,0));
+          }
+          if(target.centerId!==currentCenter().id||target.routeId!==currentRoute().id)
+            throw Error('처리 중 회차가 변경되어 결과를 적용하지 않았습니다.');
+          if(added.length){
+            const oldStops=stops.slice(),oldDraft=draftCourseIds.slice(),
+              oldPins=draftPinnedLastIds.slice();
+            const next=stops.concat(added),newIds=added.map(x=>x.id);
+            if(!writeStored(STOPS_KEY,JSON.stringify(next)))
+              throw Error('브라우저 저장 공간이 부족합니다. 기존 자료는 변경되지 않았습니다.');
+            stops=next;
+            invalidateRoad();
+            draftCourseIds=validCourseIds(draftCourseIds.concat(newIds));
+            draftPinnedLastIds=validPins(draftPinnedLastIds,draftCourseIds);
+            draftOrderMode='manual';
+            const c=currentCenter(),r=currentRoute(),at=new Date().toISOString();
+            const ids=draftCourseIds.slice(),pins=draftPinnedLastIds.slice();
+            const savedKey=savedSnapshotKey(c.id,r.id),oldSaved=readStored(savedKey,''),
+              oldRoute=readStored(COURSE_KEY,'');
+            const snapshot={schema_version:1,date_key:r.date_key,round_no:r.round_no,
+              center_id:c.id,center_name:c.name,stops:JSON.parse(JSON.stringify(stops)),
+              ids,pinnedLastIds:pins,saved_at:at,road:null};
+            const course={ids,pinnedLastIds:pins,orderMode:'manual',updatedAt:at};
+            if(!writeStored(savedKey,JSON.stringify(snapshot))||
+               !writeStored(COURSE_KEY,JSON.stringify(course))){
+              writeStored(STOPS_KEY,JSON.stringify(oldStops));
+              if(oldSaved)writeStored(savedKey,oldSaved);else localStorage.removeItem(savedKey);
+              if(oldRoute)writeStored(COURSE_KEY,oldRoute);else localStorage.removeItem(COURSE_KEY);
+              stops=oldStops;draftCourseIds=oldDraft;draftPinnedLastIds=oldPins;
+              throw Error('회차 저장 공간이 부족해 업로드를 되돌렸습니다.');
+            }
+            courseIds=ids.slice();pinnedLastIds=pins.slice();
+            $('count').textContent=stops.length+'곳';
+            renderCourse();renderSavedRounds();drawMarkers(true);
+            roundStatus(r.date_key+' '+r.round_no+'회차에 엑셀 '+added.length+'건 등록·코스 저장 완료. 도로 경로는 다시 계산해야 합니다.');
+          }
+          return {added:added.length,skipped,failures:errors};
+        }
+      });
+
       $('courseBtn').addEventListener('click',()=>{showCourse();void refreshRoundList();});
       $('closeCourseBtn').addEventListener('click',hideCourse);
       $('cancelCourseBtn').addEventListener('click',hideCourse);
