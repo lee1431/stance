@@ -248,6 +248,8 @@
   }
   async function inspectMapPosition(coords) {
     if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) return;
+    cancelSearchRequests();
+    hideAddressResults();
     if (map.editing) leaveCenterMode();
     closeMapInfo();
     state.selected = null;
@@ -648,22 +650,41 @@
         inspected.road || inspected.jibun || ''
       );
     });
-    $('mapAddBtn').addEventListener('click',() => {
-      closeMapInfo();
-      if (!map.isAvailable()) { toast('지도 연결이 필요합니다.'); return; }
-      if (map.editing) {
-        if (map.onDraft) map.onDraft(map.getDraftPosition());
-        return;
-      }
-      map.setAdd(!map.adding);
-      updateMapAddUI();
+    $('mapSearchInput').addEventListener('input', searchAddressInput);
+    $('mapSearchInput').addEventListener('keydown', event => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      // Enter selects the current top match when available.
+      const first = $('mapSearchResults').querySelector('.map-search-result');
+      if (first) first.click();
+      $('mapSearchInput').blur();
     });
-    $('mapEditBtn').addEventListener('click',() => {
-      closeMapInfo();
+    $('mapSearchClear').addEventListener('click', () => {
+      cancelSearchRequests();
+      state.searchMatch = null;
+      $('mapSearchInput').value = '';
+      $('mapSearchClear').classList.add('hidden');
+      hideAddressResults();
+      $('mapSearchInput').focus();
+    });
+    $('mapCenterSave').addEventListener('click', () => {
+      if (map.onDraft) map.onDraft(map.getDraftPosition());
+    });
+    $('mapCenterCancel').addEventListener('click', () => {
+      cancelSearchRequests();
+      hideAddressResults();
+      leaveCenterMode();
+    });
+    $('mapEditBtn').addEventListener('click', () => {
+      cancelSearchRequests();
+      hideAddressResults();
       if (!map.isAvailable()) { toast('지도 연결이 필요합니다.'); return; }
-      if (map.adding) map.setAdd(false);
-      map.setEdit(!map.editing);
-      updateMapAddUI();
+      if (map.editing) leaveCenterMode();
+      else {
+        state.editTarget = null;
+        state.searchMatch = null;
+        enterCenterMode();
+      }
     });
     $('downloadBtn').addEventListener('click',() => {
       if (state.round) {
