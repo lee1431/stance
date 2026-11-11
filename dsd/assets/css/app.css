@@ -40,3 +40,26 @@
 .map-address-road{font-weight:750;color:#15365b}.map-address-jibun{color:#59708a}.map-address-coords{color:#31779a;font-variant-numeric:tabular-nums}
 .map-address-card .primary{width:100%;margin-top:7px;min-height:36px}
 @media(orientation:landscape){.app[data-view="map"] .map-address-card{right:calc(54px + env(safe-area-inset-right));bottom:calc(58px + env(safe-area-inset-bottom));max-height:calc(100dvh - 95px)}}
+
+/* Live address search floats at the lower-right, above the map/list switch. */
+.map-search-panel{position:absolute;z-index:11;right:calc(10px + env(safe-area-inset-right));bottom:calc(56px + env(safe-area-inset-bottom));width:min(365px,calc(100vw - 20px));display:flex;flex-direction:column;gap:6px}
+.map-search-row{display:flex;align-items:center;gap:7px;height:46px;border:1px solid #d1e0f1;border-radius:13px;padding:0 10px;background:#fff;box-shadow:0 4px 18px #142b5033}
+.map-search-row>svg{width:19px;height:19px;flex-shrink:0;color:#246fe9;stroke-width:2.4}
+.map-search-row input{min-width:0;flex:1;height:100%;padding:0 3px;border:0;background:transparent;outline:0;color:#16385b;font-size:13px}
+.map-search-row input:focus-visible{outline:0}
+.map-search-row button{flex-shrink:0;width:28px;height:28px;display:grid;place-items:center;border:0;border-radius:9px;background:#edf3fc;color:#506c8c}
+.map-search-results{max-height:min(215px,30dvh);overflow-y:auto;overscroll-behavior:contain;background:#fff;border:1px solid #d6e4f1;border-radius:13px;box-shadow:0 3px 18px #142b5028;display:flex;flex-direction:column;padding:5px}
+.map-search-result{display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:10px 11px;text-align:left;color:#1b3c61;border:0;border-radius:9px;background:#fff}
+.map-search-result+ .map-search-result{border-top:1px solid #eef2f7}
+.map-search-result:active,.map-search-result:hover{background:#edf5ff}
+.map-search-result strong{font-size:12px;overflow-wrap:anywhere;line-height:1.45}
+.map-search-result small{font-size:10px;color:#7b8fa8;overflow-wrap:anywhere}
+.map-search-message{padding:12px;color:#657d96;font-size:12px;line-height:1.5}
+.map-center-actions{background:#fff;border:1px solid #d3e2f1;border-radius:13px;box-shadow:0 4px 15px #142b5023;padding:10px;display:flex;flex-direction:column;gap:7px}
+.map-center-text{font-size:11px;color:#4e6988;overflow-wrap:anywhere;text-align:center;font-variant-numeric:tabular-nums}
+.map-center-buttons{display:flex;gap:7px}
+.map-center-buttons button{flex:1;min-width:0;padding:9px 6px;font-size:12px}
+.map-center-pin{position:absolute;z-index:8;pointer-events:none;top:50%;left:50%;width:38px;height:38px;transform:translate(-50%,-100%);filter:drop-shadow(0 4px 4px #15274388)}
+.map-center-pin-shape{position:absolute;inset:1px;border:3px solid white;border-radius:50% 50% 50% 8px;background:#f07928;transform:rotate(-45deg);display:grid;place-items:center}
+.map-center-pin-dot{width:13px;height:13px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px #f9aa4c4d}
+@media(orientation:landscape){.app[data-view="map"] .map-search-panel{right:calc(55px + env(safe-area-inset-right));bottom:calc(8px + env(safe-area-inset-bottom));width:min(310px,calc(100vw - 75px))}.app[data-view="map"] .map-search-row{height:40px}.app[data-view="map"] .map-search-results{max-height:min(120px,27dvh)}.app[data-view="map"] .map-center-actions{padding:7px}.app[data-view="map"] .map-center-buttons button{min-height:33px}}
