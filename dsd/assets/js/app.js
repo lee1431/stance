@@ -7,9 +7,10 @@
   const state = {
     user: null, date: localDate(), rounds: [], round: null, stops: [],
     view: 'map', selected: null, filter: 'all', editingStop: null, busy: false,
-    geocoding: false, mapLoaded: false, mapError: null
+    geocoding: false, mapLoaded: false, mapError: null, inspected: null
   };
   let toastTimer;
+  let inspectRequest = 0;
   function localDate() {
     const d = new Date();
     return [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-');
@@ -74,14 +75,15 @@
     map.onAdd = coords => {
       map.setAdd(false);
       updateMapAddUI();
-      openEditor(null, coords);
+      openEditorFromMap(coords);
     };
     map.onDraft = coords => {
       if (!coords || $('stopDialog').open) return;
       map.setEdit(false);
       updateMapAddUI();
-      openEditor(null, coords);
+      openEditorFromMap(coords);
     };
+    map.onInspect = coords => inspectMapPosition(coords);
     map.onGPS = event => {
       $('gpsBtn').classList.toggle('active', event.tracking);
       if (event.error) toast('GPS: ' + event.error);
@@ -227,10 +229,61 @@
     strip.append(el('span','',info));
   }
   function selectStop(id) {
+    closeMapInfo();
     state.selected = id;
     renderCard();
     const selected = state.stops.find(s => s.id === id);
     if (selected && !map.editing) map.centerOn(selected,16);
+  }
+  function closeMapInfo() {
+    inspectRequest++;
+    state.inspected = null;
+    $('mapAddressCard').classList.add('hidden');
+    map.clearInspectMarker();
+  }
+  async function inspectMapPosition(coords) {
+    if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) return;
+    if (map.adding) map.setAdd(false);
+    if (map.editing) map.setEdit(false);
+    updateMapAddUI();
+    closeMapInfo();
+    state.selected = null;
+    renderCard();
+
+    state.inspected = { lat:coords.lat, lng:coords.lng, road:'', jibun:'' };
+    map.showInspectMarker(coords);
+    $('mapAddressCard').classList.remove('hidden');
+    $('mapAddressRoad').textContent = '도로명주소 조회 중...';
+    $('mapAddressJibun').textContent = '지번주소 조회 중...';
+    $('mapAddressCoords').textContent =
+      '위도 ' + coords.lat.toFixed(7) + ' · 경도 ' + coords.lng.toFixed(7);
+    const requestId = ++inspectRequest;
+    try {
+      const found = await map.reverseGeocode(coords);
+      if (requestId !== inspectRequest || !state.inspected) return;
+      state.inspected.road = found.road || '';
+      state.inspected.jibun = found.jibun || '';
+      $('mapAddressRoad').textContent = found.road ? '도로명: ' + found.road : '도로명주소: 조회 결과 없음';
+      $('mapAddressJibun').textContent = found.jibun ? '지번: ' + found.jibun : '지번주소: 조회 결과 없음';
+    } catch (error) {
+      if (requestId !== inspectRequest || !state.inspected) return;
+      $('mapAddressRoad').textContent = '주소 조회 불가: ' + error.message;
+      $('mapAddressJibun').textContent = '좌표는 그대로 배송지 등록에 사용할 수 있습니다.';
+    }
+  }
+  function openEditorFromMap(coords, address = '') {
+    if (!coords) return;
+    closeMapInfo();
+    openEditor(null, coords, address);
+    if (address) return;
+    // Also populate addresses when a user adds by ordinary map tap or pencil.
+    map.reverseGeocode(coords).then(found => {
+      if (!$('stopDialog').open || state.editingStop) return;
+      if (Number($('stopLat').value) !== coords.lat || Number($('stopLng').value) !== coords.lng) return;
+      if (!$('stopAddress').value.trim()) $('stopAddress').value = found.road || found.jibun || '';
+    }).catch(() => {
+      // Map coordinate entry stays available when the reverse geocoding quota/permission fails.
+    });
   }
   function updateMapAddUI() {
     const button = $('mapAddBtn');
@@ -247,6 +300,7 @@
     $('mapHint').classList.toggle('hidden', !(map.adding || map.editing));
   }
   function changeView(view) {
+    if (view !== 'map') closeMapInfo();
     if (view !== 'map' && (map.adding || map.editing)) {
       map.setAdd(false);
       map.setEdit(false);
@@ -336,11 +390,11 @@
     },'danger-quiet');
     $('moreDialog').showModal();
   }
-  function openEditor(stop,coords) {
+  function openEditor(stop,coords,address = '') {
     state.editingStop = stop ? stop.id : null;
     $('stopDialogTitle').textContent = stop ? '배송지 수정' : '배송지 추가';
     $('stopCompany').value = stop?.company || '';
-    $('stopAddress').value = stop?.address || '';
+    $('stopAddress').value = stop?.address || address || '';
     $('stopWaybill').value = stop?.waybill || '';
     $('stopQuantity').value = stop?.quantity || 1;
     $('stopMemo').value = stop?.memo || '';
@@ -468,7 +522,17 @@
       catch(error) { toast(error.message); }
     });
     $('fitBtn').addEventListener('click',() => map.fit());
+    $('mapAddressClose').addEventListener('click', closeMapInfo);
+    $('mapAddressRegister').addEventListener('click', () => {
+      const inspected = state.inspected;
+      if (!inspected) return;
+      openEditorFromMap(
+        { lat: inspected.lat, lng: inspected.lng },
+        inspected.road || inspected.jibun || ''
+      );
+    });
     $('mapAddBtn').addEventListener('click',() => {
+      closeMapInfo();
       if (!map.isAvailable()) { toast('지도 연결이 필요합니다.'); return; }
       if (map.editing) {
         if (map.onDraft) map.onDraft(map.getDraftPosition());
@@ -478,6 +542,7 @@
       updateMapAddUI();
     });
     $('mapEditBtn').addEventListener('click',() => {
+      closeMapInfo();
       if (!map.isAvailable()) { toast('지도 연결이 필요합니다.'); return; }
       if (map.adding) map.setAdd(false);
       map.setEdit(!map.editing);
