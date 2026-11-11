@@ -73,6 +73,8 @@
       if (!map.editing) { selectStop(id); return; }
       const stop = state.stops.find(item => item.id === id);
       if (!stop) return;
+      cancelSearchRequests();
+      hideAddressResults();
       state.editTarget = id;
       state.searchMatch = null;
       map.centerOn(stop, 17);
