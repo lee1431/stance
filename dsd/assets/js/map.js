@@ -9,6 +9,8 @@
       this.gpsMarker = null;
       this.pathLine = null;
       this.targetLine = null;
+      this.pendingTargetOverview = false;
+      this.targetOverviewUntil = 0;
       this.current = null;
       this.target = null;
       this.stops = [];
@@ -110,7 +112,7 @@
       const stop = this.stops.find(s => s.id === this.target);
       const lat = stop && (stop.parking_lat == null ? stop.lat : stop.parking_lat);
       const lng = stop && (stop.parking_lng == null ? stop.lng : stop.parking_lng);
-      if (!this.map || !this.lastGps || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      if (!this.map || !this.tracking || !this.lastGps || !Number.isFinite(lat) || !Number.isFinite(lng)) {
         if (this.targetLine) this.targetLine.setMap(null);
         this.targetLine = null;
         return;
@@ -130,6 +132,26 @@
           clickable: false, zIndex: 12
         });
       }
+    }
+    showTargetOverview() {
+      this.pendingTargetOverview = true;
+      this.targetOverviewUntil = Date.now() + 8000;
+      this.tryTargetOverview();
+    }
+    tryTargetOverview() {
+      if (!this.pendingTargetOverview || !this.map || !this.lastGps) return false;
+      const stop = this.stops.find(s => s.id === this.target);
+      const lat = stop && (stop.parking_lat == null ? stop.lat : stop.parking_lat);
+      const lng = stop && (stop.parking_lng == null ? stop.lng : stop.parking_lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+      const n = root.naver.maps;
+      const bounds = new n.LatLngBounds();
+      bounds.extend(new n.LatLng(this.lastGps.lat, this.lastGps.lng));
+      bounds.extend(new n.LatLng(lat, lng));
+      this.lastProgrammatic = Date.now();
+      this.map.fitBounds(bounds, {top: 140, bottom: 130, left: 60, right: 80});
+      this.pendingTargetOverview = false;
+      return true;
     }
     setEdit(flag) {
       this.editing = !!flag;
@@ -253,6 +275,9 @@
         this.tracking = false;
         if (this.watchId !== null) navigator.geolocation.clearWatch(this.watchId);
         this.watchId = null; this.lastTier = -1;
+        this.pendingTargetOverview = false;
+        this.targetOverviewUntil = 0;
+        this.updateTargetLine();
         if (this.onGPS) this.onGPS({ tracking: false });
         return;
       }
@@ -278,12 +303,13 @@
         });
         else this.gpsMarker.setPosition(new n.LatLng(this.lastGps.lat, this.lastGps.lng));
         this.updateTargetLine();
-        this.follow();
+        if (!this.tryTargetOverview()) this.follow();
       }
       if (this.onGPS) this.onGPS({ tracking: true, gps: this.lastGps });
     }
     follow() {
-      if (!this.map || !this.tracking || !this.lastGps || Date.now() < this.pausedUntil) return;
+      if (!this.map || !this.tracking || !this.lastGps ||
+          Date.now() < this.pausedUntil || Date.now() < this.targetOverviewUntil) return;
       const stop = this.stops.find(s => s.id === this.target);
       const lat = stop ? (stop.parking_lat == null ? stop.lat : stop.parking_lat) : null;
       const lng = stop ? (stop.parking_lng == null ? stop.lng : stop.parking_lng) : null;
@@ -302,7 +328,12 @@
         new root.naver.maps.LatLng(this.lastGps.lat, this.lastGps.lng);
       this.map.setCenter(center);
     }
-    resumeFollow() { this.pausedUntil = 0; this.follow(); }
+    resumeFollow() {
+      this.pausedUntil = 0;
+      this.pendingTargetOverview = false;
+      this.targetOverviewUntil = 0;
+      this.follow();
+    }
     resize() { if (this.map) { root.naver.maps.Event.trigger(this.map, 'resize'); } }
     static distance(a, b) {
       const toR = Math.PI / 180;
