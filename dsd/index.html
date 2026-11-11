@@ -7,7 +7,7 @@
   <meta name="description" content="DSD - 간단하고 빠른 배송 실행 관리">
   <title>DSD | 배송 실행 관리</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="assets/css/app.css?v=driving-20261111">
+  <link rel="stylesheet" href="assets/css/app.css?v=topsearch-20261111">
 </head>
 <body>
   <!-- Inline SVG symbol library; no icon CDN required. -->
@@ -45,7 +45,6 @@
 
   <div id="app" class="app hidden" data-view="map">
     <header id="topBar" class="top-bar">
-      <span id="saveIndicator" class="save-indicator" role="status">● 연결됨</span>
       <button id="menuBtn" class="icon-button menu-toggle" type="button" aria-label="메뉴 열기"><svg><use href="#ico-menu"/></svg></button>
     </header>
 
@@ -115,6 +114,7 @@
     <div id="drawerScrim" class="drawer-scrim hidden"></div>
     <aside id="drawer" class="drawer hidden" aria-label="설정 메뉴">
       <div class="drawer-head"><h2>설정</h2><button id="closeDrawer" class="icon-button" aria-label="닫기">✕</button></div>
+      <div class="drawer-status-row"><span>서버 저장 상태</span><span id="saveIndicator" class="drawer-save-indicator" role="status" aria-live="polite">● 연결됨</span></div>
       <label for="workDate">배송일</label><input id="workDate" type="date" required>
       <label>현재 계정</label><div id="userInfo" class="drawer-value"></div>
       <div class="drawer-stack">
@@ -157,6 +157,6 @@
   <script src="assets/js/api.js?v=driving-20261111" defer></script>
   <script src="assets/js/map.js?v=driving-20261111" defer></script>
   <script src="assets/js/legacy.js" defer></script>
-  <script src="assets/js/app.js?v=driving-20261111" defer></script>
+  <script src="assets/js/app.js?v=topsearch-20261111" defer></script>
 </body>
 </html>
