@@ -404,9 +404,9 @@
       event.preventDefault(); $('loginSubmit').disabled=true;
       try {
         const response=await API.enter($('clientId').value.trim(),$('phone').value.trim(),$('password').value);
-        // Server-side session must survive the second cross-origin request.
+        // Verify the token on a second independent API request.
         const verified = await API.me().catch(() => {
-          throw new Error('로그인 쿠키가 유지되지 않습니다. 서버의 SameSite=None/CORS 설정 또는 브라우저 제3자 쿠키 차단을 확인하세요.');
+          throw new Error('로그인 토큰 검증 실패: 서버 버전과 프론트 인증 방식이 일치하는지 확인하세요.');
         });
         $('password').value=''; await showApp(verified.user || response.user);
       } catch(error) { toast(error.message,6000); }
