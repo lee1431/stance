@@ -76,6 +76,12 @@
       updateMapAddUI();
       openEditor(null, coords);
     };
+    map.onDraft = coords => {
+      if (!coords || $('stopDialog').open) return;
+      map.setEdit(false);
+      updateMapAddUI();
+      openEditor(null, coords);
+    };
     map.onGPS = event => {
       $('gpsBtn').classList.toggle('active', event.tracking);
       if (event.error) toast('GPS: ' + event.error);
@@ -228,15 +234,22 @@
   }
   function updateMapAddUI() {
     const button = $('mapAddBtn');
-    button.classList.toggle('active', map.adding);
-    button.setAttribute('aria-pressed', String(map.adding));
-    button.querySelector('span').textContent = map.adding ? '추가 취소' : '배송지 추가';
-    $('mapHint').textContent = map.adding ? '지도에서 배송할 위치를 터치하세요.' : '';
-    $('mapHint').classList.toggle('hidden', !map.adding);
+    button.classList.toggle('active', map.adding || map.editing);
+    button.setAttribute('aria-pressed', String(map.adding || map.editing));
+    button.querySelector('span').textContent = map.editing ? '이 위치 등록'
+      : map.adding ? '추가 취소' : '배송지 추가';
+    button.title = map.editing ? '임시 마커의 위치를 배송지로 등록' : '지도에서 위치를 터치해 배송지 추가';
+    $('mapEditBtn').classList.toggle('active', map.editing);
+    $('mapEditBtn').setAttribute('aria-pressed', String(map.editing));
+    $('mapHint').textContent = map.editing
+      ? '주황색 임시 마커를 끌거나 지도를 터치하세요. 위치를 정한 뒤 이 위치 등록을 누르세요.'
+      : map.adding ? '지도에서 배송할 위치를 터치하세요.' : '';
+    $('mapHint').classList.toggle('hidden', !(map.adding || map.editing));
   }
   function changeView(view) {
-    if (view !== 'map' && map.adding) {
+    if (view !== 'map' && (map.adding || map.editing)) {
       map.setAdd(false);
+      map.setEdit(false);
       updateMapAddUI();
     }
     state.view = view;
@@ -457,24 +470,18 @@
     $('fitBtn').addEventListener('click',() => map.fit());
     $('mapAddBtn').addEventListener('click',() => {
       if (!map.isAvailable()) { toast('지도 연결이 필요합니다.'); return; }
-      if (!map.adding && map.editing) {
-        map.setEdit(false);
-        $('mapEditBtn').classList.remove('active');
+      if (map.editing) {
+        if (map.onDraft) map.onDraft(map.getDraftPosition());
+        return;
       }
       map.setAdd(!map.adding);
       updateMapAddUI();
     });
     $('mapEditBtn').addEventListener('click',() => {
       if (!map.isAvailable()) { toast('지도 연결이 필요합니다.'); return; }
-      if (map.adding) {
-        map.setAdd(false);
-        updateMapAddUI();
-      }
+      if (map.adding) map.setAdd(false);
       map.setEdit(!map.editing);
-      $('mapEditBtn').classList.toggle('active',map.editing);
-      $('mapHint').textContent=map.editing?'마커를 움직여 위치를 저장하세요.':'위치 편집을 종료했습니다.';
-      $('mapHint').classList.remove('hidden');
-      setTimeout(()=>$('mapHint').classList.add('hidden'),3000);
+      updateMapAddUI();
     });
     $('downloadBtn').addEventListener('click',() => {
       if (state.round) {
