@@ -12,6 +12,47 @@
     drivingRoute: null, drivingFor: null, routeError: '', routeLoading: false,
     routeFrom: null, routeCheckedAt: 0, routeGeneration: 0
   };
+  let homeDraft = null;
+  const homeKey = () => 'dsd:home-map:v1:' + encodeURIComponent((state.user && state.user.client_id) || '');
+  function validHome(point) {
+    return !!point && Number.isFinite(point.lat) && Number.isFinite(point.lng) &&
+      point.lat >= -90 && point.lat <= 90 && point.lng >= -180 && point.lng <= 180;
+  }
+  function readHome() {
+    try {
+      const entry = JSON.parse(localStorage.getItem(homeKey()) || 'null');
+      return validHome(entry) ? entry : null;
+    } catch (_) { return null; }
+  }
+  function homeSummary() {
+    const home = readHome();
+    $('homeLocationSummary').textContent = home
+      ? (home.name || '센터') + ' · ' + (home.address || home.lat.toFixed(5) + ', ' + home.lng.toFixed(5))
+      : '지도 시작 위치를 설정하지 않았습니다.';
+  }
+  function homeDraftText() {
+    $('homeCoords').textContent = validHome(homeDraft)
+      ? '위도 ' + homeDraft.lat.toFixed(6) + ' · 경도 ' + homeDraft.lng.toFixed(6)
+      : '위치를 지정해 주세요.';
+  }
+  function openHomeDialog() {
+    const home = readHome();
+    homeDraft = home ? {lat:home.lat,lng:home.lng} : null;
+    $('homeName').value = home?.name || '';
+    $('homeAddress').value = home?.address || '';
+    homeDraftText();
+    toggleDrawer(false);
+    $('homeDialog').showModal();
+  }
+  function currentGPS() {
+    return new Promise((resolve,reject) => {
+      if (!navigator.geolocation) { reject(Error('GPS를 사용할 수 없습니다.')); return; }
+      navigator.geolocation.getCurrentPosition(position => resolve({
+        lat:position.coords.latitude,lng:position.coords.longitude
+      }), error => reject(Error(error.message || '위치 권한을 확인하세요.')),
+      {enableHighAccuracy:true,timeout:15000,maximumAge:10000});
+    });
+  }
   let toastTimer;
   let inspectRequest = 0;
   let searchTimer = null;
@@ -68,6 +109,8 @@
     $('authView').classList.add('hidden');
     $('app').classList.remove('hidden');
     $('userInfo').textContent = user.client_id + ' · ' + (user.phone || '');
+    homeSummary();
+    map.setHomeLocation(readHome());
     $('workDate').value = state.date;
     $('dateCaption').textContent = state.date;
     await loadRounds();
@@ -104,8 +147,9 @@
       state.mapLoaded = true;
       $('mapPlaceholder').classList.add('hidden');
       drawMap();
+      map.setHomeLocation(readHome(), Boolean(readHome()));
       if (map.tracking) refreshDrivingRoute(true);
-      setTimeout(() => map.fit(), 250);
+      if (!readHome()) setTimeout(() => map.fit(), 250);
     }).catch(error => {
       state.mapError = error.message;
       $('mapPlaceholder').querySelector('strong').textContent = '지도를 연결할 수 없습니다';
@@ -735,6 +779,59 @@
     $('navMap').addEventListener('click',() => changeView('map'));
     $('navList').addEventListener('click',() => changeView('list'));
     $('menuBtn').addEventListener('click',() => toggleDrawer(true));
+    $('homeLocationBtn').addEventListener('click', openHomeDialog);
+    $('homeCloseBtn').addEventListener('click',() => $('homeDialog').close());
+    $('homeCancelBtn').addEventListener('click',() => $('homeDialog').close());
+    $('homeAddress').addEventListener('input',() => { homeDraft = null; homeDraftText(); });
+    $('homeFindBtn').addEventListener('click',async () => {
+      const address = $('homeAddress').value.trim();
+      if (!address) { toast('센터 주소를 입력하세요.'); return; }
+      $('homeFindBtn').disabled = true;
+      try {
+        homeDraft = await map.geocode(address);
+        homeDraftText();
+        toast('센터 주소를 찾았습니다. 저장을 눌러 확정하세요.');
+      } catch (error) { toast(error.message,6000); }
+      finally { $('homeFindBtn').disabled = false; }
+    });
+    $('homeGPSBtn').addEventListener('click',async () => {
+      $('homeGPSBtn').disabled = true;
+      try {
+        homeDraft = await currentGPS();
+        $('homeAddress').value = '';
+        homeDraftText();
+        toast('현재 위치를 선택했습니다. 저장을 눌러 확정하세요.');
+      } catch (error) { toast(error.message,6000); }
+      finally { $('homeGPSBtn').disabled = false; }
+    });
+    $('homeMapBtn').addEventListener('click',() => {
+      const point = map.getDraftPosition();
+      if (!validHome(point)) { toast('지도 연결이 필요합니다.'); return; }
+      homeDraft = point;
+      $('homeAddress').value = '';
+      homeDraftText();
+      toast('지도 중앙을 선택했습니다. 저장을 눌러 확정하세요.');
+    });
+    $('homeResetBtn').addEventListener('click',() => {
+      localStorage.removeItem(homeKey());
+      map.setHomeLocation(null);
+      homeDraft = null;
+      homeSummary();
+      $('homeDialog').close();
+      toast('첫 지도 기준 위치를 해제했습니다.');
+    });
+    $('homeForm').addEventListener('submit',event => {
+      event.preventDefault();
+      if (!validHome(homeDraft)) { toast('주소 검색 또는 GPS로 센터 위치를 지정하세요.'); return; }
+      const home = {lat:homeDraft.lat,lng:homeDraft.lng,
+        name:$('homeName').value.trim(),address:$('homeAddress').value.trim()};
+      try { localStorage.setItem(homeKey(),JSON.stringify(home)); }
+      catch (error) { toast('기기에 위치를 저장하지 못했습니다: '+error.message); return; }
+      map.setHomeLocation(home,true);
+      homeSummary();
+      $('homeDialog').close();
+      toast('센터 위치를 저장했습니다. 다음 접속부터 첫 지도 기준이 됩니다.');
+    });
     $('closeDrawer').addEventListener('click',() => toggleDrawer(false));
     $('drawerScrim').addEventListener('click',() => toggleDrawer(false));
     $('workDate').addEventListener('change',async event => {
