@@ -7,6 +7,8 @@
       this.markers = new Map();
       this.inspectMarker = null;
       this.gpsMarker = null;
+      this.homeMarker = null;
+      this.homeLocation = null;
       this.pathLine = null;
       this.targetLine = null;
       this.drivingRouteStopId = null;
@@ -53,7 +55,7 @@
     init() {
       const n = root.naver.maps;
       this.map = new n.Map('map', {
-        center: new n.LatLng(36.991, 127.925), zoom: 12,
+        center: new n.LatLng(this.homeLocation ? this.homeLocation.lat : 36.991, this.homeLocation ? this.homeLocation.lng : 127.925), zoom: this.homeLocation ? 15 : 12,
         zoomControl: false, mapDataControl: false, scaleControl: false, logoControl: true
       });
       const inspectPoint = event => {
@@ -76,6 +78,21 @@
       });
     }
     isAvailable() { return !!this.map; }
+    setHomeLocation(location, focus = false) {
+      const point = location && Number.isFinite(location.lat) && Number.isFinite(location.lng)
+        ? {lat:location.lat,lng:location.lng,name:location.name || '센터'} : null;
+      this.homeLocation = point;
+      if (this.homeMarker) { this.homeMarker.setMap(null); this.homeMarker = null; }
+      if (!this.map || !point) return;
+      const n = root.naver.maps;
+      this.homeMarker = new n.Marker({
+        map:this.map, position:new n.LatLng(point.lat,point.lng), clickable:false,
+        title:point.name, zIndex:120,
+        icon:{ content:'<div class="home-pin" aria-label="센터 위치">⌂</div>',
+          size:new n.Size(34,38), anchor:new n.Point(17,34) }
+      });
+      if (focus) this.centerOn(point,15);
+    }
     draw(stops, targetId, road) {
       if (!this.map) return;
       this.stops = stops;
