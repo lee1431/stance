@@ -7,7 +7,7 @@
   <meta name="description" content="DSD - 간단하고 빠른 배송 실행 관리">
   <title>DSD | 배송 실행 관리</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="assets/css/app.css?v=list-layout-20261112">
+  <link rel="stylesheet" href="assets/css/app.css?v=home-location-20261112">
   <!-- Reuse the llsshh.com AdSense publisher for Auto ads; ad placement is configured in AdSense. -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9382191250873184" crossorigin="anonymous"></script>
 </head>
@@ -120,6 +120,8 @@
       <label for="workDate">배송일</label><input id="workDate" type="date" required>
       <label>현재 계정</label><div id="userInfo" class="drawer-value"></div>
       <div class="drawer-stack">
+        <button id="homeLocationBtn" class="secondary" type="button">⌖ 센터 위치 설정 (첫 지도)</button>
+        <div id="homeLocationSummary" class="drawer-value home-location-summary">지도 시작 위치를 설정하지 않았습니다.</div>
         <button id="downloadBtn" class="secondary">현재 회차 CSV 내보내기</button>
         <button id="filesBtn" class="secondary">업로드한 원본 파일 보기</button>
         <button id="legacyBtn" class="secondary">기존 DSD 브라우저 자료 이전</button>
@@ -129,6 +131,31 @@
       <p class="drawer-note">회차와 배송지·코스는 DSD 전용 서버에 저장됩니다. 마커를 옮길 때만 지도 편집 버튼을 활성화하세요.</p>
     </aside>
   </div>
+
+  <dialog id="homeDialog" class="simple-dialog home-dialog" aria-labelledby="homeDialogTitle">
+    <form id="homeForm">
+      <div class="dialog-header"><h2 id="homeDialogTitle">센터 위치 · 첫 지도</h2><button id="homeCloseBtn" type="button" class="icon-button" aria-label="닫기">✕</button></div>
+      <div class="home-fields">
+        <p class="home-help">DSD를 열 때 지도가 처음 보여줄 위치입니다. 배송 경로의 출발점이나 GPS 추적에는 영향을 주지 않습니다.</p>
+        <label for="homeName">센터 이름 (선택)</label>
+        <input id="homeName" maxlength="80" placeholder="예: 충주 센터" autocomplete="off">
+        <label for="homeAddress">센터 주소</label>
+        <input id="homeAddress" maxlength="250" placeholder="도로명주소 또는 지번주소" autocomplete="street-address">
+        <div class="home-tools">
+          <button id="homeFindBtn" type="button" class="secondary">주소로 위치 찾기</button>
+          <button id="homeGPSBtn" type="button" class="secondary">현재 GPS 위치</button>
+          <button id="homeMapBtn" type="button" class="secondary">지도 중앙 위치</button>
+        </div>
+        <p id="homeCoords" class="home-coords" role="status">위치를 지정해 주세요.</p>
+        <small class="home-help">설정한 위치는 이 기기 브라우저의 로그인 계정별로 저장됩니다.</small>
+      </div>
+      <div class="dialog-actions home-actions">
+        <button id="homeResetBtn" type="button" class="danger-quiet">해제</button>
+        <button id="homeCancelBtn" type="button" class="secondary">취소</button>
+        <button id="homeSaveBtn" type="submit" class="primary">저장</button>
+      </div>
+    </form>
+  </dialog>
 
   <dialog id="stopDialog" class="stop-dialog">
     <form id="stopForm">
@@ -159,6 +186,6 @@
   <script src="assets/js/api.js?v=driving-20261111" defer></script>
   <script src="assets/js/map.js?v=driving-20261111" defer></script>
   <script src="assets/js/legacy.js" defer></script>
-  <script src="assets/js/app.js?v=list-layout-20261112" defer></script>
+  <script src="assets/js/app.js?v=home-location-20261112" defer></script>
 </body>
 </html>
