@@ -7,7 +7,7 @@
   <meta name="description" content="DSD - 간단하고 빠른 배송 실행 관리">
   <title>DSD | 배송 실행 관리</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="assets/css/app.css?v=route-line-top-20261111">
+  <link rel="stylesheet" href="assets/css/app.css?v=driving-20261111">
 </head>
 <body>
   <!-- Inline SVG symbol library; no icon CDN required. -->
@@ -45,8 +45,6 @@
 
   <div id="app" class="app hidden" data-view="map">
     <header id="topBar" class="top-bar">
-      <span class="mini-brand">DSD</span>
-      <button id="roundChip" class="chip" type="button" title="목록에서 회차 선택">1회차 <svg><use href="#ico-chevron"/></svg></button>
       <span id="saveIndicator" class="save-indicator" role="status">● 연결됨</span>
       <button id="menuBtn" class="icon-button menu-toggle" type="button" aria-label="메뉴 열기"><svg><use href="#ico-menu"/></svg></button>
     </header>
@@ -59,6 +57,7 @@
         <button id="gpsBtn" class="map-tool" type="button" aria-label="실시간 위치 추적" title="GPS 추적"><svg><use href="#ico-locate"/></svg></button>
         <button id="fitBtn" class="map-tool" type="button" aria-label="전체 배송지 보기" title="전체 보기"><svg><use href="#ico-eye"/></svg></button>
         <button id="mapEditBtn" class="map-tool" type="button" aria-label="지도 중앙 고정 마커 위치 선택" aria-pressed="false" title="지도 중앙 고정 마커로 새 배송지 또는 기존 배송지 위치 지정"><svg><use href="#ico-edit"/></svg></button>
+        <div id="mapRoundPicker" class="map-round-picker" role="group" aria-label="회차 선택"></div>
       </div>
       <div id="mapCenterPin" class="map-center-pin hidden" aria-hidden="true"><span class="map-center-pin-shape"><span class="map-center-pin-dot"></span></span></div>
       <div id="mapSearchPanel" class="map-search-panel">
@@ -155,9 +154,9 @@
   </dialog>
   <input id="excelFile" type="file" accept=".xlsx,.xlsm,.xls,.csv" class="hidden">
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
-  <script src="assets/js/api.js?v=action400-20261111" defer></script>
-  <script src="assets/js/map.js?v=route-line-top-20261111" defer></script>
+  <script src="assets/js/api.js?v=driving-20261111" defer></script>
+  <script src="assets/js/map.js?v=driving-20261111" defer></script>
   <script src="assets/js/legacy.js" defer></script>
-  <script src="assets/js/app.js?v=routing-status-20261111" defer></script>
+  <script src="assets/js/app.js?v=driving-20261111" defer></script>
 </body>
 </html>

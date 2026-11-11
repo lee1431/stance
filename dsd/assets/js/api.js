@@ -84,6 +84,7 @@
     deleteStop: (id, rev) => request('stops/' + encodeURIComponent(id), { method: 'DELETE', body: { expected_revision: rev } }),
     order: (id, rev, ids) => request('rounds/' + encodeURIComponent(id) + '/order', { method: 'PUT', body: { expected_revision: rev, ids } }),
     recommend: (id, rev, start) => request('rounds/' + encodeURIComponent(id) + '/recommend', { method: 'POST', body: { expected_revision: rev, start } }),
+    drivingRoute: (id, start) => request('routes/driving', { method: 'POST', body: { stop_id: id, start } }),
     importSheet(id, rev, file) {
       const body = new FormData(); body.set('expected_revision', String(rev)); body.set('file', file);
       return request('rounds/' + encodeURIComponent(id) + '/import', { method: 'POST', body, file: true });

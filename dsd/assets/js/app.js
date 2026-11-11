@@ -8,7 +8,9 @@
     user: null, date: localDate(), rounds: [], round: null, stops: [],
     view: 'map', selected: null, filter: 'all', editingStop: null, busy: false,
     geocoding: false, mapLoaded: false, mapError: null, inspected: null,
-    editTarget: null, searchMatch: null
+    editTarget: null, searchMatch: null,
+    drivingRoute: null, drivingFor: null, routeError: '', routeLoading: false,
+    routeFrom: null, routeCheckedAt: 0, routeGeneration: 0
   };
   let toastTimer;
   let inspectRequest = 0;
@@ -94,12 +96,15 @@
     map.onGPS = event => {
       $('gpsBtn').classList.toggle('active', event.tracking);
       if (event.error) toast('GPS: ' + event.error);
+      if (!event.tracking) clearDrivingState();
+      else if (event.gps) refreshDrivingRoute(false);
       renderTarget();
     };
     map.load(user.client_id).then(() => {
       state.mapLoaded = true;
       $('mapPlaceholder').classList.add('hidden');
       drawMap();
+      if (map.tracking) refreshDrivingRoute(true);
       setTimeout(() => map.fit(), 250);
     }).catch(error => {
       state.mapError = error.message;
@@ -126,28 +131,43 @@
     render();
   }
   function applyState(response) {
+    const previousTarget = state.round && state.round.active_stop_id;
+    const previousRound = state.round && state.round.id;
     state.round = response.round;
     state.stops = response.stops;
-    if (state.selected && !state.stops.some(s => s.id === state.selected)) state.selected = null;
+    if (previousTarget !== state.round.active_stop_id || previousRound !== state.round.id) clearDrivingState();
+    if (state.selected && !state.stops.some(s => s.id === state.selected && s.status !== 'done')) state.selected = null;
     if (!state.selected) state.selected = state.round.active_stop_id || null;
     const i = state.rounds.findIndex(r => r.id === response.round.id);
     if (i >= 0) state.rounds[i].revision = response.round.revision;
     render();
   }
   function render() {
-    const roundNo = state.round ? state.round.round_no : 1;
-    $('roundChip').firstChild.textContent = roundNo + '회차 ';
     $('dateCaption').textContent = state.date;
     renderRounds(); renderList(); renderCard(); renderTarget(); drawMap();
   }
   function drawMap() {
-    map.draw(state.stops, state.round && state.round.active_stop_id, state.round && state.round.road);
+    map.draw(state.stops, state.round && state.round.active_stop_id, null);
   }
   function renderRounds() {
     const root = $('roundTabs'); root.replaceChildren();
+    const picker = $('mapRoundPicker'); picker.replaceChildren();
     for (const round of state.rounds) {
-      root.append(btn(round.round_no + '회차', 'round-tab' + (state.round && round.id === state.round.id ? ' active' : ''),
+      const active = Boolean(state.round && round.id === state.round.id);
+      root.append(btn(round.round_no + '회차', 'round-tab' + (active ? ' active' : ''),
         () => openRound(round.id).catch(e => toast(e.message))));
+      const numberButton = btn(String(round.round_no), 'map-round-tab' + (active ? ' active' : ''),
+        () => {
+          if (active) return;
+          openRound(round.id).then(() => {
+            state.selected = state.round.active_stop_id || null;
+            render();
+            if (map.tracking && state.round.active_stop_id) refreshDrivingRoute(true);
+          }).catch(e => toast(e.message));
+        }, round.round_no + '회차 선택');
+      numberButton.setAttribute('aria-label',round.round_no + '회차');
+      numberButton.setAttribute('aria-pressed', String(active));
+      picker.append(numberButton);
     }
   }
   function statusText(status) {
@@ -202,7 +222,7 @@
   function renderCard() {
     const card = $('stopCard'); card.replaceChildren();
     const stop = state.stops.find(s => s.id === state.selected);
-    if (!stop || state.view !== 'map') { card.classList.add('hidden'); return; }
+    if (!stop || stop.status === 'done' || state.view !== 'map') { card.classList.add('hidden'); return; }
     card.classList.remove('hidden');
     const head = el('div','stop-card-head');
     head.append(el('h3','',stop.position + ' · ' + (stop.company || '배송지')));
@@ -224,31 +244,77 @@
   }
   function renderTarget() {
     const strip = $('targetStrip');
-    const stop = state.stops.find(s => state.round && s.id === state.round.active_stop_id);
+    const stop = state.stops.find(s =>
+      state.round && s.id === state.round.active_stop_id && s.status !== 'done');
     if (!stop || state.view !== 'map') { strip.classList.add('hidden'); return; }
     strip.classList.remove('hidden'); strip.replaceChildren();
-    strip.append(el('strong','',stop.position + '번 목적지 · ' + (stop.company || '배송지')));
-    const lat = stop.parking_lat == null ? stop.lat : stop.parking_lat;
-    const lng = stop.parking_lng == null ? stop.lng : stop.parking_lng;
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      strip.append(el('span','', '목적지 좌표가 없습니다. 배송지 위치를 지정하세요.'));
-      return;
-    }
-    const distance = map.tracking && map.lastGps
-      ? map.constructor.distance(map.lastGps,{lat,lng}) : null;
-    if (distance === null) {
-      strip.append(el('span','',map.tracking
-        ? '현재 GPS 위치 확인 중 · 위치 권한을 허용하세요.'
-        : 'GPS 추적을 켜야 거리를 표시할 수 있습니다.'));
-    } else {
-      const display = distance < 1000 ? distance + ' m' : (distance / 1000).toFixed(2) + ' km';
-      strip.append(el('span','target-distance','현재 위치 → 목적지 · 직선 ' + display));
-      if (Number.isFinite(map.lastGps.accuracy)) {
-        strip.append(el('span','target-accuracy','GPS 정확도 약 ±' +
-          Math.round(map.lastGps.accuracy) + ' m'));
-      }
+    strip.append(el('strong','',stop.position + '번 목적지 · ' + (stop.company || stop.address || '배송지')));
+    if (state.drivingRoute && state.drivingFor === stop.id) {
+      const meters = state.drivingRoute.meters;
+      const seconds = state.drivingRoute.seconds;
+      const distance = meters < 1000 ? meters + ' m' : (meters/1000).toFixed(2) + ' km';
+      const duration = Number.isFinite(seconds) ? ' · 예상 ' + Math.ceil(seconds/60) + '분' : '';
+      strip.append(el('span','target-distance','자동차 도로 ' + distance + duration));
       strip.append(el('span','target-route-note',
-        '주황색 점선은 직선 안내선입니다. 실제 도로 경로·주행거리가 아닙니다.'));
+        '네이버에서 제공된 후보 경로 중 주행거리가 짧은 경로 · 최단거리 보장 아님'));
+    } else if (state.routeLoading) {
+      strip.append(el('span','','자동차 도로 경로 계산 중...'));
+    } else if (state.routeError) {
+      strip.append(el('span','target-route-error',state.routeError));
+    } else {
+      strip.append(el('span','',map.tracking
+        ? 'GPS 확인 후 자동차 도로 경로를 조회합니다.'
+        : '현재 위치 권한과 GPS 추적이 필요합니다.'));
+    }
+  }
+  function clearDrivingState() {
+    state.routeGeneration++;
+    state.drivingRoute = null;
+    state.drivingFor = null;
+    state.routeFrom = null;
+    state.routeCheckedAt = 0;
+    state.routeLoading = false;
+    state.routeError = '';
+    map.clearDrivingRoute();
+  }
+  async function refreshDrivingRoute(force = false) {
+    const stopId = state.round && state.round.active_stop_id;
+    const stop = state.stops.find(item => item.id === stopId && item.status !== 'done');
+    if (!stop || !map.isAvailable() || !map.tracking || !map.lastGps) return;
+    if (state.routeLoading) return;
+    const point = {lat:map.lastGps.lat, lng:map.lastGps.lng};
+    if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng)) return;
+    const elapsed = Date.now() - state.routeCheckedAt;
+    if (!force && state.drivingFor === stopId && state.routeFrom &&
+        (elapsed < 60000 || map.constructor.distance(point,state.routeFrom) < 250)) return;
+    if (!force && state.routeError && elapsed < 60000) return;
+    state.routeLoading = true;
+    state.routeError = '';
+    state.routeCheckedAt = Date.now();
+    const requestId = ++state.routeGeneration;
+    renderTarget();
+    try {
+      const result = await API.drivingRoute(stopId,point);
+      if (requestId !== state.routeGeneration ||
+          !state.round || state.round.active_stop_id !== stopId || !map.tracking) return;
+      map.setDrivingRoute(result,stopId);
+      state.drivingRoute = result;
+      state.drivingFor = stopId;
+      state.routeFrom = point;
+      state.routeError = '';
+    } catch (error) {
+      if (requestId !== state.routeGeneration) return;
+      map.clearDrivingRoute();
+      state.drivingRoute = null;
+      state.drivingFor = null;
+      state.routeError = error.status === 404
+        ? '도로 경로 API가 서버에 설치되지 않았습니다. Termux 서버 패치를 적용하세요.'
+        : error.message || '도로 경로 조회에 실패했습니다.';
+    } finally {
+      if (requestId === state.routeGeneration) {
+        state.routeLoading = false;
+        renderTarget();
+      }
     }
   }
   function selectStop(id) {
@@ -486,6 +552,7 @@
   async function start(id) {
     const result = await perform(() => API.updateStop(id,state.round.revision,null,'start'),'목적지를 지정했습니다.');
     if (!result) return;
+    clearDrivingState();
     state.selected = id;
     changeView('map');
     const stop = state.stops.find(s => s.id === id);
@@ -493,12 +560,32 @@
     if (!map.tracking) {
       try { map.gpsToggle(); } catch (error) { toast(error.message); }
     } else map.resumeFollow();
-    if (map.tracking) map.showTargetOverview();
+    if (map.tracking) {
+      map.showTargetOverview();
+      refreshDrivingRoute(true);
+    }
     render();
   }
-  function action(id,code) {
-    perform(() => API.updateStop(id,state.round.revision,null,code),
+  async function action(id,code) {
+    const result = await perform(() => API.updateStop(id,state.round.revision,null,code),
       code === 'done' ? '배송 완료! 다음 목적지를 확인하세요.' : '배송 상태를 저장했습니다.');
+    if (!result) return;
+    if (code === 'done' || code === 'failed' || code === 'return') {
+      // Flask automatically advances active_stop_id to the next pending stop.
+      state.selected = result.round.active_stop_id || null;
+      render();
+      const next = state.stops.find(item => item.id === state.selected);
+      if (next) {
+        changeView('map');
+        map.centerOn(next,16);
+        if (map.tracking) {
+          map.showTargetOverview();
+          refreshDrivingRoute(true);
+        }
+      } else if (code === 'done') {
+        toast('현재 회차에 남은 목적지가 없습니다.',4500);
+      }
+    }
   }
   function openNavigation(stop) {
     const lat=stop.parking_lat == null ? stop.lat : stop.parking_lat;
@@ -646,7 +733,6 @@
     });
     $('navMap').addEventListener('click',() => changeView('map'));
     $('navList').addEventListener('click',() => changeView('list'));
-    $('roundChip').addEventListener('click',() => changeView('list'));
     $('menuBtn').addEventListener('click',() => toggleDrawer(true));
     $('closeDrawer').addEventListener('click',() => toggleDrawer(false));
     $('drawerScrim').addEventListener('click',() => toggleDrawer(false));
