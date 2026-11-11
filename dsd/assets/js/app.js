@@ -72,8 +72,8 @@
       return perform(() => API.updateStop(id, state.round.revision, changes), '마커 위치를 저장했습니다.');
     };
     map.onAdd = coords => {
-      $('mapHint').classList.add('hidden');
-      $('mapAddBtn').classList.remove('active');
+      map.setAdd(false);
+      updateMapAddUI();
       openEditor(null, coords);
     };
     map.onGPS = event => {
@@ -226,7 +226,19 @@
     const selected = state.stops.find(s => s.id === id);
     if (selected && !map.editing) map.centerOn(selected,16);
   }
+  function updateMapAddUI() {
+    const button = $('mapAddBtn');
+    button.classList.toggle('active', map.adding);
+    button.setAttribute('aria-pressed', String(map.adding));
+    button.querySelector('span').textContent = map.adding ? '추가 취소' : '배송지 추가';
+    $('mapHint').textContent = map.adding ? '지도에서 배송할 위치를 터치하세요.' : '';
+    $('mapHint').classList.toggle('hidden', !map.adding);
+  }
   function changeView(view) {
+    if (view !== 'map' && map.adding) {
+      map.setAdd(false);
+      updateMapAddUI();
+    }
     state.view = view;
     $('app').dataset.view = view;
     $('mapView').classList.toggle('hidden',view !== 'map');
@@ -445,13 +457,19 @@
     $('fitBtn').addEventListener('click',() => map.fit());
     $('mapAddBtn').addEventListener('click',() => {
       if (!map.isAvailable()) { toast('지도 연결이 필요합니다.'); return; }
+      if (!map.adding && map.editing) {
+        map.setEdit(false);
+        $('mapEditBtn').classList.remove('active');
+      }
       map.setAdd(!map.adding);
-      $('mapAddBtn').classList.toggle('active',map.adding);
-      $('mapHint').textContent=map.adding ? '지도에서 배송할 위치를 누르세요.' : '';
-      $('mapHint').classList.toggle('hidden',!map.adding);
+      updateMapAddUI();
     });
     $('mapEditBtn').addEventListener('click',() => {
       if (!map.isAvailable()) { toast('지도 연결이 필요합니다.'); return; }
+      if (map.adding) {
+        map.setAdd(false);
+        updateMapAddUI();
+      }
       map.setEdit(!map.editing);
       $('mapEditBtn').classList.toggle('active',map.editing);
       $('mapHint').textContent=map.editing?'마커를 움직여 위치를 저장하세요.':'위치 편집을 종료했습니다.';
