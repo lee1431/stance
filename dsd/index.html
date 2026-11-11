@@ -7,7 +7,7 @@
   <meta name="description" content="DSD - 간단하고 빠른 배송 실행 관리">
   <title>DSD | 배송 실행 관리</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="assets/css/app.css?v=longtap-20261111">
+  <link rel="stylesheet" href="assets/css/app.css?v=centersearch-20261111">
 </head>
 <body>
   <!-- Inline SVG symbol library; no icon CDN required. -->
@@ -58,9 +58,24 @@
       <div class="map-tools">
         <button id="gpsBtn" class="map-tool" type="button" aria-label="실시간 위치 추적" title="GPS 추적"><svg><use href="#ico-locate"/></svg></button>
         <button id="fitBtn" class="map-tool" type="button" aria-label="전체 배송지 보기" title="전체 보기"><svg><use href="#ico-eye"/></svg></button>
-        <button id="mapEditBtn" class="map-tool" type="button" aria-label="임시 마커 표시 및 위치 편집" aria-pressed="false" title="임시 마커 표시 / 기존 마커 이동"><svg><use href="#ico-edit"/></svg></button>
+        <button id="mapEditBtn" class="map-tool" type="button" aria-label="지도 중앙 고정 마커 위치 선택" aria-pressed="false" title="지도 중앙 고정 마커로 새 배송지 또는 기존 배송지 위치 지정"><svg><use href="#ico-edit"/></svg></button>
       </div>
-      <button id="mapAddBtn" class="map-add-fab" type="button" aria-label="지도에서 배송지 추가" aria-pressed="false" title="지도에서 위치를 눌러 새 배송지를 등록하세요"><svg><use href="#ico-plus"/></svg><span>배송지 추가</span></button>
+      <div id="mapCenterPin" class="map-center-pin hidden" aria-hidden="true"><span class="map-center-pin-shape"><span class="map-center-pin-dot"></span></span></div>
+      <div id="mapSearchPanel" class="map-search-panel">
+        <div id="mapSearchResults" class="map-search-results hidden" role="listbox" aria-label="주소 검색 결과"></div>
+        <div class="map-search-row">
+          <svg aria-hidden="true"><use href="#ico-pin"/></svg>
+          <input id="mapSearchInput" type="search" inputmode="search" autocomplete="off" spellcheck="false" placeholder="주소 검색 · 입력하면 지도 이동" aria-label="주소 실시간 검색">
+          <button id="mapSearchClear" class="hidden" type="button" aria-label="주소 검색 초기화">✕</button>
+        </div>
+        <div id="mapCenterActions" class="map-center-actions hidden">
+          <span id="mapCenterText" class="map-center-text">지도 중앙에 위치를 맞춰주세요.</span>
+          <div class="map-center-buttons">
+            <button id="mapCenterCancel" type="button" class="secondary compact">취소</button>
+            <button id="mapCenterSave" type="button" class="primary compact">이 위치 등록</button>
+          </div>
+        </div>
+      </div>
       <div id="mapHint" class="map-hint hidden" role="status"></div>
       <section id="mapAddressCard" class="map-address-card hidden" aria-label="지도 위치 주소 확인">
         <div class="map-address-heading"><strong>선택한 지도 위치</strong><button id="mapAddressClose" type="button" aria-label="주소 정보 닫기">✕</button></div>
@@ -141,8 +156,8 @@
   <input id="excelFile" type="file" accept=".xlsx,.xlsm,.xls,.csv" class="hidden">
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
   <script src="assets/js/api.js?v=bearer-20261111" defer></script>
-  <script src="assets/js/map.js?v=longtap-20261111" defer></script>
+  <script src="assets/js/map.js?v=centersearch-20261111" defer></script>
   <script src="assets/js/legacy.js" defer></script>
-  <script src="assets/js/app.js?v=longtap-20261111" defer></script>
+  <script src="assets/js/app.js?v=centersearch-20261111" defer></script>
 </body>
 </html>
