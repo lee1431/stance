@@ -234,7 +234,8 @@
       strip.append(el('span','', '목적지 좌표가 없습니다. 배송지 위치를 지정하세요.'));
       return;
     }
-    const distance = map.lastGps ? map.constructor.distance(map.lastGps,{lat,lng}) : null;
+    const distance = map.tracking && map.lastGps
+      ? map.constructor.distance(map.lastGps,{lat,lng}) : null;
     if (distance === null) {
       strip.append(el('span','',map.tracking
         ? '현재 GPS 위치 확인 중 · 위치 권한을 허용하세요.'
@@ -242,8 +243,10 @@
     } else {
       const display = distance < 1000 ? distance + ' m' : (distance / 1000).toFixed(2) + ' km';
       strip.append(el('span','target-distance','현재 위치 → 목적지 · 직선 ' + display));
-      strip.append(el('span','target-accuracy','GPS 정확도 약 ±' +
-        Math.round(map.lastGps.accuracy || 0) + ' m'));
+      if (Number.isFinite(map.lastGps.accuracy)) {
+        strip.append(el('span','target-accuracy','GPS 정확도 약 ±' +
+          Math.round(map.lastGps.accuracy) + ' m'));
+      }
       strip.append(el('span','target-route-note',
         '주황색 점선은 직선 안내선입니다. 실제 도로 경로·주행거리가 아닙니다.'));
     }
@@ -490,6 +493,7 @@
     if (!map.tracking) {
       try { map.gpsToggle(); } catch (error) { toast(error.message); }
     } else map.resumeFollow();
+    if (map.tracking) map.showTargetOverview();
     render();
   }
   function action(id,code) {
