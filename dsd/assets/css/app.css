@@ -102,3 +102,42 @@
  .app[data-view="map"] .map-search-row{height:34px}
  .app[data-view="map"] .target-strip{top:calc(44px + env(safe-area-inset-top));left:calc(8px + env(safe-area-inset-left));max-width:min(360px,calc(100vw - 115px))}
 }
+
+/* List layout: rounds alongside the top-right menu, no redundant page heading. */
+.app[data-view="list"] .list-page{
+  padding-top:calc(6px + env(safe-area-inset-top));
+  padding-bottom:calc(110px + env(safe-area-inset-bottom));
+}
+.list-page .round-row{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:7px;
+  padding:0 calc(55px + env(safe-area-inset-right)) 7px calc(10px + env(safe-area-inset-left));
+}
+.list-page .round-tabs{
+  flex:0 1 auto;
+  min-width:0;
+  max-width:calc(100% - 46px);
+}
+.list-page .round-tab{min-height:38px}
+.list-page .list-date{
+  max-width:770px;
+  margin:0 auto;
+  padding:0 14px 11px;
+  font-size:11px;
+  color:#7b8797;
+}
+.list-page .list-add-fab{
+  position:fixed;
+  z-index:10;
+  right:calc(12px + env(safe-area-inset-right));
+  bottom:calc(58px + env(safe-area-inset-bottom));
+  min-height:47px;
+  padding:0 17px;
+  border-radius:14px;
+  box-shadow:0 5px 18px #164f9e54;
+  font-size:14px;
+  white-space:nowrap;
+}
+.list-page .list-add-fab svg{width:20px;height:20px;stroke-width:2.4}
