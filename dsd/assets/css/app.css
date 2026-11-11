@@ -30,3 +30,13 @@
 .draft-pin{width:36px;height:36px;display:grid;place-items:center;border:3px solid #fff;border-radius:50% 50% 50% 9px;transform:rotate(-45deg);background:#f17828;color:#fff;box-shadow:0 3px 11px #7a3a1888;font-size:22px;font-weight:900;line-height:1}
 .draft-pin span{display:block;transform:rotate(45deg)}
 .map-hint{white-space:normal;max-width:calc(100vw - 28px);min-width:190px;width:max-content;line-height:1.45;text-align:center}
+
+/* Inspect a pressed point without covering the delivery add action. */
+.inspect-pin{height:26px;width:26px;border:3px solid #fff;border-radius:50% 50% 50% 5px;transform:rotate(-45deg);display:grid;place-items:center;background:#127d99;color:#fff;font-size:13px;box-shadow:0 2px 8px #17314975}
+.map-address-card{position:absolute;z-index:12;left:calc(9px + env(safe-area-inset-left));right:calc(9px + env(safe-area-inset-right));bottom:calc(111px + env(safe-area-inset-bottom));max-width:490px;margin-inline:auto;max-height:calc(100dvh - 148px);overflow:auto;padding:12px 14px;background:#fff;box-shadow:0 8px 30px #182e4d42;border:1px solid #d9e8f3;border-radius:16px;line-height:1.45}
+.map-address-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px;color:#193e69;font-size:13px}
+.map-address-heading button{border:0;background:#f0f4fa;width:25px;height:25px;border-radius:8px;color:#54708f;flex-shrink:0}
+.map-address-road,.map-address-jibun,.map-address-coords{font-size:12px;margin:5px 0;overflow-wrap:anywhere}
+.map-address-road{font-weight:750;color:#15365b}.map-address-jibun{color:#59708a}.map-address-coords{color:#31779a;font-variant-numeric:tabular-nums}
+.map-address-card .primary{width:100%;margin-top:7px;min-height:36px}
+@media(orientation:landscape){.app[data-view="map"] .map-address-card{right:calc(54px + env(safe-area-inset-right));bottom:calc(58px + env(safe-area-inset-bottom));max-height:calc(100dvh - 95px)}}

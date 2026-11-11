@@ -7,7 +7,7 @@
   <meta name="description" content="DSD - 간단하고 빠른 배송 실행 관리">
   <title>DSD | 배송 실행 관리</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="assets/css/app.css?v=pencil-20261111">
+  <link rel="stylesheet" href="assets/css/app.css?v=longtap-20261111">
 </head>
 <body>
   <!-- Inline SVG symbol library; no icon CDN required. -->
@@ -62,6 +62,13 @@
       </div>
       <button id="mapAddBtn" class="map-add-fab" type="button" aria-label="지도에서 배송지 추가" aria-pressed="false" title="지도에서 위치를 눌러 새 배송지를 등록하세요"><svg><use href="#ico-plus"/></svg><span>배송지 추가</span></button>
       <div id="mapHint" class="map-hint hidden" role="status"></div>
+      <section id="mapAddressCard" class="map-address-card hidden" aria-label="지도 위치 주소 확인">
+        <div class="map-address-heading"><strong>선택한 지도 위치</strong><button id="mapAddressClose" type="button" aria-label="주소 정보 닫기">✕</button></div>
+        <p id="mapAddressRoad" class="map-address-road">도로명주소 조회 중...</p>
+        <p id="mapAddressJibun" class="map-address-jibun">지번주소 조회 중...</p>
+        <p id="mapAddressCoords" class="map-address-coords"></p>
+        <button id="mapAddressRegister" class="primary compact" type="button">이 위치 배송지 등록</button>
+      </section>
       <section id="stopCard" class="stop-card hidden" aria-live="polite"></section>
     </section>
 
@@ -134,8 +141,8 @@
   <input id="excelFile" type="file" accept=".xlsx,.xlsm,.xls,.csv" class="hidden">
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
   <script src="assets/js/api.js?v=bearer-20261111" defer></script>
-  <script src="assets/js/map.js?v=pencil-20261111" defer></script>
+  <script src="assets/js/map.js?v=longtap-20261111" defer></script>
   <script src="assets/js/legacy.js" defer></script>
-  <script src="assets/js/app.js?v=pencil-20261111" defer></script>
+  <script src="assets/js/app.js?v=longtap-20261111" defer></script>
 </body>
 </html>
