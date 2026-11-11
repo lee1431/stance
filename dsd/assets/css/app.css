@@ -20,3 +20,8 @@
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 
 .simple-dialog{width:min(350px,calc(100vw - 24px));border:0;border-radius:17px;padding:8px;background:#fff;box-shadow:0 14px 45px #1b304a70}.simple-dialog::backdrop{background:#081d346b}.simple-actions{display:flex;flex-direction:column;gap:7px;padding:9px}.simple-actions button{min-height:43px;font-size:14px}.simple-actions a{display:block;text-align:center;background:#e8f2ff;border-radius:10px;padding:13px;color:#1258ab;text-decoration:none;font-weight:800;overflow-wrap:anywhere}
+/* Prominent but compact add-stop action; the map remains the primary surface. */
+.map-add-fab{position:absolute;z-index:10;right:calc(10px + env(safe-area-inset-right));bottom:calc(57px + env(safe-area-inset-bottom));height:44px;padding:0 15px;border:0;border-radius:15px;background:var(--blue);color:#fff;box-shadow:0 4px 17px #164f9e54;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:900;white-space:nowrap}
+.map-add-fab svg{width:20px;height:20px;stroke-width:2.4}.map-add-fab:focus-visible{outline:3px solid #99bfff;outline-offset:2px}.map-add-fab.active{background:#153c72}
+.map-page:has(.stop-card:not(.hidden)) .map-add-fab{bottom:calc(180px + env(safe-area-inset-bottom))}
+@media(orientation:landscape){.app[data-view="map"] .map-add-fab{right:calc(55px + env(safe-area-inset-right));bottom:calc(12px + env(safe-area-inset-bottom));height:39px;border-radius:12px;padding:0 11px;font-size:12px}.app[data-view="map"] .map-page:has(.stop-card:not(.hidden)) .map-add-fab{bottom:calc(12px + env(safe-area-inset-bottom))}}
