@@ -80,7 +80,7 @@
     getRound: id => request('rounds/' + encodeURIComponent(id)),
     deleteRound: (id, rev) => request('rounds/' + encodeURIComponent(id), { method: 'DELETE', body: { expected_revision: rev } }),
     addStop: (id, rev, stop) => request('rounds/' + encodeURIComponent(id) + '/stops', { method: 'POST', body: { expected_revision: rev, stop } }),
-    updateStop: (id, rev, changes, action) => request('stops/' + encodeURIComponent(id), { method: 'PATCH', body: { expected_revision: rev, ...(action ? { action } : { changes }) } }),
+    updateStop: (id, rev, changes, action) => request('stops/' + encodeURIComponent(id), { method: 'PATCH', body: { expected_revision: rev, ...(action ? { changes: {}, action } : { changes }) } }),
     deleteStop: (id, rev) => request('stops/' + encodeURIComponent(id), { method: 'DELETE', body: { expected_revision: rev } }),
     order: (id, rev, ids) => request('rounds/' + encodeURIComponent(id) + '/order', { method: 'PUT', body: { expected_revision: rev, ids } }),
     recommend: (id, rev, start) => request('rounds/' + encodeURIComponent(id) + '/recommend', { method: 'POST', body: { expected_revision: rev, start } }),
