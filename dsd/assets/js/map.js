@@ -9,6 +9,7 @@
       this.gpsMarker = null;
       this.pathLine = null;
       this.targetLine = null;
+      this.drivingRouteStopId = null;
       this.pendingTargetOverview = false;
       this.targetOverviewUntil = 0;
       this.current = null;
@@ -82,7 +83,9 @@
       const n = root.naver.maps;
       for (const marker of this.markers.values()) marker.setMap(null);
       this.markers.clear();
+      if (this.drivingRouteStopId && this.drivingRouteStopId !== targetId) this.clearDrivingRoute();
       for (const stop of stops) {
+        if (stop.status === 'done') continue; // Completed stops remain in history/list, not active map.
         const lat = stop.parking_lat == null ? stop.lat : stop.parking_lat;
         const lng = stop.parking_lng == null ? stop.lng : stop.parking_lng;
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
@@ -105,33 +108,34 @@
           strokeLineCap: 'round', strokeLineJoin: 'round'
         });
       }
-      this.updateTargetLine();
+      // Do not infer or render any straight-line substitute.
     }
-    // GPS-to-active-stop connector only: this is NOT a routed driving path.
-    updateTargetLine() {
-      const stop = this.stops.find(s => s.id === this.target);
-      const lat = stop && (stop.parking_lat == null ? stop.lat : stop.parking_lat);
-      const lng = stop && (stop.parking_lng == null ? stop.lng : stop.parking_lng);
-      if (!this.map || !this.tracking || !this.lastGps || !Number.isFinite(lat) || !Number.isFinite(lng)) {
-        if (this.targetLine) this.targetLine.setMap(null);
-        this.targetLine = null;
-        return;
+    // Actual road geometry comes only from authenticated backend Directions response.
+    // Never draw a straight line as a substitute for a road route.
+    clearDrivingRoute() {
+      if (this.targetLine) this.targetLine.setMap(null);
+      this.targetLine = null;
+      this.drivingRouteStopId = null;
+    }
+    setDrivingRoute(route, stopId) {
+      if (!this.map || !route || !Array.isArray(route.path) || route.path.length < 2) {
+        throw Error('도로 경로선이 올바르지 않습니다.');
       }
       const n = root.naver.maps;
-      const points = [
-        new n.LatLng(this.lastGps.lat, this.lastGps.lng),
-        new n.LatLng(lat, lng)
-      ];
-      if (this.targetLine) {
-        this.targetLine.setPath(points);
-      } else {
-        this.targetLine = new n.Polyline({
-          map: this.map, path: points,
-          strokeColor: '#df692a', strokeOpacity: 0.95,
-          strokeWeight: 4, strokeStyle: 'shortdash',
-          clickable: false, zIndex: 12
-        });
-      }
+      const path = route.path.map(p => {
+        if (!p || !Number.isFinite(p.lat) || !Number.isFinite(p.lng)) {
+          throw Error('도로 경로 좌표가 올바르지 않습니다.');
+        }
+        return new n.LatLng(p.lat, p.lng);
+      });
+      this.clearDrivingRoute();
+      this.drivingRouteStopId = stopId;
+      this.targetLine = new n.Polyline({
+        map: this.map, path,
+        strokeColor: '#1265e8', strokeOpacity: 0.96,
+        strokeWeight: 7, strokeLineCap: 'round',
+        strokeLineJoin: 'round', zIndex: 20
+      });
     }
     showTargetOverview() {
       this.pendingTargetOverview = true;
@@ -277,7 +281,7 @@
         this.watchId = null; this.lastTier = -1;
         this.pendingTargetOverview = false;
         this.targetOverviewUntil = 0;
-        this.updateTargetLine();
+        this.clearDrivingRoute();
         if (this.onGPS) this.onGPS({ tracking: false });
         return;
       }
@@ -302,7 +306,6 @@
           icon: { content: '<div class="gps-pin"></div>', anchor: new n.Point(10, 10) }, zIndex: 500
         });
         else this.gpsMarker.setPosition(new n.LatLng(this.lastGps.lat, this.lastGps.lng));
-        this.updateTargetLine();
         if (!this.tryTargetOverview()) this.follow();
       }
       if (this.onGPS) this.onGPS({ tracking: true, gps: this.lastGps });
