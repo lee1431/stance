@@ -8,6 +8,7 @@
       this.inspectMarker = null;
       this.gpsMarker = null;
       this.pathLine = null;
+      this.targetLine = null;
       this.current = null;
       this.target = null;
       this.stops = [];
@@ -100,6 +101,33 @@
           map: this.map, path: road.path.map(p => new n.LatLng(p.lat, p.lng)),
           strokeColor: '#246fe9', strokeOpacity: .87, strokeWeight: 5,
           strokeLineCap: 'round', strokeLineJoin: 'round'
+        });
+      }
+      this.updateTargetLine();
+    }
+    // GPS-to-active-stop connector only: this is NOT a routed driving path.
+    updateTargetLine() {
+      const stop = this.stops.find(s => s.id === this.target);
+      const lat = stop && (stop.parking_lat == null ? stop.lat : stop.parking_lat);
+      const lng = stop && (stop.parking_lng == null ? stop.lng : stop.parking_lng);
+      if (!this.map || !this.lastGps || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+        if (this.targetLine) this.targetLine.setMap(null);
+        this.targetLine = null;
+        return;
+      }
+      const n = root.naver.maps;
+      const points = [
+        new n.LatLng(this.lastGps.lat, this.lastGps.lng),
+        new n.LatLng(lat, lng)
+      ];
+      if (this.targetLine) {
+        this.targetLine.setPath(points);
+      } else {
+        this.targetLine = new n.Polyline({
+          map: this.map, path: points,
+          strokeColor: '#df692a', strokeOpacity: 0.95,
+          strokeWeight: 4, strokeStyle: 'shortdash',
+          clickable: false, zIndex: 12
         });
       }
     }
@@ -249,6 +277,7 @@
           icon: { content: '<div class="gps-pin"></div>', anchor: new n.Point(10, 10) }, zIndex: 500
         });
         else this.gpsMarker.setPosition(new n.LatLng(this.lastGps.lat, this.lastGps.lng));
+        this.updateTargetLine();
         this.follow();
       }
       if (this.onGPS) this.onGPS({ tracking: true, gps: this.lastGps });
