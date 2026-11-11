@@ -5,6 +5,7 @@
     constructor() {
       this.map = null;
       this.markers = new Map();
+      this.draftMarker = null;
       this.gpsMarker = null;
       this.pathLine = null;
       this.current = null;
@@ -21,6 +22,7 @@
       this.onSelect = null;
       this.onMove = null;
       this.onAdd = null;
+      this.onDraft = null;
       this.onGPS = null;
     }
     load(clientId) {
@@ -50,9 +52,13 @@
         zoomControl: false, mapDataControl: false, scaleControl: false, logoControl: true
       });
       n.Event.addListener(this.map, 'click', (event) => {
-        if (!this.adding) return;
-        this.adding = false;
-        if (this.onAdd) this.onAdd({ lat: event.coord.lat(), lng: event.coord.lng() });
+        if (this.adding) {
+          this.adding = false;
+          if (this.onAdd) this.onAdd({ lat: event.coord.lat(), lng: event.coord.lng() });
+        } else if (this.editing && this.draftMarker) {
+          // Reposition the unsaved draft marker by tapping the map.
+          this.draftMarker.setPosition(event.coord);
+        }
       });
       n.Event.addListener(this.map, 'dragstart', () => { if (this.tracking) this.pausedUntil = Date.now() + 30000; });
       n.Event.addListener(this.map, 'zoom_changed', () => {
@@ -99,6 +105,36 @@
     setEdit(flag) {
       this.editing = !!flag;
       for (const marker of this.markers.values()) marker.setDraggable(this.editing);
+      if (!this.map) return;
+      if (!this.editing) {
+        if (this.draftMarker) this.draftMarker.setMap(null);
+        this.draftMarker = null;
+        return;
+      }
+      if (this.draftMarker) return;
+      const n = root.naver.maps;
+      // A new stop must remain a preview until the user confirms and saves it.
+      this.draftMarker = new n.Marker({
+        position: this.map.getCenter(),
+        map: this.map,
+        draggable: true,
+        clickable: true,
+        zIndex: 900,
+        title: '임시 마커: 위치 조정 후 이 위치 등록',
+        icon: {
+          content: '<div class="draft-pin"><span>+</span></div>',
+          size: new n.Size(36, 40),
+          anchor: new n.Point(18, 39)
+        }
+      });
+      n.Event.addListener(this.draftMarker, 'click', () => {
+        if (this.editing && this.onDraft) this.onDraft(this.getDraftPosition());
+      });
+    }
+    getDraftPosition() {
+      if (!this.draftMarker) return null;
+      const position = this.draftMarker.getPosition();
+      return position ? { lat: position.lat(), lng: position.lng() } : null;
     }
     setAdd(flag) { this.adding = !!flag; }
     centerOn(stop, zoom = 16) {

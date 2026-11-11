@@ -25,3 +25,8 @@
 .map-add-fab svg{width:20px;height:20px;stroke-width:2.4}.map-add-fab:focus-visible{outline:3px solid #99bfff;outline-offset:2px}.map-add-fab.active{background:#153c72}
 .map-page:has(.stop-card:not(.hidden)) .map-add-fab{bottom:calc(180px + env(safe-area-inset-bottom))}
 @media(orientation:landscape){.app[data-view="map"] .map-add-fab{right:calc(55px + env(safe-area-inset-right));bottom:calc(12px + env(safe-area-inset-bottom));height:39px;border-radius:12px;padding:0 11px;font-size:12px}.app[data-view="map"] .map-page:has(.stop-card:not(.hidden)) .map-add-fab{bottom:calc(12px + env(safe-area-inset-bottom))}}
+
+/* A visible temporary pin while editing positions; it is not saved until confirmed. */
+.draft-pin{width:36px;height:36px;display:grid;place-items:center;border:3px solid #fff;border-radius:50% 50% 50% 9px;transform:rotate(-45deg);background:#f17828;color:#fff;box-shadow:0 3px 11px #7a3a1888;font-size:22px;font-weight:900;line-height:1}
+.draft-pin span{display:block;transform:rotate(45deg)}
+.map-hint{white-space:normal;max-width:calc(100vw - 28px);min-width:190px;width:max-content;line-height:1.45;text-align:center}
