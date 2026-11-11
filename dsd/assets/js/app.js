@@ -611,6 +611,21 @@
   }
   async function roadRecommend() {
     if (!state.round) return;
+    if (state.stops.length < 2) {
+      toast('도로 추천은 배송지가 2곳 이상일 때 사용할 수 있습니다.', 5000);
+      return;
+    }
+    let health;
+    try {
+      health = await API.health();
+    } catch (error) {
+      toast('도로 경로 엔진 상태를 확인하지 못했습니다: ' + error.message, 6000);
+      return;
+    }
+    if (!health.routing_ready) {
+      toast('도로 추천 사용 불가: DSD 서버의 도로 경로 엔진이 연결되지 않았습니다. 서버 DSD_OSRM_URL 설정을 확인하세요.', 7500);
+      return;
+    }
     if (!confirm('현재 배송지 좌표를 설정된 도로 경로 엔진에 전송해 실제 도로 기준 방문 순서를 계산하고 저장할까요?\n기존 수동 방문 순서를 덮어씁니다.')) return;
     const start=map.lastGps ? {lat:map.lastGps.lat,lng:map.lastGps.lng}:null;
     const result=await perform(() => API.recommend(state.round.id,state.round.revision,start));
