@@ -5,7 +5,6 @@
     constructor() {
       this.map = null;
       this.markers = new Map();
-      this.draftMarker = null;
       this.inspectMarker = null;
       this.gpsMarker = null;
       this.pathLine = null;
@@ -21,10 +20,10 @@
       this.lastProgrammatic = 0;
       this.watchId = null;
       this.onSelect = null;
-      this.onMove = null;
-      this.onAdd = null;
       this.onDraft = null;
       this.onInspect = null;
+      this.onCenterIdle = null;
+      this.onPanStart = null;
       this.onGPS = null;
     }
     load(clientId) {
@@ -53,15 +52,6 @@
         center: new n.LatLng(36.991, 127.925), zoom: 12,
         zoomControl: false, mapDataControl: false, scaleControl: false, logoControl: true
       });
-      n.Event.addListener(this.map, 'click', (event) => {
-        if (this.adding) {
-          this.adding = false;
-          if (this.onAdd) this.onAdd({ lat: event.coord.lat(), lng: event.coord.lng() });
-        } else if (this.editing && this.draftMarker) {
-          // Reposition the unsaved draft marker by tapping the map.
-          this.draftMarker.setPosition(event.coord);
-        }
-      });
       const inspectPoint = event => {
         if (!event || !event.coord || !this.onInspect) return;
         this.onInspect({ lat: event.coord.lat(), lng: event.coord.lng() });
@@ -70,7 +60,13 @@
       n.Event.addListener(this.map, 'longtap', inspectPoint);
       // Desktop alternative for a mouse or trackpad.
       n.Event.addListener(this.map, 'rightclick', inspectPoint);
-      n.Event.addListener(this.map, 'dragstart', () => { if (this.tracking) this.pausedUntil = Date.now() + 30000; });
+      n.Event.addListener(this.map, 'dragstart', () => {
+        if (this.tracking) this.pausedUntil = Infinity;
+        if (this.onPanStart) this.onPanStart();
+      });
+      n.Event.addListener(this.map, 'idle', () => {
+        if (this.onCenterIdle) this.onCenterIdle(this.getDraftPosition());
+      });
       n.Event.addListener(this.map, 'zoom_changed', () => {
         if (this.tracking && Date.now() - this.lastProgrammatic > 700) this.pausedUntil = Date.now() + 30000;
       });
@@ -89,18 +85,13 @@
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
         const cls = stop.status === 'done' ? 'done' : stop.id === targetId ? 'active' : '';
         const marker = new n.Marker({
-          position: new n.LatLng(lat, lng), map: this.map, draggable: this.editing,
+          position: new n.LatLng(lat, lng), map: this.map, draggable: false,
           zIndex: stop.id === targetId ? 200 : 100 - Math.min(stop.position, 90),
           title: (stop.company || '배송지') + ' · ' + stop.position + '번',
           icon: { content: '<div class="stop-pin ' + cls + '"><span>' + Number(stop.position) + '</span></div>',
                   size: new n.Size(34, 34), anchor: new n.Point(17, 25) }
         });
         n.Event.addListener(marker, 'click', () => { if (this.onSelect) this.onSelect(stop.id); });
-        n.Event.addListener(marker, 'dragend', () => {
-          if (!this.editing || !this.onMove) return;
-          const p = marker.getPosition();
-          this.onMove(stop.id, { lat: p.lat(), lng: p.lng() });
-        });
         this.markers.set(stop.id, marker);
       }
       if (this.pathLine) { this.pathLine.setMap(null); this.pathLine = null; }
@@ -114,37 +105,12 @@
     }
     setEdit(flag) {
       this.editing = !!flag;
-      for (const marker of this.markers.values()) marker.setDraggable(this.editing);
-      if (!this.map) return;
-      if (!this.editing) {
-        if (this.draftMarker) this.draftMarker.setMap(null);
-        this.draftMarker = null;
-        return;
-      }
-      if (this.draftMarker) return;
-      const n = root.naver.maps;
-      // A new stop must remain a preview until the user confirms and saves it.
-      this.draftMarker = new n.Marker({
-        position: this.map.getCenter(),
-        map: this.map,
-        draggable: true,
-        clickable: true,
-        zIndex: 900,
-        title: '임시 마커: 위치 조정 후 이 위치 등록',
-        icon: {
-          content: '<div class="draft-pin"><span>+</span></div>',
-          size: new n.Size(36, 40),
-          anchor: new n.Point(18, 39)
-        }
-      });
-      n.Event.addListener(this.draftMarker, 'click', () => {
-        if (this.editing && this.onDraft) this.onDraft(this.getDraftPosition());
-      });
+      if (this.editing && this.tracking) this.pausedUntil = Infinity;
     }
     getDraftPosition() {
-      if (!this.draftMarker) return null;
-      const position = this.draftMarker.getPosition();
-      return position ? { lat: position.lat(), lng: position.lng() } : null;
+      if (!this.map) return null;
+      const center = this.map.getCenter();
+      return center ? { lat: center.lat(), lng: center.lng() } : null;
     }
     setAdd(flag) { this.adding = !!flag; }
     showInspectMarker(coords) {
@@ -182,16 +148,41 @@
       this.lastProgrammatic = Date.now();
       this.map.fitBounds(bounds, { top: 90, bottom: 120, left: 45, right: 65 });
     }
-    geocode(address) {
+    searchAddresses(query, count = 5) {
       return new Promise((resolve, reject) => {
-        if (!this.map || !root.naver.maps.Service) { reject(Error('네이버 지도 주소 검색이 연결되지 않았습니다.')); return; }
-        root.naver.maps.Service.geocode({ query: address }, (status, response) => {
-          if (status !== root.naver.maps.Service.Status.OK) { reject(Error('주소 검색 실패')); return; }
-          const found = response && response.v2 && response.v2.addresses && response.v2.addresses[0];
-          if (!found) { reject(Error('검색되는 주소가 없습니다. 지도에서 직접 위치를 지정하세요.')); return; }
-          resolve({ lat: Number(found.y), lng: Number(found.x) });
-        });
+        const service = root.naver && root.naver.maps && root.naver.maps.Service;
+        if (!this.map || !service || typeof service.geocode !== 'function') {
+          reject(Error('네이버 지도 주소 검색이 연결되지 않았습니다.'));
+          return;
+        }
+        let settled = false;
+        const timer = setTimeout(() => {
+          if (!settled) { settled = true; reject(Error('주소 검색 응답 시간이 초과되었습니다.')); }
+        }, 10000);
+        try {
+          service.geocode({ query, count }, (status, response) => {
+            if (settled) return;
+            settled = true; clearTimeout(timer);
+            if (status !== service.Status.OK) {
+              reject(Error('주소 검색 API가 응답하지 않습니다. 네이버 지도 서비스 권한을 확인하세요.'));
+              return;
+            }
+            const addresses = response && response.v2 && response.v2.addresses || [];
+            resolve(addresses.map(item => ({
+              lat: Number(item.y), lng: Number(item.x),
+              road: String(item.roadAddress || '').trim(),
+              jibun: String(item.jibunAddress || '').trim()
+            })).filter(item => Number.isFinite(item.lat) && Number.isFinite(item.lng)));
+          });
+        } catch (error) {
+          if (!settled) { settled = true; clearTimeout(timer); reject(error); }
+        }
       });
+    }
+    async geocode(address) {
+      const results = await this.searchAddresses(address, 1);
+      if (!results.length) throw Error('검색되는 주소가 없습니다. 지도에서 직접 위치를 지정하세요.');
+      return { lat: results[0].lat, lng: results[0].lng };
     }
     reverseGeocode(coords) {
       return new Promise((resolve, reject) => {
