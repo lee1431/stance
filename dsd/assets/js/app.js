@@ -147,7 +147,7 @@
     renderRounds(); renderList(); renderCard(); renderTarget(); drawMap();
   }
   function drawMap() {
-    map.draw(state.stops, state.round && state.round.active_stop_id, state.round && state.round.road);
+    map.draw(state.stops, state.round && state.round.active_stop_id, null);
   }
   function renderRounds() {
     const root = $('roundTabs'); root.replaceChildren();
