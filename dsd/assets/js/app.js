@@ -7,10 +7,13 @@
   const state = {
     user: null, date: localDate(), rounds: [], round: null, stops: [],
     view: 'map', selected: null, filter: 'all', editingStop: null, busy: false,
-    geocoding: false, mapLoaded: false, mapError: null, inspected: null
+    geocoding: false, mapLoaded: false, mapError: null, inspected: null,
+    editTarget: null, searchMatch: null
   };
   let toastTimer;
   let inspectRequest = 0;
+  let searchTimer = null;
+  let searchSequence = 0;
   function localDate() {
     const d = new Date();
     return [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-');
@@ -66,22 +69,24 @@
     $('workDate').value = state.date;
     $('dateCaption').textContent = state.date;
     await loadRounds();
-    map.onSelect = id => selectStop(id);
-    map.onMove = (id, coords) => {
-      const stop = state.stops.find(s => s.id === id);
-      const changes = stop?.parking_lat != null ? { parking_lat:coords.lat, parking_lng:coords.lng } : coords;
-      return perform(() => API.updateStop(id, state.round.revision, changes), '마커 위치를 저장했습니다.');
+    map.onSelect = id => {
+      if (!map.editing) { selectStop(id); return; }
+      const stop = state.stops.find(item => item.id === id);
+      if (!stop) return;
+      state.editTarget = id;
+      state.searchMatch = null;
+      map.centerOn(stop, 17);
+      updateCenterUI();
+      toast('지도 중앙에 위치를 맞춘 후 위치 저장을 누르세요.', 3200);
     };
-    map.onAdd = coords => {
-      map.setAdd(false);
-      updateMapAddUI();
-      openEditorFromMap(coords);
-    };
-    map.onDraft = coords => {
-      if (!coords || $('stopDialog').open) return;
-      map.setEdit(false);
-      updateMapAddUI();
-      openEditorFromMap(coords);
+    map.onDraft = coords => commitCenterPosition(coords);
+    map.onCenterIdle = () => updateCenterUI();
+    map.onPanStart = () => {
+      if (!map.editing) return;
+      searchSequence++;
+      state.searchMatch = null;
+      hideAddressResults();
+      updateCenterUI();
     };
     map.onInspect = coords => inspectMapPosition(coords);
     map.onGPS = event => {
@@ -243,9 +248,7 @@
   }
   async function inspectMapPosition(coords) {
     if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) return;
-    if (map.adding) map.setAdd(false);
-    if (map.editing) map.setEdit(false);
-    updateMapAddUI();
+    if (map.editing) leaveCenterMode();
     closeMapInfo();
     state.selected = null;
     renderCard();
@@ -285,26 +288,140 @@
       // Map coordinate entry stays available when the reverse geocoding quota/permission fails.
     });
   }
-  function updateMapAddUI() {
-    const button = $('mapAddBtn');
-    button.classList.toggle('active', map.adding || map.editing);
-    button.setAttribute('aria-pressed', String(map.adding || map.editing));
-    button.querySelector('span').textContent = map.editing ? '이 위치 등록'
-      : map.adding ? '추가 취소' : '배송지 추가';
-    button.title = map.editing ? '임시 마커의 위치를 배송지로 등록' : '지도에서 위치를 터치해 배송지 추가';
-    $('mapEditBtn').classList.toggle('active', map.editing);
-    $('mapEditBtn').setAttribute('aria-pressed', String(map.editing));
-    $('mapHint').textContent = map.editing
-      ? '주황색 임시 마커를 끌거나 지도를 터치하세요. 위치를 정한 뒤 이 위치 등록을 누르세요.'
-      : map.adding ? '지도에서 배송할 위치를 터치하세요.' : '';
-    $('mapHint').classList.toggle('hidden', !(map.adding || map.editing));
+  function hideAddressResults() {
+    $('mapSearchResults').classList.add('hidden');
+    $('mapSearchResults').replaceChildren();
+  }
+  function cancelSearchRequests() {
+    searchSequence++;
+    clearTimeout(searchTimer);
+    searchTimer = null;
+  }
+  function updateCenterUI() {
+    const choosing = map.editing;
+    $('mapCenterPin').classList.toggle('hidden', !choosing);
+    $('mapCenterActions').classList.toggle('hidden', !choosing);
+    $('mapEditBtn').classList.toggle('active', choosing);
+    $('mapEditBtn').setAttribute('aria-pressed', String(choosing));
+    const stop = state.editTarget && state.stops.find(item => item.id === state.editTarget);
+    $('mapCenterSave').textContent = stop ? '위치 저장' : '이 위치 등록';
+    const coords = choosing ? map.getDraftPosition() : null;
+    $('mapCenterText').textContent = coords
+      ? (stop ? (stop.company || '선택한 배송지') + ' · ' : '') +
+        '위도 ' + coords.lat.toFixed(6) + ' · 경도 ' + coords.lng.toFixed(6)
+      : '지도를 움직여 중앙 위치를 맞춰주세요.';
+    $('mapHint').classList.add('hidden');
+  }
+  function enterCenterMode() {
+    if (!map.isAvailable()) {
+      toast('지도가 아직 연결되지 않았습니다.');
+      return false;
+    }
+    closeMapInfo();
+    state.selected = null;
+    renderCard();
+    if (!map.editing) map.setEdit(true);
+    updateCenterUI();
+    return true;
+  }
+  function leaveCenterMode() {
+    map.setEdit(false);
+    state.editTarget = null;
+    state.searchMatch = null;
+    updateCenterUI();
+  }
+  function chooseAddressResult(found, keepResults = false) {
+    if (!enterCenterMode()) return;
+    state.editTarget = null;
+    state.searchMatch = { lat: found.lat, lng: found.lng,
+      address: found.road || found.jibun || '' };
+    if (!keepResults) {
+      cancelSearchRequests();
+      $('mapSearchInput').value = found.road || found.jibun ||
+        (found.lat.toFixed(6) + ', ' + found.lng.toFixed(6));
+      $('mapSearchClear').classList.remove('hidden');
+      hideAddressResults();
+    }
+    map.centerOn({ lat: found.lat, lng: found.lng }, 17);
+    updateCenterUI();
+  }
+  function renderAddressResults(rows, message) {
+    const panel = $('mapSearchResults');
+    panel.replaceChildren();
+    if (message) {
+      panel.append(el('div', 'map-search-message', message));
+      panel.classList.remove('hidden');
+      return;
+    }
+    for (const result of rows) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'map-search-result';
+      button.setAttribute('role','option');
+      button.append(el('strong','',result.road || result.jibun || '주소 없음'));
+      if (result.road && result.jibun)
+        button.append(el('small','',result.jibun));
+      button.addEventListener('click', () => chooseAddressResult(result));
+      panel.append(button);
+    }
+    panel.classList.toggle('hidden', !rows.length);
+  }
+  function searchAddressInput() {
+    cancelSearchRequests();
+    const query = $('mapSearchInput').value.trim();
+    $('mapSearchClear').classList.toggle('hidden', !query);
+    state.searchMatch = null;
+    if (!query || query.length < 2) {
+      hideAddressResults();
+      return;
+    }
+    if (!enterCenterMode()) return;
+    renderAddressResults([], '주소 검색 중...');
+    const request = searchSequence;
+    searchTimer = setTimeout(async () => {
+      try {
+        const rows = await map.searchAddresses(query, 5);
+        if (request !== searchSequence || state.view !== 'map') return;
+        if (!rows.length) {
+          renderAddressResults([], '주소 검색 결과가 없습니다. 더 정확한 주소를 입력하세요.');
+          return;
+        }
+        renderAddressResults(rows);
+        // Auto-place the fixed center pin on the best match without saving it.
+        chooseAddressResult(rows[0], true);
+      } catch (error) {
+        if (request !== searchSequence) return;
+        renderAddressResults([], error.message || '주소 검색 실패');
+      }
+    }, 450);
+  }
+  async function commitCenterPosition(coords) {
+    if (!coords || $('stopDialog').open || state.busy) return;
+    const stop = state.editTarget &&
+      state.stops.find(item => item.id === state.editTarget);
+    if (stop) {
+      const changes = stop.parking_lat != null
+        ? { parking_lat: coords.lat, parking_lng: coords.lng }
+        : { lat: coords.lat, lng: coords.lng };
+      const result = await perform(
+        () => API.updateStop(stop.id, state.round.revision, changes),
+        '지도 중앙 위치로 마커를 저장했습니다.');
+      if (result) leaveCenterMode();
+      return;
+    }
+    const matched = state.searchMatch;
+    const address = matched && map.constructor.distance(coords, matched) <= 12
+      ? matched.address : '';
+    leaveCenterMode();
+    hideAddressResults();
+    openEditorFromMap(coords, address);
   }
   function changeView(view) {
-    if (view !== 'map') closeMapInfo();
-    if (view !== 'map' && (map.adding || map.editing)) {
-      map.setAdd(false);
-      map.setEdit(false);
-      updateMapAddUI();
+    if (view !== 'map') {
+      closeMapInfo();
+      cancelSearchRequests();
+      hideAddressResults();
+      if (map.editing) leaveCenterMode();
     }
     state.view = view;
     $('app').dataset.view = view;
