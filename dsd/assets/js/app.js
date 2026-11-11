@@ -248,15 +248,16 @@
       state.round && s.id === state.round.active_stop_id && s.status !== 'done');
     if (!stop || state.view !== 'map') { strip.classList.add('hidden'); return; }
     strip.classList.remove('hidden'); strip.replaceChildren();
-    strip.append(el('strong','',stop.position + '번 목적지 · ' + (stop.company || stop.address || '배송지')));
+    const destinationName = (stop.company || '').trim() || '배송지';
+    const destinationAddress = (stop.address || '').trim();
+    strip.append(el('strong','',stop.position + '번 목적지 · ' + destinationName +
+      (destinationAddress ? ' · ' + destinationAddress : '')));
     if (state.drivingRoute && state.drivingFor === stop.id) {
       const meters = state.drivingRoute.meters;
       const seconds = state.drivingRoute.seconds;
       const distance = meters < 1000 ? meters + ' m' : (meters/1000).toFixed(2) + ' km';
       const duration = Number.isFinite(seconds) ? ' · 예상 ' + Math.ceil(seconds/60) + '분' : '';
       strip.append(el('span','target-distance','자동차 도로 ' + distance + duration));
-      strip.append(el('span','target-route-note',
-        '네이버에서 제공된 후보 경로 중 주행거리가 짧은 경로 · 최단거리 보장 아님'));
     } else if (state.routeLoading) {
       strip.append(el('span','','자동차 도로 경로 계산 중...'));
     } else if (state.routeError) {
