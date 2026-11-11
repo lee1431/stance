@@ -6,6 +6,7 @@
       this.map = null;
       this.markers = new Map();
       this.draftMarker = null;
+      this.inspectMarker = null;
       this.gpsMarker = null;
       this.pathLine = null;
       this.current = null;
@@ -23,6 +24,7 @@
       this.onMove = null;
       this.onAdd = null;
       this.onDraft = null;
+      this.onInspect = null;
       this.onGPS = null;
     }
     load(clientId) {
@@ -60,6 +62,14 @@
           this.draftMarker.setPosition(event.coord);
         }
       });
+      const inspectPoint = event => {
+        if (!event || !event.coord || !this.onInspect) return;
+        this.onInspect({ lat: event.coord.lat(), lng: event.coord.lng() });
+      };
+      // NAVER Maps supports longtap (a one-finger press of 1s or longer).
+      n.Event.addListener(this.map, 'longtap', inspectPoint);
+      // Desktop alternative for a mouse or trackpad.
+      n.Event.addListener(this.map, 'rightclick', inspectPoint);
       n.Event.addListener(this.map, 'dragstart', () => { if (this.tracking) this.pausedUntil = Date.now() + 30000; });
       n.Event.addListener(this.map, 'zoom_changed', () => {
         if (this.tracking && Date.now() - this.lastProgrammatic > 700) this.pausedUntil = Date.now() + 30000;
@@ -137,6 +147,22 @@
       return position ? { lat: position.lat(), lng: position.lng() } : null;
     }
     setAdd(flag) { this.adding = !!flag; }
+    showInspectMarker(coords) {
+      if (!this.map || !coords) return;
+      const n = root.naver.maps;
+      const point = new n.LatLng(coords.lat, coords.lng);
+      if (this.inspectMarker) { this.inspectMarker.setPosition(point); return; }
+      this.inspectMarker = new n.Marker({
+        map: this.map, position: point, clickable: false, zIndex: 950,
+        title: '길게 누른 지도 위치',
+        icon: { content: '<div class="inspect-pin">●</div>',
+          size: new n.Size(26, 34), anchor: new n.Point(13, 32) }
+      });
+    }
+    clearInspectMarker() {
+      if (this.inspectMarker) this.inspectMarker.setMap(null);
+      this.inspectMarker = null;
+    }
     centerOn(stop, zoom = 16) {
       if (!this.map || !stop) return;
       const lat = stop.parking_lat == null ? stop.lat : stop.parking_lat;
@@ -165,6 +191,42 @@
           if (!found) { reject(Error('검색되는 주소가 없습니다. 지도에서 직접 위치를 지정하세요.')); return; }
           resolve({ lat: Number(found.y), lng: Number(found.x) });
         });
+      });
+    }
+    reverseGeocode(coords) {
+      return new Promise((resolve, reject) => {
+        const n = root.naver && root.naver.maps;
+        if (!n || !n.Service || typeof n.Service.reverseGeocode !== 'function') {
+          reject(Error('네이버 지도 역지오코딩 서비스를 사용할 수 없습니다.'));
+          return;
+        }
+        if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) {
+          reject(Error('유효하지 않은 좌표입니다.'));
+          return;
+        }
+        let settled = false;
+        const finish = (error, result) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          if (error) reject(error); else resolve(result);
+        };
+        const timer = setTimeout(() => finish(Error('주소 조회 시간이 초과되었습니다.')), 10000);
+        try {
+          n.Service.reverseGeocode({
+            coords: new n.LatLng(coords.lat, coords.lng),
+            orders: 'roadaddr,addr'
+          }, (status, response) => {
+            if (status !== n.Service.Status.OK) {
+              finish(Error('네이버 주소 조회에 실패했습니다. API 권한을 확인하세요.'));
+              return;
+            }
+            const found = response && response.v2 && response.v2.address;
+            const road = found && typeof found.roadAddress === 'string' ? found.roadAddress.trim() : '';
+            const jibun = found && typeof found.jibunAddress === 'string' ? found.jibunAddress.trim() : '';
+            finish(null, { road, jibun });
+          });
+        } catch (error) { finish(error); }
       });
     }
     gpsToggle() {
