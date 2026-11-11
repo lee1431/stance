@@ -552,6 +552,7 @@
   async function start(id) {
     const result = await perform(() => API.updateStop(id,state.round.revision,null,'start'),'목적지를 지정했습니다.');
     if (!result) return;
+    clearDrivingState();
     state.selected = id;
     changeView('map');
     const stop = state.stops.find(s => s.id === id);
@@ -559,12 +560,32 @@
     if (!map.tracking) {
       try { map.gpsToggle(); } catch (error) { toast(error.message); }
     } else map.resumeFollow();
-    if (map.tracking) map.showTargetOverview();
+    if (map.tracking) {
+      map.showTargetOverview();
+      refreshDrivingRoute(true);
+    }
     render();
   }
-  function action(id,code) {
-    perform(() => API.updateStop(id,state.round.revision,null,code),
+  async function action(id,code) {
+    const result = await perform(() => API.updateStop(id,state.round.revision,null,code),
       code === 'done' ? '배송 완료! 다음 목적지를 확인하세요.' : '배송 상태를 저장했습니다.');
+    if (!result) return;
+    if (code === 'done' || code === 'failed' || code === 'return') {
+      // Flask automatically advances active_stop_id to the next pending stop.
+      state.selected = result.round.active_stop_id || null;
+      render();
+      const next = state.stops.find(item => item.id === state.selected);
+      if (next) {
+        changeView('map');
+        map.centerOn(next,16);
+        if (map.tracking) {
+          map.showTargetOverview();
+          refreshDrivingRoute(true);
+        }
+      } else if (code === 'done') {
+        toast('현재 회차에 남은 목적지가 없습니다.',4500);
+      }
+    }
   }
   function openNavigation(stop) {
     const lat=stop.parking_lat == null ? stop.lat : stop.parking_lat;
