@@ -230,10 +230,23 @@
     strip.append(el('strong','',stop.position + '번 목적지 · ' + (stop.company || '배송지')));
     const lat = stop.parking_lat == null ? stop.lat : stop.parking_lat;
     const lng = stop.parking_lng == null ? stop.lng : stop.parking_lng;
-    const distance = map.lastGps && Number.isFinite(lat) && Number.isFinite(lng) ? map.constructor.distance(map.lastGps,{lat,lng}) : null;
-    const info = distance === null ? 'GPS 추적을 켜면 거리를 표시합니다.' :
-      (distance < 1000 ? distance + ' m' : (distance / 1000).toFixed(1) + ' km') + ' · 직선거리';
-    strip.append(el('span','',info));
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      strip.append(el('span','', '목적지 좌표가 없습니다. 배송지 위치를 지정하세요.'));
+      return;
+    }
+    const distance = map.lastGps ? map.constructor.distance(map.lastGps,{lat,lng}) : null;
+    if (distance === null) {
+      strip.append(el('span','',map.tracking
+        ? '현재 GPS 위치 확인 중 · 위치 권한을 허용하세요.'
+        : 'GPS 추적을 켜야 거리를 표시할 수 있습니다.'));
+    } else {
+      const display = distance < 1000 ? distance + ' m' : (distance / 1000).toFixed(2) + ' km';
+      strip.append(el('span','target-distance','현재 위치 → 목적지 · 직선 ' + display));
+      strip.append(el('span','target-accuracy','GPS 정확도 약 ±' +
+        Math.round(map.lastGps.accuracy || 0) + ' m'));
+      strip.append(el('span','target-route-note',
+        '주황색 점선은 직선 안내선입니다. 실제 도로 경로·주행거리가 아닙니다.'));
+    }
   }
   function selectStop(id) {
     closeMapInfo();
