@@ -750,7 +750,6 @@
     $('lookupAddressBtn').addEventListener('click',geocodeEditor);
     $('listImportBtn').addEventListener('click',() => $('excelFile').click());
     $('excelFile').addEventListener('change',e => importExcel(e.target.files[0]));
-    $('listRecommendBtn').addEventListener('click',roadRecommend);
     $('listGeocodeBtn').addEventListener('click',autoGeocodeAll);
     document.querySelectorAll('.filter').forEach(button => button.addEventListener('click',() => {
       state.filter=button.dataset.filter;
