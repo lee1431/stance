@@ -7,7 +7,7 @@
   <meta name="description" content="DSD - 간단하고 빠른 배송 실행 관리">
   <title>DSD | 배송 실행 관리</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="assets/css/app.css?v=topsearch-20261111">
+  <link rel="stylesheet" href="assets/css/app.css?v=list-layout-20261112">
 </head>
 <body>
   <!-- Inline SVG symbol library; no icon CDN required. -->
@@ -86,15 +86,14 @@
     </section>
 
     <section id="listView" class="page list-page hidden" aria-label="목록 페이지">
-      <div class="list-heading">
-        <div><h2>배송 목록</h2><span id="dateCaption">오늘</span></div>
-        <button id="addListStopBtn" class="primary compact"><svg><use href="#ico-plus"/></svg> 배송지</button>
+      <div class="round-row">
+        <div id="roundTabs" class="round-tabs"></div>
+        <button id="newRoundBtn" class="round-plus" type="button" aria-label="새 회차 추가"><svg><use href="#ico-plus"/></svg></button>
       </div>
-      <div class="round-row"><div id="roundTabs" class="round-tabs"></div><button id="newRoundBtn" class="round-plus" aria-label="새 회차 추가"><svg><use href="#ico-plus"/></svg></button></div>
+      <div class="list-date"><span id="dateCaption">오늘</span></div>
       <div id="summary" class="summary"></div>
       <div class="list-actions">
         <button id="listImportBtn" class="secondary compact"><svg><use href="#ico-upload"/></svg> 엑셀</button>
-        <button id="listRecommendBtn" class="secondary compact"><svg><use href="#ico-route"/></svg> 도로 추천</button>
         <button id="listGeocodeBtn" class="secondary compact">좌표 찾기</button>
       </div>
       <div class="filters" role="group" aria-label="배송 상태 필터">
@@ -104,6 +103,7 @@
       </div>
       <div id="stopList" class="stop-list" aria-live="polite"></div>
       <p class="list-footnote">순서는 ↕ 버튼이나 끌어서 변경할 수 있습니다. <strong>출발</strong>을 누르면 지도로 전환됩니다.</p>
+      <button id="addListStopBtn" class="list-add-fab primary" type="button" aria-label="배송지 추가"><svg><use href="#ico-plus"/></svg> 배송지</button>
     </section>
 
     <nav id="modeNav" class="mode-nav" aria-label="페이지 전환">
@@ -157,6 +157,6 @@
   <script src="assets/js/api.js?v=driving-20261111" defer></script>
   <script src="assets/js/map.js?v=driving-20261111" defer></script>
   <script src="assets/js/legacy.js" defer></script>
-  <script src="assets/js/app.js?v=topsearch-20261111" defer></script>
+  <script src="assets/js/app.js?v=list-layout-20261112" defer></script>
 </body>
 </html>
