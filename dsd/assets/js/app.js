@@ -799,7 +799,9 @@
     $('authForm').addEventListener('submit',async event => {
       event.preventDefault(); $('loginSubmit').disabled=true;
       try {
-        const response=await API.enter($('clientId').value.trim(),$('phone').value.trim(),$('password').value);
+        const phone = $('phone').value.replace(/[^0-9]/g, '');
+        if (phone.length < 10 || phone.length > 11) throw new Error('휴대전화 번호를 10~11자리 숫자로 입력하세요.');
+        const response=await API.enter($('clientId').value.trim(),phone,$('password').value);
         // Verify the token on a second independent API request.
         const verified = await API.me().catch(() => {
           throw new Error('로그인 토큰 검증 실패: 서버 버전과 프론트 인증 방식이 일치하는지 확인하세요.');
