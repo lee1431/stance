@@ -10,7 +10,7 @@
     geocoding: false, mapLoaded: false, mapError: null, inspected: null,
     editTarget: null, searchMatch: null,
     drivingRoute: null, drivingFor: null, routeError: '', routeLoading: false,
-    routeFrom: null, routeCheckedAt: 0, routeGeneration: 0
+    routeFrom: null, routeCheckedAt: 0, routeGeneration: 0, routeNotice: ''
   };
   let homeDraft = null;
   const homeKey = () => 'dsd:home-map:v1:' + encodeURIComponent((state.user && state.user.client_id) || '');
@@ -302,6 +302,7 @@
       const distance = meters < 1000 ? meters + ' m' : (meters/1000).toFixed(2) + ' km';
       const duration = Number.isFinite(seconds) ? ' · 예상 ' + Math.ceil(seconds/60) + '분' : '';
       strip.append(el('span','target-distance','자동차 도로 ' + distance + duration));
+      if (state.routeNotice) strip.append(el('span','target-route-error',state.routeNotice));
     } else if (state.routeLoading) {
       strip.append(el('span','','자동차 도로 경로 계산 중...'));
     } else if (state.routeError) {
@@ -318,6 +319,7 @@
     state.drivingFor = null;
     state.routeFrom = null;
     state.routeCheckedAt = 0;
+    state.routeNotice = '';
     state.routeLoading = false;
     state.routeError = '';
     map.clearDrivingRoute();
@@ -331,7 +333,7 @@
     if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng)) return;
     const elapsed = Date.now() - state.routeCheckedAt;
     if (!force && state.drivingFor === stopId && state.routeFrom &&
-        (elapsed < 60000 || map.constructor.distance(point,state.routeFrom) < 250)) return;
+        (elapsed < 60000 && map.constructor.distance(point,state.routeFrom) < 40)) return;
     if (!force && state.routeError && elapsed < 60000) return;
     state.routeLoading = true;
     state.routeError = '';
@@ -342,16 +344,46 @@
       const result = await API.drivingRoute(stopId,point);
       if (requestId !== state.routeGeneration ||
           !state.round || state.round.active_stop_id !== stopId || !map.tracking) return;
+      const path = Array.isArray(result?.path) ? result.path : [];
+      const destination = {
+        lat: stop.parking_lat == null ? stop.lat : stop.parking_lat,
+        lng: stop.parking_lng == null ? stop.lng : stop.parking_lng
+      };
+      if (path.length < 2 || !Number.isFinite(destination.lat) || !Number.isFinite(destination.lng)) {
+        throw Error('출발점 또는 목적지의 도로 좌표가 올바르지 않습니다.');
+      }
+      const first = path[0], last = path[path.length - 1];
+      if (![first?.lat, first?.lng, last?.lat, last?.lng].every(Number.isFinite)) {
+        throw Error('도로 경로의 시작점과 종료점 좌표가 올바르지 않습니다.');
+      }
+      const distance = map.constructor.distance;
+      const fromGap = distance(point, first);
+      const toGap = distance(destination, last);
+      const reversedGap = distance(point, last) + distance(destination, first);
+      if (reversedGap + 80 < fromGap + toGap &&
+          reversedGap < (fromGap + toGap) * 0.6) {
+        throw Error('도로 경로가 목적지에서 현재 위치 방향으로 계산되었습니다. 서버 출발지/도착지 순서를 확인하세요.');
+      }
+      const notices = [];
+      if (fromGap > 80) notices.push('GPS와 도로 출발점이 ' + fromGap + 'm 떨어져 있습니다.');
+      if (toGap > 100) notices.push('목적지와 도로 도착점이 ' + toGap + 'm 떨어져 있습니다.');
+      const directMeters = distance(point, destination);
+      if (directMeters > 100 && Number.isFinite(result.meters) &&
+          result.meters > directMeters * 2.5) {
+        notices.push('우회가 큽니다. 일방통행·진입 도로를 확인하세요.');
+      }
       map.setDrivingRoute(result,stopId);
       state.drivingRoute = result;
       state.drivingFor = stopId;
       state.routeFrom = point;
+      state.routeNotice = notices.join(' ');
       state.routeError = '';
     } catch (error) {
       if (requestId !== state.routeGeneration) return;
       map.clearDrivingRoute();
       state.drivingRoute = null;
       state.drivingFor = null;
+      state.routeNotice = '';
       state.routeError = error.status === 404
         ? '도로 경로 API가 서버에 설치되지 않았습니다. Termux 서버 패치를 적용하세요.'
         : error.message || '도로 경로 조회에 실패했습니다.';
