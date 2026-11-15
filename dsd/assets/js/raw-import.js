@@ -90,16 +90,16 @@ function render(){
  acts.append(bt('추천 라벨 적용',()=>{for(const c of sh.columns||[]){if(c.confidence>=.8&&c.suggested_label!=='unclassified'&&!c.reviewed){const s=root.querySelector('select[data-col="'+c.column_index+'"]');if(s)s.value=c.suggested_label;}}}));
  const saver=bt('라벨 저장',()=>run(save));saver.className='primary';acts.append(saver);root.append(acts);
  const wrap=el('div');wrap.className='wrap';const table=el('table');const thead=el('thead'),h=el('tr');
- ['열','원본 컬럼명','데이터 예시','추천 라벨','최종 라벨'].forEach(t=>h.append(el('th',t)));thead.append(h);table.append(thead);
+ ['열','원본 컬럼명','데이터 예시','추천 라벨','최종 라벨','판단 근거'].forEach(t=>h.append(el('th',t)));thead.append(h);table.append(thead);
  const body=el('tbody');
  for(const col of sh.columns||[]){
   const tr=el('tr');
   tr.append(el('td',col.column_index+1),el('td',col.header_text||'(빈 제목)'));
   const ex=el('td',(col.examples||[]).join(' / '));ex.className='sample';tr.append(ex);
-  tr.append(el('td',(LABELS[col.suggested_label]||'미분류')+(col.confidence?' ('+Math.round(100*col.confidence)+'%)':'')));
+  tr.append(el('td',(LABELS[col.suggested_label]||'미분류')+(col.confidence?' · 판단점수 '+Math.round(100*col.confidence)+'/100':'')));
   const s=el('select');s.className='labelpick';s.dataset.col=col.column_index;
   for(const [key,label] of Object.entries(LABELS)){const o=el('option',label);o.value=key;s.append(o);}
-  s.value=col.reviewed?col.assigned_label:'unclassified';const td=el('td');td.append(s);tr.append(td);body.append(tr);
+  s.value=col.reviewed?col.assigned_label:'unclassified';const td=el('td');td.append(s);tr.append(td);const why=el('td',col.basis||'판단 근거 없음');why.style.maxWidth='350px';tr.append(why);body.append(tr);
  }
  table.append(body);wrap.append(table);root.append(wrap);
  const preview=el('div');preview.className='bar';preview.append(el('strong','원본 데이터 미리보기'));
