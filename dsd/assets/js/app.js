@@ -766,6 +766,37 @@
     $('drawer').classList.toggle('hidden',!open);
     $('drawerScrim').classList.toggle('hidden',!open);
   }
+  // Map and list share one scan-to-current-round operation.
+  async function scanWaybill(barcode, onStored) {
+    if (!state.user || !state.round) throw Error('로그인 후 회차를 선택하세요.');
+    if (state.busy) throw Error('다른 저장 작업 중입니다. 다시 스캔하세요.');
+    state.busy = true;
+    const currentRound = state.round.id;
+    try {
+      const response = await API.request('rounds/' + encodeURIComponent(currentRound) + '/scan', {
+        method: 'POST', body: {barcode, expected_revision:state.round.revision}
+      });
+      applyState(response);
+      const scanned = response.scan;
+      if (typeof onStored === 'function') onStored(scanned);
+      // Store first; coordinate lookup is best-effort and never rolls back a scan.
+      if (!scanned.already_added && map.isAvailable() && scanned.geocode_address) {
+        try {
+          const coords = await map.geocode(scanned.geocode_address);
+          if (state.round?.id === currentRound) {
+            const stop = state.stops.find(item => item.id === scanned.stop_id);
+            if (stop && stop.lat === null && stop.lng === null) {
+              const updated = await API.updateStop(stop.id,state.round.revision,coords);
+              applyState(updated);
+            }
+          }
+        } catch (_) { /* Coordinate lookup may be retried with '좌표 찾기'. */ }
+      }
+      return scanned;
+    } finally { state.busy = false; }
+  }
+  window.DSD_SCAN_WAYBILL = scanWaybill;
+
   function importExcel() {
     if (!window.DSDRawImports) { toast('원본 엑셀 업로드 화면을 불러오지 못했습니다. 새로고침하세요.', 6000); return; }
     window.DSDRawImports.open($('workDate').value).catch(error => toast(error.message,6000));
