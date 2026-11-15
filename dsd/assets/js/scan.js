@@ -46,7 +46,7 @@
    waybill:'운송장번호',recipient_name:'받는 분',recipient_phone:'수취인 연락처',
    recipient_address:'받는 분 주소',recipient_detail:'상세주소',
    sender_name:'보내는 분',sender_phone:'발송인 연락처',sender_address:'발송인 주소',
-   item_name:'상품명',quantity:'수량',payment_type:'결제구분',cod_amount:'착불금액',
+   item_name:'상품명',quantity:'수량',freight_amount:'운임 금액',freight_payment_type:'운임 결제 구분',payment_type:'결제구분 (기존)',cod_amount:'착불금액 (기존)',
    company:'업체명',memo:'배송 요청사항'
  };
  function scanRow(label,value){
@@ -71,7 +71,15 @@
    const fields=receipt.fields||{};
    for(const [key,label] of Object.entries(SCAN_FIELD_LABELS)){
      const value=fields[key];
+     if(['freight_amount','freight_payment_type','cod_amount','payment_type'].includes(key))continue;
      if(value!==undefined && String(value).trim())target.append(scanRow(label,value));
+   }
+   const fareAmount=fields.freight_amount ?? fields.cod_amount;
+   const farePayment=fields.freight_payment_type ?? fields.payment_type;
+   if((fareAmount!==undefined && String(fareAmount).trim()) || (farePayment!==undefined && String(farePayment).trim())){
+     const heading=document.createElement('h4');heading.textContent='운임';target.append(heading);
+     if(fareAmount!==undefined && String(fareAmount).trim())target.append(scanRow('금액',fareAmount));
+     if(farePayment!==undefined && String(farePayment).trim())target.append(scanRow('결제 구분',farePayment));
    }
    const extra=Array.isArray(receipt.unclassified)?receipt.unclassified:[];
    if(extra.length){
