@@ -766,12 +766,9 @@
     $('drawer').classList.toggle('hidden',!open);
     $('drawerScrim').classList.toggle('hidden',!open);
   }
-  async function importExcel(file) {
-    if (!file || !state.round) return;
-    if (!confirm('현재 '+state.round.round_no+'회차에 '+file.name+'을(를) 가져올까요?\n원본 파일도 DSD 서버에 보관됩니다.')) return;
-    const result = await perform(() => API.importSheet(state.round.id,state.round.revision,file));
-    if (result) toast(result.imported+'건 추가 · '+result.skipped+'건 제외. 좌표 찾기를 실행하세요.',6000);
-    $('excelFile').value='';
+  function importExcel() {
+    if (!window.DSDRawImports) { toast('원본 엑셀 업로드 화면을 불러오지 못했습니다. 새로고침하세요.', 6000); return; }
+    window.DSDRawImports.open($('workDate').value).catch(error => toast(error.message,6000));
   }
   async function roadRecommend() {
     if (!state.round) return;
@@ -877,8 +874,7 @@
     $('cancelStop2').addEventListener('click',() => $('stopDialog').close());
     $('stopForm').addEventListener('submit',saveEditor);
     $('lookupAddressBtn').addEventListener('click',geocodeEditor);
-    $('listImportBtn').addEventListener('click',() => $('excelFile').click());
-    $('excelFile').addEventListener('change',e => importExcel(e.target.files[0]));
+    $('listImportBtn').addEventListener('click',importExcel);
     $('listGeocodeBtn').addEventListener('click',autoGeocodeAll);
     document.querySelectorAll('.filter').forEach(button => button.addEventListener('click',() => {
       state.filter=button.dataset.filter;
