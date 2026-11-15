@@ -15,17 +15,81 @@
  '.dsd-scan-dialog button{padding:9px 12px;border:1px solid #9aabba;border-radius:7px;cursor:pointer}.dsd-scan-dialog form button{background:#18675d;color:white}',
  '.dsd-scan-dialog video{width:100%;max-height:36vh;margin-top:10px}.dsd-scan-dialog video[hidden]{display:none}',
  '.dsd-scan-msg.error{color:#aa3333}.dsd-scan-map-button{font-size:15px;font-weight:700}',
+ '.dsd-scan-dialog{width:min(540px,96vw);max-height:88vh;overflow:auto}',
+ '.dsd-scan-pop.pending small{color:#ffdf9e}',
+ '.dsd-scan-slip{margin-top:13px;border-top:1px solid #c5d0db;padding-top:12px;font-size:13px;color:#233548}',
+ '.dsd-scan-slip h3{margin:0 0 9px;font-size:15px}.dsd-scan-slip h4{font-size:12px;margin:14px 0 6px}',
+ '.dsd-scan-slip .scan-row{display:grid;grid-template-columns:130px minmax(0,1fr);gap:8px;padding:7px 0;border-bottom:1px solid #e3e9ee}',
+ '.dsd-scan-slip .scan-key{color:#586979}.dsd-scan-slip .scan-value{font-weight:600;overflow-wrap:anywhere;white-space:pre-wrap}',
+ '.dsd-scan-slip .scan-raw{background:#f0f4f7;padding:6px 10px;border-radius:8px}',
+ '.dsd-scan-slip .scan-pending{padding:9px;background:#fff4df;color:#895c14;border-radius:8px;font-size:12px;margin:8px 0}',
+ '.dsd-scan-slip .scan-source{color:#607080;font-size:11px;margin:6px 0;overflow-wrap:anywhere}',
+ '@media(max-width:480px){.dsd-scan-slip .scan-row{grid-template-columns:104px minmax(0,1fr)}}',
  '@media(prefers-reduced-motion:reduce){.dsd-scan-pop.on{animation:none;opacity:1;transform:translate(-50%,0)}}'
  ].join('\n');
  document.head.append(css);
  let dialog,input,msg,video,cameraBtn,stream=null,frame=0,detecting=false;
  const queue=[];let busy=false,last='',lastAt=0,toastTimer=0;
- function notice(address,already){
+
+ function notice(receipt){
    const pop=$('dsdScanReceipt');
-   $('dsdScanReceiptAddress').textContent=address||'주소 확인 필요';
-   $('dsdScanReceiptText').textContent=already?'이미 추가된 배송지입니다':'배송지가 추가되었습니다';
+   const pending=!!receipt.pending_reason;
+   pop.classList.toggle('pending',pending);
+   $('dsdScanReceiptAddress').textContent=receipt.address||'받는 분 주소 확인 필요';
+   $('dsdScanReceiptText').textContent=pending?'원본 조회 완료 · 배송지 등록 대기'
+      :receipt.already_added?'이미 등록된 배송지입니다'
+      :receipt.added?'배송지가 추가되었습니다':'운송장 원본을 찾았습니다';
    pop.classList.remove('on');void pop.offsetWidth;pop.classList.add('on');
    clearTimeout(toastTimer);toastTimer=setTimeout(()=>pop.classList.remove('on'),2800);
+ }
+ const SCAN_FIELD_LABELS={
+   waybill:'운송장번호',recipient_name:'받는 분',recipient_phone:'수취인 연락처',
+   recipient_address:'받는 분 주소',recipient_detail:'상세주소',
+   sender_name:'보내는 분',sender_phone:'발송인 연락처',sender_address:'발송인 주소',
+   item_name:'상품명',quantity:'수량',payment_type:'결제구분',cod_amount:'착불금액',
+   company:'업체명',memo:'배송 요청사항'
+ };
+ function scanRow(label,value){
+   const row=document.createElement('div');row.className='scan-row';
+   const name=document.createElement('span');name.className='scan-key';name.textContent=label;
+   const val=document.createElement('span');val.className='scan-value';val.textContent=String(value??'');
+   row.append(name,val);return row;
+ }
+ function renderSlip(receipt){
+   const target=$('dsdScanSlip');
+   target.replaceChildren();target.hidden=false;
+   const title=document.createElement('h3');title.textContent='운송장 상세정보';target.append(title);
+   if(receipt.pending_reason){
+     const warning=document.createElement('p');warning.className='scan-pending';
+     warning.textContent=receipt.pending_reason;target.append(warning);
+   }
+   if(receipt.source){
+     const source=document.createElement('p');source.className='scan-source';
+     source.textContent=receipt.source.filename+' · '+receipt.source.sheet+' · '+receipt.source.row_no+'행';
+     target.append(source);
+   }
+   const fields=receipt.fields||{};
+   for(const [key,label] of Object.entries(SCAN_FIELD_LABELS)){
+     const value=fields[key];
+     if(value!==undefined && String(value).trim())target.append(scanRow(label,value));
+   }
+   const extra=Array.isArray(receipt.unclassified)?receipt.unclassified:[];
+   if(extra.length){
+     const head=document.createElement('h4');head.textContent='추가 원본 데이터 · 미분류 '+extra.length+'개';
+     target.append(head);
+     const content=document.createElement('div');content.className='scan-raw';
+     for(const item of extra){
+       if(item && item.value!==undefined)content.append(scanRow(item.header||('열 '+(item.column_index+1)),item.value));
+     }
+     target.append(content);
+   }
+   if(Array.isArray(receipt.warnings)&&receipt.warnings.length){
+     const heading=document.createElement('h4');heading.textContent='확인이 필요한 항목';
+     target.append(heading);
+     for(const warning of receipt.warnings){
+       const p=document.createElement('p');p.className='scan-pending';p.textContent=warning;target.append(p);
+     }
+   }
  }
  function status(text,error){msg.textContent=text;msg.classList.toggle('error',!!error);}
  async function consume(){
@@ -35,8 +99,9 @@
      try{
        if(typeof window.DSD_SCAN_WAYBILL!=='function')throw Error('DSD 배송 화면이 준비되지 않았습니다.');
        await window.DSD_SCAN_WAYBILL(code,receipt=>{
-         notice(receipt.address,receipt.already_added);
-         status(receipt.already_added?'이미 등록된 운송장입니다.':'추가 완료. 다음 운송장을 스캔하세요.',false);
+         renderSlip(receipt);
+         notice(receipt);
+         status(receipt.pending_reason || (receipt.already_added?'이미 등록된 운송장입니다.':receipt.added?'추가 완료 · 다음 운송장을 스캔하세요.':'운송장 원본 조회 완료.'),!!receipt.pending_reason);
        });
      }catch(e){status(e.message||'등록하지 못했습니다.',true);}
      if(dialog.open)input.focus({preventScroll:true});
@@ -47,7 +112,7 @@
    const v=String(raw||'').trim();
    if(!v)return;
    const now=Date.now();
-   if(v===last&&now-lastAt<1700)return;
+   if(v===last&&now-lastAt<4500)return;
    last=v;lastAt=now;queue.push(v);consume();
  }
  function stopCamera(){
@@ -87,14 +152,14 @@
    dialog.innerHTML='<div class="dsd-scan-head"><h2>운송장 스캔</h2><button id="dsdScanClose" type="button" aria-label="닫기">✕</button></div>'
     +'<p>현재 회차에 등록합니다. 바코드 리더기로 읽거나 번호를 입력하세요.</p>'
     +'<form id="dsdScanForm"><input id="dsdScanCode" autocomplete="off" spellcheck="false" placeholder="바코드 스캔 또는 번호 입력" aria-label="운송장번호" /><button type="submit">추가</button></form>'
-    +'<button id="dsdScanCam" type="button">카메라 스캔</button><video id="dsdScanVideo" playsinline muted hidden></video><p id="dsdScanMessage" class="dsd-scan-msg" aria-live="polite"></p>';
+    +'<button id="dsdScanCam" type="button">카메라 스캔</button><video id="dsdScanVideo" playsinline muted hidden></video><p id="dsdScanMessage" class="dsd-scan-msg" aria-live="polite"></p><section id="dsdScanSlip" class="dsd-scan-slip" hidden aria-label="운송장 상세정보"></section>';
    document.body.append(dialog);
    const pop=document.createElement('div');pop.id='dsdScanReceipt';pop.className='dsd-scan-pop';pop.setAttribute('role','status');
    pop.setAttribute('aria-live','polite');
    pop.innerHTML='<strong id="dsdScanReceiptAddress"></strong><small id="dsdScanReceiptText"></small>';
    document.body.append(pop);
    input=$('dsdScanCode');msg=$('dsdScanMessage');video=$('dsdScanVideo');cameraBtn=$('dsdScanCam');
-   function open(){if($('app')?.classList.contains('hidden'))return;if(!dialog.open)dialog.showModal();input.value='';status('스캔 준비 · Enter로 등록합니다.');input.focus({preventScroll:true});}
+   function open(){if($('app')?.classList.contains('hidden'))return;if(!dialog.open)dialog.showModal();input.value='';$('dsdScanSlip').replaceChildren();$('dsdScanSlip').hidden=true;status('스캔 준비 · Enter로 등록합니다.');input.focus({preventScroll:true});}
    $('mapScanBtn')?.addEventListener('click',open);
    $('listScanBtn')?.addEventListener('click',open);
    $('dsdScanClose').addEventListener('click',()=>dialog.close());
