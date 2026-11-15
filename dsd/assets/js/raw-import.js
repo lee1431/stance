@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const API=window.DSD_API;
-const LABELS={unclassified:'미분류',waybill:'운송장번호',recipient_name:'받는 분 이름',recipient_phone:'받는 분 연락처',recipient_address:'받는 분 주소',recipient_detail:'받는 분 상세주소',sender_name:'보내는 분 이름',sender_phone:'보내는 분 연락처',sender_address:'보내는 분 주소',company:'업체명',item_name:'품명',quantity:'수량',cod_amount:'착불금액',payment_type:'운임 결제 구분',memo:'배송메모',other:'기타'};
+const LABELS={unclassified:'미분류',waybill:'운송장번호',recipient_name:'받는 분 이름',recipient_phone:'받는 분 연락처',recipient_address:'받는 분 주소',recipient_detail:'받는 분 상세주소',sender_name:'보내는 분 이름',sender_phone:'보내는 분 연락처',sender_address:'보내는 분 주소',company:'업체명',item_name:'품명',quantity:'수량',freight_amount:'운임 금액',freight_payment_type:'운임 결제 구분 (선불/착불)',cod_amount:'착불금액 (기존)',payment_type:'결제구분 (기존)',memo:'배송메모',other:'기타'};
 const S={date:'',id:'',data:null,sheet:0,page:0,busy:false};
 const el=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text??'');return e;};
 const $=id=>document.getElementById(id);
@@ -98,7 +98,14 @@ function render(){
   const ex=el('td',(col.examples||[]).join(' / '));ex.className='sample';tr.append(ex);
   tr.append(el('td',(LABELS[col.suggested_label]||'미분류')+(col.confidence?' · 판단점수 '+Math.round(100*col.confidence)+'/100':'')));
   const s=el('select');s.className='labelpick';s.dataset.col=col.column_index;
-  for(const [key,label] of Object.entries(LABELS)){const o=el('option',label);o.value=key;s.append(o);}
+  let freightGroup=null;
+  for(const [key,label] of Object.entries(LABELS)){
+   const o=el('option',label);o.value=key;
+   if(key==='freight_amount'||key==='freight_payment_type'){
+    if(!freightGroup){freightGroup=el('optgroup');freightGroup.label='운임';s.append(freightGroup);}
+    freightGroup.append(o);
+   }else{s.append(o);}
+  }
   s.value=col.reviewed?col.assigned_label:'unclassified';const td=el('td');td.append(s);tr.append(td);const why=el('td',col.basis||'판단 근거 없음');why.style.maxWidth='350px';tr.append(why);body.append(tr);
  }
  table.append(body);wrap.append(table);root.append(wrap);
