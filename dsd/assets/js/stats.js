@@ -55,7 +55,8 @@
         if (!result || !Array.isArray(result.stops)) throw new Error('회차 기록 형식이 올바르지 않습니다.');
         data[index] = {
           name: String(result.round?.round_no ?? rounds[index].round_no ?? (index + 1)) + '회차',
-          counts: bucket(result.stops)
+          counts: bucket(result.stops),
+          stops: result.stops
         };
       }
     }
@@ -66,6 +67,115 @@
     const td = document.createElement('td');
     td.textContent = String(value);
     tr.appendChild(td);
+  }
+  function statusLabel(value) {
+    const code = String(value || '').toLowerCase();
+    return ({ done:'완료', pending:'미완료', failed:'미배송', return:'반품' })[code] || '기타';
+  }
+  function deliveryText(stop, key, fallback = '') {
+    const value = stop && stop[key];
+    return value === null || value === undefined ? fallback : String(value).trim();
+  }
+  function renderDeliveryList(container, stops, roundName) {
+    container.replaceChildren();
+    const caption = document.createElement('div');
+    caption.className = 'round-details-title';
+    caption.textContent = roundName + ' 배송지 · ' + number(stops.length) + '건';
+    container.appendChild(caption);
+    if (!stops.length) {
+      const empty = document.createElement('div');
+      empty.className = 'delivery-none';
+      empty.textContent = '등록된 배송지가 없습니다.';
+      container.appendChild(empty);
+      return;
+    }
+    const list = document.createElement('div');
+    list.className = 'delivery-list';
+    const ordered = stops.map((stop, index) => ({ stop: stop || {}, index }))
+      .sort((a,b) => {
+        const pa = Number(a.stop.position), pb = Number(b.stop.position);
+        const na = Number.isFinite(pa) && pa > 0 ? pa : Number.MAX_SAFE_INTEGER;
+        const nb = Number.isFinite(pb) && pb > 0 ? pb : Number.MAX_SAFE_INTEGER;
+        return na - nb || a.index - b.index;
+      });
+    ordered.forEach(({stop, index}, orderIndex) => {
+      const article = document.createElement('article');
+      article.className = 'delivery-item';
+      const top = document.createElement('div');
+      top.className = 'delivery-top';
+      const name = document.createElement('div');
+      name.className = 'delivery-name';
+      const place = deliveryText(stop,'company') || deliveryText(stop,'recipient_name') ||
+        deliveryText(stop,'name') || '배송지';
+      name.textContent = (deliveryText(stop,'position') || String(orderIndex + 1)) + '번 · ' + place;
+      const badge = document.createElement('span');
+      const status = deliveryText(stop,'status').toLowerCase();
+      badge.className = 'delivery-badge ' + (['done','pending','failed','return'].includes(status) ? status : 'other');
+      badge.textContent = statusLabel(status);
+      top.append(name,badge);
+      const address = document.createElement('div');
+      address.className = 'delivery-address';
+      address.textContent = deliveryText(stop,'address') || deliveryText(stop,'recipient_address') || '주소 미등록';
+      article.append(top,address);
+      const waybill = deliveryText(stop,'waybill') || deliveryText(stop,'waybill_no') ||
+        deliveryText(stop,'tracking_number');
+      const memo = deliveryText(stop,'memo');
+      const metadata = [];
+      if (waybill) metadata.push('운송장 ' + waybill);
+      if (memo) metadata.push('메모 ' + memo);
+      if (metadata.length) {
+        const extra = document.createElement('div');
+        extra.className = 'delivery-sub';
+        for (const item of metadata) {
+          const label = document.createElement('span');
+          label.textContent = item;
+          extra.appendChild(label);
+        }
+        article.appendChild(extra);
+      }
+      list.appendChild(article);
+    });
+    container.appendChild(list);
+  }
+  function addExpandableRound(tbody, row, index) {
+    const tr = document.createElement('tr');
+    addCell(tr, row.name);
+    for (const key of ['total','done','pending','failed','returned']) addCell(tr, number(row.counts[key]));
+    addCell(tr, rate(row.counts.done + row.counts.failed + row.counts.returned, row.counts.total));
+
+    const buttonCell = document.createElement('td');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'round-expand';
+    button.textContent = '▼ 배송지 보기';
+    button.setAttribute('aria-expanded','false');
+    const panelId = 'round-deliveries-' + index;
+    button.setAttribute('aria-controls',panelId);
+    buttonCell.appendChild(button);
+    tr.appendChild(buttonCell);
+    tbody.appendChild(tr);
+
+    const detailsRow = document.createElement('tr');
+    detailsRow.hidden = true;
+    detailsRow.id = panelId;
+    const detailsCell = document.createElement('td');
+    detailsCell.colSpan = 8;
+    detailsCell.className = 'round-detail-cell';
+    const panel = document.createElement('div');
+    detailsCell.appendChild(panel);
+    detailsRow.appendChild(detailsCell);
+    tbody.appendChild(detailsRow);
+    let built = false;
+    button.addEventListener('click', () => {
+      const expanding = detailsRow.hidden;
+      if (expanding && !built) {
+        renderDeliveryList(panel, row.stops || [], row.name);
+        built = true;
+      }
+      detailsRow.hidden = !expanding;
+      button.setAttribute('aria-expanded',String(expanding));
+      button.textContent = expanding ? '▲ 접기' : '▼ 배송지 보기';
+    });
   }
   function drawBar(t) {
     const bar = $('progressBar');
@@ -86,13 +196,7 @@
     $('processRate').textContent = rate(total.done + total.failed + total.returned, total.total);
     drawBar(total);
     $('roundRows').replaceChildren();
-    for (const row of rounds) {
-      const tr = document.createElement('tr');
-      addCell(tr, row.name);
-      for (const key of ['total','done','pending','failed','returned']) addCell(tr, number(row.counts[key]));
-      addCell(tr, rate(row.counts.done + row.counts.failed + row.counts.returned, row.counts.total));
-      $('roundRows').appendChild(tr);
-    }
+    rounds.forEach((row,index) => addExpandableRound($('roundRows'),row,index));
     $('otherNotice').hidden = total.other === 0;
     $('otherNotice').textContent = total.other ? '분류되지 않은 상태 ' + number(total.other) + '건은 전체 건수에 포함되지만 완료·미완료·미배송·반품에는 포함되지 않습니다.' : '';
     $('report').hidden = false;
