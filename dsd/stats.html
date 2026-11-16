@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7faff">
+  <meta name="description" content="DSD 로그인 기사 계정의 일일 배송 통계 조회">
+  <title>DSD | 데일리 배송 통계</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <style>
+    :root{font-family:system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#1a314c;background:#f7faff;font-synthesis:none}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:#f7faff}
+    button,input{font:inherit}
+    button{cursor:pointer}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #89b6ff;outline-offset:3px}
+    .wrap{width:min(100% - 28px,880px);margin:auto}
+    .top{background:#fff;border-bottom:1px solid #e5ebf3}
+    .top-inner{min-height:62px;display:flex;align-items:center;gap:12px}
+    .back{color:#255d9c;text-decoration:none;font-size:13px;font-weight:800;white-space:nowrap}
+    .brand{font-size:18px;font-weight:950;letter-spacing:-.5px;color:#173f77}
+    .tag{font-size:11px;font-weight:750;color:#647992;margin-left:auto;text-align:right}
+    main{padding:28px 0 48px}
+    h1{font-size:27px;letter-spacing:-1px;margin:0 0 6px}
+    .lead{font-size:13px;color:#65778d;line-height:1.65;margin:0 0 23px}
+    .datebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid #e1e9f3;padding:11px;border-radius:16px}
+    .datebar button,.datebar input{min-height:42px;border:1px solid #dae5f1;border-radius:11px;background:#f5f9ff;color:#23538e;font-size:13px;font-weight:800;padding:9px 12px}
+    .datebar input{flex:1;min-width:150px;max-width:280px;background:#fff;color:#19314d}
+    .datebar button:hover{background:#e8f2ff}
+    .datebar .today{background:#1669e8;color:white;border-color:#1669e8}
+    .datebar .reload{margin-left:auto}
+    .status{margin:15px 1px;font-size:13px;color:#65778d;min-height:20px}
+    .status.error{color:#ad3434}
+    .grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+    .card{padding:17px 12px;border:1px solid #e3e9f2;border-radius:15px;background:#fff;min-height:110px}
+    .card b{font-size:12px;color:#65778d;font-weight:800}
+    .card strong{display:block;font-size:29px;letter-spacing:-1.1px;margin:12px 0 0;font-weight:900}
+    .card.done strong{color:#16804b}.card.failed strong{color:#ba5348}.card.pending strong{color:#2065c2}.card.return strong{color:#9f6325}
+    .section{margin-top:17px;background:white;padding:21px;border:1px solid #e3e9f2;border-radius:17px}
+    .section h2{font-size:16px;margin:0 0 16px;letter-spacing:-.35px}
+    .rate{display:flex;gap:24px;flex-wrap:wrap;margin:0 0 15px}
+    .rate div{display:flex;flex-direction:column;gap:3px}
+    .rate span{font-size:11px;color:#708095}
+    .rate strong{font-size:23px;font-weight:900}
+    .bar{height:14px;border-radius:50px;overflow:hidden;display:flex;background:#eef2f7}
+    .bar>span{display:block;height:100%}
+    .bar .done{background:#169760}.bar .failed{background:#ed8170}.bar .return{background:#e7ad59}.bar .pending{background:#80aaff}.bar .other{background:#9aa6b5}
+    .legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;color:#697c8e;font-size:11px}
+    .legend span:before{content:"";display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;background:var(--color)}
+    .muted{font-size:12px;color:#77869a;line-height:1.6}
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;min-width:550px}
+    th,td{padding:13px 10px;text-align:right;border-bottom:1px solid #edf1f5;font-size:13px;white-space:nowrap}
+    th{font-size:11px;font-weight:850;color:#6d7c91;background:#f8fafd}
+    th:first-child,td:first-child{text-align:left}
+    tbody tr:last-child td{border-bottom:0}
+    td:first-child{font-weight:850}
+    .empty{margin-top:16px;border:1px dashed #c9d9ec;background:#fff;padding:35px 15px;text-align:center;border-radius:16px;font-size:14px;color:#647a91}
+    .actions{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-top:17px}
+    .download{background:#ebf3ff;color:#225ca2;border:0;border-radius:11px;padding:12px 15px;font-size:12px;font-weight:800}
+    .download:hover{background:#dcecff}
+    .note{font-size:11px;color:#7a899b;line-height:1.75;max-width:625px}
+    [hidden]{display:none!important}
+    @media(max-width:700px){.grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.card{min-height:100px;padding:14px 11px}.card strong{font-size:25px}main{padding-top:23px}.section{padding:16px}.datebar .reload{margin-left:0}}
+    @media(max-width:420px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.datebar input{order:-1;max-width:none;width:100%;flex:1 0 100%}h1{font-size:24px}.tag{font-size:10px}}
+  </style>
+</head>
+<body>
+  <header class="top"><div class="wrap top-inner">
+    <a class="back" href="./" aria-label="DSD 배송 화면으로 돌아가기">← 배송 화면</a>
+    <span class="brand">DSD · 통계</span>
+    <span id="account" class="tag">계정 확인 중</span>
+  </div></header>
+  <main class="wrap">
+    <h1>데일리 배송 통계</h1>
+    <p class="lead">로그인한 기사 계정의 선택 날짜 전체 회차를 합산합니다. 원본 엑셀 전체 물량이 아닌, DSD 배송 목록에 등록된 건 기준입니다.</p>
+    <div class="datebar" role="group" aria-label="조회 날짜">
+      <button id="prevDate" type="button" aria-label="이전 날짜">◀ 이전</button>
+      <input id="statDate" type="date" aria-label="통계 조회 날짜" required>
+      <button id="nextDate" type="button" aria-label="다음 날짜">다음 ▶</button>
+      <button id="todayDate" class="today" type="button">오늘</button>
+      <button id="reload" class="reload" type="button">새로고침</button>
+    </div>
+    <div id="message" class="status" role="status" aria-live="polite">서버에서 배송 기록을 확인하고 있습니다.</div>
+    <div id="empty" class="empty" hidden>해당 날짜에 저장된 배송 회차가 없습니다.</div>
+    <div id="report" hidden>
+      <div class="grid" aria-label="일일 배송 현황">
+        <div class="card"><b>등록된 배송건</b><strong id="total">0</strong></div>
+        <div class="card done"><b>배송 완료</b><strong id="done">0</strong></div>
+        <div class="card pending"><b>미완료</b><strong id="pending">0</strong></div>
+        <div class="card failed"><b>미배송</b><strong id="failed">0</strong></div>
+        <div class="card return"><b>반품</b><strong id="returned">0</strong></div>
+      </div>
+      <section class="section">
+        <h2>당일 처리 현황</h2>
+        <div class="rate">
+          <div><span>배송 완료율 (완료 / 전체)</span><strong id="deliveryRate">0%</strong></div>
+          <div><span>업무 처리율 (완료 + 미배송 + 반품 / 전체)</span><strong id="processRate">0%</strong></div>
+        </div>
+        <div id="progressBar" class="bar" role="img" aria-label="배송 상태 비율"></div>
+        <div class="legend">
+          <span style="--color:#169760">완료</span><span style="--color:#ed8170">미배송</span>
+          <span style="--color:#e7ad59">반품</span><span style="--color:#80aaff">미완료</span>
+          <span style="--color:#9aa6b5">기타 상태</span>
+        </div>
+      </section>
+      <section class="section">
+        <h2>회차별 상세</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th scope="col">회차</th><th scope="col">전체</th><th scope="col">완료</th><th scope="col">미완료</th><th scope="col">미배송</th><th scope="col">반품</th><th scope="col">처리율</th></tr></thead>
+          <tbody id="roundRows"></tbody>
+        </table></div>
+        <p id="otherNotice" class="muted" hidden></p>
+      </section>
+      <div class="actions">
+        <p class="note">현재 서버에 남아 있는 배송 목록의 상태를 조회한 값입니다. 과거 배송 상태를 바꾸거나 건을 삭제하면 통계도 바뀝니다. 삭제 이력과 시간대별 실적은 별도 서버 이력 기능이 필요합니다.</p>
+        <button id="downloadCsv" class="download" type="button">일일 통계 CSV 저장</button>
+      </div>
+    </div>
+  </main>
+  <script src="assets/js/api.js?v=driving-20261111" defer></script>
+  <script src="assets/js/stats.js?v=daily-20261116" defer></script>
+</body>
+</html>
