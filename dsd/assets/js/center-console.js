@@ -179,6 +179,7 @@ async function init(){
 function bind(){
  $('ccCenter').addEventListener('change',()=>{
    app.center=$('ccCenter').value;API.setCenterId(app.center);app.page=1;
+   $('ccInviteResult').hidden=true;$('ccInviteResult').replaceChildren();
    $('ccDriverFilter').value='';$('ccSearch').value='';reloadAll();
  });
  $('ccDate').addEventListener('change',()=>{
@@ -186,6 +187,17 @@ function bind(){
  });
  $('ccRefresh').addEventListener('click',reloadAll);
  $('ccRawRefresh').addEventListener('click',reloadAll);
+ $('ccInvite').addEventListener('click',async()=>{
+   if(!app.center)return;
+   if(!confirm('센터 가입 초대코드를 새로 발급할까요? 이전 코드는 무효화됩니다.'))return;
+   try{
+     const response=await API.centerInvite(app.center);
+     const region=$('ccInviteResult');region.replaceChildren();
+     region.append(el('b','새 초대코드 (한 번만 표시)'));
+     region.append(el('span',response.join_code));region.hidden=false;
+     note('초대코드를 새로 발급했습니다. 코드를 센터 가입을 원하는 기사에게 안전하게 전달하세요.');
+   }catch(e){note(e.message||'초대코드를 발급하지 못했습니다.',true);}
+ });
  $('ccDaesin').addEventListener('click',()=>{
    if(!window.DSDDaesinImports){note('대신택배 업로드 모듈을 불러오지 못했습니다.',true);return;}
    window.DSDDaesinImports.open(app.date).catch(e=>note(e.message,true));
