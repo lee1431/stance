@@ -4,6 +4,14 @@
   const BASE = 'https://localflow.ddns.net/dsd/api/';
   // Session-only token. No delivery/customer data is stored in browser storage.
   const TOKEN_KEY = 'dsd:v1:bearer-token';
+  const CENTER_KEY='dsd:v1:selected-center';
+  function centerId(){
+    try{return sessionStorage.getItem(CENTER_KEY)||'';}catch(_){return '';}
+  }
+  function setCenterId(id){
+    try{if(id)sessionStorage.setItem(CENTER_KEY,String(id));else sessionStorage.removeItem(CENTER_KEY);}
+    catch(_){}
+  }
   function token() {
     try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch (_) { return ''; }
   }
@@ -34,6 +42,8 @@
   }
   const api = {
     request,
+    centerId,
+    setCenterId,
     base: BASE,
     health: () => request('health'),
     async download(path, filename) {
@@ -75,8 +85,23 @@
       try { return await request('auth/logout', { method: 'POST', body: {} }); }
       finally { forget(); }
     },
-    rounds: date => request('rounds?date=' + encodeURIComponent(date)),
-    createRound: (date, center_name = '') => request('rounds', { method: 'POST', body: { date, center_name } }),
+    rounds: date => request('rounds?date=' + encodeURIComponent(date) +
+      (centerId() ? '&center_id='+encodeURIComponent(centerId()) : '')),
+    createRound: (date, center_name = '') => request('rounds', {
+      method: 'POST', body: { date, center_name, ...(centerId()?{center_id:centerId()}:{}) }
+    }),
+    centers:()=>request('centers'),
+    centerCatalog:()=>request('centers/catalog'),
+    centerCreate:name=>request('centers',{method:'POST',body:{name}}),
+    centerJoin:(id,join_code)=>request('centers/'+encodeURIComponent(id)+'/join',{method:'POST',body:{join_code}}),
+    centerMembers:id=>request('centers/'+encodeURIComponent(id)+'/members'),
+    centerInvite:id=>request('centers/'+encodeURIComponent(id)+'/invite-code',{method:'POST',body:{}}),
+    moveRoundStop:(id,target_round_id,expected_revision)=>request('stops/'+encodeURIComponent(id)+'/move-round',{
+      method:'POST',body:{target_round_id,expected_revision}
+    }),
+    transferStop:(id,target_user_id,expected_revision,target_round_no)=>request('stops/'+encodeURIComponent(id)+'/transfer',{
+      method:'POST',body:{target_user_id,expected_revision,...(target_round_no?{target_round_no}:{})}
+    }),
     getRound: id => request('rounds/' + encodeURIComponent(id)),
     deleteRound: (id, rev) => request('rounds/' + encodeURIComponent(id), { method: 'DELETE', body: { expected_revision: rev } }),
     addStop: (id, rev, stop) => request('rounds/' + encodeURIComponent(id) + '/stops', { method: 'POST', body: { expected_revision: rev, stop } }),
