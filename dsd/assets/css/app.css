@@ -157,3 +157,7 @@
 .home-location-summary{margin:-3px 0 10px;line-height:1.45;font-size:11px}
 .home-pin{width:34px;height:34px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:23px;background:#197a54;border:3px solid #fff;border-radius:50% 50% 50% 7px;transform:rotate(-45deg);box-shadow:0 3px 10px #153a2760}
 .home-pin::first-letter{transform:rotate(45deg)}
+
+/* Company-specific original Excel upload selector */
+.import-company-select{appearance:auto;-webkit-appearance:menulist;min-width:0;max-width:100%;padding:8px 10px;min-height:36px;border:0;border-radius:11px;font-size:13px;font-weight:800;color:#27507e;background:#edf3fc;cursor:pointer}
+.import-company-select option{color:#19314d;background:#fff}
