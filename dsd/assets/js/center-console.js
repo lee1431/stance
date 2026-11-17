@@ -4,7 +4,7 @@
 const API=window.DSD_API;
 const $=id=>document.getElementById(id);
 const el=(tag,text)=>{const element=document.createElement(tag);if(text!==undefined)element.textContent=String(text??'');return element;};
-const app={centers:[],center:'',date:'',dashboard:null,shipments:[],page:1,total:0,active:null,busy:false,searchTimer:0,sequence:0,manifestSequence:0};
+const app={centers:[],center:'',date:'',dashboard:null,shipments:[],page:1,total:0,sortBy:'original',direction:'asc',active:null,busy:false,searchTimer:0,sequence:0,manifestSequence:0};
 function isoLocal(){
  const now=new Date();
  return [now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
@@ -83,6 +83,8 @@ async function reloadShipments(){
  const query=new URLSearchParams({
    date:app.date,
    page:String(app.page),
+   sort_by:app.sortBy,
+   direction:app.direction,
    status:$('ccStatusFilter').value,
    user_id:$('ccDriverFilter').value,
    q:$('ccSearch').value.trim()
@@ -97,6 +99,16 @@ async function reloadShipments(){
    if(seq!==app.sequence||requestNumber!==app.manifestSequence)return;
    blankRow($('ccShipments'),'원본 조회 실패: '+error.message+'. S10 app.py v3 업데이트를 확인하세요.');
    $('ccPageInfo').textContent='조회 오류';
+ }
+}
+function updateSortHeaders(){
+ for(const button of document.querySelectorAll('[data-cc-sort]')){
+   const selected=app.sortBy===button.dataset.ccSort;
+   const th=button.closest('th');
+   if(th)th.setAttribute('aria-sort',selected?(app.direction==='asc'?'ascending':'descending'):'none');
+   const arrow=button.querySelector('.cc-sort-arrow');
+   if(arrow)arrow.textContent=selected?(app.direction==='asc'?'▲':'▼'):'↕';
+   button.title=selected?(app.direction==='asc'?'내림차순 정렬':'오름차순 정렬'):'오름차순 정렬';
  }
 }
 function drawShipments(){
@@ -196,6 +208,15 @@ async function init(){
  }
 }
 function bind(){
+ document.querySelectorAll('[data-cc-sort]').forEach(button=>{
+   button.addEventListener('click',()=>{
+     const key=button.dataset.ccSort;
+     if(app.sortBy===key)app.direction=app.direction==='asc'?'desc':'asc';
+     else{app.sortBy=key;app.direction='asc';}
+     app.page=1;updateSortHeaders();reloadShipments();
+   });
+ });
+ updateSortHeaders();
  $('ccCenter').addEventListener('change',()=>{
    app.center=$('ccCenter').value;API.setCenterId(app.center);app.page=1;
    $('ccInviteResult').hidden=true;$('ccInviteResult').replaceChildren();
