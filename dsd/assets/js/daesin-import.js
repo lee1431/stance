@@ -75,7 +75,7 @@ function setup(){
  $('daesinSave').onclick=()=>work(save);
 }
 async function refresh(preferred){
- const out=await req('raw-imports?date='+encodeURIComponent(S.date));
+ const out=await req('raw-imports?date='+encodeURIComponent(S.date)+(API.centerId()?'&center_id='+encodeURIComponent(API.centerId()):''));
  const select=$('daesinSaved');select.replaceChildren();
  for(const item of out.imports||[]){
    const opt=node('option',(item.original_name||'원본 파일')+' · '+item.status);opt.value=item.id;select.append(opt);
@@ -100,7 +100,7 @@ async function upload(){
  const file=$('daesinFile').files[0];
  if(!file){message('대신택배 엑셀 파일을 선택하세요.',true);return;}
  if(!/\.(xls|xlsx|xlsm|csv)$/i.test(file.name)){message('XLS, XLSX, XLSM 또는 CSV 파일만 선택할 수 있습니다.',true);return;}
- const fd=new FormData();fd.set('file',file);fd.set('date',S.date);
+ const fd=new FormData();fd.set('file',file);fd.set('date',S.date);if(API.centerId())fd.set('center_id',API.centerId());
  const out=await req('raw-imports',{method:'POST',body:fd,file:true});
  try{await req('raw-imports/'+encodeURIComponent(out.import_id)+'/parse',{method:'POST',body:{}});}
  catch(e){await refresh(out.import_id);throw Error('원본은 보관됐지만 읽기에 실패했습니다: '+e.message);}
