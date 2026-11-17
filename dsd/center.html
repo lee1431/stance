@@ -29,7 +29,8 @@ a{color:#1d65b2;text-decoration:none}button:focus-visible,input:focus-visible,se
 .file-state b{display:block;color:#1a426d}.buttons{display:flex;gap:8px;flex-wrap:wrap}.buttons button,.ghost{background:#eaf2fd;border:1px solid #cfe1f8;color:#1a5ba8;padding:9px 13px;border-radius:9px;font-weight:800;min-height:39px}
 .buttons button.primary{background:#1769d9;border-color:#1769d9;color:white}
 table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:12px 9px;border-bottom:1px solid #e6edf4;vertical-align:middle}
-th{font-size:11px;color:#657a91;font-weight:850;background:#f8fafc;white-space:nowrap}td{overflow-wrap:anywhere}
+th{font-size:11px;color:#657a91;font-weight:850;background:#f8fafc;white-space:nowrap}
+th.cc-sortable{padding:0}.cc-sort{display:inline-flex;align-items:center;gap:6px;width:100%;border:0;background:transparent;color:inherit;font:inherit;font-weight:850;text-align:left;padding:12px 9px;cursor:pointer;white-space:nowrap}.cc-sort:hover{background:#eaf2ff;color:#155db6}.cc-sort:focus-visible{outline:3px solid #75acfb;outline-offset:-3px}.cc-sort-arrow{font-size:11px;color:#9baabe}th[aria-sort=ascending] .cc-sort,th[aria-sort=descending] .cc-sort{background:#edf5ff;color:#155db6}th[aria-sort=ascending] .cc-sort-arrow,th[aria-sort=descending] .cc-sort-arrow{color:#155db6}td{overflow-wrap:anywhere}
 .table-wrap{overflow-x:auto}.muted{color:#72859c}.num{text-align:right;font-variant-numeric:tabular-nums}
 .pill{display:inline-flex;padding:5px 9px;font-size:11px;font-weight:800;border-radius:20px;background:#edf3fb;color:#426281;white-space:nowrap}
 .pill.done{color:#11774c;background:#e6f7ee}.pill.failed,.pill.return{color:#99552d;background:#fff0e2}.pill.pending{color:#27609d;background:#e8f2ff}
@@ -84,7 +85,7 @@ dialog label{display:block;font-size:12px;font-weight:800;margin:17px 0 7px}dial
     <select id="ccDriverFilter" aria-label="기사 필터"><option value="">전체 기사</option></select>
     <select id="ccStatusFilter" aria-label="배송 상태"><option value="all">전체 상태</option><option value="unassigned">미배정</option><option value="pending">미완료</option><option value="done">완료</option><option value="failed">미배송</option><option value="return">반품</option></select>
    </div>
-   <div class="table-wrap"><table><thead><tr><th>운송장번호</th><th>물품명</th><th>수취인</th><th>발송인</th><th>배송 주소</th><th>배정 기사</th><th>회차</th><th>완료 여부</th><th>원본 / 관리</th></tr></thead><tbody id="ccShipments"></tbody></table></div>
+   <div class="table-wrap"><table><thead><tr><th scope="col" class="cc-sortable" aria-sort="none"><button class="cc-sort" type="button" data-cc-sort="waybill">운송장번호 <span class="cc-sort-arrow" aria-hidden="true">↕</span></button></th><th scope="col" class="cc-sortable" aria-sort="none"><button class="cc-sort" type="button" data-cc-sort="item_name">물품명 <span class="cc-sort-arrow" aria-hidden="true">↕</span></button></th><th scope="col" class="cc-sortable" aria-sort="none"><button class="cc-sort" type="button" data-cc-sort="recipient_name">수취인 <span class="cc-sort-arrow" aria-hidden="true">↕</span></button></th><th scope="col" class="cc-sortable" aria-sort="none"><button class="cc-sort" type="button" data-cc-sort="sender_name">발송인 <span class="cc-sort-arrow" aria-hidden="true">↕</span></button></th><th scope="col" class="cc-sortable" aria-sort="none"><button class="cc-sort" type="button" data-cc-sort="address">배송 주소 <span class="cc-sort-arrow" aria-hidden="true">↕</span></button></th><th scope="col" class="cc-sortable" aria-sort="none"><button class="cc-sort" type="button" data-cc-sort="driver_label">배정 기사 <span class="cc-sort-arrow" aria-hidden="true">↕</span></button></th><th scope="col" class="cc-sortable" aria-sort="none"><button class="cc-sort" type="button" data-cc-sort="round_no">회차 <span class="cc-sort-arrow" aria-hidden="true">↕</span></button></th><th scope="col" class="cc-sortable" aria-sort="none"><button class="cc-sort" type="button" data-cc-sort="status">완료 여부 <span class="cc-sort-arrow" aria-hidden="true">↕</span></button></th><th scope="col">원본 / 관리</th></tr></thead><tbody id="ccShipments"></tbody></table></div>
    <div class="tfoot"><span id="ccPageInfo"></span><button type="button" id="ccPrev">이전</button><button type="button" id="ccNext">다음</button></div>
   </section>
  </section>
@@ -107,6 +108,6 @@ dialog label{display:block;font-size:12px;font-weight:800;margin:17px 0 7px}dial
 <script src="assets/js/api.js?v=center-console-20261117" defer></script>
 <script src="assets/js/raw-import.js?v=center-shared-20261117" defer></script>
 <script src="assets/js/daesin-import.js?v=center-shared-20261117" defer></script>
-<script src="assets/js/center-console.js?v=manifest-v3-20261117" defer></script>
+<script src="assets/js/center-console.js?v=manifest-sort-v4-20261117" defer></script>
 </body>
 </html>
