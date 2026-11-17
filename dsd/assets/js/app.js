@@ -797,9 +797,9 @@
   }
   window.DSD_SCAN_WAYBILL = scanWaybill;
 
-  function importExcel() {
+  function importExcel(profile='generic') {
     if (!window.DSDRawImports) { toast('원본 엑셀 업로드 화면을 불러오지 못했습니다. 새로고침하세요.', 6000); return; }
-    window.DSDRawImports.open($('workDate').value).catch(error => toast(error.message,6000));
+    window.DSDRawImports.open($('workDate').value,profile).catch(error => toast(error.message,6000));
   }
   async function roadRecommend() {
     if (!state.round) return;
@@ -905,7 +905,11 @@
     $('cancelStop2').addEventListener('click',() => $('stopDialog').close());
     $('stopForm').addEventListener('submit',saveEditor);
     $('lookupAddressBtn').addEventListener('click',geocodeEditor);
-    $('listImportBtn').addEventListener('click',importExcel);
+    $('listImportMode').addEventListener('change',event => {
+      const profile=event.target.value;
+      event.target.value='';
+      if(profile)importExcel(profile);
+    });
     $('listGeocodeBtn').addEventListener('click',autoGeocodeAll);
     document.querySelectorAll('.filter').forEach(button => button.addEventListener('click',() => {
       state.filter=button.dataset.filter;
