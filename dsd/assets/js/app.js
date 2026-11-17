@@ -798,8 +798,13 @@
   window.DSD_SCAN_WAYBILL = scanWaybill;
 
   function importExcel(profile='generic') {
+    if (profile === 'daesin') {
+      if (!window.DSDDaesinImports) { toast('대신택배 전용 화면을 불러오지 못했습니다. 새로고침하세요.', 6000); return; }
+      window.DSDDaesinImports.open($('workDate').value).catch(error => toast(error.message,6000));
+      return;
+    }
     if (!window.DSDRawImports) { toast('원본 엑셀 업로드 화면을 불러오지 못했습니다. 새로고침하세요.', 6000); return; }
-    window.DSDRawImports.open($('workDate').value,profile).catch(error => toast(error.message,6000));
+    window.DSDRawImports.open($('workDate').value,'generic').catch(error => toast(error.message,6000));
   }
   async function roadRecommend() {
     if (!state.round) return;
