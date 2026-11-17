@@ -4,7 +4,7 @@
 const API=window.DSD_API;
 const $=id=>document.getElementById(id);
 const el=(tag,text)=>{const element=document.createElement(tag);if(text!==undefined)element.textContent=String(text??'');return element;};
-const app={centers:[],center:'',date:'',dashboard:null,shipments:[],page:1,total:0,active:null,busy:false,searchTimer:0,sequence:0};
+const app={centers:[],center:'',date:'',dashboard:null,shipments:[],page:1,total:0,active:null,busy:false,searchTimer:0,sequence:0,manifestSequence:0};
 function isoLocal(){
  const now=new Date();
  return [now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
@@ -13,8 +13,8 @@ function note(message,error=false){
  const target=$('ccNotice');target.textContent=message||'';
  target.classList.toggle('error',Boolean(error));
 }
-function statusText(s){return ({pending:'미완료',done:'완료',failed:'미배송',return:'반품'})[s]||s;}
-function blankRow(parent,message,columns=6){
+function statusText(s){return ({unassigned:'미배정',pending:'미완료',done:'완료',failed:'미배송',return:'반품'})[s]||s;}
+function blankRow(parent,message,columns=9){
  parent.replaceChildren();const tr=el('tr'),td=el('td',message);td.colSpan=columns;td.className='muted';tr.append(td);parent.append(tr);
 }
 function cell(row,content,cls){
@@ -47,6 +47,7 @@ function drawDashboard(){
  const data=app.dashboard;
  $('ccWorkspace').hidden=false;
  $('ccRawRows').textContent=data.raw?.data_rows??0;
+ $('ccUnassigned').textContent=data.summary?.unassigned??0;
  for(const [id,key] of [['ccTotal','total'],['ccDone','done'],['ccPending','pending']])
    $(id).textContent=data.summary?.[key]??0;
  $('ccExceptions').textContent=(data.summary?.failed||0)+(data.summary?.returned||0);
@@ -78,6 +79,7 @@ function drawDashboard(){
 async function reloadShipments(){
  if(!app.center)return;
  const seq=app.sequence;
+ const requestNumber=++app.manifestSequence;
  const query=new URLSearchParams({
    date:app.date,
    page:String(app.page),
@@ -87,13 +89,13 @@ async function reloadShipments(){
  });
  blankRow($('ccShipments'),'배송 물품을 조회하고 있습니다.');
  try{
-   const data=await API.request('centers/'+encodeURIComponent(app.center)+'/shipments?'+query);
-   if(seq!==app.sequence)return;
+   const data=await API.request('centers/'+encodeURIComponent(app.center)+'/manifest?'+query);
+   if(seq!==app.sequence||requestNumber!==app.manifestSequence)return;
    app.total=data.total;app.shipments=data.shipments||[];
    drawShipments();
  }catch(error){
-   if(seq!==app.sequence)return;
-   blankRow($('ccShipments'),'물품 조회 실패: '+error.message);
+   if(seq!==app.sequence||requestNumber!==app.manifestSequence)return;
+   blankRow($('ccShipments'),'원본 조회 실패: '+error.message+'. S10 app.py v3 업데이트를 확인하세요.');
    $('ccPageInfo').textContent='조회 오류';
  }
 }
@@ -102,27 +104,44 @@ function drawShipments(){
  for(const item of app.shipments){
    const tr=el('tr');
    cell(tr,item.waybill||'번호 없음');
-   const address=cell(tr);
-   const strong=el('div',item.company||'이름 없음');strong.style.fontWeight='750';
-   const small=el('div',item.address||'주소 확인 필요');small.className='muted';small.style.fontSize='11px';address.append(strong,small);
-   cell(tr,item.driver_label);cell(tr,item.round_no+'회차');
-   const stat=cell(tr);const badge=el('span',statusText(item.status));badge.className='pill '+item.status;stat.append(badge);
+   cell(tr,item.item_name||'—');
+   cell(tr,item.recipient_name||'—');
+   cell(tr,item.sender_name||'—');
+   cell(tr,item.address||'주소 확인 필요');
+   cell(tr,item.driver_label||'미배정');
+   cell(tr,item.round_no?item.round_no+'회차':'—');
+   const stat=cell(tr),badge=el('span',statusText(item.status));
+   badge.className='pill '+item.status;stat.append(badge);
    const action=cell(tr);
-   const button=el('button','배정 변경');button.type='button';button.className='ghost';
-   button.disabled=item.status==='done'||Boolean(item.started_at);
-   button.title=button.disabled?'배송 완료·운행 중 물품은 배정 변경 불가':'기사 또는 회차 이동';
-   button.addEventListener('click',()=>openAssignment(item));
-   action.append(button);body.append(tr);
+   const original=el('button','원본 보기');original.className='ghost';original.type='button';
+   original.addEventListener('click',()=>showRaw(item));action.append(original);
+   if(item.assigned){
+     const move=el('button','배정 변경');move.className='ghost';move.type='button';
+     move.style.marginLeft='6px';
+     move.disabled=item.status==='done'||Boolean(item.started_at);
+     move.title=move.disabled?'완료·운행 중 물품은 변경할 수 없습니다.':'기사 또는 회차 이동';
+     move.addEventListener('click',()=>openAssignment(item));action.append(move);
+   }
+   body.append(tr);
  }
- if(!app.shipments.length)blankRow(body,'조건에 맞는 배송 물품이 없습니다.');
+ if(!app.shipments.length)blankRow(body,'원본 데이터가 없거나 검색 조건에 일치하는 물품이 없습니다.');
  const count=app.total,per=50,from=count?((app.page-1)*per)+1:0,to=Math.min(count,app.page*per);
  $('ccPageInfo').textContent=count?from+'–'+to+' / 전체 '+count+'건':'0건';
  $('ccPrev').disabled=app.page<=1;$('ccNext').disabled=app.page*per>=count;
 }
+function showRaw(item){
+ $('ccRawSource').textContent=(item.waybill||'운송장번호 없음')+' · '+(item.sheet_name||'원본')+' · '+item.row_no+'행';
+ const body=$('ccRawDetails');body.replaceChildren();
+ for(const field of item.details||[]){
+   const row=el('tr');cell(row,field.header);cell(row,field.value);body.append(row);
+ }
+ if(!(item.details||[]).length)blankRow(body,'원본 데이터가 없습니다.',2);
+ $('ccRawDialog').showModal();
+}
 function openAssignment(item){
  if(!app.dashboard)return;
  app.active=item;
- $('ccAssignInfo').textContent=(item.waybill||'운송장번호 없음')+' · '+(item.company||'수화주 없음')+' · 현재 '+item.driver_label+' / '+item.round_no+'회차';
+ $('ccAssignInfo').textContent=(item.waybill||'운송장번호 없음')+' · '+(item.recipient_name||'수화주 없음')+' · 현재 '+item.driver_label+' / '+item.round_no+'회차';
  const select=$('ccAssignDriver');select.replaceChildren();
  for(const member of app.dashboard.members||[]){
    const option=el('option',member.label+(member.role==='owner'?' · 생성자':''));option.value=member.id;select.append(option);
@@ -217,6 +236,7 @@ function bind(){
  $('ccNext').addEventListener('click',()=>{if(app.page*50<app.total){app.page++;reloadShipments();}});
  $('ccAssignForm').addEventListener('submit',assign);
  $('ccCancelAssign').addEventListener('click',()=>$('ccAssignDialog').close());
+ $('ccRawClose').addEventListener('click',()=>$('ccRawDialog').close());
  $('ccAssignDialog').addEventListener('close',()=>{app.active=null;});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&app.center)reloadAll();});
 }
