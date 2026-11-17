@@ -106,6 +106,7 @@
   }
   async function showApp(user) {
     state.user = user;
+    window.DSD_CURRENT_USER_ID = user.id;
     $('authView').classList.add('hidden');
     $('app').classList.remove('hidden');
     $('userInfo').textContent = user.client_id + ' · ' + (user.phone || '');
@@ -113,6 +114,10 @@
     map.setHomeLocation(readHome());
     $('workDate').value = state.date;
     $('dateCaption').textContent = state.date;
+    if (window.DSDCenters) await window.DSDCenters.start(async()=>{
+      await loadRounds();
+      toggleDrawer(false);
+    });
     await loadRounds();
     map.onSelect = id => {
       if (!map.editing) { selectStop(id); return; }
@@ -687,6 +692,20 @@
     add('미배송 처리',()=>action(id,'failed'));
     add('반품 처리',()=>action(id,'return'));
     add('미완료로 되돌리기',()=>action(id,'undo'));
+    if(window.DSDCenters){
+      add('다른 회차로 이동',()=>window.DSDCenters.moveStop(stop,state.round,state.rounds,
+        async (response,message)=>{
+          if(response)await loadRounds(state.round.id).catch(e=>toast(e.message,6000));
+          if(message)toast(message,6000);
+        }));
+      if(API.centerId()){
+        add('다른 기사에게 넘기기',()=>window.DSDCenters.transferStop(stop,state.round,
+          async (response,message)=>{
+            if(response)await loadRounds(state.round.id).catch(e=>toast(e.message,6000));
+            if(message)toast(message,6000);
+          }));
+      }
+    }
     add('삭제',()=>{
       if (confirm('이 배송지를 삭제하시겠습니까?')) perform(() => API.deleteStop(id,state.round.revision),'삭제했습니다.');
     },'danger-quiet');
