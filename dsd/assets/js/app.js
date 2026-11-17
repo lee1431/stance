@@ -259,6 +259,10 @@
       details.append(el('strong','',stop.company || ('배송지 ' + stop.position)));
       details.append(el('small','',stop.address || '지도에서 위치 지정'));
       details.append(el('div','stop-sub',statusText(stop.status) + (stop.id === state.round.active_stop_id ? ' · 현재 목적지' : '')));
+      const messages = el('div','stop-message-actions');
+      messages.append(btn('배송 예정','secondary',() => window.DSDMessages.open(stop,'scheduled')));
+      messages.append(btn('완료문자','secondary',() => window.DSDMessages.open(stop,'done')));
+      details.append(messages);
       details.addEventListener('click', () => { selectStop(stop.id); openEditor(stop); });
       const actions = el('div','stop-actions');
       actions.append(btn('출발','action-start',() => start(stop.id)));
@@ -283,6 +287,8 @@
       () => action(stop.id,stop.status === 'done' ? 'undo' : 'done')));
     buttons.append(btn('내비','secondary',() => openNavigation(stop)));
     buttons.append(btn('수정','secondary',() => openEditor(stop)));
+    buttons.append(btn('배송 예정','secondary',() => window.DSDMessages.open(stop,'scheduled')));
+    buttons.append(btn('완료문자','secondary',() => window.DSDMessages.open(stop,'done')));
     const select = el('select',''); select.title = '방문 순서 변경';
     for (let i=1;i<=state.stops.length;i++) {
       const option = el('option','',i + '번'); option.value = String(i);
@@ -689,6 +695,8 @@
       $('moreDialog').close(); fn();
     }));
     add('정보 수정',()=>openEditor(stop));
+    add('배송 예정',()=>window.DSDMessages.open(stop,'scheduled'));
+    add('완료문자',()=>window.DSDMessages.open(stop,'done'));
     add('미배송 처리',()=>action(id,'failed'));
     add('반품 처리',()=>action(id,'return'));
     add('미완료로 되돌리기',()=>action(id,'undo'));
