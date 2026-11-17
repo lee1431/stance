@@ -241,6 +241,7 @@
      return;
    }
    const session=++cameraSession;
+   input.blur(); // iPhone: hide the software keyboard before showing camera preview.
    cameraStarting=true;cameraBtn.disabled=true;
    const iOS=/iPhone|iPad|iPod/i.test(navigator.userAgent)||
      (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
