@@ -59,7 +59,7 @@ async function open(date,profile='generic'){
  await run(()=>refresh());
 }
 async function refresh(prefer){
- const r=await req('raw-imports?date='+encodeURIComponent(S.date));
+ const r=await req('raw-imports?date='+encodeURIComponent(S.date)+(API.centerId()?'&center_id='+encodeURIComponent(API.centerId()):''));
  const sel=$('rawSaved');sel.replaceChildren();
  for(const item of r.imports||[]){const x=el('option',item.original_name+' / '+item.status);x.value=item.id;sel.append(x);}
  if(!sel.options.length){sel.append(el('option','저장된 파일 없음'));S.data=null;S.id='';render();return;}
@@ -68,7 +68,7 @@ async function refresh(prefer){
 }
 async function upload(){
  const file=$('rawFile').files[0];if(!file){msg('파일을 선택하세요.',true);return;}
- const body=new FormData();body.set('file',file);body.set('date',S.date);
+ const body=new FormData();body.set('file',file);body.set('date',S.date);if(API.centerId())body.set('center_id',API.centerId());
  const r=await req('raw-imports',{method:'POST',body,file:true});
  msg('원본 저장 완료. 원본 행을 분석합니다.');$('rawFile').value='';
  try{await req('raw-imports/'+encodeURIComponent(r.import_id)+'/parse',{method:'POST',body:{}});}
