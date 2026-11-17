@@ -126,7 +126,7 @@ function render(){
  const acts=el('div');acts.className='bar';
  acts.append(bt(profile.valid?'대신택배 규칙 다시 적용':'추천 라벨 적용',()=>{
    for(const c of sh.columns||[]){
-     if(c.reviewed)continue;
+     if(c.reviewed&&!profile.valid)continue;
      const choice=profile.valid?profile.fields.get(c.column_index):(c.confidence>=.8&&c.suggested_label!=='unclassified'?c.suggested_label:null);
      if(choice){const select=root.querySelector('select[data-col="'+c.column_index+'"]');if(select)select.value=choice;}
    }
@@ -149,7 +149,7 @@ function render(){
     freightGroup.append(o);
    }else{s.append(o);}
   }
-  s.value=col.reviewed?col.assigned_label:(profile.valid?(profile.fields.get(col.column_index)||'unclassified'):'unclassified');const td=el('td');td.append(s);tr.append(td);const why=el('td',col.basis||'판단 근거 없음');why.style.maxWidth='350px';tr.append(why);body.append(tr);
+  s.value=profile.valid?(profile.fields.get(col.column_index)||(col.reviewed?col.assigned_label:'unclassified')):(col.reviewed?col.assigned_label:'unclassified');const td=el('td');td.append(s);tr.append(td);const why=el('td',col.basis||'판단 근거 없음');why.style.maxWidth='350px';tr.append(why);body.append(tr);
  }
  table.append(body);wrap.append(table);root.append(wrap);
  const preview=el('div');preview.className='bar';preview.append(el('strong','원본 데이터 미리보기'));
