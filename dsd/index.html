@@ -7,7 +7,7 @@
   <meta name="description" content="DSD - 간단하고 빠른 배송 실행 관리">
   <title>DSD | 배송 실행 관리</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="assets/css/app.css?v=home-location-20261112">
+  <link rel="stylesheet" href="assets/css/app.css?v=company-import-20261117">
 </head>
 <body>
   <!-- Inline SVG symbol library; no icon CDN required. -->
@@ -96,7 +96,7 @@
       <div id="summary" class="summary"></div>
       <div class="list-actions">
         <button id="listScanBtn" class="secondary compact" type="button">▥ 스캔</button>
-        <button id="listImportBtn" class="secondary compact"><svg><use href="#ico-upload"/></svg> 엑셀</button>
+        <select id="listImportMode" class="secondary compact import-company-select" aria-label="업체별 원본 엑셀 업로드"><option value="">엑셀 업로드 ▾</option><option value="daesin">대신택배 · 원본 엑셀</option><option value="generic">일반 / 기타 업체 · 원본 엑셀</option></select>
         <button id="listGeocodeBtn" class="secondary compact">좌표 찾기</button>
       </div>
       <div class="filters" role="group" aria-label="배송 상태 필터">
@@ -189,8 +189,8 @@
   <script src="assets/js/api.js?v=driving-20261111" defer></script>
   <script src="assets/js/map.js?v=driving-20261111" defer></script>
   <script src="assets/js/legacy.js" defer></script>
-  <script src="assets/js/app.js?v=raw-scan-20261115" defer></script>
-  <script src="assets/js/raw-import.js?v=studio-v051-20261115" defer></script>
+  <script src="assets/js/app.js?v=company-import-20261117" defer></script>
+  <script src="assets/js/raw-import.js?v=company-import-20261117" defer></script>
   <script src="assets/js/scan.js?v=raw-slip-20261115" defer></script>
 </body>
 </html>
