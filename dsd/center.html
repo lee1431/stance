@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f3f7fc">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>DSD 센터 관리콘솔</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<style>
+:root{font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;color:#17304d;background:#f3f7fc;font-synthesis:none}*{box-sizing:border-box}
+body{margin:0;min-height:100vh}button,input,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}
+a{color:#1d65b2;text-decoration:none}button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #75acfb;outline-offset:3px}
+.top{background:#fff;border-bottom:1px solid #e1e9f2}.bar{max-width:1320px;margin:auto;display:flex;align-items:center;gap:14px;padding:18px 22px}
+.brand{display:flex;gap:12px;align-items:center;font-weight:850;color:#123c6f}.mark{display:grid;place-items:center;background:#146be1;color:white;width:40px;height:40px;border-radius:11px;font-size:20px}
+.brand small{display:block;font-size:11px;letter-spacing:1px;color:#6984a0;margin-top:2px}.bar nav{margin-left:auto;display:flex;gap:14px;font-size:13px;font-weight:750}.bar nav a{color:#385e86}
+.container{max-width:1320px;margin:auto;padding:28px 22px 72px}
+.heading{display:flex;gap:16px;align-items:end;justify-content:space-between;flex-wrap:wrap;margin-bottom:20px}.heading h1{font-size:26px;letter-spacing:-.8px;margin:0 0 6px}.heading p{margin:0;font-size:13px;color:#6b7e96}
+.controls{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.controls select,.controls input{min-height:42px;padding:9px 12px;border:1px solid #cddae8;border-radius:9px;background:#fff;color:#17304d}
+.controls select{max-width:270px;min-width:190px}.controls button,.action{border:0;padding:10px 16px;min-height:42px;border-radius:9px;background:#1567d8;color:#fff;font-weight:800}
+.notice{padding:14px 16px;background:white;border:1px solid #dfebf6;border-radius:12px;font-size:13px;margin:12px 0 20px;color:#31536e;line-height:1.6}
+.notice.error{border-color:#f0b6bd;color:#a52838;background:#fff9fa}.notice:empty{display:none}
+.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.stat{background:white;border:1px solid #e3eaf3;border-radius:15px;padding:19px 18px;box-shadow:0 5px 18px #16355c07}
+.stat .label{font-size:12px;font-weight:750;color:#657994}.stat strong{display:block;font-size:29px;letter-spacing:-.8px;margin-top:9px;font-variant-numeric:tabular-nums}.stat:nth-child(3) strong{color:#137f54}.stat:nth-child(4) strong{color:#c47a24}
+.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;margin-bottom:18px}.panel{background:white;border:1px solid #e3eaf3;border-radius:16px;padding:20px;box-shadow:0 5px 18px #16355c07;min-width:0}
+.panel h2{font-size:17px;letter-spacing:-.3px;margin:0 0 6px}.panel .hint{font-size:12px;color:#73859a;margin:0 0 15px;line-height:1.6}
+.file-state{padding:14px;border-radius:11px;background:#f0f5fb;margin:10px 0 16px;font-size:13px;line-height:1.8;overflow-wrap:anywhere}
+.file-state b{display:block;color:#1a426d}.buttons{display:flex;gap:8px;flex-wrap:wrap}.buttons button,.ghost{background:#eaf2fd;border:1px solid #cfe1f8;color:#1a5ba8;padding:9px 13px;border-radius:9px;font-weight:800;min-height:39px}
+.buttons button.primary{background:#1769d9;border-color:#1769d9;color:white}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:12px 9px;border-bottom:1px solid #e6edf4;vertical-align:middle}
+th{font-size:11px;color:#657a91;font-weight:850;background:#f8fafc;white-space:nowrap}td{overflow-wrap:anywhere}
+.table-wrap{overflow-x:auto}.muted{color:#72859c}.num{text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;padding:5px 9px;font-size:11px;font-weight:800;border-radius:20px;background:#edf3fb;color:#426281;white-space:nowrap}
+.pill.done{color:#11774c;background:#e6f7ee}.pill.failed,.pill.return{color:#99552d;background:#fff0e2}.pill.pending{color:#27609d;background:#e8f2ff}
+.filters{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:16px 0}
+.filters input,.filters select{min-height:40px;padding:9px 10px;border:1px solid #cfdded;border-radius:9px;background:#fff;max-width:100%}
+.filters input{flex:1 1 220px}.filters select{flex:0 1 170px}
+table .ghost{min-height:31px;padding:6px 10px;font-size:11px}.tfoot{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:14px;color:#6b7f93;font-size:12px}
+.tfoot button{min-height:34px;padding:5px 12px;border:1px solid #cfdeed;background:#f4f8ff;border-radius:8px}
+dialog{width:min(460px,94vw);border:1px solid #cbd9ea;border-radius:16px;background:white;color:#19314d;padding:22px;box-shadow:0 15px 40px #15294630}dialog::backdrop{background:#1022389c}
+dialog h2{font-size:19px;margin:0 0 9px}.dialog-sub{font-size:13px;color:#647a92;line-height:1.5;overflow-wrap:anywhere}
+dialog label{display:block;font-size:12px;font-weight:800;margin:17px 0 7px}dialog select,dialog input{width:100%;min-height:43px;border:1px solid #cbd8e8;border-radius:9px;padding:9px;background:white;color:#17304d}
+.dialog-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:22px}.dialog-footer button{border-radius:9px;border:1px solid #ccdaeb;padding:10px 16px;font-weight:800;background:#edf3fb;color:#234b75}.dialog-footer button.primary{background:#1769d9;border-color:#1769d9;color:#fff}
+[hidden]{display:none!important}
+@media(max-width:900px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}.grid{grid-template-columns:1fr}}
+@media(max-width:570px){.container{padding:19px 12px 50px}.bar{padding:13px 12px}.heading h1{font-size:22px}.stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.stat{padding:13px}.stat strong{font-size:24px}.panel{padding:14px}.controls{width:100%}.controls select{flex:1;min-width:0}.filters input{flex-basis:100%}.bar nav{gap:8px}.brand small{font-size:9px}}
+</style>
+</head>
+<body>
+<header class="top"><div class="bar"><a href="./" class="brand"><span class="mark">D</span><span>DSD <small>CENTER CONSOLE</small></span></a><nav><a href="./">기사 화면</a><a href="./stats.html">배송 통계</a></nav></div></header>
+<main class="container">
+ <div class="heading">
+  <div><h1>센터 관리콘솔</h1><p>공용 원본 · 기사별 현황 · 물품 인계 및 회차 이동</p></div>
+  <div class="controls"><select id="ccCenter" aria-label="관리할 센터"><option value="">센터 선택</option></select><input type="date" id="ccDate" aria-label="배송일"><button id="ccRefresh" type="button">새로고침</button></div>
+ </div>
+ <p id="ccNotice" class="notice" role="status" aria-live="polite">센터 권한을 확인하는 중입니다.</p>
+ <section id="ccWorkspace" hidden>
+  <div class="stats" aria-label="배송 현황 요약">
+   <div class="stat"><span class="label">원본 배송 행</span><strong id="ccRawRows">—</strong></div>
+   <div class="stat"><span class="label">기사 배정</span><strong id="ccTotal">—</strong></div>
+   <div class="stat"><span class="label">배송 완료</span><strong id="ccDone">—</strong></div>
+   <div class="stat"><span class="label">미완료</span><strong id="ccPending">—</strong></div>
+   <div class="stat"><span class="label">미배송 · 반품</span><strong id="ccExceptions">—</strong></div>
+  </div>
+  <div class="grid">
+   <section class="panel" aria-labelledby="ccImportTitle"><h2 id="ccImportTitle">당일 원본 엑셀</h2><p class="hint">센터 생성자 계정에서 한 번만 업로드합니다. 소속 기사는 같은 배송일의 원본을 조회합니다.</p>
+    <div class="file-state" id="ccRawStatus">원본 정보를 불러오는 중입니다.</div>
+    <div class="buttons"><button id="ccDaesin" type="button" class="primary">대신택배 전용 등록</button><button id="ccGeneric" type="button">기타 업체 등록</button><button id="ccRawRefresh" type="button">원본 상태 확인</button></div>
+   </section>
+   <section class="panel" aria-labelledby="ccMembersTitle"><h2 id="ccMembersTitle">소속 기사별 현황</h2><p class="hint">기사 계정은 별도로 만들 필요가 없습니다. 기존 DSD 계정으로 센터에 가입합니다.</p>
+    <div class="table-wrap"><table><thead><tr><th>기사</th><th class="num">배정</th><th class="num">완료</th><th class="num">남음</th></tr></thead><tbody id="ccMembers"></tbody></table></div>
+    <p class="hint" style="margin-top:14px"><a href="./">센터 추가·기사 가입은 DSD 설정에서 관리</a></p>
+   </section>
+  </div>
+  <section class="panel" aria-labelledby="ccShipmentsTitle">
+   <h2 id="ccShipmentsTitle">센터 물품 관리</h2><p class="hint">기사에게 이미 배정된 운송장입니다. 미배정 운송장은 원본에만 있고, 기사 스캔 시 선점됩니다. 완료·운행 중 물품은 재배정할 수 없습니다.</p>
+   <div class="filters">
+    <input id="ccSearch" type="search" maxlength="100" placeholder="운송장번호 · 수화주 · 배송지 검색" aria-label="배송지 검색">
+    <select id="ccDriverFilter" aria-label="기사 필터"><option value="">전체 기사</option></select>
+    <select id="ccStatusFilter" aria-label="배송 상태"><option value="all">전체 상태</option><option value="pending">미완료</option><option value="done">완료</option><option value="failed">미배송</option><option value="return">반품</option></select>
+   </div>
+   <div class="table-wrap"><table><thead><tr><th>운송장</th><th>수화주 · 배송지</th><th>담당 기사</th><th>회차</th><th>상태</th><th>관리</th></tr></thead><tbody id="ccShipments"></tbody></table></div>
+   <div class="tfoot"><span id="ccPageInfo"></span><button type="button" id="ccPrev">이전</button><button type="button" id="ccNext">다음</button></div>
+  </section>
+ </section>
+</main>
+<dialog id="ccAssignDialog" aria-labelledby="ccAssignTitle">
+ <h2 id="ccAssignTitle">물품 배정 변경</h2><p id="ccAssignInfo" class="dialog-sub"></p>
+ <form id="ccAssignForm">
+  <label for="ccAssignDriver">대상 기사</label><select id="ccAssignDriver" required></select>
+  <label for="ccAssignRound">대상 회차 번호</label><input id="ccAssignRound" type="number" min="1" max="1000" step="1" required>
+  <p class="dialog-sub">같은 기사로 회차만 바꾸거나 다른 기사에게 물품을 넘길 수 있습니다. 변경 이력은 서버에 저장됩니다.</p>
+  <div class="dialog-footer"><button type="button" id="ccCancelAssign">취소</button><button type="submit" id="ccConfirmAssign" class="primary">변경 저장</button></div>
+ </form>
+</dialog>
+<script src="assets/js/api.js?v=center-console-20261117" defer></script>
+<script src="assets/js/raw-import.js?v=center-shared-20261117" defer></script>
+<script src="assets/js/daesin-import.js?v=center-shared-20261117" defer></script>
+<script src="assets/js/center-console.js?v=center-console-20261117" defer></script>
+</body>
+</html>
