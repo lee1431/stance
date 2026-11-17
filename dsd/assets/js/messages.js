@@ -53,8 +53,14 @@
     const separator = /iPhone|iPad|iPod/i.test(agent) ? '&' : '?';
     return 'sms:'+digits(phone)+separator+'body='+encodeURIComponent(body);
   }
+  function launchSmsDraft(phone,body,navigate=url=>{location.href=url;}) {
+    if(text(phone)&&!validPhone(phone))throw Error('수취인 연락처를 확인하세요.');
+    if(!text(body))throw Error('문자 내용을 입력하세요.');
+    // Keep external-app navigation in the original button gesture, with no API await.
+    navigate(smsUrl(phone,body));
+  }
   // Expose pure composition functions for focused validation and future native integration.
-  window.DSDMessageTools = Object.freeze({amount,payment,buildMessage,smsUrl,validPhone});
+  window.DSDMessageTools = Object.freeze({amount,payment,buildMessage,smsUrl,validPhone,launchSmsDraft});
   function node(tag, cls, content) {
     const n = document.createElement(tag); if(cls)n.className=cls;
     if(content !== undefined)n.textContent=content; return n;
@@ -71,6 +77,12 @@
     header.append(node('h2','',kind==='done'?'완료문자':'배송 예정'),button('✕',()=>d.close(),'icon-button'));
     const root=node('div','message-fields');
     const status=node('p','message-help','물품 정보를 불러오는 중입니다.');
+    const feedback=node('p','message-warning');
+    feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');
+    function notify(message){
+      status.textContent=message;feedback.textContent=message;
+      if(feedback.isConnected)feedback.scrollIntoView({block:'nearest'});
+    }
     root.append(status); d.append(header,root); document.body.append(d);
     let photoURL='';
     d.addEventListener('close',()=>{ if(photoURL)URL.revokeObjectURL(photoURL); d.remove(); if(current===d)current=null; });
@@ -97,7 +109,8 @@
       const l=node('label','message-label',label),i=node('input');i.type=type;i.value=value||'';i.maxLength=max;
       l.append(i);root.append(l);return i;
     }
-    const phone=input('받는 분 연락처',selected.fields.recipient_phone,'tel',30);
+    const phone=input('받는 분 연락처 (없으면 문자 앱에서 입력)',selected.fields.recipient_phone,'tel',30);
+    phone.placeholder='휴대폰 번호 입력 · 비워두고 열기 가능';
     const boxes=node('div','message-items');root.append(boxes);
     for(const item of items){
       const box=node('fieldset','message-item');
@@ -132,12 +145,12 @@
     root.addEventListener('input',e=>{if(e.target!==preview&&e.target.type!=='file')refresh();});
     root.addEventListener('change',e=>{if(e.target!==preview&&e.target.type!=='file')refresh();});
     refresh();
-    function validate(){
+    function validate(draft=false){
       const r=result();
       if(!chosen().length)throw Error('보낼 물품을 선택하세요.');
-      if(!validPhone(phone.value))throw Error('수취인 연락처를 확인하세요.');
-      if(r.unknown||r.missing||r.accountMissing)throw Error('운임 구분·착불 금액·입금 계좌를 먼저 확인하세요.');
-      if(chosen().some(i=>!text(i.fields.sender_name)||!text(i.fields.item_name)))throw Error('발송인과 물품명을 확인하세요.');
+      if(text(phone.value)?!validPhone(phone.value):!draft)throw Error('수취인 연락처를 확인하세요.');
+      if(!draft&&(r.unknown||r.missing||r.accountMissing))throw Error('운임 구분·착불 금액·입금 계좌를 먼저 확인하세요.');
+      if(!draft&&chosen().some(i=>!text(i.fields.sender_name)||!text(i.fields.item_name)))throw Error('발송인과 물품명을 확인하세요.');
       if(!preview.value.trim())throw Error('문자 내용을 입력하세요.');
       if(kind==='done'&&chosen().some(i=>i.status!=='done'))throw Error('완료문자는 배송 완료 처리한 물품에만 보낼 수 있습니다.');
       return preview.value;
@@ -154,11 +167,13 @@
       }finally{saving=false;}
     }
     const actions=node('div','message-actions');
-    if(server)actions.append(button('계좌·수금·장소 저장',()=>save().catch(e=>{status.textContent=e.message;})));
-    actions.append(button('문자 앱 열기',async()=>{
-      try{const body=validate();await save();location.href=smsUrl(phone.value,body);
-        status.textContent='문자 앱에서 받는 분과 내용을 확인하고 전송하세요. 실제 발송 여부는 DSD에서 확인할 수 없습니다.';
-      }catch(e){status.textContent=e.message;}
+    if(server)actions.append(button('계좌·수금·장소 저장',()=>save().then(()=>notify('계좌·수금 여부·보관 장소를 저장했습니다.')).catch(e=>notify(e.message))));
+    actions.append(button('문자 앱 열기',()=>{
+      try{
+        const body=validate(true);
+        notify('문자 앱에서 받는 분과 미확인 내용을 수정한 뒤 전송하세요. 계좌·수금·장소 저장은 별도 버튼으로 해주세요. 문자 앱이 열리지 않으면 DSD를 휴대폰 크롬에서 열어주세요.');
+        launchSmsDraft(phone.value,body);
+      }catch(e){notify(e.message);}
     },'primary'));
     actions.append(button('내용 복사',async()=>{try{await navigator.clipboard.writeText(preview.value);status.textContent='문자 내용을 복사했습니다.';}catch(_){preview.focus();preview.select();status.textContent='선택된 문자 내용을 길게 눌러 복사하세요.';}}));
     if(kind==='done'){
@@ -178,11 +193,12 @@
           if(!navigator.canShare?.({files:[photo]})||!navigator.share)throw Error('이 환경에서는 사진 공유를 지원하지 않습니다. 내용을 복사하고 문자 앱에서 사진을 직접 첨부하세요.');
           navigator.share(data).then(()=>{if(d.open)status.textContent='공유 화면을 닫았습니다. 문자 앱에서 수취인과 사진·본문을 확인하세요. 발송 여부는 확인되지 않습니다.';})
             .catch(e=>{if(d.open&&e.name!=='AbortError')status.textContent='사진 공유 실패: 내용을 복사하고 문자 앱에서 사진을 직접 첨부하세요.';});
-        }catch(e){status.textContent=e.message;}
+        }catch(e){notify(e.message);}
       }));
       root.append(node('p','message-help','사진 공유에서 문자 앱을 선택한 뒤 수취인 번호와 사진·내용을 확인하세요. 앱에 따라 본문이 누락될 수 있어 내용 복사도 제공합니다. 사진은 MMS 요금이 적용될 수 있습니다. 선택한 사진은 DSD 서버에 업로드하지 않습니다.'));
     }
-    root.append(actions,node('p','message-help','문자 앱을 열거나 공유해도 자동 전송되지 않으며 배송 상태도 바뀌지 않습니다. 긴 문자는 LMS로 전환될 수 있습니다.'));
+    root.append(actions,feedback,node('p','message-help','문자 앱 열기는 저장 없이 실행합니다. 연락처가 없으면 문자 앱에서 직접 입력하고, 확인 필요로 표시된 내용도 수정하세요. 문자 앱을 열거나 공유해도 자동 전송되지 않으며 배송 상태도 바뀌지 않습니다. 긴 문자는 LMS로 전환될 수 있습니다.'));
   }
   window.DSDMessages=Object.freeze({open});
 })();
+

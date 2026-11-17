@@ -21,5 +21,12 @@ assert(t.buildMessage('done',[make('착불','5000')],{},'').accountMissing);
 assert(t.validPhone('010-1234-5678'));assert(!t.validPhone('0101234;0105678'));assert(!t.validPhone(''));
 assert.match(t.smsUrl('010-1234-5678','안녕 & +','Android'),/^sms:01012345678\?body=/);
 assert.match(t.smsUrl('01012345678','안녕','iPhone'),/^sms:01012345678&body=/);
-console.log('Message composition: 24 assertions passed');
+let launched='';
+t.launchSmsDraft('', '배송 안내', url=>{launched=url;});
+assert.match(launched,/^sms:\?body=/); // Missing number can be entered in the message app.
+launched='';t.launchSmsDraft('010-1234-5678','배송 안내',url=>{launched=url;});
+assert.match(launched,/^sms:01012345678\?body=/); // Synchronous; no saving/API dependency.
+assert.throws(()=>t.launchSmsDraft('잘못된 번호','안내',()=>{}),/연락처/);
+assert.throws(()=>t.launchSmsDraft('01012345678','',()=>{}),/문자 내용/);
+console.log('Message composition and synchronous draft launch assertions passed');
 
