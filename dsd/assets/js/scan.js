@@ -13,7 +13,7 @@
  '.dsd-scan-dialog p{font-size:13px;color:#566475}.dsd-scan-head{display:flex;justify-content:space-between;align-items:center}',
  '.dsd-scan-dialog form{display:flex;gap:7px;margin:12px 0}.dsd-scan-dialog input{flex:1;min-width:0;background:white;color:#172333;border:1px solid #aab6c6;border-radius:7px;padding:10px;font-size:16px}',
  '.dsd-scan-dialog button{padding:9px 12px;border:1px solid #9aabba;border-radius:7px;cursor:pointer}.dsd-scan-dialog form button{background:#18675d;color:white}',
- '.dsd-scan-dialog video{width:100%;max-height:36vh;margin-top:10px}.dsd-scan-dialog video[hidden]{display:none}',
+ '.dsd-scan-dialog video{width:100%;max-height:40vh;min-height:170px;object-fit:cover;margin-top:10px;border-radius:10px;background:#09121c}.dsd-scan-dialog video[hidden]{display:none}',
  '.dsd-scan-msg.error{color:#aa3333}.dsd-scan-map-button{font-size:15px;font-weight:700}',
  '.dsd-scan-dialog{width:min(540px,96vw);max-height:88vh;overflow:auto}',
  '.dsd-scan-pop.pending small{color:#ffdf9e}',
@@ -29,6 +29,44 @@
  ].join('\n');
  document.head.append(css);
  let dialog,input,msg,video,cameraBtn,stream=null,frame=0,detecting=false;
+ let zxingControls=null,zxingLoader=null,cameraStarting=false,cameraSession=0;
+ // Pin the decoding library; iPhone browsers do not consistently expose BarcodeDetector.
+ const ZXING_CDNS=[
+   'https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.1/umd/zxing-browser.min.js',
+   'https://unpkg.com/@zxing/browser@0.2.1/umd/zxing-browser.min.js'
+ ];
+ function supportsZXing(){
+   const browser=window.ZXingBrowser;
+   return !!(browser && (browser.BrowserMultiFormatOneDReader || browser.BrowserMultiFormatReader));
+ }
+ function loadZXing(){
+   if(supportsZXing())return Promise.resolve(window.ZXingBrowser);
+   if(zxingLoader)return zxingLoader;
+   zxingLoader=(async()=>{
+     for(const url of ZXING_CDNS){
+       try{
+         await new Promise((resolve,reject)=>{
+           const script=document.createElement('script');
+           let finished=false;
+           const finish=(error)=>{
+             if(finished)return;finished=true;clearTimeout(timeout);
+             script.onerror=null;script.onload=null;
+             if(error){script.remove();reject(error);}else resolve();
+           };
+           const timeout=setTimeout(()=>finish(Error('ZXing loading timeout')),12000);
+           script.src=url;script.async=true;
+           script.onload=()=>finish();
+           script.onerror=()=>finish(Error('ZXing loading error'));
+           document.head.appendChild(script);
+         });
+         if(supportsZXing())return window.ZXingBrowser;
+       }catch(_){}
+     }
+     throw Error('아이폰 바코드 인식 모듈을 불러오지 못했습니다. 인터넷 연결을 확인하거나 운송장번호를 직접 입력하세요.');
+   })().catch(error=>{zxingLoader=null;throw error;});
+   return zxingLoader;
+ }
+ function cameraActive(){return !!stream||!!zxingControls||cameraStarting;}
  const queue=[];let busy=false,last='',lastAt=0,toastTimer=0;
 
  function notice(receipt){
@@ -112,7 +150,7 @@
          status(receipt.pending_reason || (receipt.already_added?'이미 등록된 운송장입니다.':receipt.added?'추가 완료 · 다음 운송장을 스캔하세요.':'운송장 원본 조회 완료.'),!!receipt.pending_reason);
        });
      }catch(e){status(e.message||'등록하지 못했습니다.',true);}
-     if(dialog.open)input.focus({preventScroll:true});
+     if(dialog.open&&!cameraActive())input.focus({preventScroll:true});
    }
    busy=false;
  }
@@ -124,43 +162,127 @@
    last=v;lastAt=now;queue.push(v);consume();
  }
  function stopCamera(){
+   cameraSession++;
    if(frame)cancelAnimationFrame(frame);frame=0;
-   if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;
-   if(video){video.pause();video.srcObject=null;video.hidden=true;}
-   if(cameraBtn)cameraBtn.textContent='카메라 스캔';
+   detecting=false;
+   if(zxingControls){
+     try{zxingControls.stop();}catch(_){}
+     zxingControls=null;
+   }
+   if(stream){stream.getTracks().forEach(track=>track.stop());stream=null;}
+   if(video){
+     try{video.pause();}catch(_){}
+     video.srcObject=null;video.hidden=true;
+   }
+   cameraStarting=false;
+   if(cameraBtn){cameraBtn.disabled=false;cameraBtn.textContent='카메라 스캔';}
  }
  async function detect(){
    if(!stream||!dialog.open)return;
    if(!detecting&&video.readyState>=2){
      detecting=true;
-     try{const codes=await window.dsdDetector.detect(video);if(codes.length)enqueue(codes[0].rawValue);}
-     catch(_){}
+     try{
+       const codes=await window.dsdDetector.detect(video);
+       if(codes.length)enqueue(codes[0].rawValue);
+     }catch(_){}
      finally{detecting=false;}
    }
    if(stream&&dialog.open)frame=requestAnimationFrame(detect);
  }
- async function camera(){
-   if(stream){stopCamera();input.focus();return;}
-   if(!('BarcodeDetector' in window)||!navigator.mediaDevices?.getUserMedia){
-     status('카메라 바코드 인식 미지원. 바코드 리더기나 직접 입력을 이용하세요.',true);return;
+ async function startNativeCamera(session){
+   const preferred=['code_128','ean_13','ean_8','itf','codabar'];
+   const supported=typeof BarcodeDetector.getSupportedFormats==='function'
+     ?await BarcodeDetector.getSupportedFormats():preferred;
+   const formats=preferred.filter(format=>supported.includes(format));
+   if(!formats.length)throw Error('기본 카메라가 운송장 바코드 형식을 지원하지 않습니다.');
+   const detector=new BarcodeDetector({formats});
+   const media=await navigator.mediaDevices.getUserMedia({audio:false,
+     video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}});
+   if(session!==cameraSession||!dialog.open){
+     media.getTracks().forEach(track=>track.stop());
+     return;
    }
+   window.dsdDetector=detector;
+   stream=media;video.srcObject=stream;video.hidden=false;
+   video.muted=true;video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');
+   await video.play();
+   if(session!==cameraSession||!dialog.open){stopCamera();return;}
+   status('바코드를 가로로 맞춰주세요. 자동으로 조회합니다.',false);
+   frame=requestAnimationFrame(detect);
+ }
+ async function startZXingCamera(session){
+   status('아이폰용 바코드 인식기를 준비하는 중…',false);
+   const zx=await loadZXing();
+   if(session!==cameraSession||!dialog.open)return;
+   const Reader=zx.BrowserMultiFormatOneDReader||zx.BrowserMultiFormatReader;
+   const reader=new Reader(undefined,{delayBetweenScanAttempts:350,delayBetweenScanSuccess:600});
+   video.hidden=false;video.muted=true;
+   video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');
+   const controls=await reader.decodeFromConstraints({
+     audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}
+   },video,result=>{
+     if(session!==cameraSession||!dialog.open||!result)return;
+     const raw=typeof result.getText==='function'?result.getText():result.text;
+     if(raw)enqueue(raw);
+   });
+   if(session!==cameraSession||!dialog.open){
+     controls.stop();return;
+   }
+   zxingControls=controls;
+   status('카메라 준비 완료 · 운송장 바코드를 가로로 맞춰주세요.',false);
+ }
+ async function camera(){
+   if(cameraActive()){
+     stopCamera();
+     return;
+   }
+   if(!navigator.mediaDevices?.getUserMedia){
+     status('카메라 사용이 불가능합니다. Safari에서 HTTPS 접속과 카메라 권한을 확인하세요.',true);
+     return;
+   }
+   const session=++cameraSession;
+   cameraStarting=true;cameraBtn.disabled=true;
+   const iOS=/iPhone|iPad|iPod/i.test(navigator.userAgent)||
+     (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
    try{
-     const preferred=['code_128','ean_13','ean_8','itf','codabar'];
-     const available=typeof BarcodeDetector.getSupportedFormats==='function'?await BarcodeDetector.getSupportedFormats():preferred;
-     window.dsdDetector=new BarcodeDetector({formats:preferred.filter(f=>available.includes(f))});
-     stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'}}});
-     video.srcObject=stream;video.hidden=false;await video.play();
-     if(!dialog.open){stopCamera();return;}
-     cameraBtn.textContent='카메라 끄기';status('바코드를 카메라에 맞춰주세요.',false);
-     frame=requestAnimationFrame(detect);
-   }catch(e){stopCamera();status('카메라를 시작하지 못했습니다. 권한을 확인하세요.',true);}
+     if(!iOS&&typeof window.BarcodeDetector==='function'){
+       try{await startNativeCamera(session);}
+       catch(error){
+         if(session!==cameraSession||!dialog.open)return;
+         if(stream){stream.getTracks().forEach(track=>track.stop());stream=null;}
+         video.srcObject=null;video.hidden=true;
+         await startZXingCamera(session);
+       }
+     }else{
+       await startZXingCamera(session);
+     }
+     if(session===cameraSession&&dialog.open&&
+        (stream||zxingControls)){
+       cameraBtn.textContent='카메라 끄기';
+     }
+   }catch(error){
+     if(session===cameraSession&&dialog.open){
+       stopCamera();
+       const denied=error?.name==='NotAllowedError'||error?.name==='PermissionDeniedError';
+       const detail=denied
+         ?'카메라 접근이 거부됐습니다. 아이폰 설정에서 Safari의 카메라 권한을 허용하세요.'
+         :error?.name==='NotFoundError'
+           ?'사용할 카메라를 찾지 못했습니다.'
+           :(error?.message||'카메라를 시작하지 못했습니다.');
+       status(detail,true);
+     }
+   }finally{
+     if(session===cameraSession){
+       cameraStarting=false;cameraBtn.disabled=false;
+     }
+   }
  }
  function setup(){
    dialog=document.createElement('dialog');dialog.className='dsd-scan-dialog';
    dialog.innerHTML='<div class="dsd-scan-head"><h2>운송장 스캔</h2><button id="dsdScanClose" type="button" aria-label="닫기">✕</button></div>'
     +'<p>현재 회차에 등록합니다. 바코드 리더기로 읽거나 번호를 입력하세요.</p>'
     +'<form id="dsdScanForm"><input id="dsdScanCode" autocomplete="off" spellcheck="false" placeholder="바코드 스캔 또는 번호 입력" aria-label="운송장번호" /><button type="submit">추가</button></form>'
-    +'<button id="dsdScanCam" type="button">카메라 스캔</button><video id="dsdScanVideo" playsinline muted hidden></video><p id="dsdScanMessage" class="dsd-scan-msg" aria-live="polite"></p><section id="dsdScanSlip" class="dsd-scan-slip" hidden aria-label="운송장 상세정보"></section>';
+    +'<button id="dsdScanCam" type="button">카메라 스캔</button><video id="dsdScanVideo" autoplay playsinline webkit-playsinline muted hidden></video><p id="dsdScanMessage" class="dsd-scan-msg" aria-live="polite"></p><section id="dsdScanSlip" class="dsd-scan-slip" hidden aria-label="운송장 상세정보"></section>';
    document.body.append(dialog);
    const pop=document.createElement('div');pop.id='dsdScanReceipt';pop.className='dsd-scan-pop';pop.setAttribute('role','status');
    pop.setAttribute('aria-live','polite');
@@ -172,6 +294,7 @@
    $('listScanBtn')?.addEventListener('click',open);
    $('dsdScanClose').addEventListener('click',()=>dialog.close());
    dialog.addEventListener('close',stopCamera);
+   document.addEventListener('visibilitychange',()=>{if(document.hidden&&cameraActive())stopCamera();});
    $('dsdScanForm').addEventListener('submit',e=>{e.preventDefault();const s=input.value;input.value='';enqueue(s);input.focus({preventScroll:true});});
    cameraBtn.addEventListener('click',camera);
  }
