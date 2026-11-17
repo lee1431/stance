@@ -20,9 +20,9 @@ a{color:#1d65b2;text-decoration:none}button:focus-visible,input:focus-visible,se
 .controls select{max-width:270px;min-width:190px}.controls button,.action{border:0;padding:10px 16px;min-height:42px;border-radius:9px;background:#1567d8;color:#fff;font-weight:800}
 .notice{padding:14px 16px;background:white;border:1px solid #dfebf6;border-radius:12px;font-size:13px;margin:12px 0 20px;color:#31536e;line-height:1.6}
 .notice.error{border-color:#f0b6bd;color:#a52838;background:#fff9fa}.notice:empty{display:none}
-.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:18px}
+ .stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:18px}
 .stat{background:white;border:1px solid #e3eaf3;border-radius:15px;padding:19px 18px;box-shadow:0 5px 18px #16355c07}
-.stat .label{font-size:12px;font-weight:750;color:#657994}.stat strong{display:block;font-size:29px;letter-spacing:-.8px;margin-top:9px;font-variant-numeric:tabular-nums}.stat:nth-child(3) strong{color:#137f54}.stat:nth-child(4) strong{color:#c47a24}
+.stat .label{font-size:12px;font-weight:750;color:#657994}.stat strong{display:block;font-size:29px;letter-spacing:-.8px;margin-top:9px;font-variant-numeric:tabular-nums}.stat:nth-child(4) strong{color:#137f54}.stat:nth-child(2) strong{color:#c47a24}
 .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;margin-bottom:18px}.panel{background:white;border:1px solid #e3eaf3;border-radius:16px;padding:20px;box-shadow:0 5px 18px #16355c07;min-width:0}
 .panel h2{font-size:17px;letter-spacing:-.3px;margin:0 0 6px}.panel .hint{font-size:12px;color:#73859a;margin:0 0 15px;line-height:1.6}
 .file-state{padding:14px;border-radius:11px;background:#f0f5fb;margin:10px 0 16px;font-size:13px;line-height:1.8;overflow-wrap:anywhere}
@@ -38,7 +38,7 @@ th{font-size:11px;color:#657a91;font-weight:850;background:#f8fafc;white-space:n
 .filters input{flex:1 1 220px}.filters select{flex:0 1 170px}
 table .ghost{min-height:31px;padding:6px 10px;font-size:11px}.tfoot{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:14px;color:#6b7f93;font-size:12px}
 .tfoot button{min-height:34px;padding:5px 12px;border:1px solid #cfdeed;background:#f4f8ff;border-radius:8px}
-dialog{width:min(460px,94vw);border:1px solid #cbd9ea;border-radius:16px;background:white;color:#19314d;padding:22px;box-shadow:0 15px 40px #15294630}dialog::backdrop{background:#1022389c}
+dialog{width:min(560px,94vw);border:1px solid #cbd9ea;border-radius:16px;background:white;color:#19314d;padding:22px;box-shadow:0 15px 40px #15294630}dialog::backdrop{background:#1022389c}
 dialog h2{font-size:19px;margin:0 0 9px}.dialog-sub{font-size:13px;color:#647a92;line-height:1.5;overflow-wrap:anywhere}
 dialog label{display:block;font-size:12px;font-weight:800;margin:17px 0 7px}dialog select,dialog input{width:100%;min-height:43px;border:1px solid #cbd8e8;border-radius:9px;padding:9px;background:white;color:#17304d}
 .dialog-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:22px}.dialog-footer button{border-radius:9px;border:1px solid #ccdaeb;padding:10px 16px;font-weight:800;background:#edf3fb;color:#234b75}.dialog-footer button.primary{background:#1769d9;border-color:#1769d9;color:#fff}
@@ -58,6 +58,7 @@ dialog label{display:block;font-size:12px;font-weight:800;margin:17px 0 7px}dial
  <section id="ccWorkspace" hidden>
   <div class="stats" aria-label="배송 현황 요약">
    <div class="stat"><span class="label">원본 배송 행</span><strong id="ccRawRows">—</strong></div>
+   <div class="stat"><span class="label">미배정</span><strong id="ccUnassigned">—</strong></div>
    <div class="stat"><span class="label">기사 배정</span><strong id="ccTotal">—</strong></div>
    <div class="stat"><span class="label">배송 완료</span><strong id="ccDone">—</strong></div>
    <div class="stat"><span class="label">미완료</span><strong id="ccPending">—</strong></div>
@@ -77,17 +78,23 @@ dialog label{display:block;font-size:12px;font-weight:800;margin:17px 0 7px}dial
    </section>
   </div>
   <section class="panel" aria-labelledby="ccShipmentsTitle">
-   <h2 id="ccShipmentsTitle">센터 물품 관리</h2><p class="hint">기사에게 이미 배정된 운송장입니다. 미배정 운송장은 원본에만 있고, 기사 스캔 시 선점됩니다. 완료·운행 중 물품은 재배정할 수 없습니다.</p>
+   <h2 id="ccShipmentsTitle">원본 물품 · 배송 현황</h2><p class="hint">센터 원본 엑셀의 전체 행을 표시합니다. 기사 스캔 전에는 미배정, 스캔 후에는 담당 기사·회차·배송상태를 표시합니다. 완료·운행 중 물품은 재배정할 수 없습니다.</p>
    <div class="filters">
-    <input id="ccSearch" type="search" maxlength="100" placeholder="운송장번호 · 수화주 · 배송지 검색" aria-label="배송지 검색">
+    <input id="ccSearch" type="search" maxlength="100" placeholder="송장번호 · 물품명 · 수취인 · 발송인 · 주소 검색" aria-label="배송지 검색">
     <select id="ccDriverFilter" aria-label="기사 필터"><option value="">전체 기사</option></select>
-    <select id="ccStatusFilter" aria-label="배송 상태"><option value="all">전체 상태</option><option value="pending">미완료</option><option value="done">완료</option><option value="failed">미배송</option><option value="return">반품</option></select>
+    <select id="ccStatusFilter" aria-label="배송 상태"><option value="all">전체 상태</option><option value="unassigned">미배정</option><option value="pending">미완료</option><option value="done">완료</option><option value="failed">미배송</option><option value="return">반품</option></select>
    </div>
-   <div class="table-wrap"><table><thead><tr><th>운송장</th><th>수화주 · 배송지</th><th>담당 기사</th><th>회차</th><th>상태</th><th>관리</th></tr></thead><tbody id="ccShipments"></tbody></table></div>
+   <div class="table-wrap"><table><thead><tr><th>운송장번호</th><th>물품명</th><th>수취인</th><th>발송인</th><th>배송 주소</th><th>배정 기사</th><th>회차</th><th>완료 여부</th><th>원본 / 관리</th></tr></thead><tbody id="ccShipments"></tbody></table></div>
    <div class="tfoot"><span id="ccPageInfo"></span><button type="button" id="ccPrev">이전</button><button type="button" id="ccNext">다음</button></div>
   </section>
  </section>
 </main>
+<dialog id="ccRawDialog" aria-labelledby="ccRawTitle">
+ <h2 id="ccRawTitle">원본 운송장 상세정보</h2>
+ <p class="dialog-sub" id="ccRawSource"></p>
+ <div class="table-wrap"><table><thead><tr><th>원본 컬럼명</th><th>원본 데이터</th></tr></thead><tbody id="ccRawDetails"></tbody></table></div>
+ <div class="dialog-footer"><button type="button" id="ccRawClose">닫기</button></div>
+</dialog>
 <dialog id="ccAssignDialog" aria-labelledby="ccAssignTitle">
  <h2 id="ccAssignTitle">물품 배정 변경</h2><p id="ccAssignInfo" class="dialog-sub"></p>
  <form id="ccAssignForm">
@@ -100,6 +107,6 @@ dialog label{display:block;font-size:12px;font-weight:800;margin:17px 0 7px}dial
 <script src="assets/js/api.js?v=center-console-20261117" defer></script>
 <script src="assets/js/raw-import.js?v=center-shared-20261117" defer></script>
 <script src="assets/js/daesin-import.js?v=center-shared-20261117" defer></script>
-<script src="assets/js/center-console.js?v=center-console-20261117" defer></script>
+<script src="assets/js/center-console.js?v=manifest-v3-20261117" defer></script>
 </body>
 </html>
