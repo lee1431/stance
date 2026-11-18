@@ -114,8 +114,8 @@ def create_app() -> Flask:
         data = body()
         phone = clean_phone(data.get("phone"))
         password = data.get("password")
-        if not PHONE_PATTERN.fullmatch(phone) or not isinstance(password, str) or not 10 <= len(password) <= 128:
-            return jsonify(ok=False, error="휴대폰 번호와 10~128자 비밀번호를 확인하세요."), 400
+        if not PHONE_PATTERN.fullmatch(phone) or not isinstance(password, str) or not 1 <= len(password) <= 16:
+            return jsonify(ok=False, error="휴대폰 번호와 1~16자 비밀번호를 확인하세요."), 400
         if throttled(phone):
             return jsonify(ok=False, error="요청이 많습니다. 잠시 후 다시 시도하세요."), 429
         hashed = generate_password_hash(password, method="scrypt")
@@ -137,7 +137,7 @@ def create_app() -> Flask:
         data = body()
         phone = clean_phone(data.get("phone"))
         password = data.get("password")
-        if not PHONE_PATTERN.fullmatch(phone) or not isinstance(password, str) or len(password) > 128:
+        if not PHONE_PATTERN.fullmatch(phone) or not isinstance(password, str) or not 1 <= len(password) <= 16:
             return jsonify(ok=False, error="전화번호 또는 비밀번호를 확인하세요."), 400
         if throttled(phone):
             return jsonify(ok=False, error="요청이 많습니다. 잠시 후 다시 시도하세요."), 429
