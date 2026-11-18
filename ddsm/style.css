@@ -83,3 +83,39 @@
 .address-map-coordinates { font-size: 10px; line-height: 1.55; color: #086774; margin: 8px 1px 0; overflow-wrap: anywhere; }
 .address-map-coordinates:empty { display: none; }
 .address-map-empty.map-error { color: #A4493D; background: #FFF8F6; border-color: #EAC8C3; }
+
+/* Stable delivery pin: centered above a pannable NAVER map. */
+.address-map-stage {
+  position: relative;
+  width: 100%;
+  height: clamp(200px, 31dvh, 278px);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #e5f0ea;
+  isolation: isolate;
+}
+.address-map-stage .address-map-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border-radius: inherit;
+  touch-action: pan-x pan-y;
+}
+.address-map-center-pin {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 42px;
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+  filter: drop-shadow(0 3px 3px #17345155);
+}
+.address-map-center-pin svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
