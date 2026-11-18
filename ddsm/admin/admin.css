@@ -8,3 +8,6 @@
 #filterMissingBtn{background:#FFF0E7;color:#86533A;border:0}
 #showMoreBtn{margin:14px auto 0;display:block;background:#DDF3F0;color:#086774;border:0}
 #showMoreBtn[hidden]{display:none}
+
+.map-pin-save-bar{position:absolute;left:50%;top:50%;transform:translate(-50%,74px);z-index:25}
+.map-pin-save-bar button{border-radius:999px;padding:12px 20px;box-shadow:0 7px 23px #1734513A}
