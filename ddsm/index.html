@@ -10,9 +10,9 @@
   <link rel="stylesheet" href="style.css?v=14-neo-mint-dark">
   <script src="naver-map.js?v=4-address-classification" defer></script>
   <script src="address-utils.js?v=3-attached-units" defer></script>
-  <script src="delivery-map.js?v=5-address-classification" defer></script>
+  <script src="delivery-map.js?v=6-round-filter" defer></script>
   <script src="waybill.js?v=1-master-13" defer></script>
-  <script src="app.js?v=24-neo-mint-dark" defer></script>
+  <script src="app.js?v=25-round-filter" defer></script>
   <script src="theme.js?v=1" defer></script>
 </head>
 <body>
@@ -100,13 +100,13 @@
       <section class="delivery-map-panel" aria-labelledby="deliveryMapHeading">
         <div class="delivery-map-header">
           <div>
-            <h3 id="deliveryMapHeading">오늘의 배송 지도</h3>
+            <h3 id="deliveryMapHeading">선택 회차 배송 지도</h3>
             <p id="deliveryMapCount">오늘의 배송지를 지도에 표시합니다.</p>
           </div>
-          <button id="deliveryMapFitBtn" class="map-fit-button" type="button">◎ 전체 보기</button>
+          <button id="deliveryMapFitBtn" class="map-fit-button" type="button">◎ 회차 전체</button>
         </div>
         <div id="deliveryMapStage" class="delivery-map-stage">
-          <div id="deliveryMapCanvas" class="delivery-map-canvas" role="region" aria-label="오늘 전체 회차의 배송지 네이버 지도"></div>
+          <div id="deliveryMapCanvas" class="delivery-map-canvas" role="region" aria-label="선택 회차의 배송지 네이버 지도"></div>
           <div id="deliveryMapEmpty" class="delivery-map-empty" role="status">지도 준비 중입니다.</div>
         </div>
         <div class="delivery-map-footer">
@@ -118,7 +118,7 @@
       <div class="delivery-round-toolbar">
         <label for="deliveryRoundSelect">배송 목록 회차</label>
         <select id="deliveryRoundSelect" aria-label="배송 목록 회차 선택"></select>
-        <span>지도는 선택 날짜의 전체 회차를 표시합니다.</span>
+        <span>지도와 목록은 선택한 회차만 표시합니다.</span>
       </div>
       <div class="progress-wrap">
         <div class="progress-heading"><strong id="progressLabel">완료 0 / 0</strong><span id="remainingLabel">남은 배송 0건</span></div>
