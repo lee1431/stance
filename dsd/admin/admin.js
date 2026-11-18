@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const API_BASE = 'https://mrdindoin.ddns.net/dsd/api/';
+  const API_BASE = '/dsd-center-api/';
   const dateString = () => {
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
@@ -15,7 +15,7 @@
     && p.lat >= -90 && p.lat <= 90 && p.lng >= -180 && p.lng <= 180;
   const say = (id, message) => { $(id).textContent = message; };
   async function api(path, options={}) {
-    const opts = { credentials: 'include', cache: 'no-store', ...options };
+    const opts = { credentials: 'same-origin', cache: 'no-store', ...options };
     opts.headers = { ...(opts.headers || {}), ...(opts.method === 'POST' ? {'X-CSRF-Token':csrf} : {}) };
     if (opts.body instanceof FormData) delete opts.headers['Content-Type'];
     else if (opts.body && typeof opts.body !== 'string') {
