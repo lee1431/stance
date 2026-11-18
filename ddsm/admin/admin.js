@@ -274,6 +274,7 @@
     selected=row;editorOpen=true;
     $('locationEditor').hidden=false;
     $('mapCrosshair').hidden=false;
+    $('mapPinSaveBar').hidden=false;
     say('editName','배송지 · '+rowName(row));
     say('editInfo','운송장 '+(row.waybill||'미등록')+' · 원본 '+row.sheet_name+' '+row.source_row+'행');
     $('editAddress').value=row.registry_address||row.source_address||'';
@@ -289,6 +290,7 @@
   function closeEditor() {
     selected=null;editorOpen=false;
     $('locationEditor').hidden=true;$('mapCrosshair').hidden=true;
+    $('mapPinSaveBar').hidden=true;
     $('savedDestinationPanel').hidden=true;
     document.querySelectorAll('.row-selected').forEach(el=>el.classList.remove('row-selected'));
   }
@@ -356,7 +358,7 @@
   async function saveCenter() {
     if(!selected||!map)return;
     const address=$('editAddress').value.trim();
-    if(!address){say('locationHint','저장할 배송지의 주소를 입력하세요.');return;}
+    if(!address && !selected.business_name.trim()) {say('locationHint','주소 또는 상호명이 필요합니다.');return;}
     const center=map.getCenter();
     try{
       await post('admin/deliveries/'+selected.id+'/location',{
@@ -364,7 +366,7 @@
         lat:center.lat(), lng:center.lng()
       });
       closeEditor();await loadDay();
-      say('importStatus','고유 배송지 위치를 저장했습니다. 향후 같은 주소의 배송에도 적용됩니다.');
+      say('importStatus',address ? '공용 배송지 마스터의 주소와 좌표를 저장했습니다.' : '상호명만으로 공용 배송지 마스터의 좌표를 저장했습니다.');
     }catch(e){say('locationHint','위치 저장 실패: '+e.message);}
   }
   let geocodeRunning=false;
@@ -434,6 +436,7 @@
     $('geocodeBtn').addEventListener('click',()=>autoGeocode(200));
     $('cancelLocationBtn').addEventListener('click',closeEditor);
     $('saveCenterBtn').addEventListener('click',saveCenter);
+    $('mapPinSaveBtn').addEventListener('click',saveCenter);
     $('searchAddressBtn').addEventListener('click',searchAddress);
     $('linkDestinationBtn').addEventListener('click',linkSaved);
     $('showMoreBtn')?.addEventListener('click',appendPage);
