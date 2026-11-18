@@ -42,6 +42,7 @@
       headers:{Authorization:'Bearer '+token},credentials:'omit',cache:'no-store'
     });
     const body = await res.json().catch(()=>null);
+    if (res.status===404) throw Error('S10 배송 작업 API가 없습니다. 서버 admin.py 업데이트 및 재시작이 필요합니다.');
     if (!res.ok || body?.ok!==true || !body.day) throw Error(body?.error||'서버 배송 목록 조회 실패');
     return body;
   }
@@ -983,6 +984,11 @@
         signal: controller.signal
       });
       const result = await response.json().catch(() => null);
+      if (response.status === 404) {
+        throw new Error(action === 'login'
+          ? 'S10 로그인 API가 없습니다(404). 서버 admin.py를 업데이트하고 Waitress를 재시작하세요.'
+          : '가입 API가 없습니다(404). S10 인증 라우트를 확인하세요.');
+      }
       if (!response.ok || !result || result.ok !== true || result.phone !== phone) {
         throw new Error(result?.error || '인증 API 연결 또는 응답을 확인하세요.');
       }
