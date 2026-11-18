@@ -433,3 +433,47 @@
   letter-spacing: .3px;
 }
 .identity-error { color: #AC453B; font-size: 12px; font-weight: 750; line-height: 1.4; }
+
+/* Daily ID and API-ready account controls. */
+.date-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
+  letter-spacing: .4px;
+}
+.date-meta #dailyPhoneLabel {
+  display: inline-block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  letter-spacing: 0;
+  font-size: 11px;
+  color: #086774;
+}
+.date-meta-sep { color: #9BB6B0; }
+.identity-dialog input[type="password"] {
+  width: 100%;
+  font-size: 16px;
+}
+.identity-auth-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 18px;
+}
+.identity-auth-actions button { min-width: 0; margin: 0; }
+.identity-auth-actions button:disabled { opacity: .55; }
+.identity-local-action {
+  width: 100%;
+  margin-top: 10px;
+  padding: 11px;
+  border: 1px solid #D0E5DE;
+  border-radius: 12px;
+  background: #F5FAF7;
+  color: #436E67;
+  font-size: 12px;
+  font-weight: 800;
+}
