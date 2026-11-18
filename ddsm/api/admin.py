@@ -245,10 +245,12 @@ def destination_id_for(db, name, address):
             # Promote a single, previously addressless business instead of splitting
             # today's row from its historic, shared master record.
             provisional = db.execute(
-                "SELECT id FROM destinations WHERE name_key=? AND address_key='' LIMIT 2",
+                "SELECT id FROM destinations WHERE name_key=? LIMIT 2",
                 (normalized_name,)
             ).fetchall()
-            if len(provisional) == 1:
+            if len(provisional) == 1 and not db.execute(
+                "SELECT address_key FROM destinations WHERE id=?", (provisional[0][0],)
+            ).fetchone()[0]:
                 chosen_id = provisional[0][0]
                 db.execute(
                     """UPDATE destinations
