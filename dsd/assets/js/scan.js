@@ -75,7 +75,8 @@
    pop.classList.toggle('pending',pending);
    $('dsdScanReceiptAddress').textContent=receipt.address||'받는 분 주소 확인 필요';
    $('dsdScanReceiptText').textContent=pending?'원본 조회 완료 · 배송지 등록 대기'
-      :receipt.already_added?'이미 등록된 배송지입니다'
+      :receipt.already_added
+        ? (receipt.item_suffix?'물품 '+receipt.item_suffix+' · 배송지는 이미 등록됨':'이미 등록된 배송지입니다')
       :receipt.added?'배송지가 추가되었습니다':'운송장 원본을 찾았습니다';
    pop.classList.remove('on');void pop.offsetWidth;pop.classList.add('on');
    clearTimeout(toastTimer);toastTimer=setTimeout(()=>pop.classList.remove('on'),2800);
@@ -97,6 +98,9 @@
    const target=$('dsdScanSlip');
    target.replaceChildren();target.hidden=false;
    const title=document.createElement('h3');title.textContent='운송장 상세정보';target.append(title);
+   if(receipt.scanned_barcode)target.append(scanRow('실제 스캔 번호',receipt.scanned_barcode));
+   if(receipt.master_waybill_digits && receipt.item_suffix)
+     target.append(scanRow('기본 운송장 / 물품번호',receipt.master_waybill_digits+' / '+receipt.item_suffix));
    if(receipt.pending_reason){
      const warning=document.createElement('p');warning.className='scan-pending';
      warning.textContent=receipt.pending_reason;target.append(warning);
@@ -147,7 +151,9 @@
        await window.DSD_SCAN_WAYBILL(code,receipt=>{
          renderSlip(receipt);
          notice(receipt);
-         status(receipt.pending_reason || (receipt.already_added?'이미 등록된 운송장입니다.':receipt.added?'추가 완료 · 다음 운송장을 스캔하세요.':'운송장 원본 조회 완료.'),!!receipt.pending_reason);
+         status(receipt.pending_reason || (receipt.already_added
+           ? (receipt.item_suffix?'물품 '+receipt.item_suffix+' · 동일 배송지는 이미 등록됨':'이미 등록된 운송장입니다.')
+           : receipt.added?'추가 완료 · 다음 운송장을 스캔하세요.':'운송장 원본 조회 완료.'),!!receipt.pending_reason);
        });
      }catch(e){status(e.message||'등록하지 못했습니다.',true);}
      if(dialog.open&&!cameraActive())input.focus({preventScroll:true});
