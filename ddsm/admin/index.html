@@ -6,9 +6,9 @@
 <meta name="theme-color" content="#F8F7F4">
 <title>DDSM | 센터 관리콘솔</title>
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="admin.css?v=1">
+<link rel="stylesheet" href="admin.css?v=2-unlocated">
 <script src="../naver-map.js?v=3-shared-sdk" defer></script>
-<script src="admin.js?v=1" defer></script>
+<script src="admin.js?v=2-unlocated" defer></script>
 </head>
 <body>
 <div class="shell">
@@ -55,6 +55,11 @@
     <div id="mapCrosshair" class="map-crosshair" hidden><span class="pin">📍</span><span>지도의 중앙을 배송지로 저장</span></div>
    </div>
    <div class="map-bottom"><span>● 지도: 위치가 확인된 배송지</span><span>○ 미확인: 아래 목록에서 관리</span></div>
+  </section>
+  <section id="unlocatedPanel" class="unlocated-panel" hidden>
+   <div class="section-head"><div><h2>위치 미확인 배송지</h2><p>상호명만 있거나 지도 좌표가 없는 건입니다. 항목을 눌러 별도 관리하세요.</p></div>
+    <button id="filterMissingBtn" type="button">미확인 목록 전체 보기</button></div>
+   <div id="unlocatedChips" class="unlocated-chips"></div>
   </section>
   <section id="locationEditor" class="location-panel" hidden>
    <div><strong id="editName">배송 위치 수정</strong><p id="editInfo"></p></div>
