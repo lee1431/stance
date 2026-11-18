@@ -77,3 +77,9 @@
   margin: 8px 1px 0;
 }
 #editDialog { overscroll-behavior: contain; }
+
+/* NAVER map preview — editable location marker */
+.address-map-frame { position: relative; width: 100%; min-height: 176px; height: clamp(176px, 27dvh, 238px); overflow: hidden; touch-action: pan-x pan-y; }
+.address-map-coordinates { font-size: 10px; line-height: 1.55; color: #086774; margin: 8px 1px 0; overflow-wrap: anywhere; }
+.address-map-coordinates:empty { display: none; }
+.address-map-empty.map-error { color: #A4493D; background: #FFF8F6; border-color: #EAC8C3; }
