@@ -321,3 +321,42 @@
   line-height: 1.3;
   font-weight: 750;
 }
+
+/* Scan modal: stays inside visual viewport when tablet software keyboard opens. */
+#scanDialog.scan-dialog {
+  position: fixed;
+  top: calc(var(--scan-viewport-top, 0px) + 12px);
+  left: 0;
+  right: 0;
+  bottom: auto;
+  margin: 0 auto;
+  width: min(460px, calc(100vw - 28px));
+  max-height: max(140px, calc(var(--scan-viewport-height, 100dvh) - 24px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+#scanDialog .dialog-head { position: sticky; top: -1px; z-index: 1; background: #fff; }
+#scanDialog .scan-form { align-items: stretch; }
+#scanDialog .scan-form > input {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  font-size: 16px;
+}
+#scanDialog .scan-form > .primary-action {
+  flex: 0 0 82px;
+  min-width: 82px;
+  white-space: nowrap;
+  word-break: keep-all;
+}
+#scanDialog .dialog-message { margin-top: 12px; overflow-wrap: anywhere; }
+#scanDialog .scan-footnote { margin-bottom: 0; }
+@media (max-height: 560px), (max-width: 370px) {
+  #scanDialog.scan-dialog { padding: 14px; border-radius: 17px; }
+  #scanDialog .dialog-head h2 { font-size: 18px; }
+  #scanDialog .dialog-description { margin: 7px 0 10px; font-size: 12px; }
+  #scanDialog .secondary-action { margin-top: 8px; }
+  #scanDialog .scan-footnote { display: none; }
+}
