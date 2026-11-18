@@ -1,472 +1,351 @@
-/* DSD center console. Never cache recipient data in browser storage. */
+/* DSD fixed-admin center console. Bearer token kept in memory; no signup or browser cookie auth. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const API_BASE = window.location.hostname === 'mrdindoin.ddns.net'
-    ? '/dsd-center-api/'
-    : 'https://mrdindoin.ddns.net/dsd-center-api/';
+  const API_BASE = 'https://mrdindoin.ddns.net/dsd-center-api/';
   const dateString = () => {
     const d = new Date();
-    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    return [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-');
   };
-  let csrf = '', rows = [], columns = [], map = null, maps = null, markers = [], selected = null;
-  let updateSeq = 0, mapLoading = null, editorOpen = false, fitOnce = false;
-  let currentPage = 0, visibleFiltered = [];
-  const chunkSize = 250;
-  const valid = p => Number.isFinite(p.lat) && Number.isFinite(p.lng)
-    && p.lat >= -90 && p.lat <= 90 && p.lng >= -180 && p.lng <= 180;
-  const say = (id, message) => { $(id).textContent = message; };
-  async function api(path, options={}) {
-    const opts = { credentials: 'include', cache: 'no-store', ...options };
-    opts.headers = { ...(opts.headers || {}), ...(opts.method === 'POST' ? {'X-CSRF-Token':csrf} : {}) };
-    if (opts.body instanceof FormData) delete opts.headers['Content-Type'];
-    else if (opts.body && typeof opts.body !== 'string') {
-      opts.body = JSON.stringify(opts.body);
-      opts.headers['Content-Type'] = 'application/json';
+
+  let token = '';
+  let rows = [], columns = [], map = null, maps = null, markers = [], mapLoading = null;
+  let requestVersion = 0, geocodeRunning = false, fitOnLoad = false;
+  let shown = [], pageIndex = 0;
+  const PAGE_SIZE = 250;
+  const attempted = new Set();
+  const safePoint = p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng)
+      && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180;
+  const say = (id,text) => { $(id).textContent = String(text); };
+
+  async function api(path, options = {}) {
+    const headers = {...(options.headers || {})};
+    if (token) headers.Authorization = 'Bearer ' + token;
+    let body = options.body;
+    if (body && !(body instanceof FormData) && typeof body !== 'string') {
+      body = JSON.stringify(body);
+      headers['Content-Type'] = 'application/json';
     }
-    const response = await fetch(API_BASE + path, opts);
-    const json = await response.json().catch(() => null);
-    if (!response.ok || !json || !json.ok) {
-      throw new Error(json?.error || 'API 응답 오류 (' + response.status + ')');
+    const response = await fetch(API_BASE + path, {
+      method: options.method || 'GET',
+      headers, body, mode: 'cors', credentials: 'omit',
+      cache: 'no-store'
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data?.ok) {
+      if (response.status === 401 && token) {
+        // A lost/expired token must never allow access to old delivery data.
+        lock(false);
+      }
+      throw new Error(data?.error || 'API 요청 실패 (' + response.status + ')');
     }
-    return json;
+    return data;
   }
   const get = path => api(path);
-  const post = (path, body) => api(path, { method:'POST', body });
-  function showDashboard() {
-    $('authPanel').hidden = true;
-    $('dashboard').hidden = false;
-    $('logoutBtn').hidden = false;
-    say('authBadge', '관리자 인증됨');
-    loadDay();
-  }
-  async function validateSession() {
-    try {
-      const result = await get('admin/me');
-      csrf = result.csrf;
-      showDashboard();
-    } catch (_) {
-      $('authPanel').hidden = false;
-    }
-  }
-  async function authenticate(event) {
+  const post = (path, body) => api(path, {method:'POST', body});
+
+  async function signIn(event) {
     event.preventDefault();
-    const phone = $('loginPhone').value.replace(/\D/g,'');
-    const password = $('loginPassword').value;
-    const adminPassword = $('adminPassword').value;
     const button = $('authForm').querySelector('button[type=submit]');
     button.disabled = true;
     say('authError','');
     try {
-      let me;
-      try { me = await get('auth/me'); }
-      catch (_) { me = null; }
-      if (!me || me.phone !== phone) {
-        const loggedIn = await post('auth/login',{phone,password});
-        csrf = loggedIn.csrf;
-      } else {
-        csrf = me.csrf;
-      }
-      // Confirm that the browser retained the HttpOnly session cookie before
-      // attempting admin unlock. Cross-site cookie blocking otherwise looks
-      // like an incorrect administrator password.
-      let verified;
-      try {
-        verified = await get('auth/me');
-      } catch (error) {
-        throw new Error(
-          '사용자 로그인 응답은 받았지만 세션 쿠키를 확인하지 못했습니다. ' +
-          '관리자 화면을 API와 같은 mrdindoin.ddns.net 도메인에서 열어야 합니다.'
-        );
-      }
-      if (verified.phone !== phone) {
-        throw new Error('로그인된 사용자 계정이 입력한 휴대폰 번호와 다릅니다. 다시 로그인하세요.');
-      }
-      csrf = verified.csrf;
-      const unlocked = await post('admin/unlock',{admin_password:adminPassword});
-      csrf = unlocked.csrf;
-      $('loginPassword').value = '';
+      const result = await post('admin/login', {
+        id: $('adminId').value.trim(),
+        password: $('adminPassword').value
+      });
+      if (!result.token || typeof result.token !== 'string') throw new Error('서버 로그인 응답에 토큰이 없습니다.');
+      token = result.token; // In-memory only. Refresh requires login.
       $('adminPassword').value = '';
-      showDashboard();
+      $('authPanel').hidden = true;
+      $('dashboard').hidden = false;
+      $('logoutBtn').hidden = false;
+      await loadDay();
     } catch (error) {
-      say('authError',error.message || '인증에 실패했습니다.');
-    } finally { button.disabled = false; }
+      say('authError', error.message || '로그인 실패');
+    } finally {
+      button.disabled = false;
+    }
   }
-  async function lock() {
-    try {
-      await post('auth/logout',{});
-    } catch (_) { /* Local UI lock even if session expiry is already complete. */ }
-    csrf = '';
-    rows = [];
-    clearMarkers();
+
+  function clearMap() {
+    for (const item of markers) item.marker.setMap(null);
+    markers = [];
+  }
+  function lock(performLogout = true) {
+    const previous = token;
+    token = '';
+    requestVersion++;
+    rows = []; columns = []; attempted.clear();
+    clearMap();
     $('dashboard').hidden = true;
     $('authPanel').hidden = false;
     $('logoutBtn').hidden = true;
-    say('authBadge','관리자 인증 필요');
+    say('adminPassword','');
+    if (performLogout && previous) {
+      // Revocation uses the captured token so it survives local state reset.
+      fetch(API_BASE + 'admin/logout', {
+        method:'POST', mode:'cors', credentials:'omit',
+        headers: {Authorization:'Bearer ' + previous}
+      }).catch(() => {});
+    }
   }
-  function mapNotice(message, small=false) {
-    const el = $('mapPlaceholder');
-    el.textContent = message;
-    el.hidden = false;
-    el.classList.toggle('hint',small);
-  }
+
   async function ensureMap() {
+    if (map) return map;
     if (mapLoading) return mapLoading;
     mapLoading = window.DSD_NaverMap.loadSdk().then(n => {
       maps = n;
-      map = new n.Map($('mapCanvas'),{
-        center:new n.LatLng(36.991,127.925), zoom:12,
-        zoomControl:true, zoomControlOptions:{position:n.Position.TOP_RIGHT},
-        scaleControl:false, mapDataControl:false
+      map = new n.Map($('mapCanvas'), {
+        center: new n.LatLng(36.991,127.925),
+        zoom:12,
+        zoomControl:true,
+        zoomControlOptions:{position:n.Position.TOP_RIGHT},
+        mapDataControl:false,scaleControl:false
       });
-      mapNotice('위치가 저장된 배송지가 없습니다. 지도를 이동할 수 있습니다.',true);
       return map;
-    }).catch(err => {
-      mapLoading=null;
-      mapNotice('네이버 지도 연결 실패: '+(err.message||err));
-      throw err;
+    }).catch(error => {
+      mapLoading = null;
+      say('mapPlaceholder','네이버 지도 연결 실패: ' + error.message);
+      throw error;
     });
     return mapLoading;
   }
-  function clearMarkers() {
-    markers.forEach(item=>item.marker.setMap(null));
-    markers=[];
-  }
-  function renderUnlocated() {
-    const missing=rows.filter(row=>!row.located);
-    $('unlocatedPanel').hidden=missing.length===0;
-    const target=$('unlocatedChips');target.replaceChildren();
-    const LIMIT=100;
-    missing.slice(0,LIMIT).forEach(row=>{
-      const button=document.createElement('button');
-      button.type='button';
-      button.className='unlocated-chip';
-      button.textContent=(row.business_name||'상호 미입력') + (row.source_address?' · 주소 확인':' · 주소 없음');
-      button.title='배송지 위치 지정: '+(row.business_name||row.waybill||'미입력');
-      button.addEventListener('click',()=>selectRow(row.id));
-      target.append(button);
-    });
-    if(missing.length>LIMIT){
-      const more=document.createElement('span');
-      more.textContent='외 '+(missing.length-LIMIT)+'건 · 미확인 목록 전체 보기에서 확인';
-      more.className='unlocated-more';
-      target.append(more);
-    }
-  }
-  function fit() {
+  function fitMap() {
     if (!map || !markers.length) return;
     maps.Event.trigger(map,'resize');
-    if(markers.length===1) {
-      map.setCenter(markers[0].marker.getPosition());map.setZoom(16);return;
+    if (markers.length===1) {
+      map.setCenter(markers[0].marker.getPosition());
+      map.setZoom(16);
+      return;
     }
-    const bounds=new maps.LatLngBounds();
-    markers.forEach(x=>bounds.extend(x.marker.getPosition()));
-    map.fitBounds(bounds,{top:65,bottom:60,left:60,right:60});
+    const bounds = new maps.LatLngBounds();
+    markers.forEach(m => bounds.extend(m.marker.getPosition()));
+    map.fitBounds(bounds,{top:50,bottom:50,left:50,right:50});
   }
-  function rowName(row) {return row.business_name||row.waybill||'상호 미입력';}
+
   function drawMap() {
     if (!map) return;
-    clearMarkers();
-    // One marker per unique destination, with shipment count in tooltip.
-    const locations=new Map();
+    clearMap();
+    const places = new Map();
     for (const row of rows) {
-      if(!row.located || !valid(row))continue;
-      const id=String(row.destination_id || row.id);
-      if(!locations.has(id))locations.set(id,{row,count:0});
-      locations.get(id).count++;
+      const pt = {lat:Number(row.lat),lng:Number(row.lng)};
+      if (!row.located || !safePoint(pt)) continue;
+      const key = row.destination_id ? 'd:'+row.destination_id : pt.lat.toFixed(6)+':'+pt.lng.toFixed(6);
+      const entry=places.get(key);
+      if (entry) entry.items.push(row);
+      else places.set(key,{pt,items:[row]});
     }
-    let order=0;
-    for (const group of locations.values()) {
-      const row=group.row;
-      const count=++order;
-      const marker=new maps.Marker({
-        map, position:new maps.LatLng(row.lat,row.lng),
-        icon:{
-          content:'<div class="admin-map-marker">' + count + '</div>',
-          size:new maps.Size(30,32),
-          anchor:new maps.Point(15,29)
+    for (const entry of places.values()) {
+      const first = entry.items[0];
+      const count = entry.items.length;
+      const label = first.business_name || first.waybill || '배송지';
+      const marker = new maps.Marker({
+        map,
+        position:new maps.LatLng(entry.pt.lat,entry.pt.lng),
+        icon: {
+          content:'<div class="admin-map-marker">'+count+'</div>',
+          size:new maps.Size(30,32), anchor:new maps.Point(15,29)
         },
-        title:rowName(row)+' · '+group.count+'건',
-        clickable:true
+        clickable:true,
+        title:label+' · 배송 '+count+'건'
       });
-      maps.Event.addListener(marker,'click',()=>selectRow(row.id));
-      markers.push({marker,id:row.id});
+      maps.Event.addListener(marker,'click',()=>{
+        $('searchInput').value=String(first.business_name||first.waybill||'');
+        $('filterSelect').value='all';
+        renderTable();
+        $('rawTable').scrollIntoView({behavior:'smooth',block:'start'});
+      });
+      markers.push({marker});
     }
-    const placeholder=$('mapPlaceholder');
-    if(markers.length)placeholder.hidden=true;
-    else mapNotice(rows.length
-        ? '아직 지도 위치가 확인되지 않았습니다. 주소 좌표 찾기를 실행하세요.'
-        : '당일 배송지가 없습니다. 엑셀을 업로드하세요.',true);
-    say('mapCount',String(rows.filter(x=>x.located).length));
-    say('missingCount',String(rows.filter(x=>!x.located).length));
-    if(!fitOnce&&markers.length){fitOnce=true;requestAnimationFrame(fit);}
+    say('markerCount',markers.length);
+    const mapped=rows.filter(row=>row.located&&safePoint({lat:Number(row.lat),lng:Number(row.lng)})).length;
+    say('mapCount',mapped);
+    say('missingCount',rows.length-mapped);
+    const empty=$('mapPlaceholder');
+    empty.hidden=markers.length>0;
+    if(!markers.length)empty.textContent=rows.length
+      ? '아직 위치가 확인된 배송지가 없습니다. 주소 좌표 조회를 실행하세요.'
+      : '엑셀을 업로드하면 배송지가 표시됩니다.';
+    if(!fitOnLoad && markers.length){fitOnLoad=true;requestAnimationFrame(fitMap);}
   }
+
   async function loadDay() {
-    const date=$('deliveryDate').value;
-    const token=++updateSeq;
-    say('importStatus','당일 원본 데이터 조회 중…');
+    if (!token) return;
+    const version=++requestVersion;
+    const day=$('deliveryDate').value;
+    say('importStatus',day+' 배송 목록 조회 중…');
     try {
-      const info=await get('admin/deliveries?date='+encodeURIComponent(date));
-      if(token!==updateSeq)return;
-      rows=info.rows;
-      columns=info.columns;
-      say('totalCount',String(info.total));
-      say('mapCount',String(info.located));
-      say('missingCount',String(info.unlocated));
-      say('lastImport',info.last_import?.filename||'—');
-      say('importStatus',date+' · 원본 '+info.total+'건 · 위치 미확인 '+info.unlocated+'건');
-      fitOnce=false;
-      selected=null;
-      closeEditor();
+      const result=await get('admin/deliveries?date='+encodeURIComponent(day));
+      if (version!==requestVersion || !token) return;
+      rows=result.rows||[];
+      columns=result.columns||[];
+      say('totalCount',rows.length);
+      say('importStatus',day+' · 전체 '+rows.length+'건 · 위치 미확인 '+result.unlocated+'건');
+      fitOnLoad=false;
       renderTable();
-      renderUnlocated();
-      try { await ensureMap();drawMap();} catch (_) {}
-      if(token!==updateSeq)return;
-      // Use a bounded number of address queries; avoids unexpectedly exhausting map quota.
-      if(rows.length&&rows.some(x=>!x.located&&x.source_address)) autoGeocode(60);
-    } catch(e){if(token===updateSeq)say('importStatus','조회 실패: '+e.message);}
+      try {
+        await ensureMap();
+        if(version!==requestVersion||!token)return;
+        drawMap();
+        // Automatic lookup is quota bounded; manual lookup can continue later.
+        if(rows.some(x=>!x.located && x.source_address))lookupMissing(60);
+      } catch (_) {}
+    } catch(error) {
+      if(version===requestVersion && token)say('importStatus','목록 조회 실패: '+error.message);
+    }
   }
-  async function importExcel(event) {
+
+  async function upload(event) {
     event.preventDefault();
-    if(!$('excelFile').files[0])return;
-    const file=$('excelFile').files[0],date=$('deliveryDate').value;
-    if(file.size>8*1024*1024){say('importStatus','8MB 이하 파일만 지원합니다.');return;}
+    const file=$('excelFile').files[0];
+    if(!file)return;
+    if(file.size>8*1024*1024) {
+      say('importStatus','8MB 이하 엑셀 파일만 업로드 가능합니다.');return;
+    }
     const body=new FormData();
-    body.append('date',date);body.append('file',file,file.name);
-    const button=$('importBtn');button.disabled=true;
-    say('importStatus','원본 엑셀을 분석하고 모든 행을 저장하는 중…');
+    body.append('file',file,file.name);
+    body.append('date',$('deliveryDate').value);
+    const button=$('importBtn');
+    button.disabled=true;
+    say('importStatus','전체 원본 데이터 저장 중…');
     try {
       const result=await post('admin/import',body);
-      geocodeTried.clear();
+      attempted.clear();
       await loadDay();
-      say('importStatus',file.name+' · '+result.imported+'행 반영 · 신규 '+result.added+'건 / 갱신 '+result.updated+'건');
-    }catch(e){say('importStatus','업로드 실패: '+e.message);}
-    finally{button.disabled=false;}
+      say('importStatus',file.name+' · '+result.imported+'행 저장 (신규 '+result.added+' / 갱신 '+result.updated+')');
+    } catch(error) {say('importStatus','엑셀 업로드 실패: '+error.message);}
+    finally {button.disabled=false;}
   }
-  const textCell=(text)=>{const td=document.createElement('td');td.textContent=String(text??'');return td;};
-  function displayedRows() {
-    const filter=$('filterSelect').value;
+
+  function filteredRows(){
     const q=$('searchInput').value.trim().toLocaleLowerCase();
-    return rows.filter(r=>{
-      if(filter==='missing'&&r.located)return false;
-      if(filter==='mapped'&&!r.located)return false;
-      if(!q)return true;
-      return [r.waybill,r.business_name,r.source_address,
-        ...Object.values(r.raw||{})].some(x=>String(x||'').toLocaleLowerCase().includes(q));
+    const filter=$('filterSelect').value;
+    return rows.filter(row=>{
+      if(filter==='mapped'&&!row.located)return false;
+      if(filter==='missing'&&row.located)return false;
+      return !q || [row.waybill,row.business_name,row.source_address,
+        ...Object.values(row.raw||{})].some(x=>String(x||'').toLocaleLowerCase().includes(q));
     });
   }
-  function appendPage() {
-    const tbody=$('rawBody');
-    for(const row of visibleFiltered.slice(currentPage*chunkSize,(currentPage+1)*chunkSize)){
-      const tr=document.createElement('tr');tr.dataset.id=String(row.id);
-      const action=document.createElement('td');
-      const button=document.createElement('button');button.type='button';
-      button.className='row-edit';button.textContent=row.located?'위치 수정':'위치 지정';
-      button.addEventListener('click',()=>selectRow(row.id));
-      action.append(button);tr.append(action);
-      const state=textCell(row.located?'● 지도 표시':'○ 위치 미확인');
-      state.className=row.located?'mapped':'missing';tr.append(state);
-      tr.append(textCell(row.business_name||'상호 미입력'));
-      tr.append(textCell(row.registry_address||row.source_address||'주소 없음'));
-      tr.append(textCell(row.waybill));
-      for(const col of columns)tr.append(textCell((row.raw||{})[col]||''));
-      tbody.append(tr);
-    }
-    currentPage++;
-    const shown=Math.min(currentPage*chunkSize,visibleFiltered.length);
-    $('tableInfo').textContent='전체 '+rows.length+'건 · 검색 '+visibleFiltered.length+'건 · 표시 '+shown+'건';
-    const more=$('showMoreBtn');
-    if(more)more.hidden=shown>=visibleFiltered.length;
+
+  function cell(text) {
+    const td=document.createElement('td');
+    td.textContent=String(text==null?'':text);
+    return td;
   }
-  function renderTable() {
-    const head=$('rawHeader'),body=$('rawBody');head.replaceChildren();body.replaceChildren();
+  function appendPage(){
+    const body=$('rawBody');
+    for(const row of shown.slice(pageIndex*PAGE_SIZE,(pageIndex+1)*PAGE_SIZE)){
+      const tr=document.createElement('tr');
+      const status=cell(row.located?'● 지도':'○ 미확인');
+      status.className=row.located?'mapped':'missing';
+      tr.append(status,cell(row.business_name||'상호 미입력'),
+        cell(row.registry_address||row.source_address||'주소 없음'),cell(row.waybill));
+      for(const column of columns)tr.append(cell(row.raw?.[column]||''));
+      body.append(tr);
+    }
+    pageIndex++;
+    const total=Math.min(pageIndex*PAGE_SIZE,shown.length);
+    say('tableInfo','전체 '+rows.length+'건 · 검색 '+shown.length+'건 · 표시 '+total+'건');
+    $('showMoreBtn').hidden=total>=shown.length;
+  }
+  function renderTable(){
+    const head=$('rawHeader'),body=$('rawBody');
+    head.replaceChildren();body.replaceChildren();
     const tr=document.createElement('tr');
-    ['작업','지도 상태','수취인/상호','배송 주소','운송장',...columns].forEach(c=>{
-      const th=document.createElement('th');th.textContent=c;tr.append(th);
-    });head.append(tr);
-    visibleFiltered=displayedRows();currentPage=0;appendPage();
+    ['위치','상호/수취인','배송지','운송장',...columns].forEach(label=>{
+      const th=document.createElement('th');
+      th.textContent=label;tr.append(th);
+    });
+    head.append(tr);
+    pageIndex=0;
+    shown=filteredRows();
+    appendPage();
   }
-  function focusSelectedRow(id) {
-    document.querySelectorAll('.row-selected').forEach(el=>el.classList.remove('row-selected'));
-    const match=[...$('rawBody').children].find(tr=>tr.dataset.id===String(id));
-    if(match){match.classList.add('row-selected');match.scrollIntoView({block:'nearest',behavior:'smooth'});}
-  }
-  function selectRow(id) {
-    const row=rows.find(r=>r.id===id);if(!row)return;
-    selected=row;editorOpen=true;
-    $('locationEditor').hidden=false;
-    $('mapCrosshair').hidden=false;
-    say('editName','배송지 · '+rowName(row));
-    say('editInfo','운송장 '+(row.waybill||'미등록')+' · 원본 '+row.sheet_name+' '+row.source_row+'행');
-    $('editAddress').value=row.registry_address||row.source_address||'';
-    say('locationHint','지도를 움직여 중앙 마커 위치를 맞춘 뒤 저장하세요.');
-    focusSelectedRow(id);
-    if(map&&valid(row)){
-      map.setCenter(new maps.LatLng(row.lat,row.lng));map.setZoom(17);
-    }
-    searchSaved(row.business_name);
-    $('locationEditor').scrollIntoView({block:'nearest',behavior:'smooth'});
-  }
-  function closeEditor() {
-    selected=null;editorOpen=false;
-    $('locationEditor').hidden=true;$('mapCrosshair').hidden=true;
-    $('savedDestinationPanel').hidden=true;
-    document.querySelectorAll('.row-selected').forEach(el=>el.classList.remove('row-selected'));
-  }
-  async function searchSaved(name){
-    $('savedDestinationPanel').hidden=true;
-    if(!name||name.length<2)return;
-    try {
-      const data=await get('admin/destinations?q='+encodeURIComponent(name));
-      if(!selected||selected.business_name!==name||!data.destinations.length)return;
-      const list=$('savedDestinationSelect');list.replaceChildren();
-      data.destinations.forEach(d=>{
-        const option=document.createElement('option');option.value=String(d.id);
-        option.textContent=(d.business_name||'상호 없음')+' · '+d.address;
-        list.append(option);
-      });
-      $('savedDestinationPanel').hidden=false;
-    }catch(_){}
-  }
-  async function linkSaved() {
-    if(!selected)return;
-    const destinationId=Number($('savedDestinationSelect').value);
-    if(!Number.isSafeInteger(destinationId))return;
-    try {
-      await post('admin/deliveries/'+selected.id+'/location',{destination_id:destinationId});
-      closeEditor();await loadDay();
-      say('importStatus','기존 배송지와 연결했습니다. 이후 동일 상호의 재배송에도 참조됩니다.');
-    }catch(e){say('locationHint','연결 실패: '+e.message);}
-  }
-  function geocodingQueries(raw) {
+
+  function addressesToTry(raw){
     const full=String(raw||'').trim();
-    // Strip apartment unit or floor ONLY for the map query. Original address
-    // remains intact in the unique delivery destination registry.
-    const beforeComma=full.split(/[,，]/)[0].trim();
-    const withoutUnit=beforeComma
-      .replace(/\s+\d{1,4}\s*동\s*\d{1,4}\s*호.*$/,'')
+    const first=full.split(/[,，]/)[0].trim();
+    const simplified=first.replace(/\s+\d{1,4}\s*동\s*\d{1,4}\s*호.*$/,'')
       .replace(/\s+\d{1,4}\s*호.*$/,'')
       .replace(/\s+\d{1,3}\s*층.*$/,'').trim();
-    return [...new Set([full,beforeComma,withoutUnit].filter(q=>q.length>=4))];
+    return [...new Set([full,first,simplified].filter(s=>s.length>=4))];
   }
-  async function lookupCoordinates(address) {
-    for(const query of geocodingQueries(address)) {
-      const coords=await new Promise(resolve=>{
-        let settled=false;
-        const complete=value=>{if(settled)return;settled=true;clearTimeout(timer);resolve(value);};
-        const timer=setTimeout(()=>complete(null),5000);
+  async function coordinatesFor(address){
+    for(const query of addressesToTry(address)){
+      const found=await new Promise(resolve=>{
+        let resolved=false;
+        const finish=value=>{if(resolved)return;resolved=true;clearTimeout(timer);resolve(value);};
+        const timer=setTimeout(()=>finish(null),5000);
         try {
-          maps.Service.geocode({query},(status,response)=>{
-            const first=response?.v2?.addresses?.[0];
-            const lat=Number(first?.y),lng=Number(first?.x);
-            complete(status===maps.Service.Status.OK&&first&&valid({lat,lng})?{lat,lng}:null);
+          maps.Service.geocode({query},(status,result)=>{
+            const first=result?.v2?.addresses?.[0];
+            const pt={lat:Number(first?.y),lng:Number(first?.x)};
+            finish(status===maps.Service.Status.OK&&first&&safePoint(pt)?pt:null);
           });
-        }catch(_){complete(null);}
+        } catch (_) {finish(null);}
       });
-      if(coords)return coords;
+      if(found)return found;
     }
     return null;
   }
-  async function searchAddress(){
-    const address=$('editAddress').value.trim();
-    if(address.length<4){say('locationHint','정확한 주소를 입력하세요.');return;}
-    const selectedId=selected?.id;
-    try{
-      await ensureMap();
-      say('locationHint','네이버 주소를 검색하는 중…');
-      const coords=await lookupCoordinates(address);
-      if(!editorOpen||selected?.id!==selectedId)return;
-      if(!coords) {
-        say('locationHint','주소를 찾지 못했습니다. 지도를 직접 움직여 지정하세요.');
-        return;
-      }
-      map.setCenter(new maps.LatLng(coords.lat,coords.lng));
-      map.setZoom(17);
-      say('locationHint','검색 위치로 이동했습니다. 동·호는 원본에 보존되며, 지도 중앙을 조정해 저장하세요.');
-    }catch(e){say('locationHint',e.message);}
-  }
-  async function saveCenter() {
-    if(!selected||!map)return;
-    const address=$('editAddress').value.trim();
-    if(!address){say('locationHint','저장할 배송지의 주소를 입력하세요.');return;}
-    const center=map.getCenter();
-    try{
-      await post('admin/deliveries/'+selected.id+'/location',{
-        address, business_name:selected.business_name,
-        lat:center.lat(), lng:center.lng()
-      });
-      closeEditor();await loadDay();
-      say('importStatus','고유 배송지 위치를 저장했습니다. 향후 같은 주소의 배송에도 적용됩니다.');
-    }catch(e){say('locationHint','위치 저장 실패: '+e.message);}
-  }
-  let geocodeRunning=false;
-  const geocodeTried=new Set();
-  async function autoGeocode(limit=60){
-    if(geocodeRunning)return;
+  async function lookupMissing(limit=60){
+    if(geocodeRunning || !token || !map)return;
     geocodeRunning=true;
+    const day=$('deliveryDate').value;
+    const candidates=rows.filter(r=>!r.located&&r.source_address?.trim().length>=4
+      && !attempted.has(day+':'+r.id));
+    let checked=0,saved=0;
+    const cache=new Map();
     try {
-      await ensureMap();
-      const targetDate=$('deliveryDate').value;
-      let stored=0,attempted=0;
-      const unresolved=rows.filter(x=>!x.located&&x.source_address?.trim().length>=4
-        && !geocodeTried.has(targetDate+'|'+x.id+'|'+x.source_address));
-      // Cache lookups per address so recurring shipments do not waste API quota.
-      const addressCache=new Map();
-      for(const row of unresolved.slice(0,limit)){
-        if(targetDate!==$('deliveryDate').value)break;
-        attempted++;
-        const address=row.source_address.trim();
-        geocodeTried.add(targetDate+'|'+row.id+'|'+row.source_address);
-        let coords=addressCache.get(address);
-        if(coords===undefined){
-          coords=await lookupCoordinates(address);
-          addressCache.set(address,coords);
-        }
-        if(coords){
+      for(const row of candidates.slice(0,limit)){
+        if(!token || day!==$('deliveryDate').value)break;
+        attempted.add(day+':'+row.id);
+        checked++;
+        const addr=row.source_address.trim();
+        if(!cache.has(addr))cache.set(addr,await coordinatesFor(addr));
+        const pt=cache.get(addr);
+        if(pt){
           try {
             await post('admin/deliveries/'+row.id+'/location',{
-              address,business_name:row.business_name,lat:coords.lat,lng:coords.lng
+              address:addr,business_name:row.business_name,
+              lat:pt.lat,lng:pt.lng
             });
-            stored++;
-          } catch(_){}
+            saved++;
+          }catch(_) {}
         }
-        if(attempted%10===0)say('importStatus','주소 좌표 자동 조회 '+attempted+'건 · 저장 '+stored+'건');
+        if(checked%10===0)say('importStatus','주소 확인 '+checked+'건 · 위치 저장 '+saved+'건');
       }
-      if(stored)await loadDayWithoutGeocode();
-      say('importStatus','주소 좌표 확인 완료 · 조회 '+attempted+'건 / 저장 '+stored+'건. 미확인은 목록에서 관리하세요.');
-    }catch(e){say('importStatus','주소 좌표 찾기 실패: '+e.message);}
-    finally{geocodeRunning=false;}
+      if(saved) {
+        const result=await get('admin/deliveries?date='+encodeURIComponent(day));
+        if(day===$('deliveryDate').value && token){
+          rows=result.rows;columns=result.columns;
+          say('totalCount',rows.length);
+          renderTable();drawMap();
+        }
+      }
+      say('importStatus','주소 확인 '+checked+'건 · 좌표 저장 '+saved+'건 · 주소가 없는 화물은 아래 목록에서 확인할 수 있습니다.');
+    }catch(error){
+      if(token)say('importStatus','주소 조회 실패: '+error.message);
+    }finally{geocodeRunning=false;}
   }
-  async function loadDayWithoutGeocode(){
-    const response=await get('admin/deliveries?date='+encodeURIComponent($('deliveryDate').value));
-    rows=response.rows;columns=response.columns;
-    say('totalCount',String(response.total));
-    say('mapCount',String(response.located));
-    say('missingCount',String(response.unlocated));
-    renderTable();renderUnlocated();drawMap();
-  }
+
   function bind(){
     $('deliveryDate').value=dateString();
-    $('authForm').addEventListener('submit',authenticate);
-    $('logoutBtn').addEventListener('click',lock);
+    $('authForm').addEventListener('submit',signIn);
+    $('logoutBtn').addEventListener('click',()=>lock(true));
     $('deliveryDate').addEventListener('change',loadDay);
     $('refreshBtn').addEventListener('click',loadDay);
-    $('excelFile').addEventListener('change',()=>say('fileName',$('excelFile').files[0]?.name||'선택된 파일 없음'));
-    $('importForm').addEventListener('submit',importExcel);
+    $('importForm').addEventListener('submit',upload);
+    $('excelFile').addEventListener('change',()=>{
+      say('fileName',$('excelFile').files[0]?.name||'선택된 파일 없음');
+    });
     $('searchInput').addEventListener('input',renderTable);
     $('filterSelect').addEventListener('change',renderTable);
-    $('filterMissingBtn').addEventListener('click',()=>{
-      $('filterSelect').value='missing';
-      renderTable();
-      $('rawTable').scrollIntoView({block:'start',behavior:'smooth'});
-    });
-    $('fitBtn').addEventListener('click',fit);
-    $('geocodeBtn').addEventListener('click',()=>autoGeocode(200));
-    $('cancelLocationBtn').addEventListener('click',closeEditor);
-    $('saveCenterBtn').addEventListener('click',saveCenter);
-    $('searchAddressBtn').addEventListener('click',searchAddress);
-    $('linkDestinationBtn').addEventListener('click',linkSaved);
-    $('showMoreBtn')?.addEventListener('click',appendPage);
+    $('fitBtn').addEventListener('click',fitMap);
+    $('geocodeBtn').addEventListener('click',()=>lookupMissing(200));
+    $('showMoreBtn').addEventListener('click',appendPage);
   }
-  bind();validateSession();
+  bind();
 })();
