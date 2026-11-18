@@ -14,6 +14,8 @@ curl -fL https://raw.githubusercontent.com/lee1431/stance/main/ddsm/api/driver.p
 curl -fL https://raw.githubusercontent.com/lee1431/stance/main/ddsm/api/requirements.txt -o requirements.txt
 python -m pip install -r requirements.txt
 python -m py_compile app.py admin.py driver.py
+curl -fL https://raw.githubusercontent.com/lee1431/stance/main/ddsm/api/test_api.py -o test_api.py
+python -m unittest -v test_api
 ```
 
 기존 환경과 패키지 충돌이 예상되면 별도 Python 가상환경을 사용하세요.
