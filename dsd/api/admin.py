@@ -340,12 +340,8 @@ def install_admin(app, connect, require_session=None, throttled=None):
         )
         db.commit()
 
-    # DDSM drivers receive scoped bearer tokens, never the administrator token.
-    # Only explicitly allowed phone accounts may read recipient information.
-    allowed_drivers = {
-        re.sub(r"\D", "", number) for number in
-        os.getenv("dsd_DRIVER_PHONES", "").split(",") if number.strip()
-    }
+    # DDSM accounts use their phone/password to receive a scoped token.
+    # A token allows a single exact waybill lookup, never a full manifest list.
     with closing(connect()) as db:
         db.execute("""CREATE TABLE IF NOT EXISTS dsd_driver_sessions (
             token_hash TEXT PRIMARY KEY,
@@ -367,7 +363,7 @@ def install_admin(app, connect, require_session=None, throttled=None):
                 "SELECT phone FROM dsd_driver_sessions WHERE token_hash=? AND expires_at>?",
                 (digest, int(time.time())),
             ).fetchone()
-        if row and row["phone"] in allowed_drivers:
+        if row:
             return row["phone"]
         return None
 
@@ -382,8 +378,6 @@ def install_admin(app, connect, require_session=None, throttled=None):
             return jsonify(ok=False, error="휴대폰 번호 또는 비밀번호를 확인하세요."), 400
         if throttled and throttled("ddsm-driver:" + phone):
             return jsonify(ok=False, error="요청이 많습니다. 잠시 후 다시 시도하세요."), 429
-        if phone not in allowed_drivers:
-            return jsonify(ok=False, error="센터에서 승인한 배송기사 계정만 원본 데이터를 조회할 수 있습니다."), 403
         with closing(connect()) as db:
             user = db.execute("SELECT password_hash FROM users WHERE phone=?", (phone,)).fetchone()
         if not user or not check_password_hash(user["password_hash"], password):
@@ -404,7 +398,7 @@ def install_admin(app, connect, require_session=None, throttled=None):
     def ddsm_waybill():
         phone = driver_session()
         if not phone:
-            return jsonify(ok=False, error="배송기사 로그인 또는 센터 승인이 필요합니다."), 401
+            return jsonify(ok=False, error="로그인이 필요합니다."), 401
         target = request.args.get("date", "")
         value = request.args.get("barcode", "")
         if not valid_date(target) or not isinstance(value, str) or len(value) > 40:
