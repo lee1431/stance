@@ -597,9 +597,15 @@
       $('scanDialog').style.removeProperty('--scan-viewport-height');
       $('scanDialog').style.removeProperty('--scan-viewport-top');
     });
-    $('waybillInput').addEventListener('pointerdown', () => {
-      // An intentional tap on the field requests the touchscreen keyboard.
-      $('waybillInput').setAttribute('inputmode', 'text');
+    $('waybillInput').addEventListener('pointerdown', event => {
+      // An intentional touch on the field enables the touchscreen keyboard.
+      if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
+      const input = $('waybillInput');
+      if (input.getAttribute('inputmode') === 'text') return;
+      input.setAttribute('inputmode', 'text');
+      // Already-focused inputmode=none fields need a fresh focus on Android.
+      input.blur();
+      input.focus({ preventScroll: true });
     });
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', syncScanViewport);
