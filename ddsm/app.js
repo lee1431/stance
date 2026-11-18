@@ -331,11 +331,11 @@
       ? '배송 예정 ' + c.pending + '건 · 누르면 목록으로 이동합니다.'
       : c.total ? '현재 회차의 배송을 모두 완료했습니다.' : '운송장을 스캔하면 배송을 시작할 수 있습니다.';
   }
-  function allDayStops() {
-    const d = day();
-    return d.rounds.flatMap(r => (r.stops || []).map((stop, index) => ({
-      ...stop, roundNo: r.no, position: index + 1
-    })));
+  function selectedRoundStops() {
+    const selected = round();
+    return (selected.stops || []).map((stop, index) => ({
+      ...stop, roundNo: selected.no, position: index + 1
+    }));
   }
   function persistGeocoded(dateKey, roundNo, id, address, coordinates) {
     const d = data.days[dateKey];
@@ -380,11 +380,12 @@
       message.classList.add('map-error');
       return;
     }
-    const all = allDayStops();
-    Promise.resolve(window.DDSM_DeliveryMap.render(date, all, {
+    const selectedRoundNo = round().no;
+    const selected = selectedRoundStops();
+    Promise.resolve(window.DDSM_DeliveryMap.render(date, selected, {
       onSelect: selectMapStop,
       onGeocoded: persistGeocoded
-    })).catch(error => {
+    }, selectedRoundNo)).catch(error => {
       message.textContent = '배송 지도 오류: ' + (error.message || String(error));
       message.classList.remove('hidden');
       message.classList.add('map-error');
