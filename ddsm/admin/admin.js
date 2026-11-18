@@ -113,6 +113,27 @@
     markers.forEach(item=>item.marker.setMap(null));
     markers=[];
   }
+  function renderUnlocated() {
+    const missing=rows.filter(row=>!row.located);
+    $('unlocatedPanel').hidden=missing.length===0;
+    const target=$('unlocatedChips');target.replaceChildren();
+    const LIMIT=100;
+    missing.slice(0,LIMIT).forEach(row=>{
+      const button=document.createElement('button');
+      button.type='button';
+      button.className='unlocated-chip';
+      button.textContent=(row.business_name||'상호 미입력') + (row.source_address?' · 주소 확인':' · 주소 없음');
+      button.title='배송지 위치 지정: '+(row.business_name||row.waybill||'미입력');
+      button.addEventListener('click',()=>selectRow(row.id));
+      target.append(button);
+    });
+    if(missing.length>LIMIT){
+      const more=document.createElement('span');
+      more.textContent='외 '+(missing.length-LIMIT)+'건 · 미확인 목록 전체 보기에서 확인';
+      more.className='unlocated-more';
+      target.append(more);
+    }
+  }
   function fit() {
     if (!map || !markers.length) return;
     maps.Event.trigger(map,'resize');
@@ -179,6 +200,7 @@
       selected=null;
       closeEditor();
       renderTable();
+      renderUnlocated();
       try { await ensureMap();drawMap();} catch (_) {}
       if(token!==updateSeq)return;
       // Use a bounded number of address queries; avoids unexpectedly exhausting map quota.
@@ -398,7 +420,7 @@
     say('totalCount',String(response.total));
     say('mapCount',String(response.located));
     say('missingCount',String(response.unlocated));
-    renderTable();drawMap();
+    renderTable();renderUnlocated();drawMap();
   }
   function bind(){
     $('deliveryDate').value=dateString();
@@ -410,6 +432,11 @@
     $('importForm').addEventListener('submit',importExcel);
     $('searchInput').addEventListener('input',renderTable);
     $('filterSelect').addEventListener('change',renderTable);
+    $('filterMissingBtn').addEventListener('click',()=>{
+      $('filterSelect').value='missing';
+      renderTable();
+      $('rawTable').scrollIntoView({block:'start',behavior:'smooth'});
+    });
     $('fitBtn').addEventListener('click',fit);
     $('geocodeBtn').addEventListener('click',()=>autoGeocode(200));
     $('cancelLocationBtn').addEventListener('click',closeEditor);
