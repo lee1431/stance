@@ -225,7 +225,7 @@
       const state=textCell(row.located?'● 지도 표시':'○ 위치 미확인');
       state.className=row.located?'mapped':'missing';tr.append(state);
       tr.append(textCell(row.business_name||'상호 미입력'));
-      tr.append(textCell(row.source_address||row.registry_address||'주소 없음'));
+      tr.append(textCell(row.registry_address||row.source_address||'주소 없음'));
       tr.append(textCell(row.waybill));
       for(const col of columns)tr.append(textCell((row.raw||{})[col]||''));
       tbody.append(tr);
@@ -256,7 +256,7 @@
     $('mapCrosshair').hidden=false;
     say('editName','배송지 · '+rowName(row));
     say('editInfo','운송장 '+(row.waybill||'미등록')+' · 원본 '+row.sheet_name+' '+row.source_row+'행');
-    $('editAddress').value=row.source_address||row.registry_address||'';
+    $('editAddress').value=row.registry_address||row.source_address||'';
     say('locationHint','지도를 움직여 중앙 마커 위치를 맞춘 뒤 저장하세요.');
     focusSelectedRow(id);
     if(map&&valid(row)){
