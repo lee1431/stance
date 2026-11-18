@@ -10,12 +10,12 @@
 
   let sdkPromise = null;
   let map = null;
-  let marker = null;
   let timer = null;
   let requestId = 0;
   let active = false;
   let selectedAddress = '';
   let point = null;
+  let movedByUser = false;
 
   function announce(message, isError = false) {
     const area = $('addressMapEmpty');
@@ -25,11 +25,10 @@
     area.classList.toggle('map-error', isError);
   }
   function hideMap() {
-    const canvas = $('addressMapCanvas');
-    if (canvas) canvas.classList.add('hidden');
+    const stage = $('addressMapStage');
+    if (stage) stage.classList.add('hidden');
     const coords = $('addressMapCoordinates');
     if (coords) coords.textContent = '';
-    if (marker) marker.setMap(null);
   }
   function updateLink(address) {
     const link = $('addressMapLink');
@@ -81,53 +80,59 @@
     });
     return sdkPromise;
   }
-  function setPoint(next, adjusted = false) {
+  function mapCenter() {
+    if (!map) return null;
+    const center = map.getCenter();
+    if (!center || typeof center.lat !== 'function' || typeof center.lng !== 'function') return null;
+    const centerPoint = { lat: center.lat(), lng: center.lng() };
+    return validPoint(centerPoint) ? centerPoint : null;
+  }
+  function updateCenterReadout() {
+    if (!active || $('addressMapStage').classList.contains('hidden')) return;
+    const center = mapCenter();
+    if (!center) return;
+    point = center;
+    $('addressMapCoordinates').textContent =
+      (movedByUser ? '중앙 위치 조정됨 · 저장하면 반영됩니다. ' : '중앙 마커에 위치를 맞춰주세요. ')
+      + center.lat.toFixed(6) + ', ' + center.lng.toFixed(6);
+  }
+  function focusAt(next) {
     if (!validPoint(next)) return;
     point = { lat: next.lat, lng: next.lng };
+    movedByUser = false;
     const n = root.naver.maps;
     const position = new n.LatLng(point.lat, point.lng);
-    const container = $('addressMapCanvas');
-    container.classList.remove('hidden');
+    const stage = $('addressMapStage');
+    stage.classList.remove('hidden');
     if (!map) {
-      map = new n.Map(container, {
+      map = new n.Map($('addressMapCanvas'), {
         center: position,
-        zoom: 16,
+        zoom: 17,
         zoomControl: true,
         zoomControlOptions: { position: n.Position.TOP_RIGHT },
         mapDataControl: false,
         scaleControl: false,
         logoControl: true
       });
-      n.Event.addListener(map, 'click', event => {
-        if (!active || !event || !event.coord) return;
-        setPoint({ lat: event.coord.lat(), lng: event.coord.lng() }, true);
+      // The marker is a fixed overlay at 50%/50%. Only the underlying map moves.
+      n.Event.addListener(map, 'dragstart', () => {
+        if (!active) return;
+        movedByUser = true;
       });
+      n.Event.addListener(map, 'idle', updateCenterReadout);
+      n.Event.addListener(map, 'zoom_changed', updateCenterReadout);
     } else {
       n.Event.trigger(map, 'resize');
       map.setCenter(position);
     }
-    if (!marker) {
-      marker = new n.Marker({
-        map,
-        position,
-        draggable: true,
-        title: '배송 위치 · 드래그해서 조정'
-      });
-      n.Event.addListener(marker, 'dragend', () => {
-        if (!active) return;
-        const moved = marker.getPosition();
-        setPoint({ lat: moved.lat(), lng: moved.lng() }, true);
-      });
-    } else {
-      marker.setMap(map);
-      marker.setPosition(position);
-    }
     $('addressMapEmpty').classList.add('hidden');
     $('addressMapCoordinates').textContent =
-      (adjusted ? '위치 조정됨 · 저장하면 반영됩니다. ' : '마커를 이동해 위치를 조정할 수 있습니다. ')
-      + point.lat.toFixed(6) + ', ' + point.lng.toFixed(6);
+      '중앙 마커에 위치를 맞춰주세요. ' + point.lat.toFixed(6) + ', ' + point.lng.toFixed(6);
     requestAnimationFrame(() => {
-      if (active && map) n.Event.trigger(map, 'resize');
+      if (!active || $('addressMapStage').classList.contains('hidden') || !map) return;
+      n.Event.trigger(map, 'resize');
+      map.setCenter(position);
+      updateCenterReadout();
     });
   }
   function geocode(maps, address, id) {
@@ -147,7 +152,7 @@
         announce('일치하는 주소를 찾지 못했습니다. 도로명과 건물번호를 확인하거나 네이버 지도에서 검색하세요.', true);
         return;
       }
-      setPoint({ lat, lng });
+      focusAt({ lat, lng });
     });
   }
   async function resolveAddress(address, storedPoint, id) {
@@ -157,7 +162,7 @@
       const dialog = $('editDialog');
       if (!dialog || !dialog.open) return;
       if (validPoint(storedPoint)) {
-        setPoint(storedPoint);
+        focusAt(storedPoint);
         return;
       }
       geocode(n, address, id);
@@ -173,6 +178,7 @@
     const id = ++requestId;
     clearTimeout(timer);
     point = null;
+    movedByUser = false;
     hideMap();
     updateLink(text);
     if (!text || text.length < 4) {
@@ -195,8 +201,11 @@
     hideMap();
   }
   function selection(address) {
-    return active && selectedAddress === String(address || '').trim() && validPoint(point)
-      ? { lat: point.lat, lng: point.lng } : null;
+    if (!active || selectedAddress !== String(address || '').trim()
+        || $('addressMapStage').classList.contains('hidden')) return null;
+    // Read the live viewport center: no touch/click precision loss and no idle-event race.
+    const center = mapCenter();
+    return center || (validPoint(point) ? { lat: point.lat, lng: point.lng } : null);
   }
 
   root.DDSM_NaverMap = Object.freeze({ open, update, close, selection });
