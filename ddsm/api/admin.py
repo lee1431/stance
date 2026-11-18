@@ -219,6 +219,11 @@ def valid_date(text):
 
 
 def destination_id_for(db, name, address):
+    """Resolve one shared destination, creating an addressless master when needed.
+
+    A name-only shipment auto-links only when exactly one master has that name.
+    Multiple branches with the same name must be chosen manually.
+    """
     normalized_name = compact(name)
     normalized_address = compact(address)
     if normalized_address:
@@ -228,7 +233,38 @@ def destination_id_for(db, name, address):
         ).fetchone()
         if alias:
             return alias[0]
-        identity = hashlib.sha256(("address:" + normalized_address).encode("utf-8")).hexdigest()
+        identity = source_key
+        found = db.execute(
+            "SELECT id FROM destinations WHERE identity_key=?", (identity,)
+        ).fetchone()
+        if found:
+            db.execute("UPDATE destinations SET last_seen_at=CURRENT_TIMESTAMP WHERE id=?", (found[0],))
+            return found[0]
+
+        if normalized_name:
+            # Promote a single, previously addressless business instead of splitting
+            # today's row from its historic, shared master record.
+            provisional = db.execute(
+                "SELECT id FROM destinations WHERE name_key=? AND address_key='' LIMIT 2",
+                (normalized_name,)
+            ).fetchall()
+            if len(provisional) == 1:
+                chosen_id = provisional[0][0]
+                db.execute(
+                    """UPDATE destinations
+                       SET address=?, address_key=?, business_name=?, last_seen_at=CURRENT_TIMESTAMP
+                       WHERE id=?""",
+                    (address, normalized_address, name, chosen_id)
+                )
+                db.execute(
+                    """INSERT INTO destination_aliases(source_key,destination_id)
+                       VALUES (?,?) ON CONFLICT(source_key) DO UPDATE SET
+                       destination_id=excluded.destination_id,
+                       updated_at=CURRENT_TIMESTAMP""",
+                    (source_key, chosen_id)
+                )
+                return chosen_id
+
         db.execute(
             """INSERT INTO destinations (identity_key, business_name, address, name_key, address_key,
                          last_seen_at)
@@ -237,14 +273,24 @@ def destination_id_for(db, name, address):
             (identity, name, address, normalized_name, normalized_address),
         )
         return db.execute("SELECT id FROM destinations WHERE identity_key=?", (identity,)).fetchone()[0]
+
     if normalized_name:
-        # Business-only entries: only auto-link when EXACTLY one historic destination
-        # with the same name exists. Never silently choose between homonyms.
-        rows = db.execute("SELECT id FROM destinations WHERE name_key=? LIMIT 2", (normalized_name,)).fetchall()
+        rows = db.execute(
+            "SELECT id FROM destinations WHERE name_key=? LIMIT 2", (normalized_name,)
+        ).fetchall()
         if len(rows) == 1:
             return rows[0][0]
+        if len(rows) > 1:
+            return None
+        identity = hashlib.sha256(("name:" + normalized_name).encode("utf-8")).hexdigest()
+        db.execute(
+            """INSERT INTO destinations (identity_key, business_name, address, name_key, address_key)
+               VALUES (?, ?, '', ?, '')
+               ON CONFLICT(identity_key) DO NOTHING""",
+            (identity, name, normalized_name)
+        )
+        return db.execute("SELECT id FROM destinations WHERE identity_key=?", (identity,)).fetchone()[0]
     return None
-
 
 def initialize(db):
     db.executescript(
@@ -518,9 +564,11 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
             else:
                 address = str(data.get("address") or shipment["source_address"]).strip()[:250]
                 business = str(data.get("business_name") or shipment["business_name"]).strip()[:160]
-                if not address:
-                    return jsonify(ok=False, error="배송지 주소를 입력하세요."), 400
+                if not address and not business:
+                    return jsonify(ok=False, error="주소 또는 상호명이 필요합니다."), 400
                 chosen_id = destination_id_for(db, business, address)
+                if chosen_id is None:
+                    return jsonify(ok=False, error="동일 상호의 배송지가 여러 곳입니다. 저장된 배송지에서 정확한 지점을 선택하거나 주소를 입력하세요."), 409
             lat, lng = data.get("lat"), data.get("lng")
             if lat is not None or lng is not None:
                 if not isinstance(lat, (int, float)) or not isinstance(lng, (int, float)) or not -90 <= lat <= 90 or not -180 <= lng <= 180:
