@@ -18,6 +18,9 @@
     el.textContent = message;
     el.classList.remove('hidden');
     el.classList.toggle('map-error', error);
+    // Once the base map exists, keep its tiles visible even when no stops
+    // or geocoding results exist. The notice becomes a small corner hint.
+    el.classList.toggle('map-ready', Boolean(map));
   }
   // NAVER icon content is HTML: always escape names entered by users.
   const escapeHtml = value => String(value).replace(/[&<>"']/g, ch => ({
@@ -86,13 +89,17 @@
     for (const [id, marker] of markers) {
       if (!keep.has(id)) { marker.setMap(null); markers.delete(id); }
     }
-    if (!stops.length) status('배송지가 없습니다. 운송장을 스캔하고 주소를 입력하세요.');
-    else if (!markers.size) status('배송지 주소의 지도 좌표를 찾는 중입니다.');
-    else {
+    const missing = stops.filter(s => !valid(s)).length;
+    $('deliveryMapCount').textContent = '지도 표시 ' + markers.size + '곳 / 전체 ' + stops.length + '건'
+      + (missing ? ' · 위치 미확인 ' + missing + '건' : '');
+    if (!stops.length) {
+      status('배송지 0건 · 지도를 자유롭게 이동할 수 있습니다.');
+    } else if (!markers.size) {
+      status(stops.some(s => s.address && s.address.length >= 4)
+        ? '주소 위치를 확인 중입니다. 지도는 이동할 수 있습니다.'
+        : '주소를 등록하면 여기에 배송지 번호가 표시됩니다.');
+    } else {
       $('deliveryMapEmpty').classList.add('hidden');
-      const missing = stops.filter(s => !valid(s)).length;
-      $('deliveryMapCount').textContent = '지도 표시 ' + markers.size + '곳 / 전체 ' + stops.length + '건'
-        + (missing ? ' · 위치 미확인 ' + missing + '건' : '');
     }
     if (markers.size && !userInteracted) {
       initialFitDone = true;
