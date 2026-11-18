@@ -627,6 +627,23 @@
     }).catch(error => { barcodeDecoder = null; throw error; });
     return barcodeDecoder;
   }
+  async function enableContinuousFocus(video) {
+    const track = video.srcObject?.getVideoTracks?.()?.[0];
+    if (!track) return false;
+    // focusMode is experimental; browsers without this capability retain the
+    // camera's own default autofocus, rather than failing barcode scanning.
+    try {
+      const capabilities = typeof track.getCapabilities === 'function'
+        ? track.getCapabilities() : {};
+      const modes = capabilities.focusMode;
+      if (Array.isArray(modes) && modes.includes('continuous') &&
+          typeof track.applyConstraints === 'function') {
+        await track.applyConstraints({advanced:[{focusMode:'continuous'}]});
+        return true;
+      }
+    } catch (_) { /* Unsupported focus constraint: use hardware default. */ }
+    return false;
+  }
   async function startCamera() {
     const generation = ++cameraGeneration;
     const video = $('cameraVideo');
@@ -639,7 +656,12 @@
     $('scanResult').textContent = '카메라를 준비하고 있습니다.';
     try {
       if (typeof window.BarcodeDetector === 'function') {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode:{ideal:'environment'},
+            width:{ideal:1280},height:{ideal:720}
+          }, audio:false
+        });
         if (generation !== cameraGeneration || !$('scanDialog').open) {
           stream.getTracks().forEach(track => track.stop()); return;
         }
@@ -647,6 +669,10 @@
         video.srcObject = stream;
         video.classList.remove('hidden');
         await video.play();
+        const autoFocus = await enableContinuousFocus(video);
+        if (generation !== cameraGeneration) return;
+        $('scanResult').textContent = autoFocus ? '연속 자동 초점 활성화 · 바코드를 맞춰주세요.'
+          : '기본 카메라 자동 초점 · 바코드를 맞춰주세요.';
         const detector = new window.BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_8', 'ean_13', 'itf'] });
         const detect = async () => {
           if (generation !== cameraGeneration) return;
@@ -666,14 +692,21 @@
         if (!Reader) throw new Error('카메라 스캔 모듈을 사용할 수 없습니다.');
         const reader = new Reader();
         video.classList.remove('hidden');
-        const controls = await reader.decodeFromVideoDevice(undefined, video, result => {
+        const callback = result => {
           if (generation === cameraGeneration && result) cameraDetected(result.getText());
-        });
+        };
+        // Prefer the back camera even when native BarcodeDetector is absent.
+        const controls = typeof reader.decodeFromConstraints === 'function'
+          ? await reader.decodeFromConstraints({
+            video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}
+          },video,callback)
+          : await reader.decodeFromVideoDevice(undefined,video,callback);
+        if (generation === cameraGeneration) await enableContinuousFocus(video);
         if (generation !== cameraGeneration) { controls.stop(); return; }
         zxingControls = controls;
       }
       control.textContent = '카메라 끄기';
-      $('scanResult').textContent = '바코드에 카메라를 맞춰주세요.';
+      $('scanResult').textContent = '카메라 준비 완료 · 바코드에 맞추면 자동으로 초점을 조절합니다(기기 지원 시).';
     } catch (error) {
       stopCamera();
       $('scanResult').textContent = '카메라 실행 실패: ' + (error.message || '권한과 브라우저 설정을 확인하세요.');
