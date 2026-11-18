@@ -123,8 +123,77 @@
       ? '배송 예정 ' + c.pending + '건 · 누르면 목록으로 이동합니다.'
       : c.total ? '현재 회차의 배송을 모두 완료했습니다.' : '운송장을 스캔하면 배송을 시작할 수 있습니다.';
   }
+  function allDayStops() {
+    const d = day();
+    return d.rounds.flatMap(r => (r.stops || []).map((stop, index) => ({
+      ...stop, roundNo: r.no, position: index + 1
+    })));
+  }
+  function persistGeocoded(dateKey, roundNo, id, address, coordinates) {
+    const d = data.days[dateKey];
+    const r = d && d.rounds.find(x => x.no === roundNo);
+    const stop = r && r.stops.find(x => x.id === id);
+    if (!stop || clean(stop.address, 250) !== address || validCoordinates(stop)) return;
+    stop.lat = coordinates.lat;
+    stop.lng = coordinates.lng;
+    if (!persist()) { delete stop.lat; delete stop.lng; return; }
+    if (dateKey === date && view === 'delivery') {
+      renderDayMap();
+    }
+  }
+  function selectMapStop(id, roundNo) {
+    const d = day();
+    if (d.selected !== roundNo) {
+      const exists = d.rounds.some(r => r.no === roundNo);
+      if (!exists) return;
+      d.selected = roundNo;
+      persist();
+      render();
+    }
+    openEdit(id);
+  }
+  function renderDayMap() {
+    if (view !== 'delivery' || !window.DDSM_DeliveryMap) return;
+    const all = allDayStops();
+    window.DDSM_DeliveryMap.render(date, all, {
+      onSelect: selectMapStop,
+      onGeocoded: persistGeocoded
+    });
+  }
+  function setSelectedRound(value) {
+    const d = day();
+    const next = Number(value);
+    if (!d.rounds.some(r => r.no === next) || d.selected === next) return;
+    const old = d.selected;
+    d.selected = next;
+    if (!persist()) { d.selected = old; return; }
+    render();
+  }
+  function moveStopOrder(id, targetIndex) {
+    const list = stops();
+    const sourceIndex = list.findIndex(stop => stop.id === id);
+    const target = Math.max(0, Math.min(list.length - 1, Number(targetIndex)));
+    if (sourceIndex < 0 || !Number.isInteger(target) || sourceIndex === target) return;
+    const moved = list.splice(sourceIndex, 1)[0];
+    list.splice(target, 0, moved);
+    if (!persist()) {
+      list.splice(target, 1);
+      list.splice(sourceIndex, 0, moved);
+      return;
+    }
+    render();
+    toast('배송 순번을 ' + (target + 1) + '번으로 변경했습니다.');
+  }
   function renderDelivery() {
     const c = counts();
+    const picker = $('deliveryRoundSelect');
+    picker.replaceChildren();
+    day().rounds.slice().sort((a,b) => a.no - b.no).forEach(r => {
+      const option = node('option', '', r.no + '회차');
+      option.value = String(r.no);
+      picker.append(option);
+    });
+    picker.value = String(round().no);
     $('workDateLabel').textContent = dateText(date) + ' · ' + round().no + '회차';
     $('progressLabel').textContent = '완료 ' + c.done + ' / ' + c.total;
     $('remainingLabel').textContent = '남은 배송 ' + c.pending + '건';
@@ -149,6 +218,24 @@
       head.append(detail);
       head.append(node('span', 'status-tag', done ? '완료' : '배송 예정'));
       card.append(head);
+      const ordering = node('div', 'stop-ordering');
+      const up = button('↑', 'order-arrow', () => moveStopOrder(stop.id, index - 1));
+      up.disabled = index === 0;
+      up.setAttribute('aria-label', (index + 1) + '번 배송지를 위로');
+      const down = button('↓', 'order-arrow', () => moveStopOrder(stop.id, index + 1));
+      down.disabled = index === stops().length - 1;
+      down.setAttribute('aria-label', (index + 1) + '번 배송지를 아래로');
+      const jump = node('select', 'order-select');
+      jump.setAttribute('aria-label', '배송 순번 변경: ' + (index + 1) + '번');
+      for (let i = 0; i < stops().length; i++) {
+        const option = node('option', '', (i + 1) + '번');
+        option.value = String(i);
+        jump.append(option);
+      }
+      jump.value = String(index);
+      jump.addEventListener('change', () => moveStopOrder(stop.id, Number(jump.value)));
+      ordering.append(node('span', 'order-caption', '순번'), up, down, jump);
+      card.append(ordering);
       const actions = node('div', 'stop-actions');
       actions.append(button('정보 수정', '', () => openEdit(stop.id)));
       if (stop.address) {
@@ -167,10 +254,14 @@
   }
   function render() {
     renderHome();
-    if (view === 'delivery') renderDelivery();
+    if (view === 'delivery') {
+      renderDelivery();
+      renderDayMap();
+    }
   }
   function showView(next) {
     view = next;
+    if (next !== 'delivery' && window.DDSM_DeliveryMap) window.DDSM_DeliveryMap.pause();
     $('homeScreen').classList.toggle('hidden', next !== 'home');
     $('deliveryScreen').classList.toggle('hidden', next !== 'delivery');
     render();
@@ -436,13 +527,7 @@
       render();
     });
     $('roundSelect').addEventListener('change', e => {
-      const d = day();
-      const next = Number(e.target.value);
-      if (!d.rounds.some(r => r.no === next)) return;
-      const old = d.selected;
-      d.selected = next;
-      if (!persist()) { d.selected = old; return; }
-      render();
+      setSelectedRound(e.target.value);
     });
     $('newRoundButton').addEventListener('click', addRound);
     $('scanButton').addEventListener('click', openScan);
@@ -450,6 +535,8 @@
     $('deliveryButton').addEventListener('click', () => showView('delivery'));
     $('listButton').addEventListener('click', () => showView('delivery'));
     $('backButton').addEventListener('click', () => showView('home'));
+    $('deliveryMapFitBtn').addEventListener('click', () => window.DDSM_DeliveryMap?.fit());
+    $('deliveryRoundSelect').addEventListener('change', e => setSelectedRound(e.target.value));
     $('closeScan').addEventListener('click', () => $('scanDialog').close());
     $('scanDialog').addEventListener('close', stopCamera);
     $('scanForm').addEventListener('submit', e => { e.preventDefault(); processScan($('waybillInput').value); });
