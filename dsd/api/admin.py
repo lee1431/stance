@@ -98,12 +98,19 @@ def canonical_key(header):
     return max(candidates, default=(0, None))[1]
 
 
-def is_fixed_dsd_sheet(headers):
-    """Only use A-Q positional mapping when all 17 headers match, in order."""
-    return len(headers) >= len(FIXED_DSD_HEADERS) and all(
-        compact(headers[i]) == compact(label)
-        for i, label in enumerate(FIXED_DSD_HEADERS)
-    )
+def fixed_dsd_start(headers):
+    """Find the fixed 17-column header block, allowing an extra leading ID column.
+
+    The supplied Excel example has a leading numeric '1' column before the date
+    in some exports. It must not shift recipient and address positions.
+    """
+    for start in range(min(4, max(0, len(headers) - len(FIXED_DSD_HEADERS)) + 1)):
+        if all(
+            compact(headers[start + i]) == compact(label)
+            for i, label in enumerate(FIXED_DSD_HEADERS)
+        ):
+            return start
+    return None
 
 
 def pick_columns(headers):
@@ -147,8 +154,10 @@ def parse_grid(sheet_name, rows):
     if len(raw_headers) > MAX_COLUMNS:
         raise ValueError(f"{sheet_name}: 열이 {MAX_COLUMNS}개를 초과합니다.")
     headers = unique_headers(raw_headers)
-    fixed_layout = is_fixed_dsd_sheet(headers)
-    fields = FIXED_DSD_FIELDS if fixed_layout else pick_columns(headers)
+    fixed_start = fixed_dsd_start(headers)
+    fixed_layout = fixed_start is not None
+    fields = ({field: fixed_start + index for field, index in FIXED_DSD_FIELDS.items()}
+              if fixed_layout else pick_columns(headers))
     outputs = []
     def walk():
         for offset, row in enumerate(sample[header_at + 1:], start=header_at + 2):
