@@ -340,6 +340,122 @@ def install_admin(app, connect, require_session=None, throttled=None):
         )
         db.commit()
 
+    # DDSM drivers receive scoped bearer tokens, never the administrator token.
+    # Only explicitly allowed phone accounts may read recipient information.
+    allowed_drivers = {
+        re.sub(r"\\D", "", number) for number in
+        os.getenv("dsd_DRIVER_PHONES", "").split(",") if number.strip()
+    }
+    with closing(connect()) as db:
+        db.execute("""CREATE TABLE IF NOT EXISTS dsd_driver_sessions (
+            token_hash TEXT PRIMARY KEY,
+            phone TEXT NOT NULL,
+            expires_at INTEGER NOT NULL
+        )""")
+        db.commit()
+
+    def driver_session():
+        header = request.headers.get("Authorization", "")
+        if not header.startswith("Bearer "):
+            return None
+        value = header[7:].strip()
+        if not re.fullmatch(r"[A-Za-z0-9_-]{40,200}", value):
+            return None
+        digest = hashlib.sha256(value.encode("ascii")).hexdigest()
+        with closing(connect()) as db:
+            row = db.execute(
+                "SELECT phone FROM dsd_driver_sessions WHERE token_hash=? AND expires_at>?",
+                (digest, int(time.time())),
+            ).fetchone()
+        if row and row["phone"] in allowed_drivers:
+            return row["phone"]
+        return None
+
+    @app.post("/dsd/api/ddsm/login")
+    def ddsm_login():
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify(ok=False, error="로그인 정보를 확인하세요."), 400
+        phone = re.sub(r"\\D", "", str(data.get("phone", "")))
+        password = data.get("password")
+        if not re.fullmatch(r"01[016789][0-9]{7,8}", phone) or not isinstance(password, str) or not 1 <= len(password) <= 128:
+            return jsonify(ok=False, error="휴대폰 번호 또는 비밀번호를 확인하세요."), 400
+        if throttled and throttled("ddsm-driver:" + phone):
+            return jsonify(ok=False, error="요청이 많습니다. 잠시 후 다시 시도하세요."), 429
+        if phone not in allowed_drivers:
+            return jsonify(ok=False, error="센터에서 승인한 배송기사 계정만 원본 데이터를 조회할 수 있습니다."), 403
+        with closing(connect()) as db:
+            user = db.execute("SELECT password_hash FROM users WHERE phone=?", (phone,)).fetchone()
+        if not user or not check_password_hash(user["password_hash"], password):
+            return jsonify(ok=False, error="전화번호 또는 비밀번호가 일치하지 않습니다."), 401
+        token = secrets.token_urlsafe(48)
+        digest = hashlib.sha256(token.encode("ascii")).hexdigest()
+        expiry = int(time.time()) + 12 * 3600
+        with closing(connect()) as db:
+            db.execute("DELETE FROM dsd_driver_sessions WHERE expires_at<=?", (int(time.time()),))
+            db.execute(
+                "INSERT INTO dsd_driver_sessions(token_hash,phone,expires_at) VALUES(?,?,?)",
+                (digest, phone, expiry),
+            )
+            db.commit()
+        return jsonify(ok=True, phone=phone, access_token=token, expires_at=expiry)
+
+    @app.get("/dsd/api/ddsm/waybill")
+    def ddsm_waybill():
+        phone = driver_session()
+        if not phone:
+            return jsonify(ok=False, error="배송기사 로그인 또는 센터 승인이 필요합니다."), 401
+        target = request.args.get("date", "")
+        value = request.args.get("barcode", "")
+        if not valid_date(target) or not isinstance(value, str) or len(value) > 40:
+            return jsonify(ok=False, error="배송일 또는 바코드 형식이 잘못되었습니다."), 400
+        digits = re.sub(r"[\\s-]", "", value)
+        if not re.fullmatch(r"(?:[0-9]{13}|[0-9]{16})", digits):
+            return jsonify(ok=False, error="기본 운송장 13자리 또는 물품 바코드 16자리를 입력하세요."), 400
+        master = digits[:13]
+        suffix = digits[13:] if len(digits) == 16 else None
+        with closing(connect()) as db:
+            matches = db.execute(
+                """SELECT s.waybill,s.business_name,s.sender_name,s.source_address,
+                          s.recipient_phone,s.item_name,s.cod_amount,s.delivery_status,
+                          s.raw_json,d.address AS saved_address,d.lat,d.lng
+                   FROM admin_deliveries s
+                   LEFT JOIN destinations d ON d.id=s.destination_id
+                   WHERE s.delivery_date=?
+                     AND REPLACE(REPLACE(s.waybill,'-',''),' ','')=?
+                   LIMIT 51""", (target, master)
+            ).fetchall()
+        if not matches:
+            return jsonify(ok=False, error="선택 날짜의 원본 엑셀에서 운송장번호를 찾지 못했습니다."), 404
+        if len(matches) > 50:
+            return jsonify(ok=False, error="같은 송장이 지나치게 많아 센터 확인이 필요합니다."), 409
+        identities = {(r["business_name"].strip(), (r["saved_address"] or r["source_address"]).strip())
+                      for r in matches}
+        if len(identities) != 1:
+            return jsonify(ok=False, error="같은 운송장에 서로 다른 수취인 또는 주소가 있습니다. 센터에서 확인하세요."), 409
+        record = matches[0]
+        raw = json.loads(record["raw_json"])
+        quantity = next((str(v) for k,v in raw.items() if compact(k) in ("수량", "박스수", "화물수량")), "")
+        return jsonify(ok=True, date=target, master_waybill=master, item_suffix=suffix,
+                       waybill=record["waybill"], recipient=record["business_name"],
+                       address=record["saved_address"] or record["source_address"],
+                       phone=record["recipient_phone"], sender=record["sender_name"],
+                       item=record["item_name"], quantity=quantity,
+                       cod=record["cod_amount"], status=record["delivery_status"],
+                       lat=record["lat"], lng=record["lng"])
+
+    @app.post("/dsd/api/ddsm/logout")
+    def ddsm_logout():
+        header = request.headers.get("Authorization", "")
+        if header.startswith("Bearer "):
+            value = header[7:].strip()
+            if re.fullmatch(r"[A-Za-z0-9_-]{40,200}", value):
+                digest = hashlib.sha256(value.encode("ascii")).hexdigest()
+                with closing(connect()) as db:
+                    db.execute("DELETE FROM dsd_driver_sessions WHERE token_hash=?", (digest,))
+                    db.commit()
+        return jsonify(ok=True)
+
     admin_id = os.getenv("dsd_ADMIN_ID", "admin")
     admin_hash = os.getenv("dsd_ADMIN_PASSWORD_HASH", "")
 
