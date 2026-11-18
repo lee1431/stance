@@ -81,7 +81,7 @@
     $('dashboard').hidden = true;
     $('authPanel').hidden = false;
     $('logoutBtn').hidden = true;
-    say('adminPassword','');
+    $('adminPassword').value = '';
     if (performLogout && previous) {
       // Revocation uses the captured token so it survives local state reset.
       fetch(API_BASE + 'admin/logout', {
