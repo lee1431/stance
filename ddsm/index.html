@@ -7,10 +7,10 @@
   <meta name="description" content="DDSM - Daily, Scan, Delivery. 로그인 없는 간편 배송 작업 화면">
   <title>DDSM | Daily · Scan · Delivery</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=12-phone-identity">
+  <link rel="stylesheet" href="style.css?v=13-api-auth">
   <script src="naver-map.js?v=3-shared-sdk" defer></script>
   <script src="delivery-map.js?v=4-empty-day" defer></script>
-  <script src="app.js?v=11-phone-identity" defer></script>
+  <script src="app.js?v=12-api-auth" defer></script>
 </head>
 <body>
   <div id="app" class="app">
@@ -18,7 +18,7 @@
       <header class="home-header">
         <button id="dateButton" class="date-button" type="button" aria-label="작업 날짜 변경">
           <span class="date-letter" aria-hidden="true">D</span>
-          <span class="date-info"><span class="eyebrow">DAILY</span><strong id="dateLabel">오늘</strong></span>
+          <span class="date-info"><span class="eyebrow date-meta"><span>DAILY</span><span class="date-meta-sep">—</span><span id="dailyPhoneLabel">번호 미등록</span></span><strong id="dateLabel">오늘</strong></span>
           <span class="chevron" aria-hidden="true">⌄</span>
         </button>
         <button id="settingsButton" class="icon-button" type="button" aria-label="설정">☰</button>
@@ -107,13 +107,20 @@
         <h2 id="identityTitle">내 휴대폰 번호</h2>
         <button id="closeIdentity" class="close-button hidden" type="button" aria-label="닫기">✕</button>
       </div>
-      <p class="dialog-description">별도 아이디 대신 휴대폰 번호를 사용합니다. 처음 한 번만 등록하세요.</p>
+      <p class="dialog-description">아이디는 휴대폰 번호입니다. 서버 연결 후 비밀번호로 가입·로그인할 수 있습니다.</p>
       <label class="input-label" for="identityPhoneInput">휴대폰 번호</label>
       <input id="identityPhoneInput" type="tel" inputmode="numeric" autocomplete="tel"
         placeholder="010-1234-5678" maxlength="13" required aria-describedby="identityInfo identityError">
+      <label class="input-label" for="identityPasswordInput">비밀번호</label>
+      <input id="identityPasswordInput" type="password" autocomplete="current-password"
+        minlength="10" maxlength="128" placeholder="10자 이상 입력" aria-describedby="identityInfo identityError">
       <p id="identityError" class="identity-error hidden" role="alert"></p>
-      <button class="primary-action full-width" type="submit" id="saveIdentityButton">이 번호로 시작</button>
-      <p id="identityInfo" class="dialog-footnote">문자 인증이나 비밀번호는 없습니다. 이 기기의 배송 자료를 구분하기 위한 번호이며, 같은 번호를 다른 기기에 입력해도 자동 동기화되지는 않습니다.</p>
+      <div class="identity-auth-actions">
+        <button id="identityLoginButton" class="primary-action" type="button">로그인</button>
+        <button id="identityRegisterButton" class="secondary-action" type="button">신규 가입</button>
+      </div>
+      <button class="identity-local-action" type="submit" id="saveIdentityButton">서버 없이 이 기기에서 계속</button>
+      <p id="identityInfo" class="dialog-footnote">서버 계정은 API 연결 후 사용 가능합니다. 로컬 계속하기는 비밀번호를 저장하거나 확인하지 않으며, 이 기기의 배송 자료만 이용합니다.</p>
     </form>
   </dialog>
 
