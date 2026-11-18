@@ -296,22 +296,51 @@
       say('importStatus','기존 배송지와 연결했습니다. 이후 동일 상호의 재배송에도 참조됩니다.');
     }catch(e){say('locationHint','연결 실패: '+e.message);}
   }
+  function geocodingQueries(raw) {
+    const full=String(raw||'').trim();
+    // Strip apartment unit or floor ONLY for the map query. Original address
+    // remains intact in the unique delivery destination registry.
+    const beforeComma=full.split(/[,，]/)[0].trim();
+    const withoutUnit=beforeComma
+      .replace(/\\s+\\d{1,4}\\s*동\\s*\\d{1,4}\\s*호.*$/,'')
+      .replace(/\\s+\\d{1,4}\\s*호.*$/,'')
+      .replace(/\\s+\\d{1,3}\\s*층.*$/,'').trim();
+    return [...new Set([full,beforeComma,withoutUnit].filter(q=>q.length>=4))];
+  }
+  async function lookupCoordinates(address) {
+    for(const query of geocodingQueries(address)) {
+      const coords=await new Promise(resolve=>{
+        let settled=false;
+        const complete=value=>{if(settled)return;settled=true;clearTimeout(timer);resolve(value);};
+        const timer=setTimeout(()=>complete(null),5000);
+        try {
+          maps.Service.geocode({query},(status,response)=>{
+            const first=response?.v2?.addresses?.[0];
+            const lat=Number(first?.y),lng=Number(first?.x);
+            complete(status===maps.Service.Status.OK&&first&&valid({lat,lng})?{lat,lng}:null);
+          });
+        }catch(_){complete(null);}
+      });
+      if(coords)return coords;
+    }
+    return null;
+  }
   async function searchAddress(){
     const address=$('editAddress').value.trim();
     if(address.length<4){say('locationHint','정확한 주소를 입력하세요.');return;}
+    const selectedId=selected?.id;
     try{
       await ensureMap();
       say('locationHint','네이버 주소를 검색하는 중…');
-      maps.Service.geocode({query:address},(status,response)=>{
-        if(!editorOpen)return;
-        const first=response?.v2?.addresses?.[0];
-        if(status!==maps.Service.Status.OK||!first){
-          say('locationHint','주소를 찾지 못했습니다. 지도를 직접 움직여 지정하세요.');return;
-        }
-        map.setCenter(new maps.LatLng(Number(first.y),Number(first.x)));
-        map.setZoom(17);
-        say('locationHint','검색 위치로 이동했습니다. 중앙 마커를 맞추고 저장하세요.');
-      });
+      const coords=await lookupCoordinates(address);
+      if(!editorOpen||selected?.id!==selectedId)return;
+      if(!coords) {
+        say('locationHint','주소를 찾지 못했습니다. 지도를 직접 움직여 지정하세요.');
+        return;
+      }
+      map.setCenter(new maps.LatLng(coords.lat,coords.lng));
+      map.setZoom(17);
+      say('locationHint','검색 위치로 이동했습니다. 동·호는 원본에 보존되며, 지도 중앙을 조정해 저장하세요.');
     }catch(e){say('locationHint',e.message);}
   }
   async function saveCenter() {
@@ -345,17 +374,7 @@
         const address=row.source_address.trim();
         let coords=addressCache.get(address);
         if(coords===undefined){
-          coords=await new Promise(resolve=>{
-            const timer=setTimeout(()=>resolve(null),5000);
-            try {
-              maps.Service.geocode({query:address},(status,response)=>{
-                clearTimeout(timer);
-                const first=response?.v2?.addresses?.[0];
-                const lat=Number(first?.y),lng=Number(first?.x);
-                resolve(status===maps.Service.Status.OK&&first&&valid({lat,lng})?{lat,lng}:null);
-              });
-            }catch(_){clearTimeout(timer);resolve(null);}
-          });
+          coords=await lookupCoordinates(address);
           addressCache.set(address,coords);
         }
         if(coords){
@@ -370,7 +389,8 @@
       }
       if(stored)await loadDayWithoutGeocode();
       say('importStatus','주소 좌표 확인 완료 · 조회 '+attempted+'건 / 저장 '+stored+'건. 미확인은 목록에서 관리하세요.');
-    }finally{geocodeRunning=false;}
+    }catch(e){say('importStatus','주소 좌표 찾기 실패: '+e.message);}
+    finally{geocodeRunning=false;}
   }
   async function loadDayWithoutGeocode(){
     const response=await get('admin/deliveries?date='+encodeURIComponent($('deliveryDate').value));
