@@ -340,6 +340,11 @@
     stop.lng = coordinates.lng;
     if (!persist()) { delete stop.lat; delete stop.lng; return; }
     if (dateKey === date && view === 'delivery') {
+      // The map may geocode after the delivery list was rendered.
+      // Refresh only the affected link, without rebuilding cards during user interaction.
+      document.querySelectorAll('#stopList a[data-navigation-stop-id]').forEach(link => {
+        if (link.dataset.navigationStopId === String(id)) configureNavigationLink(link, stop);
+      });
       renderDayMap();
     }
   }
@@ -403,6 +408,38 @@
     render();
     toast('배송 순번을 ' + (target + 1) + '번으로 변경했습니다.');
   }
+  // Open NAVER navigation from a user tap when destination coordinates are known.
+  // Android mobile web uses the official intent URL; iOS uses the NAVER URL scheme.
+  // Without coordinates, preserve the address-search fallback instead of guessing.
+  function naverNavigationUrl(stop) {
+    if (!validCoordinates(stop)) return '';
+    const params = 'dlat=' + encodeURIComponent(stop.lat)
+      + '&dlng=' + encodeURIComponent(stop.lng)
+      + '&dname=' + encodeURIComponent(stop.address || '배송지')
+      + '&appname=' + encodeURIComponent(window.location.origin + '/ddsm/');
+    if (/Android/i.test(navigator.userAgent)) {
+      const store = encodeURIComponent('https://play.google.com/store/apps/details?id=com.nhn.android.nmap');
+      return 'intent://navigation?' + params
+        + '#Intent;scheme=nmap;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;'
+        + 'package=com.nhn.android.nmap;S.browser_fallback_url=' + store + ';end';
+    }
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) return 'nmap://navigation?' + params;
+    return '';
+  }
+  function configureNavigationLink(link, stop) {
+    const url = naverNavigationUrl(stop);
+    link.textContent = url ? '내비 실행' : '지도 검색';
+    link.href = url || ('https://map.naver.com/p/search/' + encodeURIComponent(stop.address));
+    link.setAttribute('aria-label', url ? '네이버 지도 내비게이션에서 목적지 안내' : '네이버 지도에서 주소 검색');
+    if (url) {
+      link.removeAttribute('target');
+      link.removeAttribute('rel');
+    } else {
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+    }
+  }
+
   function renderDelivery() {
     const c = counts();
     const picker = $('deliveryRoundSelect');
@@ -460,11 +497,9 @@
       const actions = node('div', 'stop-actions');
       actions.append(button('정보 수정', '', () => openEdit(stop.id)));
       if (stop.address) {
-        const link = node('a', '', '지도 열기');
-        link.href = 'https://map.naver.com/p/search/' + encodeURIComponent(stop.address);
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.setAttribute('aria-label', '네이버 지도에서 주소 검색');
+        const link = node('a', '');
+        link.dataset.navigationStopId = String(stop.id);
+        configureNavigationLink(link, stop);
         actions.append(link);
       }
       actions.append(button(done ? '완료 취소' : '배송 완료', done ? 'undo' : 'complete', () => setDone(stop.id, !done)));
