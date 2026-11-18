@@ -7,10 +7,10 @@
   <meta name="description" content="DDSM - Daily, Scan, Delivery. 로그인 없는 간편 배송 작업 화면">
   <title>DDSM | Daily · Scan · Delivery</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=8-recipient-pins">
+  <link rel="stylesheet" href="style.css?v=9-scan-mobile">
   <script src="naver-map.js?v=3-shared-sdk" defer></script>
   <script src="delivery-map.js?v=3-recipient-pins" defer></script>
-  <script src="app.js?v=8-map-error-message" defer></script>
+  <script src="app.js?v=9-scan-mobile" defer></script>
 </head>
 <body>
   <div id="app" class="app">
@@ -98,9 +98,9 @@
     </section>
   </div>
 
-  <dialog id="scanDialog" class="sheet-dialog" aria-labelledby="scanTitle">
+  <dialog id="scanDialog" class="sheet-dialog scan-dialog" aria-labelledby="scanTitle">
     <div class="dialog-head"><h2 id="scanTitle">운송장 스캔</h2><button id="closeScan" class="close-button" type="button" aria-label="닫기">✕</button></div>
-    <p class="dialog-description">바코드 리더기로 찍거나 운송장번호를 입력하세요.</p>
+    <p class="dialog-description">바코드를 스캔하거나 운송장번호를 입력하세요.</p>
     <form id="scanForm" class="scan-form">
       <label for="waybillInput" class="sr-only">운송장번호</label>
       <input id="waybillInput" placeholder="운송장번호" autocomplete="off" inputmode="text" spellcheck="false" maxlength="100" required>
@@ -109,7 +109,7 @@
     <button id="cameraButton" type="button" class="secondary-action">▣ 카메라로 스캔</button>
     <video id="cameraVideo" class="camera-preview hidden" autoplay playsinline muted></video>
     <p id="scanResult" class="dialog-message" role="status" aria-live="polite">스캔하면 현재 날짜와 회차에 저장됩니다.</p>
-    <p class="dialog-footnote">주소·수취인 정보는 목록에서 직접 추가할 수 있습니다. 원본 엑셀 자동 조회는 아직 연결되지 않았습니다.</p>
+    <p class="dialog-footnote scan-footnote">주소·수취인은 배송 목록에서 수정할 수 있습니다.</p>
   </dialog>
 
   <dialog id="editDialog" class="sheet-dialog" aria-labelledby="editTitle">
