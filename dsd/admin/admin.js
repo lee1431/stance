@@ -12,6 +12,24 @@
   let rows = [], columns = [], map = null, maps = null, markers = [], mapLoading = null;
   let requestVersion = 0, geocodeRunning = false, fitOnLoad = false;
   let shown = [], pageIndex = 0;
+  let visibleColumns = [], fixedExcelLayout = false;
+  const FIXED_DSD_HEADERS = [
+    '일자','발송지','운송장번호','발화주','수화주','품명','포장','상품','수량',
+    '상태','현불운임','착불운임','출고제비용','합계','특기사항',
+    '수화주 지번주소','수화주 도로명주소'
+  ];
+  function normalizedHeader(name){
+    return String(name||'').normalize('NFKC').replace(/[\s()·\-_]+/g,'').toLowerCase();
+  }
+  function displayColumns(){
+    // Respect the Excel A-Q order even when headers contain extra spaces.
+    const lookup = new Map(columns.map(name=>[normalizedHeader(name),name]));
+    const fixed = FIXED_DSD_HEADERS.map(name=>lookup.get(normalizedHeader(name)));
+    fixedExcelLayout = fixed.every(Boolean);
+    if (!fixedExcelLayout) return [...columns];
+    const taken = new Set(fixed);
+    return [...fixed,...columns.filter(name=>!taken.has(name))];
+  }
   let highlightedIds = new Set();
   const PAGE_SIZE = 250;
   const attempted = new Set();
@@ -243,9 +261,12 @@
       if (highlightedIds.has(row.id)) tr.classList.add('row-selected');
       const status=cell(row.located?'● 지도':'○ 미확인');
       status.className=row.located?'mapped':'missing';
-      tr.append(status,cell(row.business_name||'상호 미입력'),
-        cell(row.registry_address||row.source_address||'주소 없음'),cell(row.waybill));
-      for(const column of columns)tr.append(cell(row.raw?.[column]||''));
+      tr.append(status);
+      if (!fixedExcelLayout) {
+        tr.append(cell(row.business_name||'상호 미입력'),
+          cell(row.registry_address||row.source_address||'주소 없음'),cell(row.waybill));
+      }
+      for(const column of visibleColumns)tr.append(cell(row.raw?.[column]||''));
       body.append(tr);
     }
     pageIndex++;
@@ -275,7 +296,10 @@
     const head=$('rawHeader'),body=$('rawBody');
     head.replaceChildren();body.replaceChildren();
     const tr=document.createElement('tr');
-    ['위치','상호/수취인','배송지','운송장',...columns].forEach(label=>{
+    visibleColumns=displayColumns();
+    const headers=fixedExcelLayout ? ['위치',...visibleColumns]
+      : ['위치','상호/수취인','배송지','운송장',...visibleColumns];
+    headers.forEach(label=>{
       const th=document.createElement('th');
       th.textContent=label;tr.append(th);
     });
