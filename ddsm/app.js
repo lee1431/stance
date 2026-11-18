@@ -22,6 +22,7 @@
     } catch (_) { return ''; }
   }
   let identityPhone = storedPhone();
+  let remoteAccount = false;
   const activeStorageKey = () => identityPhone ? phoneStorageKey(identityPhone) : LEGACY_STORAGE_KEY;
   const $ = id => document.getElementById(id);
   const today = () => {
@@ -122,6 +123,7 @@
 
   function renderHome() {
     $('myPhoneLabel').textContent = identityPhone ? '내 번호 · ' + displayPhone(identityPhone) : '휴대폰 번호 등록';
+    $('dailyPhoneLabel').textContent = identityPhone ? displayPhone(identityPhone) : '번호 미등록';
     const d = day();
     const active = round();
     const c = counts();
@@ -653,10 +655,11 @@
     const dialog = $('identityDialog');
     $('closeIdentity').classList.toggle('hidden', first);
     $('identityTitle').textContent = first ? '처음 시작하기' : '내 휴대폰 번호';
-    $('saveIdentityButton').textContent = first ? '이 번호로 시작' : '번호 확인 · 변경';
+    $('saveIdentityButton').textContent = '서버 없이 이 기기에서 계속';
     $('identityError').textContent = '';
     $('identityError').classList.add('hidden');
     $('identityPhoneInput').value = identityPhone ? displayPhone(identityPhone) : '';
+    $('identityPasswordInput').value = '';
     if (!dialog.open) dialog.showModal();
   }
   function openIdentityDialog(force = false) {
@@ -675,6 +678,7 @@
         !confirm('다른 번호로 전환하면 이 기기에 저장된 해당 번호의 배송 목록이 열립니다. 기존 번호의 자료는 보존됩니다. 계속할까요?')) return;
     try {
       const previous = identityPhone;
+      remoteAccount = false;
       const destination = phoneStorageKey(number);
       // Preserve legacy data on first adoption without moving or deleting its key.
       // Never copy another user's records when switching to a different number.
@@ -695,16 +699,76 @@
       if (previous && previous !== number) showView('home');
       $('identityDialog').close();
       render();
-      toast('사용 번호 ' + displayPhone(number) + (previous && previous !== number ? ' · 전환 완료' : ' · 등록 완료'));
+      toast('로컬 작업 · ' + displayPhone(number) + (previous && previous !== number ? ' · 번호 전환 완료' : ' · 등록 완료'));
+      $('identityPasswordInput').value = '';
     } catch (_) {
       error.textContent = '번호를 저장하지 못했습니다. 브라우저 저장 공간을 확인하세요.';
       error.classList.remove('hidden');
     }
   }
 
+  async function apiAuthenticate(action) {
+    const phone = normalizePhone($('identityPhoneInput').value);
+    const password = $('identityPasswordInput').value;
+    const error = $('identityError');
+    error.classList.add('hidden');
+    if (!isPhone(phone)) {
+      error.textContent = '휴대폰 번호를 확인하세요.';
+      error.classList.remove('hidden');
+      return;
+    }
+    if (!password || password.length < 10 || password.length > 128) {
+      error.textContent = '비밀번호는 10~128자로 입력하세요.';
+      error.classList.remove('hidden');
+      return;
+    }
+    const login = $('identityLoginButton');
+    const register = $('identityRegisterButton');
+    login.disabled = register.disabled = true;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    try {
+      const response = await fetch('/ddsm/api/auth/' + action, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, password }),
+        signal: controller.signal
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result || result.ok !== true || result.phone !== phone) {
+        throw new Error(result?.error || '인증 API 연결 또는 응답을 확인하세요.');
+      }
+      // The server creates a secure HttpOnly session. Keep local deliveries
+      // separate: account login alone is NOT remote data synchronization.
+      const previous = identityPhone;
+      if (previous && previous !== phone &&
+          !confirm('다른 번호의 로컬 작업으로 전환합니다. 계속할까요?')) return;
+      localStorage.setItem(IDENTITY_KEY, phone);
+      identityPhone = phone;
+      remoteAccount = true;
+      data = readData();
+      date = today();
+      $('identityDialog').close();
+      $('identityPasswordInput').value = '';
+      if (previous !== phone) showView('home');
+      render();
+      toast(action === 'register' ? '계정 가입 완료 · 배송 자료는 아직 로컬 저장' : '로그인 완료 · 배송 자료는 아직 로컬 저장');
+    } catch (e) {
+      error.textContent = e.name === 'AbortError'
+        ? '서버 응답 시간이 초과되었습니다. API 상태를 확인하세요.'
+        : e.message || 'API 연결에 실패했습니다.';
+      error.classList.remove('hidden');
+    } finally {
+      clearTimeout(timeout);
+      login.disabled = register.disabled = false;
+    }
+  }
+
   function bind() {
     $('myPhoneButton').addEventListener('click', openIdentityDialog);
     $('identityForm').addEventListener('submit', saveIdentity);
+    $('identityLoginButton').addEventListener('click', () => apiAuthenticate('login'));
+    $('identityRegisterButton').addEventListener('click', () => apiAuthenticate('register'));
     $('closeIdentity').addEventListener('click', () => $('identityDialog').close());
     $('dateButton').addEventListener('click', chooseDate);
     $('dateInput').addEventListener('change', e => {
