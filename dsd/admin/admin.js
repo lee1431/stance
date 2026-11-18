@@ -22,13 +22,17 @@
     return String(name||'').normalize('NFKC').replace(/[\s()·\-_]+/g,'').toLowerCase();
   }
   function displayColumns(){
-    // Respect the Excel A-Q order even when headers contain extra spaces.
-    const lookup = new Map(columns.map(name=>[normalizedHeader(name),name]));
-    const fixed = FIXED_DSD_HEADERS.map(name=>lookup.get(normalizedHeader(name)));
-    fixedExcelLayout = fixed.every(Boolean);
-    if (!fixedExcelLayout) return [...columns];
-    const taken = new Set(fixed);
-    return [...fixed,...columns.filter(name=>!taken.has(name))];
+    // Preserve exact original Excel column order, including a leading ID column.
+    fixedExcelLayout = false;
+    const limit = Math.min(3, columns.length - FIXED_DSD_HEADERS.length);
+    for (let start = 0; start <= limit; start++) {
+      if (FIXED_DSD_HEADERS.every((name, i) =>
+        normalizedHeader(columns[start + i]) === normalizedHeader(name))) {
+        fixedExcelLayout = true;
+        break;
+      }
+    }
+    return [...columns];
   }
   let highlightedIds = new Set();
   const PAGE_SIZE = 250;
