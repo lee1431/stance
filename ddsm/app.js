@@ -969,7 +969,6 @@
 
   function identityDialogMode(first = false) {
     const dialog = $('identityDialog');
-    $('closeIdentity').classList.toggle('hidden', first);
     $('identityTitle').textContent = first ? '처음 시작하기' : '내 휴대폰 번호';
     $('saveIdentityButton').textContent = '기존 기기 자료만 보기 (스캔은 서버 로그인 필요)';
     $('identityError').textContent = '';
