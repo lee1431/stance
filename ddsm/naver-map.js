@@ -208,5 +208,5 @@
     return center || (validPoint(point) ? { lat: point.lat, lng: point.lng } : null);
   }
 
-  root.DDSM_NaverMap = Object.freeze({ open, update, close, selection });
+  root.DDSM_NaverMap = Object.freeze({ open, update, close, selection, loadSdk });
 })(window);
