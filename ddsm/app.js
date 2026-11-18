@@ -678,11 +678,13 @@
       const destination = phoneStorageKey(number);
       // Preserve legacy data on first adoption without moving or deleting its key.
       // Never copy another user's records when switching to a different number.
-      if (!localStorage.getItem(destination) && !localStorage.getItem(MIGRATION_KEY)) {
-        const original = localStorage.getItem(LEGACY_STORAGE_KEY);
-        if (original) {
-          const parsed = JSON.parse(original);
-          if (isData(parsed)) localStorage.setItem(destination, original);
+      if (!localStorage.getItem(MIGRATION_KEY)) {
+        if (!localStorage.getItem(destination)) {
+          const original = localStorage.getItem(LEGACY_STORAGE_KEY);
+          if (original) {
+            const parsed = JSON.parse(original);
+            if (isData(parsed)) localStorage.setItem(destination, original);
+          }
         }
         localStorage.setItem(MIGRATION_KEY, '1');
       }
