@@ -35,43 +35,19 @@
   let lastCameraValue = '';
   let lastCameraAt = 0;
   let barcodeDecoder = null;
-  let addressMapTimer = null;
-  const mapSearchUrl = address => 'https://map.naver.com/p/search/' + encodeURIComponent(address);
-  // A query-based Google Maps embed avoids storing or exposing an API key.
-  // Search results are approximate; the Naver Maps link is provided for verification.
-  const mapEmbedUrl = address => 'https://maps.google.com/maps?q=' + encodeURIComponent(address) + '&output=embed';
+  function validCoordinates(item) {
+    return item && Number.isFinite(item.lat) && Number.isFinite(item.lng)
+      && item.lat >= -90 && item.lat <= 90 && item.lng >= -180 && item.lng <= 180;
+  }
   function updateAddressMap() {
+    if (!window.DDSM_NaverMap) return;
     const address = clean($('addressInput').value, 250);
-    const frame = $('addressMapFrame');
-    const empty = $('addressMapEmpty');
-    const link = $('addressMapLink');
-    clearTimeout(addressMapTimer);
-    if (!address || address.length < 4) {
-      frame.classList.add('hidden');
-      frame.removeAttribute('src');
-      link.classList.add('hidden');
-      link.removeAttribute('href');
-      empty.classList.remove('hidden');
-      empty.textContent = address ? '주소를 조금 더 자세히 입력해 주세요.' : '주소를 입력하면 여기에 지도가 표시됩니다.';
-      return;
-    }
-    empty.classList.remove('hidden');
-    empty.textContent = '입력한 주소의 지도를 불러오는 중입니다.';
-    link.href = mapSearchUrl(address);
-    link.classList.remove('hidden');
-    addressMapTimer = setTimeout(() => {
-      const current = clean($('addressInput').value, 250);
-      if (current !== address || !$('editDialog').open) return;
-      frame.src = mapEmbedUrl(address);
-      frame.classList.remove('hidden');
-      empty.classList.add('hidden');
-    }, 700);
+    const stop = stops().find(x => x.id === editingId);
+    const original = stop && clean(stop.address, 250) === address && validCoordinates(stop) ? { lat: stop.lat, lng: stop.lng } : null;
+    window.DDSM_NaverMap.update(address, original);
   }
   function closeAddressMap() {
-    clearTimeout(addressMapTimer);
-    const frame = $('addressMapFrame');
-    frame.classList.add('hidden');
-    frame.removeAttribute('src');
+    if (window.DDSM_NaverMap) window.DDSM_NaverMap.close();
   }
 
   function persist() {
@@ -259,17 +235,28 @@
     $('phoneInput').value = stop.phone;
     $('memoInput').value = stop.memo;
     $('editDialog').showModal();
-    updateAddressMap();
+    if (window.DDSM_NaverMap) {
+      window.DDSM_NaverMap.open(stop.address, validCoordinates(stop) ? { lat: stop.lat, lng: stop.lng } : null);
+    }
   }
   function saveEdit(event) {
     event.preventDefault();
     const stop = stops().find(x => x.id === editingId);
     if (!stop) return;
-    const before = { recipient: stop.recipient, address: stop.address, phone: stop.phone, memo: stop.memo };
+    const before = { recipient: stop.recipient, address: stop.address, phone: stop.phone, memo: stop.memo, lat: stop.lat, lng: stop.lng };
     stop.recipient = clean($('recipientInput').value, 100);
     stop.address = clean($('addressInput').value, 250);
     stop.phone = clean($('phoneInput').value, 25);
     stop.memo = clean($('memoInput').value, 500);
+    const selected = window.DDSM_NaverMap ? window.DDSM_NaverMap.selection(stop.address) : null;
+    if (selected) {
+      stop.lat = selected.lat;
+      stop.lng = selected.lng;
+    } else {
+      // A changed or unresolved address must never retain an unrelated older pin.
+      delete stop.lat;
+      delete stop.lng;
+    }
     if (!persist()) { Object.assign(stop, before); return; }
     $('editDialog').close();
     render();
@@ -410,7 +397,13 @@
           const waybill = clean(s.waybill, 100);
           if (codes.has(waybill)) throw Error('운송장 중복');
           codes.add(waybill);
-          return { id: makeId(), waybill, recipient: clean(s.recipient,100), address: clean(s.address,250), phone: clean(s.phone,25), memo: clean(s.memo,500), status: s.status === 'done' ? 'done' : 'pending', createdAt: clean(s.createdAt,80) };
+          return {
+            id: makeId(), waybill, recipient: clean(s.recipient,100),
+            address: clean(s.address,250), phone: clean(s.phone,25),
+            memo: clean(s.memo,500), status: s.status === 'done' ? 'done' : 'pending',
+            createdAt: clean(s.createdAt,80),
+            ...(validCoordinates(s) ? { lat: s.lat, lng: s.lng } : {})
+          };
         });
         return { no: r.no, stops };
       });
