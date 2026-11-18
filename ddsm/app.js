@@ -3,7 +3,26 @@
 (function () {
   'use strict';
 
-  const STORAGE_KEY = 'ddsm:data:v1';
+  const LEGACY_STORAGE_KEY = 'ddsm:data:v1';
+  const IDENTITY_KEY = 'ddsm:identity:phone:v1';
+  const MIGRATION_KEY = 'ddsm:identity:migrated-legacy:v1';
+  const phoneStorageKey = number => 'ddsm:data:v1:phone:' + number;
+  const normalizePhone = raw => String(raw || '').replace(/\D/g, '');
+  const isPhone = number => /^01[016789]\d{7,8}$/.test(number);
+  const displayPhone = raw => {
+    const value = normalizePhone(raw);
+    if (value.length === 11) return value.slice(0,3) + '-' + value.slice(3,7) + '-' + value.slice(7);
+    if (value.length === 10) return value.slice(0,3) + '-' + value.slice(3,6) + '-' + value.slice(6);
+    return value;
+  };
+  function storedPhone() {
+    try {
+      const value = normalizePhone(localStorage.getItem(IDENTITY_KEY));
+      return isPhone(value) ? value : '';
+    } catch (_) { return ''; }
+  }
+  let identityPhone = storedPhone();
+  const activeStorageKey = () => identityPhone ? phoneStorageKey(identityPhone) : LEGACY_STORAGE_KEY;
   const $ = id => document.getElementById(id);
   const today = () => {
     const d = new Date();
@@ -17,7 +36,7 @@
   function isData(value) { return Boolean(value && value.version === 1 && value.days && typeof value.days === 'object' && !Array.isArray(value.days)); }
   function readData() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(activeStorageKey());
       const parsed = raw ? JSON.parse(raw) : freshData();
       return isData(parsed) ? parsed : freshData();
     } catch (_) { return freshData(); }
@@ -51,7 +70,8 @@
   }
 
   function persist() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); return true; }
+    if (!identityPhone) return false;
+    try { localStorage.setItem(activeStorageKey(), JSON.stringify(data)); return true; }
     catch (_) { toast('저장할 수 없습니다. 브라우저 저장 공간을 확인하세요.'); return false; }
   }
   function toast(message) {
@@ -101,6 +121,7 @@
   }
 
   function renderHome() {
+    $('myPhoneLabel').textContent = identityPhone ? '내 번호 · ' + displayPhone(identityPhone) : '휴대폰 번호 등록';
     const d = day();
     const active = round();
     const c = counts();
@@ -628,7 +649,61 @@
     finally { $('importInput').value = ''; }
   }
 
+  function identityDialogMode(first = false) {
+    const dialog = $('identityDialog');
+    $('closeIdentity').classList.toggle('hidden', first);
+    $('identityTitle').textContent = first ? '처음 시작하기' : '내 휴대폰 번호';
+    $('saveIdentityButton').textContent = first ? '이 번호로 시작' : '번호 확인 · 변경';
+    $('identityError').textContent = '';
+    $('identityError').classList.add('hidden');
+    $('identityPhoneInput').value = identityPhone ? displayPhone(identityPhone) : '';
+    if (!dialog.open) dialog.showModal();
+  }
+  function openIdentityDialog(force = false) {
+    identityDialogMode(force || !identityPhone);
+  }
+  function saveIdentity(event) {
+    event.preventDefault();
+    const number = normalizePhone($('identityPhoneInput').value);
+    const error = $('identityError');
+    if (!isPhone(number)) {
+      error.textContent = '올바른 휴대폰 번호를 입력해 주세요. 예: 010-1234-5678';
+      error.classList.remove('hidden');
+      return;
+    }
+    if (identityPhone && identityPhone !== number &&
+        !confirm('다른 번호로 전환하면 이 기기에 저장된 해당 번호의 배송 목록이 열립니다. 기존 번호의 자료는 보존됩니다. 계속할까요?')) return;
+    try {
+      const previous = identityPhone;
+      const destination = phoneStorageKey(number);
+      // Preserve legacy data on first adoption without moving or deleting its key.
+      // Never copy another user's records when switching to a different number.
+      if (!localStorage.getItem(destination) && !localStorage.getItem(MIGRATION_KEY)) {
+        const original = localStorage.getItem(LEGACY_STORAGE_KEY);
+        if (original) {
+          const parsed = JSON.parse(original);
+          if (isData(parsed)) localStorage.setItem(destination, original);
+        }
+        localStorage.setItem(MIGRATION_KEY, '1');
+      }
+      localStorage.setItem(IDENTITY_KEY, number);
+      identityPhone = number;
+      data = readData();
+      date = today();
+      if (previous && previous !== number) showView('home');
+      $('identityDialog').close();
+      render();
+      toast('사용 번호 ' + displayPhone(number) + (previous && previous !== number ? ' · 전환 완료' : ' · 등록 완료'));
+    } catch (_) {
+      error.textContent = '번호를 저장하지 못했습니다. 브라우저 저장 공간을 확인하세요.';
+      error.classList.remove('hidden');
+    }
+  }
+
   function bind() {
+    $('myPhoneButton').addEventListener('click', openIdentityDialog);
+    $('identityForm').addEventListener('submit', saveIdentity);
+    $('closeIdentity').addEventListener('click', () => $('identityDialog').close());
     $('dateButton').addEventListener('click', chooseDate);
     $('dateInput').addEventListener('change', e => {
       const value = e.target.value;
@@ -687,9 +762,14 @@
       if (document.hidden && (cameraStream || zxingControls)) stopCamera();
     });
     window.addEventListener('storage', e => {
-      if (e.key === STORAGE_KEY) { data = readData(); render(); toast('다른 탭에서 변경된 배송 목록을 반영했습니다.'); }
+      if (e.key === activeStorageKey() && identityPhone) {
+        data = readData(); render(); toast('다른 탭에서 변경된 배송 목록을 반영했습니다.');
+      } else if (e.key === IDENTITY_KEY && e.newValue !== identityPhone) {
+        toast('다른 탭에서 사용자 번호가 변경되었습니다. 새로고침해 주세요.');
+      }
     });
   }
   bind();
   render();
+  if (!identityPhone) openIdentityDialog(true);
 })();
