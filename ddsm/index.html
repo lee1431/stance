@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="style.css?v=13-api-auth">
   <script src="naver-map.js?v=3-shared-sdk" defer></script>
   <script src="delivery-map.js?v=4-empty-day" defer></script>
-  <script src="app.js?v=12-api-auth" defer></script>
+  <script src="app.js?v=13-password-16" defer></script>
 </head>
 <body>
   <div id="app" class="app">
@@ -113,7 +113,7 @@
         placeholder="010-1234-5678" maxlength="13" required aria-describedby="identityInfo identityError">
       <label class="input-label" for="identityPasswordInput">비밀번호</label>
       <input id="identityPasswordInput" type="password" autocomplete="current-password"
-        minlength="10" maxlength="128" placeholder="10자 이상 입력" aria-describedby="identityInfo identityError">
+        minlength="1" maxlength="16" placeholder="1~16자 입력" aria-describedby="identityInfo identityError">
       <p id="identityError" class="identity-error hidden" role="alert"></p>
       <div class="identity-auth-actions">
         <button id="identityLoginButton" class="primary-action" type="button">로그인</button>
