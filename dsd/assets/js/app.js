@@ -6,7 +6,7 @@
   const map = new window.DSDMap();
   const state = {
     user: null, date: localDate(), rounds: [], round: null, stops: [],
-    view: 'map', selected: null, filter: 'all', editingStop: null, busy: false,
+    view: 'home', selected: null, filter: 'all', editingStop: null, busy: false,
     geocoding: false, mapLoaded: false, mapError: null, inspected: null,
     editTarget: null, searchMatch: null,
     drivingRoute: null, drivingFor: null, routeError: '', routeLoading: false,
@@ -161,7 +161,7 @@
       $('mapPlaceholder').querySelector('span').textContent = error.message + ' · 목록은 계속 사용할 수 있습니다.';
       toast('지도 연결 실패: ' + error.message, 6000);
     });
-    changeView('map');
+    changeView('home');
   }
   async function loadRounds(preferredId) {
     let response = await API.rounds(state.date);
@@ -193,10 +193,57 @@
   }
   function render() {
     $('dateCaption').textContent = state.date;
-    renderRounds(); renderList(); renderCard(); renderTarget(); drawMap();
+    renderRounds();
+    renderHome();
+    if (state.view === 'list') renderList();
+    renderCard(); renderTarget(); drawMap();
   }
   function drawMap() {
     map.draw(state.stops, state.round && state.round.active_stop_id, null);
+  }
+  function renderHome() {
+    const now=localDate();
+    const iso=state.date || now;
+    const [year,month,day]=iso.split('-').map(Number);
+    const label=new Date(year,month-1,day);
+    const weekday=['일','월','화','수','목','금','토'][label.getDay()];
+    $('homeDateText').textContent=(iso===now?'오늘 · ':'')+month+'월 '+day+'일 ('+weekday+')';
+    $('homeDateInput').value=iso;
+    $('homeRoundText').textContent=state.round ? state.round.round_no+'회차' : '회차 선택';
+    const center=API.centerId();
+    const choice=document.querySelector('#dsdCenterSelect option:checked');
+    $('homeWorkspaceName').textContent=center ? (choice?.textContent||'센터 작업') : '개인 작업';
+    const total=state.stops.length;
+    const done=state.stops.filter(stop=>stop.status==='done').length;
+    const pending=state.stops.filter(stop=>stop.status==='pending').length;
+    $('homeTotalCount').textContent=String(total);
+    $('homePendingCount').textContent=String(pending);
+    $('homeDoneCount').textContent=String(done);
+    $('homeScanCount').innerHTML='';
+    const count=document.createElement('strong');
+    count.textContent=total+'건';
+    $('homeScanCount').append('현재 회차 배송지 ',count,' 등록');
+    $('homeDeliveryBtn').disabled=!state.round || !pending;
+    $('homeDeliveryHint').textContent= pending
+      ? '준비된 배송지 '+pending+'곳 · 누르면 지도로 이동합니다.'
+      : total ? '진행할 배송지가 없습니다. 목록에서 확인하세요.' : '스캔한 배송지가 있어야 시작할 수 있어요.';
+  }
+  function launchDelivery() {
+    if(!state.round)return;
+    const ready=state.stops.find(stop=>stop.status==='pending');
+    if(!ready){toast('먼저 운송장을 스캔해 배송지를 등록하세요.');return;}
+    // Route ordering stays intact. The driver's existing explicit start action
+    // is reused to set the server-owned active destination.
+    start(ready.id).catch(error=>toast(error.message,6000));
+  }
+  function openHomeDate() {
+    const input=$('homeDateInput');
+    input.value=state.date;
+    if(typeof input.showPicker==='function'){
+      try {input.showPicker();return;}catch(_){}
+    }
+    input.focus({preventScroll:true});
+    input.click();
   }
   function renderRounds() {
     const root = $('roundTabs'); root.replaceChildren();
@@ -599,8 +646,12 @@
     }
     state.view = view;
     $('app').dataset.view = view;
+    $('homeView').classList.toggle('hidden',view !== 'home');
     $('mapView').classList.toggle('hidden',view !== 'map');
     $('listView').classList.toggle('hidden',view !== 'list');
+    if(view === 'list')renderList();
+    if(view === 'home')renderHome();
+    $('navHome').classList.toggle('active',view === 'home');
     $('navMap').classList.toggle('active',view === 'map');
     $('navList').classList.toggle('active',view === 'list');
     renderCard(); renderTarget();
@@ -868,6 +919,25 @@
       } catch(error) { toast(error.message,6000); }
       finally {$('loginSubmit').disabled=false;}
     });
+    $('navHome').addEventListener('click',() => changeView('home'));
+    $('homeScanBtn').addEventListener('click',() => $('mapScanBtn').click());
+    $('homeDeliveryBtn').addEventListener('click',launchDelivery);
+    $('homeListBtn').addEventListener('click',() => changeView('list'));
+    $('homeMapBtn').addEventListener('click',() => changeView('map'));
+    $('homeSettingsBtn').addEventListener('click',() => toggleDrawer(true));
+    $('homeWorkspaceBtn').addEventListener('click',() => {
+      toggleDrawer(true);
+      document.getElementById('dsdCenterSelect')?.focus({preventScroll:true});
+    });
+    $('homeDateBtn').addEventListener('click',openHomeDate);
+    $('homeDateInput').addEventListener('change',async event => {
+      const date=event.target.value;
+      if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||date===state.date)return;
+      state.date=date;
+      $('workDate').value=date;
+      renderHome();
+      await loadRounds().catch(e=>toast(e.message,6000));
+    });
     $('navMap').addEventListener('click',() => changeView('map'));
     $('navList').addEventListener('click',() => changeView('list'));
     $('menuBtn').addEventListener('click',() => toggleDrawer(true));
@@ -929,6 +999,7 @@
     $('workDate').addEventListener('change',async event => {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(event.target.value)) return;
       state.date=event.target.value; toggleDrawer(false);
+      renderHome();
       await loadRounds().catch(e=>toast(e.message));
     });
     $('newRoundBtn').addEventListener('click',newRound);
