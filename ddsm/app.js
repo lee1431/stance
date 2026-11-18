@@ -1,9 +1,9 @@
-/* DDSM v1 — standalone, login-free daily scan and delivery workflow.
-   No calls to the DSD authenticated API. Browser-local data only. */
+/* DDSM daily / scan / delivery. Local stops with opt-in authenticated S10 manifest lookup. */
 (function () {
   'use strict';
 
   const AUTH_API_BASE = 'https://mrdindoin.ddns.net/dsd/api/auth/';
+  const DRIVER_API_BASE = 'https://mrdindoin.ddns.net/dsd-center-api/';
   const LEGACY_STORAGE_KEY = 'ddsm:data:v1';
   const IDENTITY_KEY = 'ddsm:identity:phone:v1';
   const MIGRATION_KEY = 'ddsm:identity:migrated-legacy:v1';
@@ -24,6 +24,7 @@
   }
   let identityPhone = storedPhone();
   let remoteAccount = false;
+  let driverToken = ''; // Ephemeral, never written to browser storage.
   const activeStorageKey = () => identityPhone ? phoneStorageKey(identityPhone) : LEGACY_STORAGE_KEY;
   const $ = id => document.getElementById(id);
   const today = () => {
@@ -255,7 +256,9 @@
       const detail = node('div', 'stop-detail');
       detail.append(node('strong', '', stop.recipient || '배송건 ' + stop.waybill));
       detail.append(node('span', '', stop.address || '주소 미입력 · 정보 수정에서 입력하세요'));
-      detail.append(node('span', '', '운송장 ' + stop.waybill + (stop.memo ? ' · 메모 있음' : '')));
+      detail.append(node('span', '', '운송장 ' + stop.waybill
+        + (stop.scannedItems?.length ? ' · 물품 '+stop.scannedItems.join(', ') : '')
+        + (stop.memo ? ' · 메모 있음' : '')));
       head.append(detail);
       head.append(node('span', 'status-tag', done ? '완료' : '배송 예정'));
       card.append(head);
@@ -308,17 +311,43 @@
     render();
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
-  function addWaybill(raw) {
-    const waybill = clean(raw, 100).replace(/\s+/g, '');
-    if (!waybill) return { error: '운송장번호를 입력하세요.' };
-    if (waybill.length < 4 || /[\u0000-\u001f<>]/.test(waybill)) return { error: '운송장번호를 확인하세요.' };
-    if (stops().some(stop => stop.waybill === waybill)) return { error: '이미 등록된 운송장입니다: ' + waybill };
-    const stop = { id: makeId(), waybill, recipient: '', address: '', phone: '', memo: '', status: 'pending', createdAt: new Date().toISOString() };
+  function addWaybill(raw, remote = null) {
+    const parsed = window.DDSM_Waybill?.parse(raw) || {scanned:String(raw||'').trim(),valid:false};
+    const waybill = parsed.valid ? parsed.master : clean(raw,100).replace(/\\s+/g,'');
+    if (!waybill) return {error:'운송장번호를 입력하세요.'};
+    if (waybill.length < 4 || /[\\u0000-\\u001f<>]/.test(waybill)) return {error:'운송장번호를 확인하세요.'};
+    const digitKey = value => String(value||'').replace(/[\\s-]/g,'');
+    const existing = stops().find(stop => digitKey(stop.waybill) === digitKey(waybill));
+    const suffix = parsed.valid ? parsed.suffix : null;
+    if (existing) {
+      const scannedItems = Array.isArray(existing.scannedItems) ? existing.scannedItems.slice() : [];
+      if (!suffix || scannedItems.includes(suffix)) {
+        return {error: suffix ? '이미 스캔한 물품 '+suffix+'번입니다.' : '이미 등록된 운송장입니다: '+waybill};
+      }
+      const snapshot = {...existing, scannedItems};
+      existing.scannedItems = [...scannedItems, suffix];
+      if (remote) {
+        if (!existing.recipient) existing.recipient = clean(remote.recipient,100);
+        if (!existing.address) existing.address = clean(remote.address,250);
+        if (!existing.phone) existing.phone = clean(remote.phone,25);
+      }
+      if (!persist()) {Object.assign(existing,snapshot);return {error:'물품 스캔을 저장하지 못했습니다.'};}
+      render();
+      return {stop:existing,existing:true,suffix};
+    }
+    const stop = {
+      id:makeId(),waybill,recipient:clean(remote?.recipient,100),
+      address:clean(remote?.address,250),phone:clean(remote?.phone,25),
+      memo:'',status:'pending',createdAt:new Date().toISOString(),
+      scannedItems:suffix?[suffix]:[],
+      ...(Number.isFinite(remote?.lat) && Number.isFinite(remote?.lng)
+        ? {lat:remote.lat,lng:remote.lng} : {})
+    };
     stops().push(stop);
-    if (!persist()) { stops().pop(); return { error: '저장하지 못했습니다. 저장 공간을 확인하세요.' }; }
+    if (!persist()) {stops().pop();return {error:'저장하지 못했습니다. 저장 공간을 확인하세요.'};}
     render();
     if (navigator.vibrate) navigator.vibrate(45);
-    return { stop };
+    return {stop,suffix};
   }
 
   // Play an original short, two-stage mechanical click. Audio is unlocked
@@ -394,20 +423,76 @@
     syncScanViewport();
     input.focus({ preventScroll: true });
   }
-  function processScan(raw, camera = false) {
-    // "Read" is distinct from "registered": duplicates and invalid nonempty
-    // codes still produce the click and flash to confirm scanner input.
-    if (String(raw || '').trim()) scanReadFeedback();
-    const result = addWaybill(raw);
-    const message = result.error || ('등록 완료 · ' + result.stop.waybill + ' (' + stops().length + '건)');
-    $('scanResult').textContent = message;
-    if (result.error && !camera) toast(message);
-    if (!camera) {
-      $('waybillInput').value = '';
-      $('waybillInput').focus({ preventScroll: true });
+  const pendingScans = [];
+  let scanWorkerActive = false;
+  async function lookupWaybill(raw, dateKey) {
+    const parsed = window.DDSM_Waybill?.parse(raw);
+    if (!parsed?.valid) throw Error('운송장번호는 기본 13자리 또는 물품 16자리여야 합니다.');
+    if (!driverToken) throw Error('서버 조회를 위해 승인된 배송기사 계정으로 로그인하세요.');
+    const response = await fetch(
+      DRIVER_API_BASE+'ddsm/waybill?date='+encodeURIComponent(dateKey)
+        +'&barcode='+encodeURIComponent(parsed.scanned),
+      {method:'GET',headers:{Authorization:'Bearer '+driverToken},credentials:'omit',cache:'no-store'}
+    );
+    const payload = await response.json().catch(()=>null);
+    if (!response.ok || payload?.ok!==true) {
+      if (response.status===401) {driverToken='';remoteAccount=false;}
+      throw Error(payload?.error||'서버 운송장 조회 실패 (HTTP '+response.status+')');
     }
-    return !result.error;
+    if (payload.master_waybill!==parsed.master) throw Error('원본 운송장과 조회 결과가 일치하지 않습니다.');
+    return payload;
   }
+  async function drainScanQueue() {
+    if (scanWorkerActive) return;
+    scanWorkerActive=true;
+    try {
+      while (pendingScans.length) {
+        const job=pendingScans.shift();
+        $('scanResult').textContent = '운송장 조회 중 · '+job.raw;
+        try {
+          let detail=null;
+          if (driverToken) detail=await lookupWaybill(job.raw,job.date);
+          else if (remoteAccount) throw Error('서버 조회 로그인 상태가 만료됐습니다. 다시 로그인하세요.');
+          if (job.date!==date || job.roundNo!==round().no)
+            throw Error('배송일 또는 회차가 변경되었습니다. 다시 스캔하세요.');
+          const result=addWaybill(job.raw,detail);
+          if (result.error) throw Error(result.error);
+          let message;
+          if (detail) message=(result.existing?'같은 배송지 물품 추가':'서버 조회·등록 완료')
+            +' · '+(detail.recipient||result.stop.waybill)
+            +(result.suffix?' · 물품 '+result.suffix:'')
+            +(detail.address?' · 주소 확인':' · 주소 미등록');
+          else message='로컬 등록 · 서버 조회 없음 · '+result.stop.waybill
+            +(result.suffix?' / 물품 '+result.suffix:'');
+          $('scanResult').textContent=message;
+        } catch(e) {
+          const message=e.message||'운송장 조회 실패';
+          $('scanResult').textContent=message;
+          if(!job.camera)toast(message);
+        } finally {
+          if (!job.camera && $('scanDialog').open) {
+            $('waybillInput').focus({preventScroll:true});
+          }
+        }
+      }
+    } finally {scanWorkerActive=false;}
+  }
+  function processScan(raw, camera = false) {
+    if (!String(raw||'').trim()) return false;
+    scanReadFeedback();
+    if (pendingScans.length>=20) {
+      $('scanResult').textContent='스캔 대기열이 가득 찼습니다. 조회 완료 후 다시 스캔하세요.';
+      return false;
+    }
+    pendingScans.push({raw:String(raw).trim(),camera,date,roundNo:round().no});
+    if (!camera) {
+      $('waybillInput').value='';
+      $('waybillInput').focus({preventScroll:true});
+    }
+    drainScanQueue();
+    return true;
+  }
+
   function setDone(id, value) {
     const target = stops().find(x => x.id === id);
     if (!target) return;
@@ -627,6 +712,7 @@
             address: clean(s.address,250), phone: clean(s.phone,25),
             memo: clean(s.memo,500), status: s.status === 'done' ? 'done' : 'pending',
             createdAt: clean(s.createdAt,80),
+            scannedItems: Array.isArray(s.scannedItems) ? [...new Set(s.scannedItems.filter(x=>/^\\d{3}$/.test(x)))].slice(0,999) : [],
             ...(validCoordinates(s) ? { lat: s.lat, lng: s.lng } : {})
           };
         });
