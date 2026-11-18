@@ -9,6 +9,7 @@
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="assets/css/app.css?v=company-import-20261117">
   <link rel="stylesheet" href="assets/css/messages.css?v=messages-20261117">
+  <link rel="stylesheet" href="assets/css/home.css?v=dsd-home-20261118">
 </head>
 <body>
   <!-- Inline SVG symbol library; no icon CDN required. -->
@@ -45,12 +46,66 @@
     </form>
   </section>
 
-  <div id="app" class="app hidden" data-view="map">
+  <div id="app" class="app hidden" data-view="home">
     <header id="topBar" class="top-bar">
       <button id="menuBtn" class="icon-button menu-toggle" type="button" aria-label="메뉴 열기"><svg><use href="#ico-menu"/></svg></button>
     </header>
 
-    <section id="mapView" class="page map-page" aria-label="지도 페이지">
+    <!-- Daily -> Scan -> Delivery: one clear action at a time. -->
+    <section id="homeView" class="page home-page" aria-label="오늘의 배송">
+      <div class="home-layout">
+        <div class="home-head">
+          <button id="homeDateBtn" class="home-date-button" type="button" aria-label="배송 날짜 변경">
+            <span class="home-d-mark" aria-hidden="true">D</span>
+            <span class="home-date-words">
+              <small>DAILY</small>
+              <strong id="homeDateText">오늘의 배송</strong>
+            </span>
+            <svg class="home-date-arrow" aria-hidden="true"><use href="#ico-chevron"/></svg>
+          </button>
+          <input id="homeDateInput" class="home-date-input" type="date" aria-label="배송 날짜 선택">
+          <button id="homeSettingsBtn" class="home-setting-button" type="button" aria-label="설정 열기" title="설정">
+            <svg aria-hidden="true"><use href="#ico-menu"/></svg>
+          </button>
+        </div>
+        <div class="home-context">
+          <button id="homeWorkspaceBtn" class="home-workspace" type="button" aria-label="개인 작업 또는 센터 변경">
+            <span id="homeWorkspaceName">개인 작업</span>
+            <svg aria-hidden="true"><use href="#ico-chevron"/></svg>
+          </button>
+          <span id="homeRoundText" class="home-round">1회차</span>
+        </div>
+        <div class="home-middle">
+          <p class="home-overline">매일의 배송을 더 쉽게</p>
+          <h1 class="home-lead">스캔하고, 바로 출발하세요.</h1>
+          <button id="homeScanBtn" class="home-scan-button" type="button" aria-label="운송장 스캔 시작">
+            <span class="home-scan-letter" aria-hidden="true">S</span>
+            <span class="home-scan-text">SCAN</span>
+            <span class="home-scan-hint">운송장 스캔</span>
+          </button>
+          <p id="homeScanCount" class="home-scan-count" role="status" aria-live="polite">등록된 배송지 0건</p>
+        </div>
+        <div class="home-bottom">
+          <div class="home-stats" aria-label="현재 회차 배송 현황">
+            <div class="home-stat"><b id="homeTotalCount">0</b><span>전체</span></div>
+            <div class="home-stat"><b id="homePendingCount">0</b><span>배송 예정</span></div>
+            <div class="home-stat"><b id="homeDoneCount">0</b><span>배송 완료</span></div>
+          </div>
+          <button id="homeDeliveryBtn" class="home-delivery-button" type="button" disabled>
+            <span class="home-delivery-mark" aria-hidden="true">d</span>
+            <span class="home-delivery-label">배송시작</span>
+            <span class="home-delivery-arrow" aria-hidden="true">→</span>
+          </button>
+          <p id="homeDeliveryHint" class="home-bottom-hint">스캔한 배송지가 있어야 시작할 수 있어요.</p>
+          <div class="home-shortcuts">
+            <button id="homeListBtn" type="button">배송 목록</button>
+            <button id="homeMapBtn" type="button">지도 보기</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="mapView" class="page map-page hidden" aria-label="지도 페이지">
       <div id="map" class="map-canvas" role="application" aria-label="배송 위치 지도"></div>
       <div id="mapPlaceholder" class="map-placeholder"><svg><use href="#ico-map"/></svg><strong>지도를 연결하는 중입니다</strong><span>지도 API 코드와 등록된 웹 서비스 주소를 확인하세요.</span></div>
       <div id="targetStrip" class="target-strip hidden" role="status"></div>
@@ -111,6 +166,7 @@
     </section>
 
     <nav id="modeNav" class="mode-nav" aria-label="페이지 전환">
+      <button id="navHome" class="nav-option" type="button" aria-label="홈으로"><span>홈</span></button>
       <button id="navMap" class="nav-option active" type="button" aria-label="지도 페이지"><svg><use href="#ico-map"/></svg><span>지도</span></button>
       <button id="navList" class="nav-option" type="button" aria-label="목록 페이지"><svg><use href="#ico-list"/></svg><span>목록</span></button>
     </nav>
@@ -193,10 +249,10 @@
   <script src="assets/js/legacy.js" defer></script>
   <script src="assets/js/centers.js?v=center-shared-20261117" defer></script>
   <script src="assets/js/messages.js?v=messages-launch-fix-20261117" defer></script>
-  <script src="assets/js/app.js?v=messages-20261117" defer></script>
+  <script src="assets/js/app.js?v=dsd-home-20261118" defer></script>
   <script src="assets/js/raw-import.js?v=center-shared-20261117" defer></script>
   <script src="assets/js/daesin-import.js?v=center-shared-20261117" defer></script>
-  <script src="assets/js/scan.js?v=ios-zxing-20261117" defer></script>
+  <script src="assets/js/scan.js?v=dsd-home-20261118" defer></script>
 </body>
 </html>
 
