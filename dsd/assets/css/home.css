@@ -126,3 +126,18 @@
   .app[data-view="list"] #listView:not(.hidden),
   .app[data-view="home"] #homeView:not(.hidden) { animation: none; }
 }
+/* Three predictable, thumb-sized destinations after entering delivery mode. */
+.app:not([data-view="home"]) .mode-nav .nav-option {
+  flex: 1 1 0;
+  width: auto;
+  max-width: 120px;
+  min-width: 0;
+}
+@media(orientation: landscape) {
+  .app:not([data-view="home"]) .mode-nav .nav-option {
+    flex: 0 0 auto;
+    width: 42px;
+    max-width: 42px;
+    min-height: 49px;
+  }
+}
