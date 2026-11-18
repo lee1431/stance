@@ -303,3 +303,21 @@
   color: #086774;
   font-weight: 850;
 }
+
+/* Recipient-first map label: visit number + name, compact on tablet/mobile. */
+.ddsm-map-marker {
+  width: 88px;
+  min-width: 0;
+  max-width: 88px;
+  padding: 6px 5px 8px;
+}
+.ddsm-map-pin-name {
+  display: block;
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1.3;
+  font-weight: 750;
+}
