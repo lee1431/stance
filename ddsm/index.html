@@ -1,35 +1,52 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-theme="neo-mint">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#F8F7F4">
-  <meta name="description" content="DDSM - Daily, Scan, Delivery. 로그인 없는 간편 배송 작업 화면">
+  <meta name="theme-color" content="#F4FBF9">
+  <meta name="description" content="DDSM - Daily, Scan, Delivery. 서버 동기화 기반 배송 스캔 대시보드">
   <title>DDSM | Daily · Scan · Delivery</title>
   <link rel="icon" href="favicon.svg?v=vehicle-20261118" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=13-api-auth">
+  <link rel="stylesheet" href="style.css?v=14-neo-mint-dark">
   <script src="naver-map.js?v=4-address-classification" defer></script>
   <script src="address-utils.js?v=3-attached-units" defer></script>
   <script src="delivery-map.js?v=5-address-classification" defer></script>
   <script src="waybill.js?v=1-master-13" defer></script>
-  <script src="app.js?v=23-login-close" defer></script>
+  <script src="app.js?v=24-neo-mint-dark" defer></script>
+  <script src="theme.js?v=1" defer></script>
 </head>
 <body>
   <div id="app" class="app">
     <main id="homeScreen" class="screen home-screen">
       <header class="home-header">
         <button id="dateButton" class="date-button" type="button" aria-label="작업 날짜 변경">
-          <span class="date-letter" aria-hidden="true">D</span>
-          <span class="date-info"><span class="eyebrow date-meta"><span>DAILY</span><span class="date-meta-sep">—</span><span id="dailyPhoneLabel">번호 미등록</span></span><strong id="dateLabel">오늘</strong></span>
+          <span class="brand-icon" aria-hidden="true">
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>
+            </svg>
+          </span>
+          <span class="date-info">
+            <span class="eyebrow date-meta"><span class="header-status-dot" aria-hidden="true"></span><span>DAILY</span><span class="date-meta-sep">·</span><span id="dailyPhoneLabel">번호 미등록</span></span>
+            <strong id="dateLabel">오늘</strong>
+          </span>
           <span class="chevron" aria-hidden="true">⌄</span>
         </button>
-        <button id="settingsButton" class="icon-button" type="button" aria-label="설정">☰</button>
+        <div class="header-actions">
+          <button class="theme-toggle" type="button" data-theme-toggle aria-label="다크 모드 켜기" title="라이트/다크 모드 전환" aria-pressed="false">
+            <svg class="theme-icon-moon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.985 12.486A9 9 0 0 1 11.514 3.015a9 9 0 1 0 9.47 9.47Z"/></svg>
+            <svg class="theme-icon-sun" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+          </button>
+          <button id="settingsButton" class="icon-button" type="button" aria-label="설정" title="설정">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+        </div>
         <input id="dateInput" class="visually-hidden-date" type="date" aria-label="배송일">
       </header>
       <div class="context-row">
         <button id="myPhoneButton" class="personal-chip phone-identity-button" type="button" aria-label="내 휴대폰 번호 확인 또는 변경">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/></svg>
           <span id="myPhoneLabel">휴대폰 번호 등록</span>
-          <span class="phone-identity-edit" aria-hidden="true">✎</span>
+          <span class="phone-identity-edit" aria-hidden="true">⌄</span>
         </button>
         <div class="round-control">
           <label for="roundSelect" class="sr-only">회차 선택</label>
@@ -40,33 +57,44 @@
       <section class="home-main">
         <p class="intro-kicker">매일의 배송을 더 쉽게</p>
         <h1>스캔하고, 바로 출발하세요.</h1>
-        <button id="scanButton" class="scan-button" type="button" aria-label="운송장 스캔 시작">
-          <span class="scan-letter">S</span>
-          <span class="scan-title">SCAN</span>
-          <span class="scan-caption">운송장 스캔</span>
-        </button>
-        <p id="scanHint" class="scan-hint">등록된 배송지 0건</p>
+        <div class="scan-wrapper">
+          <span class="scan-pulse" aria-hidden="true"></span>
+          <button id="scanButton" class="scan-button" type="button" aria-label="운송장 스캔 시작">
+            <svg class="scan-symbol" width="41" height="41" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10M7 8v8M11 8v8M15 8v8"/></svg>
+            <span class="scan-title">SCAN</span>
+            <span class="scan-caption">운송장 스캔</span>
+          </button>
+        </div>
+        <p id="scanHint" class="scan-hint">현재 회차 배송지 0건</p>
       </section>
       <footer class="home-footer">
-        <div class="stats" aria-live="polite">
-          <div class="stat"><strong id="totalCount">0</strong><span>전체</span></div>
-          <div class="stat"><strong id="pendingCount">0</strong><span>배송 예정</span></div>
-          <div class="stat"><strong id="doneCount">0</strong><span>완료</span></div>
+        <div class="stats" aria-label="배송 현황 요약" aria-live="polite">
+          <div class="stat"><span>전체</span><strong id="totalCount">0</strong></div>
+          <div class="stat"><span><i class="stat-dot pending" aria-hidden="true"></i>배송 예정</span><strong id="pendingCount">0</strong></div>
+          <div class="stat"><span><i class="stat-dot done" aria-hidden="true"></i>완료</span><strong id="doneCount">0</strong></div>
         </div>
         <button id="deliveryButton" class="delivery-button" type="button" disabled>
-          <span class="delivery-letter">d</span>
-          <span class="delivery-title">배송시작</span>
-          <span class="arrow" aria-hidden="true">→</span>
+          <span class="delivery-letter" aria-hidden="true">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+          </span>
+          <span class="delivery-title" id="deliveryButtonLabel">운송장을 스캔하면 출발 가능</span>
+          <span class="arrow" aria-hidden="true">›</span>
         </button>
         <p id="deliveryHint" class="footer-note">운송장을 스캔하면 배송을 시작할 수 있습니다.</p>
-        <button id="listButton" class="text-link" type="button">배송 목록 보기</button>
+        <button id="listButton" class="text-link" type="button">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+          배송 목록 보기
+        </button>
       </footer>
     </main>
-
     <section id="deliveryScreen" class="screen delivery-screen hidden" aria-labelledby="deliveryHeading">
       <header class="work-header">
         <button id="backButton" class="back-button" type="button" aria-label="홈으로">←</button>
         <div class="work-heading"><span id="workDateLabel">오늘 · 1회차</span><h2 id="deliveryHeading">배송 목록</h2></div>
+        <button class="theme-toggle theme-toggle-work" type="button" data-theme-toggle aria-label="다크 모드 켜기" title="라이트/다크 모드 전환" aria-pressed="false">
+          <svg class="theme-icon-moon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.985 12.486A9 9 0 0 1 11.514 3.015a9 9 0 1 0 9.47 9.47Z"/></svg>
+          <svg class="theme-icon-sun" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+        </button>
         <button id="workScanButton" class="small-scan" type="button">＋ 스캔</button>
       </header>
       <section class="delivery-map-panel" aria-labelledby="deliveryMapHeading">
