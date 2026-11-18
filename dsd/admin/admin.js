@@ -12,6 +12,7 @@
   let rows = [], columns = [], map = null, maps = null, markers = [], mapLoading = null;
   let requestVersion = 0, geocodeRunning = false, fitOnLoad = false;
   let shown = [], pageIndex = 0;
+  let highlightedIds = new Set();
   const PAGE_SIZE = 250;
   const attempted = new Set();
   const safePoint = p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng)
@@ -77,6 +78,7 @@
     token = '';
     requestVersion++;
     rows = []; columns = []; attempted.clear();
+    highlightedIds.clear();
     clearMap();
     $('dashboard').hidden = true;
     $('authPanel').hidden = false;
@@ -151,10 +153,8 @@
         title:label+' · 배송 '+count+'건'
       });
       maps.Event.addListener(marker,'click',()=>{
-        $('searchInput').value=String(first.business_name||first.waybill||'');
-        $('filterSelect').value='all';
-        renderTable();
-        $('rawTable').scrollIntoView({behavior:'smooth',block:'start'});
+        // Marker selection must never filter or remove rows from the delivery list.
+        highlightShipments(entry.items);
       });
       markers.push({marker});
     }
@@ -180,6 +180,7 @@
       if (version!==requestVersion || !token) return;
       rows=result.rows||[];
       columns=result.columns||[];
+      highlightedIds.clear();
       say('totalCount',rows.length);
       say('importStatus',day+' · 전체 '+rows.length+'건 · 위치 미확인 '+result.unlocated+'건');
       fitOnLoad=false;
@@ -238,6 +239,8 @@
     const body=$('rawBody');
     for(const row of shown.slice(pageIndex*PAGE_SIZE,(pageIndex+1)*PAGE_SIZE)){
       const tr=document.createElement('tr');
+      tr.dataset.id = String(row.id);
+      if (highlightedIds.has(row.id)) tr.classList.add('row-selected');
       const status=cell(row.located?'● 지도':'○ 미확인');
       status.className=row.located?'mapped':'missing';
       tr.append(status,cell(row.business_name||'상호 미입력'),
@@ -250,6 +253,24 @@
     say('tableInfo','전체 '+rows.length+'건 · 검색 '+shown.length+'건 · 표시 '+total+'건');
     $('showMoreBtn').hidden=total>=shown.length;
   }
+  function highlightShipments(items){
+    highlightedIds = new Set(items.map(item => item.id));
+    // Preserve the user's current search/filter settings and the complete list.
+    const firstIndex = shown.findIndex(row => highlightedIds.has(row.id));
+    if (firstIndex < 0) {
+      // The clicked destination isn't in the current user-selected filter.
+      // Don't alter that filter or silently replace the visible shipment list.
+      return;
+    }
+    // Large tables are paged: add the necessary pages without discarding others.
+    while (pageIndex * PAGE_SIZE <= firstIndex) appendPage();
+    for (const tr of $('rawBody').rows) {
+      tr.classList.toggle('row-selected', highlightedIds.has(Number(tr.dataset.id)));
+    }
+    const selected = [...$('rawBody').rows].find(tr => tr.classList.contains('row-selected'));
+    selected?.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+
   function renderTable(){
     const head=$('rawHeader'),body=$('rawBody');
     head.replaceChildren();body.replaceChildren();
