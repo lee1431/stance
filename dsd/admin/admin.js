@@ -2,7 +2,9 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const API_BASE = 'https://mrdindoin.ddns.net/dsd-center-api/';
+  const API_BASE = window.location.hostname === 'mrdindoin.ddns.net'
+    ? '/dsd-center-api/'
+    : 'https://mrdindoin.ddns.net/dsd-center-api/';
   const dateString = () => {
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
@@ -65,6 +67,22 @@
       } else {
         csrf = me.csrf;
       }
+      // Confirm that the browser retained the HttpOnly session cookie before
+      // attempting admin unlock. Cross-site cookie blocking otherwise looks
+      // like an incorrect administrator password.
+      let verified;
+      try {
+        verified = await get('auth/me');
+      } catch (error) {
+        throw new Error(
+          '사용자 로그인 응답은 받았지만 세션 쿠키를 확인하지 못했습니다. ' +
+          '관리자 화면을 API와 같은 mrdindoin.ddns.net 도메인에서 열어야 합니다.'
+        );
+      }
+      if (verified.phone !== phone) {
+        throw new Error('로그인된 사용자 계정이 입력한 휴대폰 번호와 다릅니다. 다시 로그인하세요.');
+      }
+      csrf = verified.csrf;
       const unlocked = await post('admin/unlock',{admin_password:adminPassword});
       csrf = unlocked.csrf;
       $('loginPassword').value = '';
