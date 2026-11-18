@@ -153,11 +153,28 @@
     openEdit(id);
   }
   function renderDayMap() {
-    if (view !== 'delivery' || !window.DDSM_DeliveryMap) return;
+    if (view !== 'delivery') return;
+    const message = $('deliveryMapEmpty');
+    if (!window.DDSM_DeliveryMap || typeof window.DDSM_DeliveryMap.render !== 'function') {
+      message.textContent = '배송 지도 모듈을 불러오지 못했습니다. 브라우저 새로고침 후 다시 확인하세요.';
+      message.classList.remove('hidden');
+      message.classList.add('map-error');
+      return;
+    }
+    if (!window.DDSM_NaverMap || typeof window.DDSM_NaverMap.loadSdk !== 'function') {
+      message.textContent = '네이버 지도 연결 모듈이 오래된 버전입니다. 브라우저 새로고침 후 다시 확인하세요.';
+      message.classList.remove('hidden');
+      message.classList.add('map-error');
+      return;
+    }
     const all = allDayStops();
-    window.DDSM_DeliveryMap.render(date, all, {
+    Promise.resolve(window.DDSM_DeliveryMap.render(date, all, {
       onSelect: selectMapStop,
       onGeocoded: persistGeocoded
+    })).catch(error => {
+      message.textContent = '배송 지도 오류: ' + (error.message || String(error));
+      message.classList.remove('hidden');
+      message.classList.add('map-error');
     });
   }
   function setSelectedRound(value) {
