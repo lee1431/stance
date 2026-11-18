@@ -151,6 +151,64 @@ def install_driver(app, connect, authenticated_user):
             status=record["delivery_status"], lat=record["lat"], lng=record["lng"],
         )
 
+    @app.post("/ddsm/api/driver/destination")
+    def driver_destination():
+        """Save a scanned shipment's address/point into the shared destination master."""
+        user = authenticated_user()
+        if not user:
+            return jsonify(ok=False, error="기사 로그인이 필요합니다."), 401
+        value = request.get_json(silent=True)
+        if not isinstance(value, dict) or not valid_date(value.get("date")):
+            return jsonify(ok=False, error="배송일이 올바르지 않습니다."), 400
+        digits = re.sub(r"[\\s-]", "", str(value.get("waybill") or ""))
+        if not re.fullmatch(r"\\d{13}(?:\\d{3})?", digits):
+            return jsonify(ok=False, error="운송장번호가 올바르지 않습니다."), 400
+        master = digits[:13]
+        address = value.get("address")
+        if not isinstance(address, str) or not address.strip() or len(address) > 250:
+            return jsonify(ok=False, error="저장할 주소를 입력하세요."), 400
+        address = address.strip()
+        lat, lng = value.get("lat"), value.get("lng")
+        if lat is not None or lng is not None:
+            if (type(lat) not in (int, float) or type(lng) not in (int, float)
+                    or not -90 <= lat <= 90 or not -180 <= lng <= 180):
+                return jsonify(ok=False, error="좌표를 확인하세요."), 400
+        with closing(connect()) as db:
+            db.execute("BEGIN IMMEDIATE")
+            records = db.execute(
+                """SELECT id,business_name,source_address,destination_id FROM admin_deliveries
+                   WHERE delivery_date=? AND REPLACE(REPLACE(waybill,'-',''),' ','')=?
+                   LIMIT 51""", (value["date"], master)
+            ).fetchall()
+            if not records or len(records) > 50:
+                return jsonify(ok=False, error="당일 원본 운송장을 찾을 수 없습니다."), 404
+            # An authenticated driver may update only a destination resolved through
+            # the exact scanned waybill; never accept an arbitrary destination ID.
+            identities = {(r["business_name"].strip(), r["source_address"].strip()) for r in records}
+            if len(identities) != 1:
+                return jsonify(ok=False, error="동일 운송장에 서로 다른 배송지가 있습니다."), 409
+            name = records[0]["business_name"].strip()
+            from admin import compact, destination_id_for
+            target_id = destination_id_for(db, name, address)
+            if target_id is None:
+                return jsonify(ok=False, error="배송지를 특정할 수 없습니다."), 409
+            # Avoid moving an existing point when the address changes without a
+            # freshly selected map coordinate.
+            if lat is not None:
+                db.execute(
+                    "UPDATE destinations SET lat=?,lng=?,last_seen_at=CURRENT_TIMESTAMP WHERE id=?",
+                    (lat, lng, target_id)
+                )
+            db.execute(
+                """UPDATE admin_deliveries SET destination_id=?,updated_at=CURRENT_TIMESTAMP
+                   WHERE delivery_date=? AND REPLACE(REPLACE(waybill,'-',''),' ','')=?""",
+                (target_id, value["date"], master)
+            )
+            # Only alias the old spreadsheet address when its value is empty or
+            # already equivalent; otherwise an unrelated site could be remapped.
+            db.commit()
+        return jsonify(ok=True, destination_id=target_id, address=address, lat=lat, lng=lng)
+
     @app.route("/ddsm/api/driver/work-day", methods=["GET", "PUT"])
     def driver_work_day():
         user = authenticated_user()
