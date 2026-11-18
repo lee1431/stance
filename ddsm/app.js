@@ -428,15 +428,64 @@
   }
   function configureNavigationLink(link, stop) {
     const url = naverNavigationUrl(stop);
-    link.textContent = url ? '내비 실행' : '지도 검색';
-    link.href = url || ('https://map.naver.com/p/search/' + encodeURIComponent(stop.address));
-    link.setAttribute('aria-label', url ? '네이버 지도 내비게이션에서 목적지 안내' : '네이버 지도에서 주소 검색');
+    const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     if (url) {
+      link.textContent = '내비 실행';
+      link.href = url;
+      link.setAttribute('aria-label', '네이버 지도 내비게이션에서 목적지 안내');
+      link.removeAttribute('target');
+      link.removeAttribute('rel');
+    } else if (mobile) {
+      // Navigation requires coordinates. Do not silently open an address search.
+      link.textContent = '내비 위치 확인';
+      link.href = '#';
+      link.setAttribute('aria-label', '목적지 좌표를 확인하고 내비게이션 실행');
       link.removeAttribute('target');
       link.removeAttribute('rel');
     } else {
+      link.textContent = '지도 검색';
+      link.href = 'https://map.naver.com/p/search/' + encodeURIComponent(stop.address);
+      link.setAttribute('aria-label', '네이버 지도에서 주소 검색');
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
+    }
+  }
+  async function locateAndLaunchNavigation(link, stop) {
+    if (link.dataset.navigationLoading === '1') return;
+    const startDate = date;
+    const startRound = round().no;
+    const address = stop.address;
+    link.dataset.navigationLoading = '1';
+    link.textContent = '좌표 확인 중…';
+    link.setAttribute('aria-busy', 'true');
+    try {
+      if (!window.DDSM_NaverMap || !window.DDSM_Address) throw new Error('지도 모듈을 불러올 수 없습니다.');
+      const maps = await window.DDSM_NaverMap.loadSdk();
+      const point = await window.DDSM_Address.resolve(maps, address);
+      const stillHere = startDate === date && day().rounds.some(r =>
+        r.no === startRound && r.stops.some(s => s.id === stop.id && s.address === address));
+      if (!stillHere) return;
+      if (!point?.verified || !validCoordinates(point)) {
+        toast('정확한 위치를 확인할 수 없습니다. 지도에서 목적지를 지정해 주세요.');
+        if (round().no === startRound) openEdit(stop.id);
+        return;
+      }
+      persistGeocoded(startDate, startRound, stop.id, address, point);
+      configureNavigationLink(link, { ...stop, lat: point.lat, lng: point.lng });
+      // Browsers may disallow app deep links after asynchronous geocoding.
+      // The now-visible real link supports a second direct tap in that case.
+      window.location.href = naverNavigationUrl({ ...stop, lat: point.lat, lng: point.lng });
+      toast('내비가 열리지 않으면 내비 실행을 다시 눌러 주세요.');
+    } catch (_) {
+      toast('좌표를 찾지 못했습니다. 정보 수정에서 지도 위치를 지정해 주세요.');
+      if (startDate === date && round().no === startRound) openEdit(stop.id);
+    } finally {
+      delete link.dataset.navigationLoading;
+      link.removeAttribute('aria-busy');
+      if (!validCoordinates(stop)) {
+        const current = day().rounds.find(r => r.no === startRound)?.stops.find(s => s.id === stop.id);
+        if (current) configureNavigationLink(link, current);
+      }
     }
   }
 
@@ -500,6 +549,11 @@
         const link = node('a', '');
         link.dataset.navigationStopId = String(stop.id);
         configureNavigationLink(link, stop);
+        link.addEventListener('click', event => {
+          if (naverNavigationUrl(stop) || !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) return;
+          event.preventDefault();
+          void locateAndLaunchNavigation(link, stop);
+        });
         actions.append(link);
       }
       actions.append(button(done ? '완료 취소' : '배송 완료', done ? 'undo' : 'complete', () => setDone(stop.id, !done)));
