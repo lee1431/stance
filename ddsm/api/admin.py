@@ -15,6 +15,7 @@ import re
 import sqlite3
 import unicodedata
 from datetime import date as date_type, datetime
+from contextlib import closing
 from itertools import islice
 
 from flask import jsonify, request, session
@@ -187,6 +188,12 @@ def destination_id_for(db, name, address):
     normalized_name = compact(name)
     normalized_address = compact(address)
     if normalized_address:
+        source_key = hashlib.sha256(("address:" + normalized_address).encode("utf-8")).hexdigest()
+        alias = db.execute(
+            "SELECT destination_id FROM destination_aliases WHERE source_key=?", (source_key,)
+        ).fetchone()
+        if alias:
+            return alias[0]
         identity = hashlib.sha256(("address:" + normalized_address).encode("utf-8")).hexdigest()
         db.execute(
             """INSERT INTO destinations (identity_key, business_name, address, name_key, address_key,
@@ -219,6 +226,11 @@ def initialize(db):
             last_seen_at TEXT DEFAULT CURRENT_TIMESTAMP
         );
         CREATE INDEX IF NOT EXISTS idx_destination_name ON destinations(name_key);
+        CREATE TABLE IF NOT EXISTS destination_aliases (
+            source_key TEXT PRIMARY KEY,
+            destination_id INTEGER NOT NULL REFERENCES destinations(id),
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
         CREATE TABLE IF NOT EXISTS import_batches (
             id INTEGER PRIMARY KEY,
             delivery_date TEXT NOT NULL,
@@ -256,7 +268,7 @@ def initialize(db):
 
 
 def install_admin(app, connect, require_session, throttled):
-    with connect() as db:
+    with closing(connect()) as db:
         initialize(db)
         db.commit()
 
@@ -480,6 +492,19 @@ def install_admin(app, connect, require_session, throttled):
                 """UPDATE admin_deliveries SET destination_id=?, updated_at=CURRENT_TIMESTAMP
                    WHERE id=?""", (chosen_id, shipment_id)
             )
+            # Keep a stable mapping from the spreadsheet's original address
+            # to the manually corrected canonical destination.
+            if shipment["source_address"].strip():
+                old_key = hashlib.sha256(
+                    ("address:" + compact(shipment["source_address"])).encode("utf-8")
+                ).hexdigest()
+                db.execute(
+                    """INSERT INTO destination_aliases (source_key,destination_id)
+                       VALUES (?,?) ON CONFLICT(source_key) DO UPDATE
+                       SET destination_id=excluded.destination_id,
+                           updated_at=CURRENT_TIMESTAMP""",
+                    (old_key, chosen_id),
+                )
             db.commit()
         return jsonify(ok=True, destination_id=chosen_id)
 
