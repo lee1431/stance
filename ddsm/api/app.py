@@ -44,7 +44,7 @@ def create_app() -> Flask:
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_PATH="/ddsm/api",
         PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
-        MAX_CONTENT_LENGTH=16 * 1024,
+        MAX_CONTENT_LENGTH=10 * 1024 * 1024,
         JSON_AS_ASCII=False,
     )
     allowed_origin = os.environ.get("DDSM_ORIGIN", "https://llsshh.com").rstrip("/")
@@ -171,6 +171,8 @@ def create_app() -> Flask:
         session.clear()
         return jsonify(ok=True)
 
+    from admin import install_admin
+    install_admin(app, connect, require_session, throttled)
     return app
 
 
