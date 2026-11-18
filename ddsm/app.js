@@ -717,8 +717,8 @@
       error.classList.remove('hidden');
       return;
     }
-    if (!password || password.length < 10 || password.length > 128) {
-      error.textContent = '비밀번호는 10~128자로 입력하세요.';
+    if (!password || password.length < 1 || password.length > 16) {
+      error.textContent = '비밀번호는 1~16자로 입력하세요.';
       error.classList.remove('hidden');
       return;
     }
