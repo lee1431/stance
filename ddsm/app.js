@@ -26,6 +26,97 @@
   let remoteAccount = false;
   let driverToken = ''; // Ephemeral, never written to browser storage.
   let resumeScanAfterLogin = false;
+  // Central server owns day state; localStorage remains a recovery backup.
+  let syncedDate = '', serverRevision = 0, syncBusy = false, syncPending = false, syncBlocked = false, syncEpoch = 0;
+  const WORK_API = DRIVER_API_BASE + 'ddsm/work-day';
+  function archiveLocal(dayKey) {
+    try {
+      const item = data.days[dayKey];
+      if (!item || !item.rounds?.some(r => r.stops?.length)) return;
+      const key = 'ddsm:legacy-archive:' + identityPhone + ':' + dayKey;
+      if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(item));
+    } catch (_) {}
+  }
+  async function serverDay(dayKey, token) {
+    const res = await fetch(WORK_API+'?date='+encodeURIComponent(dayKey),{
+      headers:{Authorization:'Bearer '+token},credentials:'omit',cache:'no-store'
+    });
+    const body = await res.json().catch(()=>null);
+    if (!res.ok || body?.ok!==true || !body.day) throw Error(body?.error||'서버 배송 목록 조회 실패');
+    return body;
+  }
+  async function activateDay(dayKey = date) {
+    const token=driverToken, epoch=++syncEpoch;
+    syncedDate='';syncPending=false;syncBlocked=false;
+    if (!token) return false;
+    try {
+      const remote=await serverDay(dayKey,token);
+      if (epoch!==syncEpoch || token!==driverToken || date!==dayKey) return false;
+      const local=data.days[dayKey];
+      serverRevision=remote.revision;
+      // Only migrate a legacy day when the central day has never been written.
+      if (!remote.revision && local?.rounds?.some(r=>r.stops?.length)) {
+        archiveLocal(dayKey);
+        syncedDate=dayKey;syncPending=true;render();
+        await flushDay();
+        return !syncBlocked && !syncPending && syncedDate===dayKey;
+      }
+      if (local && JSON.stringify(local)!==JSON.stringify(remote.day)) archiveLocal(dayKey);
+      data.days[dayKey]=remote.day;
+      syncedDate=dayKey;
+      try { localStorage.setItem(activeStorageKey(),JSON.stringify(data)); } catch (_) {}
+      render();return true;
+    } catch(e) {
+      if (epoch===syncEpoch) toast('서버 동기화 실패: '+e.message);
+      return false;
+    }
+  }
+  async function flushDay() {
+    if (syncBusy || !syncPending || syncBlocked || !driverToken || syncedDate!==date) return;
+    syncBusy=true;
+    const token=driverToken, dayKey=date, epoch=syncEpoch;
+    try {
+      while(syncPending && !syncBlocked && epoch===syncEpoch && syncedDate===dayKey) {
+        syncPending=false;
+        const snapshot=JSON.parse(JSON.stringify(day()));
+        const res=await fetch(WORK_API,{
+          method:'PUT',credentials:'omit',cache:'no-store',
+          headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+          body:JSON.stringify({date:dayKey,revision:serverRevision,day:snapshot})
+        });
+        const body=await res.json().catch(()=>null);
+        if(epoch!==syncEpoch || token!==driverToken) return;
+        if(res.status===409) {
+          syncBlocked=true;syncPending=false;
+          toast('다른 기기와 저장 충돌: JSON 백업 후 새로고침하세요.');
+          break;
+        }
+        if(!res.ok || body?.ok!==true) {
+          syncPending=true;
+          toast('서버 저장 대기: '+(body?.error||'연결 오류'));break;
+        }
+        serverRevision=body.revision;
+      }
+    } catch(_) {
+      if(epoch===syncEpoch){syncPending=true;toast('서버 연결 오류 · 자동 재전송 대기');}
+    } finally {syncBusy=false;}
+  }
+  async function refreshDay() {
+    if(!driverToken || syncedDate!==date || syncPending || syncBusy || syncBlocked ||
+       document.hidden || $('editDialog')?.open || $('scanDialog')?.open) return;
+    const token=driverToken, dayKey=date, epoch=syncEpoch;
+    try {
+      const remote=await serverDay(dayKey,token);
+      if(epoch!==syncEpoch || token!==driverToken || date!==dayKey || syncPending) return;
+      if(remote.revision>serverRevision) {
+        serverRevision=remote.revision;
+        data.days[dayKey]=remote.day;
+        try {localStorage.setItem(activeStorageKey(),JSON.stringify(data));}catch(_){}
+        render();toast('다른 기기의 변경사항을 동기화했습니다.');
+      }
+    } catch(_) {}
+  }
+
   const activeStorageKey = () => identityPhone ? phoneStorageKey(identityPhone) : LEGACY_STORAGE_KEY;
   const $ = id => document.getElementById(id);
   const today = () => {
@@ -75,8 +166,15 @@
 
   function persist() {
     if (!identityPhone) return false;
-    try { localStorage.setItem(activeStorageKey(), JSON.stringify(data)); return true; }
-    catch (_) { toast('저장할 수 없습니다. 브라우저 저장 공간을 확인하세요.'); return false; }
+    try {
+      localStorage.setItem(activeStorageKey(),JSON.stringify(data));
+      if(driverToken && syncedDate===date && !syncBlocked) {
+        syncPending=true;void flushDay();
+      } else if(driverToken && syncBlocked) {
+        toast('저장 충돌 상태입니다. JSON 백업 후 새로고침하세요.');
+      }
+      return true;
+    } catch(_) {toast('브라우저 백업 저장 실패');return false;}
   }
   function toast(message) {
     const el = $('toast');
@@ -147,7 +245,7 @@
     $('doneCount').textContent = String(c.done);
     $('scanHint').textContent = '현재 회차 배송지 ' + c.total + '건'
       + (driverToken ? ' · 서버 조회 가능' : ' · 스캔하려면 서버 로그인');
-    $('deliveryButton').disabled = c.pending === 0;
+    $('deliveryButton').disabled = c.pending === 0 || !driverToken || syncedDate !== date || syncBlocked;
     $('deliveryHint').textContent = c.pending
       ? '배송 예정 ' + c.pending + '건 · 누르면 목록으로 이동합니다.'
       : c.total ? '현재 회차의 배송을 모두 완료했습니다.' : '운송장을 스캔하면 배송을 시작할 수 있습니다.';
@@ -420,6 +518,7 @@
     dialog.style.setProperty('--scan-viewport-top', (viewport ? viewport.offsetTop : 0) + 'px');
   }
   function openScan() {
+    if (driverToken && (syncedDate !== date || syncBlocked)) { toast('서버 배송 목록 동기화 후 스캔하세요.');return; }
     if (!driverToken) {
       // No silent local registration. A scanned barcode must resolve on S10.
       resumeScanAfterLogin = true;
@@ -498,6 +597,7 @@
   }
   function processScan(raw, camera = false) {
     if (!String(raw||'').trim()) return false;
+    if (syncedDate !== date || syncBlocked) { toast('서버 동기화가 필요합니다.'); return false; }
     if (!driverToken) {
       const message='서버 로그인이 필요합니다. 휴대폰 번호 버튼에서 로그인 후 다시 스캔하세요.';
       $('scanResult').textContent=message;
@@ -812,6 +912,7 @@
   }
   function saveIdentity(event) {
     event.preventDefault();
+    syncEpoch++;syncedDate='';syncPending=false;syncBlocked=false;
     const number = normalizePhone($('identityPhoneInput').value);
     const error = $('identityError');
     if (!isPhone(number)) {
@@ -896,15 +997,18 @@
       identityPhone = phone;
       remoteAccount = action === 'login';
       driverToken = action === 'login' ? result.access_token : '';
+      syncEpoch++;syncedDate='';syncPending=false;syncBlocked=false;
       data = readData();
       date = today();
       $('identityDialog').close();
       $('identityPasswordInput').value = '';
       if (previous !== phone) showView('home');
       render();
-      if (action === 'login' && resumeScanAfterLogin) {
-        resumeScanAfterLogin = false;
-        requestAnimationFrame(openScan);
+      if(action==='login') {
+        const loaded=await activateDay(date);
+        if(loaded && resumeScanAfterLogin) {
+          resumeScanAfterLogin=false;requestAnimationFrame(openScan);
+        }
       }
       toast(action === 'register'
         ? '가입 완료 · 로그인 후 운송장 스캔 가능'
@@ -933,11 +1037,14 @@
     $('closeIdentity').addEventListener('click', () => $('identityDialog').close());
     $('identityDialog').addEventListener('close', () => { resumeScanAfterLogin = false; });
     $('dateButton').addEventListener('click', chooseDate);
-    $('dateInput').addEventListener('change', e => {
+    $('dateInput').addEventListener('change', async e => {
       const value = e.target.value;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return;
-      date = value;
-      render();
+      if(syncPending || syncBusy || syncBlocked) {
+        toast('서버 저장 완료 후 날짜를 변경하세요.');e.target.value=date;return;
+      }
+      date=value;render();
+      if(driverToken) await activateDay(value);
     });
     $('roundSelect').addEventListener('change', e => {
       setSelectedRound(e.target.value);
@@ -991,13 +1098,15 @@
     });
     window.addEventListener('storage', e => {
       if (e.key === activeStorageKey() && identityPhone) {
-        data = readData(); render(); toast('다른 탭에서 변경된 배송 목록을 반영했습니다.');
+        if (!driverToken) { data=readData();render(); }
+        else void refreshDay();
       } else if (e.key === IDENTITY_KEY && e.newValue !== identityPhone) {
         toast('다른 탭에서 사용자 번호가 변경되었습니다. 새로고침해 주세요.');
       }
     });
   }
   bind();
+  setInterval(()=>{if(syncPending) void flushDay();else void refreshDay();},3000);
   render();
   if (!identityPhone) openIdentityDialog(true);
 })();
