@@ -138,15 +138,12 @@
       working++;
       inFlight.add(s.lookup);
       try {
-        maps.Service.geocode({ query: s.address }, (responseStatus, response) => {
+        window.DDSM_Address.resolve(maps, s.address).then(point => {
           working--;
           inFlight.delete(s.lookup);
           if (s.generation === geocodeGeneration && s.date === currentDate) {
-            const first = response && response.v2 && Array.isArray(response.v2.addresses)
-              ? response.v2.addresses[0] : null;
-            const lat = first ? Number(first.y) : NaN;
-            const lng = first ? Number(first.x) : NaN;
-            if (responseStatus === maps.Service.Status.OK && valid({ lat, lng })) {
+            const lat = point?.lat, lng = point?.lng;
+            if (point?.verified && valid({ lat, lng })) {
               if (typeof onGeocoded === 'function') onGeocoded(s.date, s.roundNo, s.id, s.address, { lat, lng });
             } else {
               failed.add(s.lookup);
@@ -155,6 +152,11 @@
           startGeocoding();
           if (active && !requestQueue.length && !working && !markers.size)
             status('주소에서 지도 위치를 찾지 못했습니다. 배송 정보에서 주소 또는 위치를 확인하세요.', true);
+        }).catch(() => {
+          working--;
+          inFlight.delete(s.lookup);
+          failed.add(s.lookup);
+          startGeocoding();
         });
       } catch (_) {
         working--;
