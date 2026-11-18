@@ -302,6 +302,7 @@
       ? (driverToken ? '서버 로그인 · ' : '서버 로그인 필요 · ') + displayPhone(identityPhone)
       : '휴대폰 번호 등록';
     $('dailyPhoneLabel').textContent = identityPhone ? displayPhone(identityPhone) : '번호 미등록';
+    document.documentElement.dataset.ddsmConnected = driverToken ? 'true' : 'false';
     const d = day();
     const active = round();
     const c = counts();
@@ -321,6 +322,11 @@
     $('scanHint').textContent = '현재 회차 배송지 ' + c.total + '건'
       + (driverToken ? ' · 서버 조회 가능' : ' · 스캔하려면 서버 로그인');
     $('deliveryButton').disabled = c.pending === 0 || !driverToken || syncedDate !== date || syncBlocked;
+    $('deliveryButtonLabel').textContent = c.pending > 0
+      ? (driverToken && syncedDate === date && !syncBlocked
+        ? '배송 시작 (' + c.pending + '건)'
+        : '로그인 · 서버 동기화 필요')
+      : c.total > 0 ? '현재 회차 배송 완료' : '운송장을 스캔하면 출발 가능';
     $('deliveryHint').textContent = c.pending
       ? '배송 예정 ' + c.pending + '건 · 누르면 목록으로 이동합니다.'
       : c.total ? '현재 회차의 배송을 모두 완료했습니다.' : '운송장을 스캔하면 배송을 시작할 수 있습니다.';
