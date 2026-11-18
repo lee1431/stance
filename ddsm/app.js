@@ -729,11 +729,13 @@
       window.DDSM_NaverMap.open(stop.address, validCoordinates(stop) ? { lat: stop.lat, lng: stop.lng } : null);
     }
   }
-  function saveEdit(event) {
+  async function saveEdit(event) {
     event.preventDefault();
     const stop = stops().find(x => x.id === editingId);
     if (!stop) return;
     const before = { recipient: stop.recipient, address: stop.address, phone: stop.phone, memo: stop.memo, lat: stop.lat, lng: stop.lng };
+    const savedDate = date;
+    const authAtEdit = driverToken;
     const list = stops();
     const oldIndex = list.findIndex(x => x.id === editingId);
     const wantedIndex = Number($('editOrderSelect').value);
@@ -766,7 +768,32 @@
     }
     $('editDialog').close();
     render();
-    toast('배송 정보를 저장했습니다.');
+    // Only address and point edits affect the shared master. Personal notes and
+    // phone edits remain in the driver's private daily work data.
+    const addressChanged = stop.address !== before.address ||
+      stop.lat !== before.lat || stop.lng !== before.lng;
+    if (addressChanged && stop.address && authAtEdit && syncedDate === savedDate) {
+      try {
+        const response = await fetch(DRIVER_API_BASE + 'destination', {
+          method: 'POST', credentials: 'omit', cache: 'no-store',
+          headers: {'Content-Type': 'application/json', Authorization: 'Bearer ' + authAtEdit},
+          body: JSON.stringify({
+            date: savedDate, waybill: stop.waybill, address: stop.address,
+            ...(Number.isFinite(stop.lat) && Number.isFinite(stop.lng)
+              ? {lat: stop.lat, lng: stop.lng} : {})
+          })
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || payload?.ok !== true) {
+          throw Error(payload?.error || 'HTTP ' + response.status);
+        }
+        toast('배송 정보와 공용 배송지 마스터를 저장했습니다.');
+      } catch (error) {
+        toast('기사 작업은 저장됨 · 배송지 마스터 반영 실패: ' + error.message);
+      }
+    } else {
+      toast('배송 정보를 저장했습니다.');
+    }
   }
   function chooseDate() {
     const el = $('dateInput');
