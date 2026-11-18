@@ -7,8 +7,8 @@
   <meta name="description" content="DDSM - Daily, Scan, Delivery. 로그인 없는 간편 배송 작업 화면">
   <title>DDSM | Daily · Scan · Delivery</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=2-teal">
-  <script src="app.js?v=1" defer></script>
+  <link rel="stylesheet" href="style.css?v=3-address-map">
+  <script src="app.js?v=2-address-map" defer></script>
 </head>
 <body>
   <div id="app" class="app">
@@ -94,7 +94,16 @@
       <label class="input-label" for="recipientInput">받는 분 / 업체명</label>
       <input id="recipientInput" maxlength="100" placeholder="선택 입력">
       <label class="input-label" for="addressInput">배송 주소</label>
-      <input id="addressInput" maxlength="250" placeholder="도로명 주소를 입력하세요">
+      <input id="addressInput" maxlength="250" placeholder="예: 충주시 금봉4길 1" autocomplete="street-address">
+      <div id="addressMapPreview" class="address-map-preview">
+        <div class="address-map-heading">
+          <strong>지도 미리보기</strong>
+          <a id="addressMapLink" class="address-map-link hidden" href="#" target="_blank" rel="noopener noreferrer">네이버 지도에서 확인 ↗</a>
+        </div>
+        <div id="addressMapEmpty" class="address-map-empty">주소를 입력하면 여기에 지도가 표시됩니다.</div>
+        <iframe id="addressMapFrame" class="address-map-frame hidden" title="입력한 배송 주소의 지도 미리보기" loading="lazy" referrerpolicy="no-referrer"></iframe>
+        <p class="address-map-note">주소가 짧거나 중복되면 다른 위치가 나올 수 있습니다. 시·군·구까지 입력해 확인하세요.</p>
+      </div>
       <label class="input-label" for="phoneInput">수취인 연락처</label>
       <input id="phoneInput" type="tel" maxlength="25" placeholder="선택 입력">
       <label class="input-label" for="memoInput">메모</label>
