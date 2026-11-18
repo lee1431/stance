@@ -125,7 +125,9 @@
   }
 
   function renderHome() {
-    $('myPhoneLabel').textContent = identityPhone ? (driverToken ? '서버 연결 · ' : '로컬 · ') + displayPhone(identityPhone) : '휴대폰 번호 등록';
+    $('myPhoneLabel').textContent = identityPhone
+      ? (driverToken ? '서버 로그인 · ' : '서버 로그인 필요 · ') + displayPhone(identityPhone)
+      : '휴대폰 번호 등록';
     $('dailyPhoneLabel').textContent = identityPhone ? displayPhone(identityPhone) : '번호 미등록';
     const d = day();
     const active = round();
@@ -143,7 +145,8 @@
     $('totalCount').textContent = String(c.total);
     $('pendingCount').textContent = String(c.pending);
     $('doneCount').textContent = String(c.done);
-    $('scanHint').textContent = '현재 회차 배송지 ' + c.total + '건';
+    $('scanHint').textContent = '현재 회차 배송지 ' + c.total + '건'
+      + (driverToken ? ' · 서버 조회 가능' : ' · 스캔하려면 서버 로그인');
     $('deliveryButton').disabled = c.pending === 0;
     $('deliveryHint').textContent = c.pending
       ? '배송 예정 ' + c.pending + '건 · 누르면 목록으로 이동합니다.'
@@ -797,7 +800,7 @@
     const dialog = $('identityDialog');
     $('closeIdentity').classList.toggle('hidden', first);
     $('identityTitle').textContent = first ? '처음 시작하기' : '내 휴대폰 번호';
-    $('saveIdentityButton').textContent = '서버 없이 이 기기에서 계속';
+    $('saveIdentityButton').textContent = '기존 기기 자료만 보기 (스캔은 서버 로그인 필요)';
     $('identityError').textContent = '';
     $('identityError').classList.add('hidden');
     $('identityPhoneInput').value = identityPhone ? displayPhone(identityPhone) : '';
@@ -842,7 +845,7 @@
       if (previous && previous !== number) showView('home');
       $('identityDialog').close();
       render();
-      toast('로컬 작업 · ' + displayPhone(number) + (previous && previous !== number ? ' · 번호 전환 완료' : ' · 등록 완료'));
+      toast('기존 기기 자료 · ' + displayPhone(number) + ' · 스캔은 서버 로그인 후 가능합니다.');
       $('identityPasswordInput').value = '';
     } catch (_) {
       error.textContent = '번호를 저장하지 못했습니다. 브라우저 저장 공간을 확인하세요.';
