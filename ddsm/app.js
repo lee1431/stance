@@ -6,6 +6,7 @@
   const DRIVER_API_BASE = 'https://mrdindoin.ddns.net/ddsm/api/driver/';
   const LEGACY_STORAGE_KEY = 'ddsm:data:v1';
   const IDENTITY_KEY = 'ddsm:identity:phone:v1';
+  const AUTH_SESSION_KEY = 'ddsm:driver:auth-session:v1';
   const MIGRATION_KEY = 'ddsm:identity:migrated-legacy:v1';
   const phoneStorageKey = number => 'ddsm:data:v1:phone:' + number;
   const normalizePhone = raw => String(raw || '').replace(/\D/g, '');
@@ -24,11 +25,79 @@
   }
   let identityPhone = storedPhone();
   let remoteAccount = false;
-  let driverToken = ''; // Ephemeral, never written to browser storage.
+  let driverToken = ''; // Scoped to this tab; restored after server validation.
   let resumeScanAfterLogin = false;
   // Central server owns day state; localStorage remains a recovery backup.
   let syncedDate = '', serverRevision = 0, syncBusy = false, syncPending = false, syncBlocked = false, syncEpoch = 0;
   const WORK_API = DRIVER_API_BASE + 'work-day';
+  function clearAuthSession() {
+    try { sessionStorage.removeItem(AUTH_SESSION_KEY); } catch (_) {}
+  }
+  function readAuthSession() {
+    try {
+      const raw = sessionStorage.getItem(AUTH_SESSION_KEY);
+      if (!raw) return null;
+      const saved = JSON.parse(raw);
+      if (!saved || !isPhone(saved.phone) || typeof saved.token !== 'string' ||
+          !/^[A-Za-z0-9_-]{40,200}$/.test(saved.token) ||
+          !Number.isFinite(saved.expires_at) || saved.expires_at * 1000 <= Date.now()) {
+        clearAuthSession();
+        return null;
+      }
+      return saved;
+    } catch (_) {
+      clearAuthSession();
+      return null;
+    }
+  }
+  function saveAuthSession(phone, token, expiresAt) {
+    if (!Number.isFinite(expiresAt) || expiresAt * 1000 <= Date.now()) return false;
+    try {
+      sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({phone, token, expires_at: expiresAt}));
+      return true;
+    } catch (_) { return false; }
+  }
+  function invalidateDriverAuth(notify = false) {
+    clearAuthSession();
+    driverToken = '';
+    remoteAccount = false;
+    ++syncEpoch;
+    syncedDate = '';
+    syncPending = false;
+    syncBlocked = false;
+    render();
+    if (notify) toast('로그인이 만료되었습니다. 휴대폰 번호에서 다시 로그인하세요.');
+  }
+  async function restoreAuthSession() {
+    const saved = readAuthSession();
+    if (!saved) return;
+    if (saved.phone !== identityPhone) { clearAuthSession(); return; }
+    // An in-flight validation must not override a newer manual login or phone change.
+    const stillCurrent = () => {
+      const active = readAuthSession();
+      return !driverToken && active?.token === saved.token && identityPhone === saved.phone;
+    };
+    try {
+      const response = await fetch(AUTH_API_BASE + 'me', {
+        headers: {Authorization: 'Bearer ' + saved.token},
+        credentials: 'omit', cache: 'no-store'
+      });
+      const result = await response.json().catch(() => null);
+      if (!stillCurrent()) return;
+      if (response.status === 401 || response.status === 403 ||
+          (response.ok && (result?.ok !== true || result.authenticated !== true || result.phone !== saved.phone))) {
+        clearAuthSession();
+        return;
+      }
+      if (!response.ok) return; // Keep the saved session during a transient server error.
+      driverToken = saved.token;
+      remoteAccount = true;
+      render();
+      await activateDay(date);
+    } catch (_) {
+      // Offline or CORS failure: do not mistake a connection issue for a logout.
+    }
+  }
   function archiveLocal(dayKey) {
     try {
       const item = data.days[dayKey];
@@ -42,6 +111,7 @@
       headers:{Authorization:'Bearer '+token},credentials:'omit',cache:'no-store'
     });
     const body = await res.json().catch(()=>null);
+    if (res.status===401 && token===driverToken) invalidateDriverAuth(true);
     if (res.status===404) throw Error('G10 배송 작업 API가 없습니다. 서버 admin.py 업데이트 및 재시작이 필요합니다.');
     if (!res.ok || body?.ok!==true || !body.day) throw Error(body?.error||'서버 배송 목록 조회 실패');
     return body;
@@ -87,6 +157,10 @@
         });
         const body=await res.json().catch(()=>null);
         if(epoch!==syncEpoch || token!==driverToken) return;
+        if(res.status===401) {
+          if(token===driverToken) invalidateDriverAuth(true);
+          break;
+        }
         if(res.status===409) {
           syncBlocked=true;syncPending=false;
           toast('다른 기기와 저장 충돌: JSON 백업 후 새로고침하세요.');
@@ -556,11 +630,7 @@
     );
     const payload = await response.json().catch(()=>null);
     if (!response.ok || payload?.ok!==true) {
-      if (response.status===401) {
-        driverToken='';
-        remoteAccount=false;
-        renderHome();
-      }
+      if (response.status===401) invalidateDriverAuth(true);
       throw Error(payload?.error||'서버 운송장 조회 실패 (HTTP '+response.status+')');
     }
     if (payload.master_waybill!==parsed.master) throw Error('원본 운송장과 조회 결과가 일치하지 않습니다.');
@@ -925,6 +995,7 @@
         !confirm('다른 번호로 전환하면 이 기기에 저장된 해당 번호의 배송 목록이 열립니다. 기존 번호의 자료는 보존됩니다. 계속할까요?')) return;
     try {
       const previous = identityPhone;
+      clearAuthSession();
       remoteAccount = false;
       driverToken = '';
       const destination = phoneStorageKey(number);
@@ -992,8 +1063,8 @@
       if (!response.ok || !result || result.ok !== true || result.phone !== phone) {
         throw new Error(result?.error || '인증 API 연결 또는 응답을 확인하세요.');
       }
-      // DDSM courier tokens are in memory only, never browser storage.
-      // Login is required; it does not synchronize local delivery stops.
+      // Persist a short-lived tab session, not a long-lived localStorage token.
+      // Validate it with /auth/me before reuse after a refresh.
       if (action === 'login' && typeof result.access_token !== 'string')
         throw new Error('배송기사 인증 토큰이 없습니다. G10의 API를 업데이트하세요.');
       const previous = identityPhone;
@@ -1003,6 +1074,8 @@
       identityPhone = phone;
       remoteAccount = action === 'login';
       driverToken = action === 'login' ? result.access_token : '';
+      const sessionSaved = action !== 'login' || saveAuthSession(phone, driverToken, result.expires_at);
+      if (action !== 'login') clearAuthSession();
       syncEpoch++;syncedDate='';syncPending=false;syncBlocked=false;
       data = readData();
       date = today();
@@ -1018,7 +1091,8 @@
       }
       toast(action === 'register'
         ? '가입 완료 · 로그인 후 운송장 스캔 가능'
-        : '배송기사 로그인 완료 · 이제 스캔 시 G10 원본 조회');
+        : sessionSaved ? '배송기사 로그인 완료 · 이제 스캔 시 G10 원본 조회'
+        : '로그인은 성공했지만 브라우저가 세션 저장을 차단해 새로고침 후 재로그인이 필요합니다.');
     } catch (e) {
       error.textContent = e.name === 'AbortError'
         ? '서버 응답 시간이 초과되었습니다. API 상태를 확인하세요.'
@@ -1115,4 +1189,5 @@
   setInterval(()=>{if(syncPending) void flushDay();else void refreshDay();},3000);
   render();
   if (!identityPhone) openIdentityDialog(true);
+  else void restoreAuthSession();
 })();
