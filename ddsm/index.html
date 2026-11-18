@@ -11,7 +11,7 @@
   <script src="naver-map.js?v=3-shared-sdk" defer></script>
   <script src="delivery-map.js?v=4-empty-day" defer></script>
   <script src="waybill.js?v=1-master-13" defer></script>
-  <script src="app.js?v=18-login-no-approval" defer></script>
+  <script src="app.js?v=19-driver-day-sync" defer></script>
 </head>
 <body>
   <div id="app" class="app">
@@ -182,7 +182,7 @@
       <button id="exportButton" class="secondary-action" type="button">내 데이터 JSON 백업</button>
       <label for="importInput" class="secondary-action file-label">JSON 백업 불러오기</label>
       <input id="importInput" type="file" accept=".json,application/json" class="hidden">
-      <p class="dialog-footnote">원본 엑셀은 S10 서버에 저장됩니다. 이 기기의 배송 작업 기록은 아직 서버와 동기화되지 않으므로 기기를 바꾸거나 브라우저 자료를 삭제하면 사라질 수 있습니다. 수취인 정보가 포함된 백업 파일은 안전하게 보관하세요.</p>
+      <p class="dialog-footnote">원본 엑셀은 S10 서버에 저장됩니다. 기사 계정과 배송일을 기준으로 S10 서버에 저장하고 동기화합니다. 기존 브라우저 데이터는 이전 시 백업합니다. 서버 저장 대기·충돌 표시가 있으면 JSON 백업을 보관하세요. 수취인 정보가 포함된 백업 파일은 안전하게 보관하세요.</p>
       <a class="old-version-link" href="admin/">센터 관리자 페이지 열기</a>
       <a class="old-version-link" href="../dsd/">기존 DSD 열기</a>
     </div>
