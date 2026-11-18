@@ -2,12 +2,12 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const API_BASE = 'https://mrdindoin.ddns.net/dsd/api/';
+  const API_BASE = 'https://mrdindoin.ddns.net/ddsm/api/';
   const dateString = () => {
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   };
-  let csrf = '', rows = [], columns = [], map = null, maps = null, markers = [], selected = null;
+  let authToken = '', rows = [], columns = [], map = null, maps = null, markers = [], selected = null;
   let updateSeq = 0, mapLoading = null, editorOpen = false, fitOnce = false;
   let currentPage = 0, visibleFiltered = [];
   const chunkSize = 250;
@@ -15,8 +15,8 @@
     && p.lat >= -90 && p.lat <= 90 && p.lng >= -180 && p.lng <= 180;
   const say = (id, message) => { $(id).textContent = message; };
   async function api(path, options={}) {
-    const opts = { credentials: 'include', cache: 'no-store', ...options };
-    opts.headers = { ...(opts.headers || {}), ...(opts.method === 'POST' ? {'X-CSRF-Token':csrf} : {}) };
+    const opts = { credentials: 'omit', cache: 'no-store', ...options };
+    opts.headers = { ...(opts.headers || {}), ...(authToken ? {Authorization:'Bearer '+authToken} : {}) };
     if (opts.body instanceof FormData) delete opts.headers['Content-Type'];
     else if (opts.body && typeof opts.body !== 'string') {
       opts.body = JSON.stringify(opts.body);
@@ -39,11 +39,12 @@
     loadDay();
   }
   async function validateSession() {
+    if (!authToken) { $('authPanel').hidden = false; return; }
     try {
-      const result = await get('admin/me');
-      csrf = result.csrf;
+      await get('admin/me');
       showDashboard();
     } catch (_) {
+      authToken = '';
       $('authPanel').hidden = false;
     }
   }
@@ -56,29 +57,23 @@
     button.disabled = true;
     say('authError','');
     try {
-      let me;
-      try { me = await get('auth/me'); }
-      catch (_) { me = null; }
-      if (!me || me.phone !== phone) {
-        const loggedIn = await post('auth/login',{phone,password});
-        csrf = loggedIn.csrf;
-      } else {
-        csrf = me.csrf;
-      }
-      const unlocked = await post('admin/unlock',{admin_password:adminPassword});
-      csrf = unlocked.csrf;
+      const loggedIn = await post('auth/login',{phone,password});
+      if (!loggedIn.access_token) throw Error('DDSM 로그인 토큰이 없습니다.');
+      authToken = loggedIn.access_token;
+      await post('admin/unlock',{admin_password:adminPassword});
       $('loginPassword').value = '';
       $('adminPassword').value = '';
       showDashboard();
     } catch (error) {
+      authToken = '';
       say('authError',error.message || '인증에 실패했습니다.');
     } finally { button.disabled = false; }
   }
   async function lock() {
     try {
-      await post('auth/logout',{});
-    } catch (_) { /* Local UI lock even if session expiry is already complete. */ }
-    csrf = '';
+      if (authToken) await post('auth/logout',{});
+    } catch (_) { /* Client-side lock still applies. */ }
+    authToken = '';
     rows = [];
     clearMarkers();
     $('dashboard').hidden = true;
