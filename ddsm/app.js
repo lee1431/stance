@@ -313,10 +313,10 @@
   }
   function addWaybill(raw, remote = null) {
     const parsed = window.DDSM_Waybill?.parse(raw) || {scanned:String(raw||'').trim(),valid:false};
-    const waybill = parsed.valid ? parsed.master : clean(raw,100).replace(/\\s+/g,'');
+    const waybill = parsed.valid ? parsed.master : clean(raw,100).replace(/\s+/g,'');
     if (!waybill) return {error:'운송장번호를 입력하세요.'};
-    if (waybill.length < 4 || /[\\u0000-\\u001f<>]/.test(waybill)) return {error:'운송장번호를 확인하세요.'};
-    const digitKey = value => String(value||'').replace(/[\\s-]/g,'');
+    if (waybill.length < 4 || /[\u0000-\u001f<>]/.test(waybill)) return {error:'운송장번호를 확인하세요.'};
+    const digitKey = value => String(value||'').replace(/[\s-]/g,'');
     const existing = stops().find(stop => digitKey(stop.waybill) === digitKey(waybill));
     const suffix = parsed.valid ? parsed.suffix : null;
     if (existing) {
@@ -748,7 +748,7 @@
             address: clean(s.address,250), phone: clean(s.phone,25),
             memo: clean(s.memo,500), status: s.status === 'done' ? 'done' : 'pending',
             createdAt: clean(s.createdAt,80),
-            scannedItems: Array.isArray(s.scannedItems) ? [...new Set(s.scannedItems.filter(x=>/^\\d{3}$/.test(x)))].slice(0,999) : [],
+            scannedItems: Array.isArray(s.scannedItems) ? [...new Set(s.scannedItems.filter(x=>/^\d{3}$/.test(x)))].slice(0,999) : [],
             ...(validCoordinates(s) ? { lat: s.lat, lng: s.lng } : {})
           };
         });
