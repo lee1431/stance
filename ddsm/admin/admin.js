@@ -302,9 +302,9 @@
     // remains intact in the unique delivery destination registry.
     const beforeComma=full.split(/[,，]/)[0].trim();
     const withoutUnit=beforeComma
-      .replace(/\\s+\\d{1,4}\\s*동\\s*\\d{1,4}\\s*호.*$/,'')
-      .replace(/\\s+\\d{1,4}\\s*호.*$/,'')
-      .replace(/\\s+\\d{1,3}\\s*층.*$/,'').trim();
+      .replace(/\s+\d{1,4}\s*동\s*\d{1,4}\s*호.*$/,'')
+      .replace(/\s+\d{1,4}\s*호.*$/,'')
+      .replace(/\s+\d{1,3}\s*층.*$/,'').trim();
     return [...new Set([full,beforeComma,withoutUnit].filter(q=>q.length>=4))];
   }
   async function lookupCoordinates(address) {
