@@ -1,4 +1,4 @@
-/* DDSM daily / scan / delivery. Local stops with opt-in authenticated S10 manifest lookup. */
+/* DDSM daily / scan / delivery. Scans require authenticated S10 manifest lookup; local delivery lists remain intact. */
 (function () {
   'use strict';
 
@@ -25,6 +25,7 @@
   let identityPhone = storedPhone();
   let remoteAccount = false;
   let driverToken = ''; // Ephemeral, never written to browser storage.
+  let resumeScanAfterLogin = false;
   const activeStorageKey = () => identityPhone ? phoneStorageKey(identityPhone) : LEGACY_STORAGE_KEY;
   const $ = id => document.getElementById(id);
   const today = () => {
@@ -312,6 +313,7 @@
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
   function addWaybill(raw, remote = null) {
+    if (!remote || remote.ok !== true) return {error:'서버 조회에 성공한 운송장만 등록할 수 있습니다.'};
     const parsed = window.DDSM_Waybill?.parse(raw) || {scanned:String(raw||'').trim(),valid:false};
     const waybill = parsed.valid ? parsed.master : clean(raw,100).replace(/\s+/g,'');
     if (!waybill) return {error:'운송장번호를 입력하세요.'};
@@ -415,11 +417,17 @@
     dialog.style.setProperty('--scan-viewport-top', (viewport ? viewport.offsetTop : 0) + 'px');
   }
   function openScan() {
+    if (!driverToken) {
+      // No silent local registration. A scanned barcode must resolve on S10.
+      resumeScanAfterLogin = true;
+      openIdentityDialog();
+      $('identityError').textContent = '운송장 조회를 위해 배송기사 로그인이 필요합니다. 로그인 후 스캔이 열립니다.';
+      $('identityError').classList.remove('hidden');
+      return;
+    }
     const dialog = $('scanDialog');
     const input = $('waybillInput');
-    $('scanResult').textContent = driverToken
-      ? date+' · '+round().no+'회차 · S10 원본 조회 후 등록'
-      : date+' · '+round().no+'회차 · 로컬 작업(서버 조회 안 됨). 번호 버튼에서 로그인할 수 있습니다.';
+    $('scanResult').textContent = date+' · '+round().no+'회차 · S10 서버 원본 조회 후 등록';
     input.value = '';
     // Handheld barcode readers act like physical keyboards. Keep input focused
     // but suppress the soft keyboard until the user explicitly taps to type.
@@ -445,7 +453,11 @@
     );
     const payload = await response.json().catch(()=>null);
     if (!response.ok || payload?.ok!==true) {
-      if (response.status===401) {driverToken=''; /* keep remote mode; never silently add locally */}
+      if (response.status===401) {
+        driverToken='';
+        remoteAccount=false;
+        renderHome();
+      }
       throw Error(payload?.error||'서버 운송장 조회 실패 (HTTP '+response.status+')');
     }
     if (payload.master_waybill!==parsed.master) throw Error('원본 운송장과 조회 결과가 일치하지 않습니다.');
@@ -459,20 +471,15 @@
         const job=pendingScans.shift();
         $('scanResult').textContent = '운송장 조회 중 · '+job.raw;
         try {
-          let detail=null;
-          if (driverToken) detail=await lookupWaybill(job.raw,job.date);
-          else if (remoteAccount) throw Error('서버 조회 로그인 상태가 만료됐습니다. 다시 로그인하세요.');
+          const detail=await lookupWaybill(job.raw,job.date);
           if (job.date!==date || job.roundNo!==round().no)
             throw Error('배송일 또는 회차가 변경되었습니다. 다시 스캔하세요.');
           const result=addWaybill(job.raw,detail);
           if (result.error) throw Error(result.error);
-          let message;
-          if (detail) message=(result.existing?'같은 배송지 물품 추가':'서버 조회·등록 완료')
+          const message=(result.existing?'같은 배송지 물품 추가':'서버 조회·등록 완료')
             +' · '+(detail.recipient||result.stop.waybill)
             +(result.suffix?' · 물품 '+result.suffix:'')
             +(detail.address?' · 주소 확인':' · 주소 미등록');
-          else message='로컬 등록 · 서버 조회 없음 · '+result.stop.waybill
-            +(result.suffix?' / 물품 '+result.suffix:'');
           $('scanResult').textContent=message;
         } catch(e) {
           const message=e.message||'운송장 조회 실패';
@@ -488,6 +495,12 @@
   }
   function processScan(raw, camera = false) {
     if (!String(raw||'').trim()) return false;
+    if (!driverToken) {
+      const message='서버 로그인이 필요합니다. 휴대폰 번호 버튼에서 로그인 후 다시 스캔하세요.';
+      $('scanResult').textContent=message;
+      toast(message);
+      return false;
+    }
     scanReadFeedback();
     if (pendingScans.length>=20) {
       $('scanResult').textContent='스캔 대기열이 가득 찼습니다. 조회 완료 후 다시 스캔하세요.';
@@ -886,6 +899,10 @@
       $('identityPasswordInput').value = '';
       if (previous !== phone) showView('home');
       render();
+      if (action === 'login' && resumeScanAfterLogin) {
+        resumeScanAfterLogin = false;
+        requestAnimationFrame(openScan);
+      }
       toast(action === 'register'
         ? '가입 완료 · 센터 승인 후 로그인하면 원본 조회 가능'
         : '배송기사 로그인 완료 · 이제 스캔 시 S10 원본 조회');
@@ -907,6 +924,7 @@
     $('identityLoginButton').addEventListener('click', () => apiAuthenticate('login'));
     $('identityRegisterButton').addEventListener('click', () => apiAuthenticate('register'));
     $('closeIdentity').addEventListener('click', () => $('identityDialog').close());
+    $('identityDialog').addEventListener('close', () => { resumeScanAfterLogin = false; });
     $('dateButton').addEventListener('click', chooseDate);
     $('dateInput').addEventListener('change', e => {
       const value = e.target.value;
