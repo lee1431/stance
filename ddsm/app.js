@@ -297,6 +297,59 @@
     return { stop };
   }
 
+  // Play an original short, two-stage mechanical click. Audio is unlocked
+  // from the user's SCAN tap so camera/barcode callbacks can give feedback.
+  let scanAudioContext = null;
+  let scanFlashTimer = null;
+  function prepareScanAudio() {
+    const AudioContextType = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextType) return;
+    try {
+      if (!scanAudioContext) scanAudioContext = new AudioContextType();
+      if (scanAudioContext.state === 'suspended') {
+        scanAudioContext.resume().catch(() => {});
+      }
+    } catch (_) { /* Sound is optional; scanning still works. */ }
+  }
+  function scanShutterSound() {
+    try {
+      prepareScanAudio();
+      const audio = scanAudioContext;
+      if (!audio || audio.state !== 'running') return;
+      const length = Math.floor(audio.sampleRate * 0.14);
+      const buffer = audio.createBuffer(1, length, audio.sampleRate);
+      const samples = buffer.getChannelData(0);
+      for (let i = 0; i < length; i++) {
+        const t = i / audio.sampleRate;
+        const first = Math.exp(-t * 110);
+        const second = t > 0.044 ? 0.88 * Math.exp(-(t - 0.044) * 48) : 0;
+        samples[i] = (Math.random() * 2 - 1) * (first + second);
+      }
+      const source = audio.createBufferSource();
+      const filter = audio.createBiquadFilter();
+      const volume = audio.createGain();
+      source.buffer = buffer;
+      filter.type = 'highpass';
+      filter.frequency.value = 800;
+      volume.gain.value = 0.33;
+      source.connect(filter);
+      filter.connect(volume);
+      volume.connect(audio.destination);
+      source.onended = () => { source.disconnect(); filter.disconnect(); volume.disconnect(); };
+      source.start();
+    } catch (_) { /* A blocked audio context must never block scanning. */ }
+  }
+  function scanReadFeedback() {
+    const dialog = $('scanDialog');
+    if (!dialog.open) return;
+    scanShutterSound();
+    clearTimeout(scanFlashTimer);
+    dialog.classList.remove('scan-read-flash');
+    // Restart animation on consecutive scans, including a duplicate code.
+    void dialog.offsetWidth;
+    dialog.classList.add('scan-read-flash');
+    scanFlashTimer = setTimeout(() => dialog.classList.remove('scan-read-flash'), 540);
+  }
   function syncScanViewport() {
     const dialog = $('scanDialog');
     if (!dialog.open) return;
@@ -313,10 +366,14 @@
     // but suppress the soft keyboard until the user explicitly taps to type.
     input.setAttribute('inputmode', 'none');
     if (!dialog.open) dialog.showModal();
+    prepareScanAudio();
     syncScanViewport();
     input.focus({ preventScroll: true });
   }
   function processScan(raw, camera = false) {
+    // "Read" is distinct from "registered": duplicates and invalid nonempty
+    // codes still produce the click and flash to confirm scanner input.
+    if (String(raw || '').trim()) scanReadFeedback();
     const result = addWaybill(raw);
     const message = result.error || ('등록 완료 · ' + result.stop.waybill + ' (' + stops().length + '건)');
     $('scanResult').textContent = message;
@@ -592,6 +649,8 @@
     $('deliveryRoundSelect').addEventListener('change', e => setSelectedRound(e.target.value));
     $('closeScan').addEventListener('click', () => $('scanDialog').close());
     $('scanDialog').addEventListener('close', () => {
+      clearTimeout(scanFlashTimer);
+      $('scanDialog').classList.remove('scan-read-flash');
       stopCamera();
       $('waybillInput').setAttribute('inputmode', 'none');
       $('scanDialog').style.removeProperty('--scan-viewport-height');
@@ -613,6 +672,7 @@
     }
     $('scanForm').addEventListener('submit', e => { e.preventDefault(); processScan($('waybillInput').value); });
     $('cameraButton').addEventListener('click', () => {
+      prepareScanAudio();
       if (cameraStream || zxingControls) stopCamera(); else startCamera();
     });
     $('editForm').addEventListener('submit', saveEdit);
