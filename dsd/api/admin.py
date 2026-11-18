@@ -41,8 +41,8 @@ ALIASES = {
     "status": ["배송상태", "배송여부", "완료여부", "배송완료", "처리상태", "상태", "deliverystatus"],
 }
 
-# Fixed daily freight export: A-Q never changes its column order.
-# The recipient (E) must not be confused with its address columns (P/Q).
+# Fixed daily freight export: column A is an index; the 17 fields are B-R.
+# Recipient F is distinct from lot address Q and road-name address R.
 FIXED_DSD_HEADERS = (
     "일자", "발송지", "운송장번호", "발화주", "수화주",
     "품명", "포장", "상품", "수량", "상태",
@@ -99,13 +99,15 @@ def canonical_key(header):
 
 
 def fixed_dsd_start(headers):
-    """Find the fixed 17-column header block, allowing an extra leading ID column.
-
-    The supplied Excel example has a leading numeric '1' column before the date
-    in some exports. It must not shift recipient and address positions.
-    """
+    """Prefer the user's exact B-R layout (A=index); allow other exports too."""
     if len(headers) < len(FIXED_DSD_HEADERS):
         return None
+    # In the provided source workbook: B=date, F=recipient, Q=lot, R=road.
+    if len(headers) >= 18 and all(
+        compact(headers[1 + i]) == compact(label)
+        for i, label in enumerate(FIXED_DSD_HEADERS)
+    ):
+        return 1
     for start in range(min(4, len(headers) - len(FIXED_DSD_HEADERS)) + 1):
         if all(
             compact(headers[start + i]) == compact(label)
