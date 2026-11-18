@@ -124,7 +124,7 @@
   }
 
   function renderHome() {
-    $('myPhoneLabel').textContent = identityPhone ? '내 번호 · ' + displayPhone(identityPhone) : '휴대폰 번호 등록';
+    $('myPhoneLabel').textContent = identityPhone ? (driverToken ? '서버 연결 · ' : '로컬 · ') + displayPhone(identityPhone) : '휴대폰 번호 등록';
     $('dailyPhoneLabel').textContent = identityPhone ? displayPhone(identityPhone) : '번호 미등록';
     const d = day();
     const active = round();
@@ -317,7 +317,11 @@
     if (!waybill) return {error:'운송장번호를 입력하세요.'};
     if (waybill.length < 4 || /[\u0000-\u001f<>]/.test(waybill)) return {error:'운송장번호를 확인하세요.'};
     const digitKey = value => String(value||'').replace(/[\s-]/g,'');
-    const existing = stops().find(stop => digitKey(stop.waybill) === digitKey(waybill));
+    const existing = stops().find(stop => {
+      const saved = digitKey(stop.waybill);
+      return saved === digitKey(waybill)
+        || (parsed.valid && saved.length === 16 && saved.slice(0,13) === waybill);
+    });
     const suffix = parsed.valid ? parsed.suffix : null;
     if (existing) {
       const scannedItems = Array.isArray(existing.scannedItems) ? existing.scannedItems.slice() : [];
@@ -413,7 +417,9 @@
   function openScan() {
     const dialog = $('scanDialog');
     const input = $('waybillInput');
-    $('scanResult').textContent = '현재 날짜와 ' + round().no + '회차에 등록합니다.';
+    $('scanResult').textContent = driverToken
+      ? date+' · '+round().no+'회차 · S10 원본 조회 후 등록'
+      : date+' · '+round().no+'회차 · 로컬 작업(서버 조회 안 됨). 번호 버튼에서 로그인할 수 있습니다.';
     input.value = '';
     // Handheld barcode readers act like physical keyboards. Keep input focused
     // but suppress the soft keyboard until the user explicitly taps to type.
@@ -439,7 +445,7 @@
     );
     const payload = await response.json().catch(()=>null);
     if (!response.ok || payload?.ok!==true) {
-      if (response.status===401) {driverToken='';remoteAccount=false;}
+      if (response.status===401) {driverToken=''; /* keep remote mode; never silently add locally */}
       throw Error(payload?.error||'서버 운송장 조회 실패 (HTTP '+response.status+')');
     }
     if (payload.master_waybill!==parsed.master) throw Error('원본 운송장과 조회 결과가 일치하지 않습니다.');
