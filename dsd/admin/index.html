@@ -21,7 +21,7 @@
   <div><h2>관리자 로그인</h2><p>서버 사용자 계정과 별도 관리자 비밀번호로 접근합니다. 배송 자료는 승인된 관리자만 볼 수 있습니다.</p></div>
   <form id="authForm" autocomplete="on">
    <label>휴대폰 번호<input id="loginPhone" type="tel" inputmode="tel" autocomplete="username" placeholder="010-1234-5678" required></label>
-   <label>사용자 비밀번호<input id="loginPassword" type="password" autocomplete="current-password" placeholder="DSD 사용자 비밀번호"></label>
+   <label>사용자 비밀번호<input id="loginPassword" type="password" minlength="1" maxlength="16" autocomplete="current-password" placeholder="DSD 사용자 비밀번호"></label>
    <label>관리자 비밀번호<input id="adminPassword" type="password" autocomplete="off" placeholder="별도 관리자 비밀번호" required></label>
    <button type="submit" class="primary">관리콘솔 열기</button>
   </form>
