@@ -18,7 +18,7 @@ from datetime import date as date_type, datetime
 from contextlib import closing
 from itertools import islice
 
-from flask import jsonify, request, session
+from flask import jsonify, request
 from werkzeug.security import check_password_hash
 
 MAX_FILE_BYTES = 8 * 1024 * 1024
@@ -267,9 +267,12 @@ def initialize(db):
     )
 
 
-def install_admin(app, connect, require_session, throttled):
+def install_admin(app, connect, authenticated_user, throttled, token_digest):
     with closing(connect()) as db:
         initialize(db)
+        db.execute("""CREATE TABLE IF NOT EXISTS ddsm_admin_tokens (
+            token_hash TEXT PRIMARY KEY
+        )""")
         db.commit()
 
     admin_phones = {
@@ -278,14 +281,15 @@ def install_admin(app, connect, require_session, throttled):
     admin_hash = os.getenv("DDSM_ADMIN_PASSWORD_HASH", "")
 
     def auth():
-        uid = require_session()
-        if uid is None:
+        user = authenticated_user()
+        digest = token_digest()
+        if not user or not digest or user["phone"] not in admin_phones:
             return None
         with closing(connect()) as db:
-            user = db.execute("SELECT phone FROM users WHERE id=?", (uid,)).fetchone()
-        if not user or user["phone"] not in admin_phones or session.get("ddsm_admin") is not True:
-            return None
-        return uid
+            row = db.execute(
+                "SELECT 1 FROM ddsm_admin_tokens WHERE token_hash=?", (digest,)
+            ).fetchone()
+        return user["id"] if row else None
 
     def protected():
         if auth() is None:
@@ -293,40 +297,37 @@ def install_admin(app, connect, require_session, throttled):
         return None
 
     def writable():
-        denied = protected()
-        if denied:
-            return denied
-        supplied = request.headers.get("X-CSRF-Token", "")
-        expected = session.get("csrf", "")
-        if not supplied or not expected or not hmac.compare_digest(supplied, expected):
-            return jsonify(ok=False, error="요청 검증 토큰이 올바르지 않습니다."), 403
-        return None
+        # A valid non-cookie Bearer token is required; the app checks Origin.
+        return protected()
 
     @app.get("/ddsm/api/admin/me")
     def admin_me():
         uid = auth()
-        return (jsonify(ok=True, admin=True, csrf=session.get("csrf")) if uid
+        return (jsonify(ok=True, admin=True) if uid
                 else (jsonify(ok=False, admin=False), 403))
 
     @app.post("/ddsm/api/admin/unlock")
     def admin_unlock():
-        uid = require_session()
-        if uid is None:
+        user = authenticated_user()
+        if not user:
             return jsonify(ok=False, error="사용자 로그인이 필요합니다."), 401
-        with closing(connect()) as db:
-            user = db.execute("SELECT phone FROM users WHERE id=?", (uid,)).fetchone()
-        if not user or user["phone"] not in admin_phones:
+        if user["phone"] not in admin_phones:
             return jsonify(ok=False, error="관리자 권한이 없습니다."), 403
         data = request.get_json(silent=True) or {}
         password = data.get("admin_password")
-        if not admin_hash or not isinstance(password, str) or len(password) > 128:
-            return jsonify(ok=False, error="서버의 관리자 인증 설정을 확인하세요."), 503
+        if not admin_hash or not isinstance(password, str) or not 1 <= len(password) <= 128:
+            return jsonify(ok=False, error="관리자 인증 설정을 확인하세요."), 503
         if throttled(user["phone"] + ":admin"):
             return jsonify(ok=False, error="요청이 많습니다. 잠시 후 다시 시도하세요."), 429
         if not check_password_hash(admin_hash, password):
             return jsonify(ok=False, error="관리자 인증이 올바르지 않습니다."), 401
-        session["ddsm_admin"] = True
-        return jsonify(ok=True, admin=True, csrf=session["csrf"])
+        with closing(connect()) as db:
+            db.execute(
+                "INSERT OR REPLACE INTO ddsm_admin_tokens(token_hash) VALUES (?)",
+                (token_digest(),),
+            )
+            db.commit()
+        return jsonify(ok=True, admin=True)
 
     @app.get("/ddsm/api/admin/deliveries")
     def admin_deliveries():
