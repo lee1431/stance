@@ -7,10 +7,10 @@
   <meta name="description" content="DDSM - Daily, Scan, Delivery. 로그인 없는 간편 배송 작업 화면">
   <title>DDSM | Daily · Scan · Delivery</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=6-delivery-map">
+  <link rel="stylesheet" href="style.css?v=7-map-order">
   <script src="naver-map.js?v=2-center-pin" defer></script>
   <script src="delivery-map.js?v=1" defer></script>
-  <script src="app.js?v=5-delivery-map" defer></script>
+  <script src="app.js?v=6-map-order" defer></script>
 </head>
 <body>
   <div id="app" class="app">
@@ -116,6 +116,8 @@
     <form id="editForm">
       <div class="dialog-head"><h2 id="editTitle">배송 정보</h2><button id="closeEdit" class="close-button" type="button" aria-label="닫기">✕</button></div>
       <p id="editWaybill" class="edit-waybill"></p>
+      <label class="input-label" for="editOrderSelect">방문 순번</label>
+      <select id="editOrderSelect" class="edit-order-select" aria-label="이 배송지의 방문 순번"></select>
       <label class="input-label" for="recipientInput">받는 분 / 업체명</label>
       <input id="recipientInput" maxlength="100" placeholder="선택 입력">
       <label class="input-label" for="addressInput">배송 주소</label>
