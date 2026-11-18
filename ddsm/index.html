@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f5f8fc">
+  <meta name="description" content="DDSM - Daily, Scan, Delivery. 로그인 없는 간편 배송 작업 화면">
+  <title>DDSM | Daily · Scan · Delivery</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css?v=1">
+  <script src="app.js?v=1" defer></script>
+</head>
+<body>
+  <div id="app" class="app">
+    <main id="homeScreen" class="screen home-screen">
+      <header class="home-header">
+        <button id="dateButton" class="date-button" type="button" aria-label="작업 날짜 변경">
+          <span class="date-letter" aria-hidden="true">D</span>
+          <span class="date-info"><span class="eyebrow">DAILY</span><strong id="dateLabel">오늘</strong></span>
+          <span class="chevron" aria-hidden="true">⌄</span>
+        </button>
+        <button id="settingsButton" class="icon-button" type="button" aria-label="설정">☰</button>
+        <input id="dateInput" class="visually-hidden-date" type="date" aria-label="배송일">
+      </header>
+      <div class="context-row">
+        <span class="personal-chip">개인 작업 · 이 기기에만 저장</span>
+        <div class="round-control">
+          <label for="roundSelect" class="sr-only">회차 선택</label>
+          <select id="roundSelect" aria-label="배송 회차"></select>
+          <button id="newRoundButton" class="round-add" type="button" aria-label="새 회차 추가">＋</button>
+        </div>
+      </div>
+      <section class="home-main">
+        <p class="intro-kicker">매일의 배송을 더 쉽게</p>
+        <h1>스캔하고, 바로 출발하세요.</h1>
+        <button id="scanButton" class="scan-button" type="button" aria-label="운송장 스캔 시작">
+          <span class="scan-letter">S</span>
+          <span class="scan-title">SCAN</span>
+          <span class="scan-caption">운송장 스캔</span>
+        </button>
+        <p id="scanHint" class="scan-hint">등록된 배송지 0건</p>
+      </section>
+      <footer class="home-footer">
+        <div class="stats" aria-live="polite">
+          <div class="stat"><strong id="totalCount">0</strong><span>전체</span></div>
+          <div class="stat"><strong id="pendingCount">0</strong><span>배송 예정</span></div>
+          <div class="stat"><strong id="doneCount">0</strong><span>완료</span></div>
+        </div>
+        <button id="deliveryButton" class="delivery-button" type="button" disabled>
+          <span class="delivery-letter">d</span>
+          <span class="delivery-title">배송시작</span>
+          <span class="arrow" aria-hidden="true">→</span>
+        </button>
+        <p id="deliveryHint" class="footer-note">운송장을 스캔하면 배송을 시작할 수 있습니다.</p>
+        <button id="listButton" class="text-link" type="button">배송 목록 보기</button>
+      </footer>
+    </main>
+
+    <section id="deliveryScreen" class="screen delivery-screen hidden" aria-labelledby="deliveryHeading">
+      <header class="work-header">
+        <button id="backButton" class="back-button" type="button" aria-label="홈으로">←</button>
+        <div class="work-heading"><span id="workDateLabel">오늘 · 1회차</span><h2 id="deliveryHeading">배송 목록</h2></div>
+        <button id="workScanButton" class="small-scan" type="button">＋ 스캔</button>
+      </header>
+      <div class="progress-wrap">
+        <div class="progress-heading"><strong id="progressLabel">완료 0 / 0</strong><span id="remainingLabel">남은 배송 0건</span></div>
+        <div class="progress-track" role="progressbar" aria-label="배송 완료율" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressTrack"><div id="progressFill"></div></div>
+      </div>
+      <div class="list-heading">
+        <strong>배송지</strong><span>주소를 입력하면 지도 열기가 가능합니다.</span>
+      </div>
+      <div id="stopList" class="stop-list"></div>
+    </section>
+  </div>
+
+  <dialog id="scanDialog" class="sheet-dialog" aria-labelledby="scanTitle">
+    <div class="dialog-head"><h2 id="scanTitle">운송장 스캔</h2><button id="closeScan" class="close-button" type="button" aria-label="닫기">✕</button></div>
+    <p class="dialog-description">바코드 리더기로 찍거나 운송장번호를 입력하세요.</p>
+    <form id="scanForm" class="scan-form">
+      <label for="waybillInput" class="sr-only">운송장번호</label>
+      <input id="waybillInput" placeholder="운송장번호" autocomplete="off" inputmode="text" spellcheck="false" maxlength="100" required>
+      <button type="submit" class="primary-action">추가</button>
+    </form>
+    <button id="cameraButton" type="button" class="secondary-action">▣ 카메라로 스캔</button>
+    <video id="cameraVideo" class="camera-preview hidden" autoplay playsinline muted></video>
+    <p id="scanResult" class="dialog-message" role="status" aria-live="polite">스캔하면 현재 날짜와 회차에 저장됩니다.</p>
+    <p class="dialog-footnote">주소·수취인 정보는 목록에서 직접 추가할 수 있습니다. 원본 엑셀 자동 조회는 아직 연결되지 않았습니다.</p>
+  </dialog>
+
+  <dialog id="editDialog" class="sheet-dialog" aria-labelledby="editTitle">
+    <form id="editForm">
+      <div class="dialog-head"><h2 id="editTitle">배송 정보</h2><button id="closeEdit" class="close-button" type="button" aria-label="닫기">✕</button></div>
+      <p id="editWaybill" class="edit-waybill"></p>
+      <label class="input-label" for="recipientInput">받는 분 / 업체명</label>
+      <input id="recipientInput" maxlength="100" placeholder="선택 입력">
+      <label class="input-label" for="addressInput">배송 주소</label>
+      <input id="addressInput" maxlength="250" placeholder="도로명 주소를 입력하세요">
+      <label class="input-label" for="phoneInput">수취인 연락처</label>
+      <input id="phoneInput" type="tel" maxlength="25" placeholder="선택 입력">
+      <label class="input-label" for="memoInput">메모</label>
+      <textarea id="memoInput" rows="3" maxlength="500" placeholder="예: 경비실에 맡김"></textarea>
+      <button type="submit" class="primary-action full-width">저장</button>
+    </form>
+  </dialog>
+
+  <dialog id="settingsDialog" class="sheet-dialog" aria-labelledby="settingsTitle">
+    <div class="dialog-head"><h2 id="settingsTitle">DDSM 설정</h2><button id="closeSettings" class="close-button" type="button" aria-label="닫기">✕</button></div>
+    <p class="dialog-description">로그인 없이 이 브라우저에서 사용합니다.</p>
+    <div class="settings-stack">
+      <button id="exportButton" class="secondary-action" type="button">내 데이터 JSON 백업</button>
+      <label for="importInput" class="secondary-action file-label">JSON 백업 불러오기</label>
+      <input id="importInput" type="file" accept=".json,application/json" class="hidden">
+      <p class="dialog-footnote">현재는 서버와 동기화되지 않습니다. 기기를 바꾸거나 브라우저 자료를 삭제하면 데이터가 사라질 수 있습니다. 수취인 정보가 포함된 백업 파일은 안전하게 보관하세요.</p>
+      <a class="old-version-link" href="../dsd/">기존 DSD 열기</a>
+    </div>
+  </dialog>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+</body>
+</html>
