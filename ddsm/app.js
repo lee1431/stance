@@ -297,12 +297,24 @@
     return { stop };
   }
 
+  function syncScanViewport() {
+    const dialog = $('scanDialog');
+    if (!dialog.open) return;
+    const viewport = window.visualViewport;
+    dialog.style.setProperty('--scan-viewport-height', (viewport ? viewport.height : window.innerHeight) + 'px');
+    dialog.style.setProperty('--scan-viewport-top', (viewport ? viewport.offsetTop : 0) + 'px');
+  }
   function openScan() {
     const dialog = $('scanDialog');
+    const input = $('waybillInput');
     $('scanResult').textContent = '현재 날짜와 ' + round().no + '회차에 등록합니다.';
-    $('waybillInput').value = '';
+    input.value = '';
+    // Handheld barcode readers act like physical keyboards. Keep input focused
+    // but suppress the soft keyboard until the user explicitly taps to type.
+    input.setAttribute('inputmode', 'none');
     if (!dialog.open) dialog.showModal();
-    $('waybillInput').focus({ preventScroll: true });
+    syncScanViewport();
+    input.focus({ preventScroll: true });
   }
   function processScan(raw, camera = false) {
     const result = addWaybill(raw);
@@ -579,7 +591,20 @@
     $('deliveryMapFitBtn').addEventListener('click', () => window.DDSM_DeliveryMap?.fit());
     $('deliveryRoundSelect').addEventListener('change', e => setSelectedRound(e.target.value));
     $('closeScan').addEventListener('click', () => $('scanDialog').close());
-    $('scanDialog').addEventListener('close', stopCamera);
+    $('scanDialog').addEventListener('close', () => {
+      stopCamera();
+      $('waybillInput').setAttribute('inputmode', 'none');
+      $('scanDialog').style.removeProperty('--scan-viewport-height');
+      $('scanDialog').style.removeProperty('--scan-viewport-top');
+    });
+    $('waybillInput').addEventListener('pointerdown', () => {
+      // An intentional tap on the field requests the touchscreen keyboard.
+      $('waybillInput').setAttribute('inputmode', 'text');
+    });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', syncScanViewport);
+      window.visualViewport.addEventListener('scroll', syncScanViewport);
+    }
     $('scanForm').addEventListener('submit', e => { e.preventDefault(); processScan($('waybillInput').value); });
     $('cameraButton').addEventListener('click', () => {
       if (cameraStream || zxingControls) stopCamera(); else startCamera();
