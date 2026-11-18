@@ -113,6 +113,54 @@ class DDSMApiTest(unittest.TestCase):
         self.assertEqual(other_driver.get_json()["revision"], 0)
         self.assertEqual(other_driver.get_json()["day"]["rounds"][0]["stops"], [])
 
+        # Addressless recurring business: the shared master is created during import,
+        # then the driver supplies a location used by the next day's export.
+        recurring_day = "2026-11-19"
+        name_only = "운송장번호,상호명,물품명\\n2139602023215,정기배송상점,부품\\n".encode("utf-8-sig")
+        uploaded = self.client.post(
+            "/ddsm/api/admin/import",
+            data={"date": recurring_day, "file": (io.BytesIO(name_only), "recurring.csv")},
+            headers=headers_a,
+        )
+        self.assertEqual(uploaded.status_code, 200, uploaded.get_json())
+        unlocated = self.client.get(
+            "/ddsm/api/admin/deliveries",
+            query_string={"date": recurring_day}, headers=headers_a,
+        ).get_json()["rows"]
+        self.assertEqual(len(unlocated), 1)
+        self.assertTrue(unlocated[0]["registered"])
+        self.assertEqual(unlocated[0]["address"], "")
+
+        shared_update = self.client.post(
+            "/ddsm/api/driver/destination",
+            json={"date": recurring_day, "waybill": "2139602023215",
+                  "address": "충주시 금봉로 21", "lat": 36.99, "lng": 127.92},
+            headers=headers_a2,
+        )
+        self.assertEqual(shared_update.status_code, 200, shared_update.get_json())
+        updated = self.client.get(
+            "/ddsm/api/admin/deliveries",
+            query_string={"date": recurring_day}, headers=headers_a,
+        ).get_json()["rows"]
+        self.assertEqual(updated[0]["address"], "충주시 금봉로 21")
+        self.assertTrue(updated[0]["located"])
+
+        next_day = "2026-11-20"
+        later = "운송장번호,상호명,물품명\\n2139602023216,정기배송상점,자재\\n".encode("utf-8-sig")
+        self.client.post(
+            "/ddsm/api/admin/import",
+            data={"date": next_day, "file": (io.BytesIO(later), "later.csv")},
+            headers=headers_a,
+        )
+        inherited = self.client.get(
+            "/ddsm/api/driver/waybill",
+            query_string={"date": next_day, "barcode": "2139602023216"},
+            headers=headers_b,
+        )
+        self.assertEqual(inherited.status_code, 200, inherited.get_json())
+        self.assertEqual(inherited.get_json()["address"], "충주시 금봉로 21")
+        self.assertEqual(inherited.get_json()["lat"], 36.99)
+
 
 if __name__ == "__main__":
     unittest.main()
