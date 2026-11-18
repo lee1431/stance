@@ -11,7 +11,7 @@
   <script src="naver-map.js?v=3-shared-sdk" defer></script>
   <script src="delivery-map.js?v=4-empty-day" defer></script>
   <script src="waybill.js?v=1-master-13" defer></script>
-  <script src="app.js?v=15-driver-lookup-focus" defer></script>
+  <script src="app.js?v=16-server-only-scans" defer></script>
 </head>
 <body>
   <div id="app" class="app">
@@ -120,8 +120,8 @@
         <button id="identityLoginButton" class="primary-action" type="button">로그인</button>
         <button id="identityRegisterButton" class="secondary-action" type="button">신규 가입</button>
       </div>
-      <button class="identity-local-action" type="submit" id="saveIdentityButton">서버 없이 이 기기에서 계속</button>
-      <p id="identityInfo" class="dialog-footnote">서버 원본 조회에는 센터에서 승인한 배송기사 로그인이 필요합니다. 로컬 모드는 서버를 조회하지 않습니다.</p>
+      <button class="identity-local-action" type="submit" id="saveIdentityButton">기존 기기 자료만 보기</button>
+      <p id="identityInfo" class="dialog-footnote">서버 로그인 후에만 스캔·원본 조회가 가능합니다. 기존 기기 자료 보기는 저장된 배송 목록 열람용입니다.</p>
     </form>
   </dialog>
 
@@ -135,7 +135,7 @@
     </form>
     <button id="cameraButton" type="button" class="secondary-action">▣ 카메라로 스캔</button>
     <video id="cameraVideo" class="camera-preview hidden" autoplay playsinline muted></video>
-    <p id="scanResult" class="dialog-message" role="status" aria-live="polite">로그인한 배송기사는 S10 원본을 조회합니다. 로컬 모드는 서버 조회 없이 저장합니다.</p>
+    <p id="scanResult" class="dialog-message" role="status" aria-live="polite">스캔 전에 서버 로그인이 필요합니다. S10 원본 조회에 성공한 송장만 등록합니다.</p>
     <p class="dialog-footnote scan-footnote">주소·수취인은 배송 목록에서 수정할 수 있습니다.</p>
   </dialog>
 
@@ -177,12 +177,12 @@
 
   <dialog id="settingsDialog" class="sheet-dialog" aria-labelledby="settingsTitle">
     <div class="dialog-head"><h2 id="settingsTitle">DDSM 설정</h2><button id="closeSettings" class="close-button" type="button" aria-label="닫기">✕</button></div>
-    <p class="dialog-description">로그인 없이 이 브라우저에서 사용합니다.</p>
+    <p class="dialog-description">서버 로그인 후 스캔할 수 있습니다. 이 기기의 기존 배송 자료도 확인할 수 있습니다.</p>
     <div class="settings-stack">
       <button id="exportButton" class="secondary-action" type="button">내 데이터 JSON 백업</button>
       <label for="importInput" class="secondary-action file-label">JSON 백업 불러오기</label>
       <input id="importInput" type="file" accept=".json,application/json" class="hidden">
-      <p class="dialog-footnote">현재는 서버와 동기화되지 않습니다. 기기를 바꾸거나 브라우저 자료를 삭제하면 데이터가 사라질 수 있습니다. 수취인 정보가 포함된 백업 파일은 안전하게 보관하세요.</p>
+      <p class="dialog-footnote">원본 엑셀은 S10 서버에 저장됩니다. 이 기기의 배송 작업 기록은 아직 서버와 동기화되지 않으므로 기기를 바꾸거나 브라우저 자료를 삭제하면 사라질 수 있습니다. 수취인 정보가 포함된 백업 파일은 안전하게 보관하세요.</p>
       <a class="old-version-link" href="admin/">센터 관리자 페이지 열기</a>
       <a class="old-version-link" href="../dsd/">기존 DSD 열기</a>
     </div>
