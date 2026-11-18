@@ -422,6 +422,9 @@
     prepareScanAudio();
     syncScanViewport();
     input.focus({ preventScroll: true });
+    requestAnimationFrame(() => {
+      if (dialog.open && document.activeElement !== input) input.focus({preventScroll:true});
+    });
   }
   const pendingScans = [];
   let scanWorkerActive = false;
@@ -766,6 +769,7 @@
     try {
       const previous = identityPhone;
       remoteAccount = false;
+      driverToken = '';
       const destination = phoneStorageKey(number);
       // Preserve legacy data on first adoption without moving or deleting its key.
       // Never copy another user's records when switching to a different number.
@@ -815,8 +819,9 @@
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     try {
-      const response = await fetch(AUTH_API_BASE + action, {
-        method: 'POST', credentials: 'include',
+      const response = await fetch(
+        action === 'login' ? DRIVER_API_BASE + 'ddsm/login' : AUTH_API_BASE + 'register', {
+        method: 'POST', credentials: 'omit',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, password }),
         signal: controller.signal
@@ -825,25 +830,30 @@
       if (!response.ok || !result || result.ok !== true || result.phone !== phone) {
         throw new Error(result?.error || '인증 API 연결 또는 응답을 확인하세요.');
       }
-      // The server creates a secure HttpOnly session. Keep local deliveries
-      // separate: account login alone is NOT remote data synchronization.
+      // DDSM courier tokens are in memory only, never browser storage.
+      // Lookup requires center approval and does not synchronize local stops.
+      if (action === 'login' && typeof result.access_token !== 'string')
+        throw new Error('배송기사 인증 토큰이 없습니다. S10의 API를 업데이트하세요.');
       const previous = identityPhone;
       if (previous && previous !== phone &&
           !confirm('다른 번호의 로컬 작업으로 전환합니다. 계속할까요?')) return;
       localStorage.setItem(IDENTITY_KEY, phone);
       identityPhone = phone;
-      remoteAccount = true;
+      remoteAccount = action === 'login';
+      driverToken = action === 'login' ? result.access_token : '';
       data = readData();
       date = today();
       $('identityDialog').close();
       $('identityPasswordInput').value = '';
       if (previous !== phone) showView('home');
       render();
-      toast(action === 'register' ? '계정 가입 완료 · 배송 자료는 아직 로컬 저장' : '로그인 완료 · 배송 자료는 아직 로컬 저장');
+      toast(action === 'register'
+        ? '가입 완료 · 센터 승인 후 로그인하면 원본 조회 가능'
+        : '배송기사 로그인 완료 · 이제 스캔 시 S10 원본 조회');
     } catch (e) {
       error.textContent = e.name === 'AbortError'
         ? '서버 응답 시간이 초과되었습니다. API 상태를 확인하세요.'
-        : e instanceof TypeError ? 'DSD API 연결 또는 CORS 오류입니다. 서버의 허용 Origin과 쿠키 설정을 확인하세요.'
+        : e instanceof TypeError ? 'S10 API 연결 또는 CORS 오류입니다. API 주소와 Origin 허용 설정을 확인하세요.'
         : e.message || 'API 연결에 실패했습니다.';
       error.classList.remove('hidden');
     } finally {
