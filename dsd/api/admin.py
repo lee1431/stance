@@ -450,7 +450,6 @@ def install_admin(app, connect, require_session=None, throttled=None):
                     db.commit()
         return jsonify(ok=True)
 
-
     admin_id = os.getenv("dsd_ADMIN_ID", "admin")
     admin_hash = os.getenv("dsd_ADMIN_PASSWORD_HASH", "")
 
