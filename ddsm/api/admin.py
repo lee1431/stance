@@ -387,6 +387,7 @@ def install_admin(app, connect, require_session, throttled):
             return jsonify(ok=False, error="파일 분석 실패: " + str(exc)[:220]), 400
 
         added = updated = 0
+        seen_waybills = {}
         with connect() as db:
             db.execute("BEGIN IMMEDIATE")
             batch = db.execute(
@@ -400,11 +401,14 @@ def install_admin(app, connect, require_session, throttled):
                 business = std.get("recipient", "").strip()
                 address = std.get("address", "").strip()
                 destination_id = destination_id_for(db, business, address)
-                signature = ("wb:" + compact(waybill)) if waybill else (
-                    "row:" + hashlib.sha256(
+                if waybill:
+                    normalized_waybill = compact(waybill)
+                    seen_waybills[normalized_waybill] = seen_waybills.get(normalized_waybill, 0) + 1
+                    signature = "wb:" + normalized_waybill + "#" + str(seen_waybills[normalized_waybill])
+                else:
+                    signature = "row:" + hashlib.sha256(
                         (item["sheet"] + "|" + str(item["row_number"]) + "|" + raw).encode()
                     ).hexdigest()
-                )
                 params = (
                     target, signature, waybill, business, std.get("sender", ""), address,
                     std.get("phone", ""), std.get("item", ""), std.get("cod", ""),
