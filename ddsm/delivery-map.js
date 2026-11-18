@@ -1,11 +1,11 @@
-/* DDSM daily all-round NAVER overview. Reuses the existing public map SDK client ID. */
+/* DDSM selected-round NAVER map. Reuses the existing public map SDK client ID. */
 (function (root) {
   'use strict';
   const $ = id => document.getElementById(id);
   const valid = p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng)
     && p.lat >= -90 && p.lat <= 90 && p.lng >= -180 && p.lng <= 180;
   const key = s => String(s.roundNo) + ':' + String(s.id);
-  let map = null, maps = null, currentDate = '', markers = new Map();
+  let map = null, maps = null, currentDate = '', currentRound = 0, markers = new Map();
   let selectedSignature = '', initialFitDone = false, userInteracted = false, active = false, loadPromise = null;
   let onSelect = null, onGeocoded = null, geocodeGeneration = 0;
   let failed = new Set();
@@ -65,7 +65,7 @@
     maps.Event.trigger(map, 'resize');
     boundsAll();
   }
-  function draw(stops) {
+  function draw(stops, roundNo) {
     if (!map) return;
     const keep = new Set();
     for (const s of stops) {
@@ -90,7 +90,7 @@
       if (!keep.has(id)) { marker.setMap(null); markers.delete(id); }
     }
     const missing = stops.filter(s => !valid(s)).length;
-    $('deliveryMapCount').textContent = '지도 표시 ' + markers.size + '곳 / 전체 ' + stops.length + '건'
+    $('deliveryMapCount').textContent = roundNo + '회차 · 지도 표시 ' + markers.size + '곳 / 전체 ' + stops.length + '건'
       + (missing ? ' · 위치 미확인 ' + missing + '건' : '');
     if (!stops.length) {
       status('배송지 0건 · 지도를 자유롭게 이동할 수 있습니다.');
@@ -165,7 +165,7 @@
       }
     }
   }
-  async function render(date, stops, callbacks) {
+  async function render(date, stops, callbacks, roundNo) {
     active = true;
     onSelect = callbacks.onSelect;
     onGeocoded = callbacks.onGeocoded;
@@ -179,7 +179,15 @@
       for (const marker of markers.values()) marker.setMap(null);
       markers.clear();
     }
-    $('deliveryMapCount').textContent = '오늘 전체 ' + stops.length + '건 · 모든 회차';
+    if (currentRound !== roundNo) {
+      currentRound = roundNo;
+      initialFitDone = false;
+      userInteracted = false;
+      // Pending geocoding from another round must not delay this round.
+      ++geocodeGeneration;
+      requestQueue = [];
+    }
+    $('deliveryMapCount').textContent = roundNo + '회차 · ' + stops.length + '건';
     // Lazy load: no additional SDK request until the delivery page opens.
     if (!loadPromise) {
       loadPromise = root.DDSM_NaverMap.loadSdk().then(n => {
@@ -191,7 +199,7 @@
         throw e;
       });
     }
-    const signature = date + '|' + stops.map(s => [
+    const signature = date + '|' + roundNo + '|' + stops.map(s => [
       s.roundNo, s.id, s.position, s.status, s.lat, s.lng, s.address, s.recipient
     ].join(':')).join('|');
     if (signature === selectedSignature && map) {
@@ -199,11 +207,11 @@
       return;
     }
     selectedSignature = signature;
-    status('오늘 배송지 지도를 준비하고 있습니다.');
+    status(roundNo + '회차 배송지 지도를 준비하고 있습니다.');
     try { await loadPromise; } catch (_) { return; }
     if (!active || currentDate !== date || signature !== selectedSignature) return;
     maps.Event.trigger(map, 'resize');
-    draw(stops);
+    draw(stops, roundNo);
     queueGeocodes(stops, date);
   }
   function pause() {
