@@ -281,7 +281,7 @@ def install_admin(app, connect, require_session, throttled):
         uid = require_session()
         if uid is None:
             return None
-        with connect() as db:
+        with closing(connect()) as db:
             user = db.execute("SELECT phone FROM users WHERE id=?", (uid,)).fetchone()
         if not user or user["phone"] not in admin_phones or session.get("ddsm_admin") is not True:
             return None
@@ -313,7 +313,7 @@ def install_admin(app, connect, require_session, throttled):
         uid = require_session()
         if uid is None:
             return jsonify(ok=False, error="사용자 로그인이 필요합니다."), 401
-        with connect() as db:
+        with closing(connect()) as db:
             user = db.execute("SELECT phone FROM users WHERE id=?", (uid,)).fetchone()
         if not user or user["phone"] not in admin_phones:
             return jsonify(ok=False, error="관리자 권한이 없습니다."), 403
@@ -336,7 +336,7 @@ def install_admin(app, connect, require_session, throttled):
         target = request.args.get("date", "")
         if not valid_date(target):
             return jsonify(ok=False, error="날짜가 올바르지 않습니다."), 400
-        with connect() as db:
+        with closing(connect()) as db:
             rows = db.execute(
                 """SELECT s.*, d.address AS registry_address, d.lat, d.lng, d.business_name AS registry_name
                    FROM admin_deliveries s
@@ -352,7 +352,7 @@ def install_admin(app, connect, require_session, throttled):
         for row in rows:
             obj = dict(row)
             obj["raw"] = json.loads(obj.pop("raw_json"))
-            obj["address"] = obj["source_address"] or obj["registry_address"] or ""
+            obj["address"] = obj["registry_address"] or obj["source_address"] or ""
             obj["located"] = obj["lat"] is not None and obj["lng"] is not None
             obj["registered"] = obj["destination_id"] is not None
             for column in obj["raw"]:
@@ -388,7 +388,7 @@ def install_admin(app, connect, require_session, throttled):
 
         added = updated = 0
         seen_waybills = {}
-        with connect() as db:
+        with closing(connect()) as db:
             db.execute("BEGIN IMMEDIATE")
             batch = db.execute(
                 """INSERT INTO import_batches (delivery_date, filename, total_rows, uploaded_by)
@@ -453,7 +453,7 @@ def install_admin(app, connect, require_session, throttled):
         query = compact(request.args.get("q", ""))[:80]
         if not query:
             return jsonify(ok=True, destinations=[])
-        with connect() as db:
+        with closing(connect()) as db:
             rows = db.execute(
                 """SELECT id, business_name, address, lat, lng FROM destinations
                    WHERE name_key LIKE ? OR address_key LIKE ?
@@ -468,7 +468,7 @@ def install_admin(app, connect, require_session, throttled):
         if denied:
             return denied
         data = request.get_json(silent=True) or {}
-        with connect() as db:
+        with closing(connect()) as db:
             db.execute("BEGIN IMMEDIATE")
             shipment = db.execute("SELECT * FROM admin_deliveries WHERE id=?", (shipment_id,)).fetchone()
             if not shipment:
