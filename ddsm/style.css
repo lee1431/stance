@@ -25,3 +25,55 @@
   writing-mode: horizontal-tb;
   padding: 10px 16px;
 }
+
+/* Address verification directly beneath the shipment address field. */
+.address-map-preview {
+  margin-top: 10px;
+  padding: 11px;
+  border: 1px solid #D5E8E2;
+  border-radius: 14px;
+  background: #F6FAF8;
+}
+.address-map-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.address-map-heading strong { font-size: 12px; color: #173451; }
+.address-map-link {
+  font-size: 11px;
+  font-weight: 800;
+  color: #087F8C;
+  text-decoration: none;
+}
+.address-map-link:focus-visible { text-decoration: underline; }
+.address-map-empty {
+  display: grid;
+  place-items: center;
+  min-height: 94px;
+  padding: 15px;
+  border: 1px dashed #BFD8D0;
+  border-radius: 10px;
+  color: #67827B;
+  font-size: 12px;
+  text-align: center;
+  line-height: 1.5;
+}
+.address-map-frame {
+  display: block;
+  width: 100%;
+  height: clamp(148px, 25dvh, 216px);
+  border: 0;
+  border-radius: 10px;
+  background: #E5F0EA;
+}
+.address-map-note {
+  font-size: 10px;
+  color: #6B8280;
+  line-height: 1.55;
+  margin: 8px 1px 0;
+}
+#editDialog { overscroll-behavior: contain; }
