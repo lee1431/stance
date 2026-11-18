@@ -923,7 +923,11 @@
 
   function bind() {
     $('myPhoneButton').addEventListener('click', openIdentityDialog);
-    $('identityForm').addEventListener('submit', saveIdentity);
+    $('identityForm').addEventListener('submit', event => {
+      event.preventDefault();
+      apiAuthenticate('login');
+    });
+    $('saveIdentityButton').addEventListener('click', saveIdentity);
     $('identityLoginButton').addEventListener('click', () => apiAuthenticate('login'));
     $('identityRegisterButton').addEventListener('click', () => apiAuthenticate('register'));
     $('closeIdentity').addEventListener('click', () => $('identityDialog').close());
