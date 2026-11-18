@@ -6,10 +6,10 @@
 <meta name="theme-color" content="#F8F7F4">
 <title>DDSM | 센터 관리콘솔</title>
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="admin.css?v=2-unlocated">
+<link rel="stylesheet" href="admin.css?v=3-master">
 <script src="../naver-map.js?v=3-shared-sdk" defer></script>
 <script src="../address-utils.js?v=1" defer></script>
-<script src="admin.js?v=6-address-classification" defer></script>
+<script src="admin.js?v=7-shared-master" defer></script>
 </head>
 <body>
 <div class="shell">
@@ -54,6 +54,7 @@
     <div id="mapCanvas" class="map-canvas"></div>
     <div id="mapPlaceholder" class="map-placeholder">네이버 지도를 준비하고 있습니다.</div>
     <div id="mapCrosshair" class="map-crosshair" hidden><span class="pin">📍</span><span>지도의 중앙을 배송지로 저장</span></div>
+    <div id="mapPinSaveBar" class="map-pin-save-bar" hidden><button id="mapPinSaveBtn" class="primary" type="button">이 위치 저장</button></div>
    </div>
    <div class="map-bottom"><span>● 지도: 위치가 확인된 배송지</span><span>○ 미확인: 아래 목록에서 관리</span></div>
   </section>
