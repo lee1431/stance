@@ -187,7 +187,7 @@ def destination_id_for(db, name, address):
     normalized_name = compact(name)
     normalized_address = compact(address)
     if normalized_address:
-        identity = hashlib.sha256((normalized_address + "|" + normalized_name).encode("utf-8")).hexdigest()
+        identity = hashlib.sha256(("address:" + normalized_address).encode("utf-8")).hexdigest()
         db.execute(
             """INSERT INTO destinations (identity_key, business_name, address, name_key, address_key,
                          last_seen_at)
