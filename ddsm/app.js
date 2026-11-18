@@ -3,6 +3,7 @@
 (function () {
   'use strict';
 
+  const AUTH_API_BASE = 'https://mrdindoin.ddns.net/dsd/api/auth/';
   const LEGACY_STORAGE_KEY = 'ddsm:data:v1';
   const IDENTITY_KEY = 'ddsm:identity:phone:v1';
   const MIGRATION_KEY = 'ddsm:identity:migrated-legacy:v1';
@@ -728,8 +729,8 @@
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     try {
-      const response = await fetch('/ddsm/api/auth/' + action, {
-        method: 'POST', credentials: 'same-origin',
+      const response = await fetch(AUTH_API_BASE + action, {
+        method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, password }),
         signal: controller.signal
@@ -756,6 +757,7 @@
     } catch (e) {
       error.textContent = e.name === 'AbortError'
         ? '서버 응답 시간이 초과되었습니다. API 상태를 확인하세요.'
+        : e instanceof TypeError ? 'DSD API 연결 또는 CORS 오류입니다. 서버의 허용 Origin과 쿠키 설정을 확인하세요.'
         : e.message || 'API 연결에 실패했습니다.';
       error.classList.remove('hidden');
     } finally {
