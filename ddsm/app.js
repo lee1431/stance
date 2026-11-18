@@ -35,6 +35,44 @@
   let lastCameraValue = '';
   let lastCameraAt = 0;
   let barcodeDecoder = null;
+  let addressMapTimer = null;
+  const mapSearchUrl = address => 'https://map.naver.com/p/search/' + encodeURIComponent(address);
+  // A query-based Google Maps embed avoids storing or exposing an API key.
+  // Search results are approximate; the Naver Maps link is provided for verification.
+  const mapEmbedUrl = address => 'https://maps.google.com/maps?q=' + encodeURIComponent(address) + '&output=embed';
+  function updateAddressMap() {
+    const address = clean($('addressInput').value, 250);
+    const frame = $('addressMapFrame');
+    const empty = $('addressMapEmpty');
+    const link = $('addressMapLink');
+    clearTimeout(addressMapTimer);
+    if (!address || address.length < 4) {
+      frame.classList.add('hidden');
+      frame.removeAttribute('src');
+      link.classList.add('hidden');
+      link.removeAttribute('href');
+      empty.classList.remove('hidden');
+      empty.textContent = address ? '주소를 조금 더 자세히 입력해 주세요.' : '주소를 입력하면 여기에 지도가 표시됩니다.';
+      return;
+    }
+    empty.classList.remove('hidden');
+    empty.textContent = '입력한 주소의 지도를 불러오는 중입니다.';
+    link.href = mapSearchUrl(address);
+    link.classList.remove('hidden');
+    addressMapTimer = setTimeout(() => {
+      const current = clean($('addressInput').value, 250);
+      if (current !== address || !$('editDialog').open) return;
+      frame.src = mapEmbedUrl(address);
+      frame.classList.remove('hidden');
+      empty.classList.add('hidden');
+    }, 700);
+  }
+  function closeAddressMap() {
+    clearTimeout(addressMapTimer);
+    const frame = $('addressMapFrame');
+    frame.classList.add('hidden');
+    frame.removeAttribute('src');
+  }
 
   function persist() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); return true; }
@@ -221,6 +259,7 @@
     $('phoneInput').value = stop.phone;
     $('memoInput').value = stop.memo;
     $('editDialog').showModal();
+    updateAddressMap();
   }
   function saveEdit(event) {
     event.preventDefault();
@@ -426,6 +465,8 @@
     });
     $('editForm').addEventListener('submit', saveEdit);
     $('closeEdit').addEventListener('click', () => $('editDialog').close());
+    $('addressInput').addEventListener('input', updateAddressMap);
+    $('editDialog').addEventListener('close', closeAddressMap);
     $('settingsButton').addEventListener('click', () => $('settingsDialog').showModal());
     $('closeSettings').addEventListener('click', () => $('settingsDialog').close());
     $('exportButton').addEventListener('click', exportData);
