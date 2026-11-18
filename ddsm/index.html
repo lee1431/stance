@@ -7,9 +7,9 @@
   <meta name="description" content="DDSM - Daily, Scan, Delivery. 로그인 없는 간편 배송 작업 화면">
   <title>DDSM | Daily · Scan · Delivery</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=4-naver-map">
-  <script src="naver-map.js?v=1" defer></script>
-  <script src="app.js?v=3-naver-map" defer></script>
+  <link rel="stylesheet" href="style.css?v=5-center-pin">
+  <script src="naver-map.js?v=2-center-pin" defer></script>
+  <script src="app.js?v=4-center-pin" defer></script>
 </head>
 <body>
   <div id="app" class="app">
@@ -102,9 +102,17 @@
           <a id="addressMapLink" class="address-map-link hidden" href="#" target="_blank" rel="noopener noreferrer">네이버 지도에서 확인 ↗</a>
         </div>
         <div id="addressMapEmpty" class="address-map-empty">주소를 입력하면 여기에 지도가 표시됩니다.</div>
-        <div id="addressMapCanvas" class="address-map-frame hidden" role="region" aria-label="네이버 지도 배송 위치 미리보기"></div>
+        <div id="addressMapStage" class="address-map-stage hidden" role="region" aria-label="중앙 마커를 기준으로 배송 위치 조정">
+          <div id="addressMapCanvas" class="address-map-frame" aria-label="네이버 지도"></div>
+          <div class="address-map-center-pin" aria-hidden="true">
+            <svg viewBox="0 0 40 48" xmlns="http://www.w3.org/2000/svg" focusable="false">
+              <path d="M20 48C16 42 3 29 3 20a17 17 0 0 1 34 0c0 9-13 22-17 28Z" fill="#087F8C" stroke="#FFFFFF" stroke-width="2"/>
+              <circle cx="20" cy="20" r="7" fill="#FFFFFF"/>
+            </svg>
+          </div>
+        </div>
         <p id="addressMapCoordinates" class="address-map-coordinates" role="status"></p>
-        <p class="address-map-note">마커를 끌거나 지도를 터치해 배송 위치를 조정할 수 있습니다. 정확한 주소인지 확인하세요.</p>
+        <p class="address-map-note">중앙 마커는 고정됩니다. 지도를 손가락으로 이동하거나 확대해 원하는 위치를 중앙에 맞춘 뒤 저장하세요.</p>
       </div>
       <label class="input-label" for="phoneInput">수취인 연락처</label>
       <input id="phoneInput" type="tel" maxlength="25" placeholder="선택 입력">
