@@ -245,6 +245,7 @@
       state.className=row.located?'mapped':'missing';tr.append(state);
       tr.append(textCell(row.business_name||'상호 미입력'));
       tr.append(textCell(row.registry_address||row.source_address||'주소 없음'));
+      tr.append(textCell(addressPlan(row).label));
       tr.append(textCell(row.waybill));
       for(const col of columns)tr.append(textCell((row.raw||{})[col]||''));
       tbody.append(tr);
@@ -258,7 +259,7 @@
   function renderTable() {
     const head=$('rawHeader'),body=$('rawBody');head.replaceChildren();body.replaceChildren();
     const tr=document.createElement('tr');
-    ['작업','지도 상태','수취인/상호','배송 주소','운송장',...columns].forEach(c=>{
+    ['작업','지도 상태','수취인/상호','배송 주소','주소 유형','운송장',...columns].forEach(c=>{
       const th=document.createElement('th');th.textContent=c;tr.append(th);
     });head.append(tr);
     visibleFiltered=displayedRows();currentPage=0;appendPage();
@@ -276,7 +277,8 @@
     say('editName','배송지 · '+rowName(row));
     say('editInfo','운송장 '+(row.waybill||'미등록')+' · 원본 '+row.sheet_name+' '+row.source_row+'행');
     $('editAddress').value=row.registry_address||row.source_address||'';
-    say('locationHint','지도를 움직여 중앙 마커 위치를 맞춘 뒤 저장하세요.');
+    const plan=addressPlan(row);
+    say('locationHint','주소 판별: '+plan.label+' · 검색 후보: '+(plan.queries.join(' / ')||'없음')+'. 지도를 확인하고 중앙 마커를 조정한 뒤 저장하세요.');
     focusSelectedRow(id);
     if(map&&valid(row)){
       map.setCenter(new maps.LatLng(row.lat,row.lng));map.setZoom(17);
@@ -315,34 +317,21 @@
       say('importStatus','기존 배송지와 연결했습니다. 이후 동일 상호의 재배송에도 참조됩니다.');
     }catch(e){say('locationHint','연결 실패: '+e.message);}
   }
-  function geocodingQueries(raw) {
-    const full=String(raw||'').trim();
-    // Strip apartment unit or floor ONLY for the map query. Original address
-    // remains intact in the unique delivery destination registry.
-    const beforeComma=full.split(/[,，]/)[0].trim();
-    const withoutUnit=beforeComma
-      .replace(/\s+\d{1,4}\s*동\s*\d{1,4}\s*호.*$/,'')
-      .replace(/\s+\d{1,4}\s*호.*$/,'')
-      .replace(/\s+\d{1,3}\s*층.*$/,'').trim();
-    return [...new Set([full,beforeComma,withoutUnit].filter(q=>q.length>=4))];
-  }
-  async function lookupCoordinates(address) {
-    for(const query of geocodingQueries(address)) {
-      const coords=await new Promise(resolve=>{
-        let settled=false;
-        const complete=value=>{if(settled)return;settled=true;clearTimeout(timer);resolve(value);};
-        const timer=setTimeout(()=>complete(null),5000);
-        try {
-          maps.Service.geocode({query},(status,response)=>{
-            const first=response?.v2?.addresses?.[0];
-            const lat=Number(first?.y),lng=Number(first?.x);
-            complete(status===maps.Service.Status.OK&&first&&valid({lat,lng})?{lat,lng}:null);
-          });
-        }catch(_){complete(null);}
-      });
-      if(coords)return coords;
+  function addressValues(row, override = null) {
+    const primary = override === null ? (row?.registry_address || row?.source_address || '') : override;
+    const entries = [primary];
+    // A manually corrected address must not be mixed with outdated spreadsheet alternatives.
+    if (override !== null || (row?.registry_address && row.registry_address !== row.source_address)) return entries;
+    for (const [header, value] of Object.entries(row?.raw || {})) {
+      if (/(?:도로명.*주소|지번.*주소)/.test(header.replace(/\s+/g, '')) && String(value || '').trim()) {
+        entries.push(String(value));
+      }
     }
-    return null;
+    return [...new Set(entries.filter(Boolean))];
+  }
+  const addressPlan = row => window.DDSM_Address.analyze(addressValues(row));
+  async function lookupCoordinates(values, manual = false) {
+    return window.DDSM_Address.resolve(maps, values, {manual});
   }
   async function searchAddress(){
     const address=$('editAddress').value.trim();
@@ -351,7 +340,7 @@
     try{
       await ensureMap();
       say('locationHint','네이버 주소를 검색하는 중…');
-      const coords=await lookupCoordinates(address);
+      const coords=await lookupCoordinates(addressValues(null,address),true);
       if(!editorOpen||selected?.id!==selectedId)return;
       if(!coords) {
         say('locationHint','주소를 찾지 못했습니다. 지도를 직접 움직여 지정하세요.');
@@ -359,7 +348,9 @@
       }
       map.setCenter(new maps.LatLng(coords.lat,coords.lng));
       map.setZoom(17);
-      say('locationHint','검색 위치로 이동했습니다. 동·호는 원본에 보존되며, 지도 중앙을 조정해 저장하세요.');
+      say('locationHint',coords.verified
+        ? '주소가 일치합니다. 동·호수는 원본에 보존되며 지도 중앙을 확인한 뒤 저장하세요.'
+        : '주소를 정확히 검증하지 못한 참고 위치입니다. 실제 배송지를 지도에서 확인하고 중앙을 조정한 뒤 저장하세요.');
     }catch(e){say('locationHint',e.message);}
   }
   async function saveCenter() {
@@ -385,19 +376,21 @@
       await ensureMap();
       const targetDate=$('deliveryDate').value;
       let stored=0,attempted=0;
-      const unresolved=rows.filter(x=>!x.located&&x.source_address?.trim().length>=4
+      const unresolved=rows.filter(x=>!x.located&&addressValues(x).some(value=>value.trim().length>=4)
         && !geocodeTried.has(targetDate+'|'+x.id+'|'+x.source_address));
       // Cache lookups per address so recurring shipments do not waste API quota.
       const addressCache=new Map();
       for(const row of unresolved.slice(0,limit)){
         if(targetDate!==$('deliveryDate').value)break;
         attempted++;
-        const address=row.source_address.trim();
+        const values=addressValues(row);
+        const address=values[0]?.trim()||'';
+        const cacheKey=values.join('\u001f');
         geocodeTried.add(targetDate+'|'+row.id+'|'+row.source_address);
-        let coords=addressCache.get(address);
+        let coords=addressCache.get(cacheKey);
         if(coords===undefined){
-          coords=await lookupCoordinates(address);
-          addressCache.set(address,coords);
+          coords=await lookupCoordinates(values);
+          addressCache.set(cacheKey,coords);
         }
         if(coords){
           try {
