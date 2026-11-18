@@ -11,7 +11,7 @@
   <script src="naver-map.js?v=3-shared-sdk" defer></script>
   <script src="delivery-map.js?v=4-empty-day" defer></script>
   <script src="waybill.js?v=1-master-13" defer></script>
-  <script src="app.js?v=16-server-only-scans" defer></script>
+  <script src="app.js?v=17-server-required-enter-login" defer></script>
 </head>
 <body>
   <div id="app" class="app">
@@ -120,7 +120,7 @@
         <button id="identityLoginButton" class="primary-action" type="button">로그인</button>
         <button id="identityRegisterButton" class="secondary-action" type="button">신규 가입</button>
       </div>
-      <button class="identity-local-action" type="submit" id="saveIdentityButton">기존 기기 자료만 보기</button>
+      <button class="identity-local-action" type="button" id="saveIdentityButton">기존 기기 자료만 보기</button>
       <p id="identityInfo" class="dialog-footnote">서버 로그인 후에만 스캔·원본 조회가 가능합니다. 기존 기기 자료 보기는 저장된 배송 목록 열람용입니다.</p>
     </form>
   </dialog>
