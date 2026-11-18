@@ -136,23 +136,19 @@
     });
   }
   function geocode(maps, address, id) {
-    maps.Service.geocode({ query: address }, (status, response) => {
+    root.DDSM_Address.resolve(maps, address, {manual:true}).then(point => {
       if (!active || id !== requestId || selectedAddress !== address) return;
-      if (status !== maps.Service.Status.OK) {
-        hideMap();
-        announce('네이버 주소 검색에 실패했습니다. Geocoding 사용 설정을 확인하거나 네이버 지도에서 검색하세요.', true);
-        return;
-      }
-      const addresses = response && response.v2 && response.v2.addresses;
-      const first = Array.isArray(addresses) ? addresses[0] : null;
-      const lat = first && Number(first.y);
-      const lng = first && Number(first.x);
-      if (!first || !validPoint({ lat, lng })) {
+      if (!point || !validPoint(point)) {
         hideMap();
         announce('일치하는 주소를 찾지 못했습니다. 도로명과 건물번호를 확인하거나 네이버 지도에서 검색하세요.', true);
         return;
       }
-      focusAt({ lat, lng });
+      focusAt({ lat: point.lat, lng: point.lng });
+      if (!point.verified) announce('주소 일치가 확인되지 않은 참고 위치입니다. 지도 중앙 마커를 직접 확인하세요.', true);
+    }).catch(() => {
+      if (!active || id !== requestId || selectedAddress !== address) return;
+      hideMap();
+      announce('주소 검색 오류입니다. 직접 위치를 확인하세요.', true);
     });
   }
   async function resolveAddress(address, storedPoint, id) {
