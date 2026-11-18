@@ -384,3 +384,26 @@
     box-shadow: 0 0 0 3px #00A99B38 !important;
   }
 }
+
+/* Empty day: keep the underlying NAVER map exposed and pannable. */
+.delivery-map-empty.map-ready {
+  inset: auto 12px 12px 12px;
+  display: block;
+  width: fit-content;
+  max-width: calc(100% - 24px);
+  padding: 9px 12px;
+  border: 1px solid #DAE8E2;
+  border-radius: 11px;
+  background: #FFFFFFE8;
+  box-shadow: 0 3px 12px #17345116;
+  color: #466A66;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: left;
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+.delivery-map-empty.map-ready.map-error {
+  color: #A4493D;
+  border-color: #EAC8C3;
+}
