@@ -846,17 +846,26 @@
   }
   // Map and list share one scan-to-current-round operation.
   async function scanWaybill(barcode, onStored) {
+    const freightCode = window.DSDWaybill?.parse(barcode) || {
+      scanned: String(barcode||'').trim(), lookup: String(barcode||'').trim(),
+      master_digits: null, item_suffix: null, kind: 'other'
+    };
     if (!state.user || !state.round) throw Error('로그인 후 회차를 선택하세요.');
     if (state.busy) throw Error('다른 저장 작업 중입니다. 다시 스캔하세요.');
     state.busy = true;
     const currentRound = state.round.id;
     try {
       const response = await API.request('rounds/' + encodeURIComponent(currentRound) + '/scan', {
-        method: 'POST', body: {barcode, expected_revision:state.round.revision}
+        method: 'POST', body: {barcode:freightCode.lookup, expected_revision:state.round.revision}
       });
       applyState(response);
       const scanned = response.scan;
-      if (typeof onStored === 'function') onStored(scanned);
+      if (typeof onStored === 'function') onStored({
+        ...scanned,
+        scanned_barcode: freightCode.scanned,
+        master_waybill_digits: freightCode.master_digits,
+        item_suffix: freightCode.item_suffix
+      });
       // Store first; coordinate lookup is best-effort and never rolls back a scan.
       if (!scanned.already_added && map.isAvailable() && scanned.geocode_address) {
         try {
