@@ -450,6 +450,148 @@ def install_admin(app, connect, require_session=None, throttled=None):
                     db.commit()
         return jsonify(ok=True)
 
+
+    # DDSM work belongs to a driver account and a delivery date, not a center.
+    # An explicit revision prevents a stale browser from silently replacing work.
+    with closing(connect()) as db:
+        db.execute("""CREATE TABLE IF NOT EXISTS ddsm_driver_days (
+            phone TEXT NOT NULL,
+            delivery_date TEXT NOT NULL,
+            revision INTEGER NOT NULL DEFAULT 0,
+            day_json TEXT NOT NULL,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY(phone, delivery_date)
+        )""")
+        db.commit()
+
+    def empty_ddsm_day():
+        return {"selected": 1, "rounds": [{"no": 1, "stops": []}]}
+
+    def validate_ddsm_day(value):
+        """Reject oversized, invalid or unexpected fields, and normalize a work day."""
+        if not isinstance(value, dict):
+            raise ValueError("배송 작업 형식이 올바르지 않습니다.")
+        raw_rounds = value.get("rounds")
+        if not isinstance(raw_rounds, list) or not 1 <= len(raw_rounds) <= 100:
+            raise ValueError("회차는 1~100개여야 합니다.")
+        rounds, seen_rounds, total = [], set(), 0
+        for raw_round in raw_rounds:
+            if not isinstance(raw_round, dict):
+                raise ValueError("회차 형식 오류")
+            number = raw_round.get("no")
+            if type(number) is not int or not 1 <= number <= 100 or number in seen_rounds:
+                raise ValueError("회차 번호 중복 또는 범위 오류")
+            seen_rounds.add(number)
+            raw_stops = raw_round.get("stops")
+            if not isinstance(raw_stops, list) or len(raw_stops) > 5000:
+                raise ValueError("배송지 목록 형식 오류")
+            total += len(raw_stops)
+            if total > 5000:
+                raise ValueError("배송지는 하루 5,000건까지 저장할 수 있습니다.")
+            stops, seen_ids, seen_waybills = [], set(), set()
+            for raw_stop in raw_stops:
+                if not isinstance(raw_stop, dict):
+                    raise ValueError("배송지 형식 오류")
+                uid = raw_stop.get("id")
+                wb = raw_stop.get("waybill")
+                if not isinstance(uid, str) or not 1 <= len(uid) <= 100 or not re.fullmatch(r"[A-Za-z0-9_-]+", uid):
+                    raise ValueError("배송지 식별자 오류")
+                if not isinstance(wb, str) or not 4 <= len(wb) <= 100 or re.search(r"[<>\\x00-\\x1f]", wb):
+                    raise ValueError("운송장번호 오류")
+                if uid in seen_ids or wb in seen_waybills:
+                    raise ValueError("동일 회차에 중복된 배송지 또는 운송장이 있습니다.")
+                seen_ids.add(uid)
+                seen_waybills.add(wb)
+                stop = {"id": uid, "waybill": wb}
+                for key, limit in (("recipient", 100), ("address", 250), ("phone", 25),
+                                   ("memo", 500), ("createdAt", 80)):
+                    val = raw_stop.get(key, "")
+                    if not isinstance(val, str):
+                        raise ValueError("배송지 문자 필드 오류")
+                    stop[key] = val[:limit]
+                stop["status"] = "done" if raw_stop.get("status") == "done" else "pending"
+                items = raw_stop.get("scannedItems", [])
+                if not isinstance(items, list) or len(items) > 999:
+                    raise ValueError("스캔 물품 목록 오류")
+                if any(not isinstance(v, str) or not re.fullmatch(r"[0-9]{3}", v) for v in items):
+                    raise ValueError("물품번호 형식 오류")
+                stop["scannedItems"] = list(dict.fromkeys(items))
+                lat, lng = raw_stop.get("lat"), raw_stop.get("lng")
+                if lat is not None or lng is not None:
+                    if (type(lat) not in (float, int) or type(lng) not in (float, int)
+                            or not -90 <= lat <= 90 or not -180 <= lng <= 180):
+                        raise ValueError("위치 좌표 오류")
+                    stop["lat"], stop["lng"] = lat, lng
+                stops.append(stop)
+            rounds.append({"no": number, "stops": stops})
+        selected = value.get("selected", 1)
+        if type(selected) is not int or selected not in seen_rounds:
+            selected = rounds[0]["no"]
+        return {"selected": selected, "rounds": rounds}
+
+    @app.route("/dsd/api/ddsm/work-day", methods=["GET", "PUT"])
+    def ddsm_work_day():
+        phone = driver_session()
+        if not phone:
+            return jsonify(ok=False, error="배송기사 로그인이 필요합니다."), 401
+        if request.method == "GET":
+            target = request.args.get("date", "")
+            if not valid_date(target):
+                return jsonify(ok=False, error="배송일이 올바르지 않습니다."), 400
+            with closing(connect()) as db:
+                row = db.execute(
+                    "SELECT revision,day_json,updated_at FROM ddsm_driver_days WHERE phone=? AND delivery_date=?",
+                    (phone, target),
+                ).fetchone()
+            day_data = json.loads(row["day_json"]) if row else empty_ddsm_day()
+            response = jsonify(ok=True, date=target, revision=row["revision"] if row else 0,
+                               day=day_data, updated_at=row["updated_at"] if row else None)
+            response.headers["Cache-Control"] = "no-store"
+            return response
+        if request.content_length and request.content_length > 3 * 1024 * 1024:
+            return jsonify(ok=False, error="배송 작업 데이터가 너무 큽니다."), 413
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict) or not valid_date(body.get("date")):
+            return jsonify(ok=False, error="배송일이 올바르지 않습니다."), 400
+        target = body["date"]
+        expected = body.get("revision")
+        if type(expected) is not int or expected < 0:
+            return jsonify(ok=False, error="저장 버전이 올바르지 않습니다."), 400
+        try:
+            normalized = validate_ddsm_day(body.get("day"))
+        except ValueError as exc:
+            return jsonify(ok=False, error=str(exc)), 400
+        payload = json.dumps(normalized, ensure_ascii=False, separators=(",", ":"))
+        if len(payload.encode("utf-8")) > 2 * 1024 * 1024:
+            return jsonify(ok=False, error="배송 작업은 2MB 이하여야 합니다."), 413
+        with closing(connect()) as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute(
+                "SELECT revision,day_json FROM ddsm_driver_days WHERE phone=? AND delivery_date=?",
+                (phone, target),
+            ).fetchone()
+            current_revision = row["revision"] if row else 0
+            if current_revision != expected:
+                db.rollback()
+                response = jsonify(ok=False, error="다른 기기에서 수정되었습니다.",
+                                   date=target, revision=current_revision,
+                                   day=json.loads(row["day_json"]) if row else empty_ddsm_day())
+                response.status_code = 409
+                response.headers["Cache-Control"] = "no-store"
+                return response
+            db.execute(
+                """INSERT INTO ddsm_driver_days (phone,delivery_date,revision,day_json)
+                   VALUES (?,?,?,?)
+                   ON CONFLICT(phone,delivery_date) DO UPDATE SET
+                       revision=excluded.revision,day_json=excluded.day_json,
+                       updated_at=CURRENT_TIMESTAMP""",
+                (phone, target, current_revision + 1, payload),
+            )
+            db.commit()
+        response = jsonify(ok=True, date=target, revision=current_revision + 1, day=normalized)
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
     admin_id = os.getenv("dsd_ADMIN_ID", "admin")
     admin_hash = os.getenv("dsd_ADMIN_PASSWORD_HASH", "")
 
