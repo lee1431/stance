@@ -292,3 +292,14 @@
 @media (max-height: 600px) and (orientation: landscape) {
   .delivery-map-stage { height: 65dvh; min-height: 230px; }
 }
+
+.edit-order-select {
+  width: 100%;
+  min-height: 47px;
+  padding: 11px;
+  border: 1px solid #C9E0D7;
+  border-radius: 11px;
+  background: #DDF3F0;
+  color: #086774;
+  font-weight: 850;
+}
