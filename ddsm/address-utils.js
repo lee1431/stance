@@ -6,10 +6,10 @@
   const REGION = /^(?:서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주|[가-힣0-9]+(?:도|시|군|구|읍|면))$/;
   // An apartment name is a place candidate, but its dong/ho details are NOT
   // geocodable building numbers. The original full address stays untouched.
-  const COMPLEX_NAME = /(?:아파트|오피스텔|빌라|맨션|주상복합|단지|apt\\.?$)/i;
-  const RESIDENTIAL_TAIL = /(?:[\\s,，(]+)(?:제?\\d{1,4}\\s*동(?:\\s*제?\\d{1,5}\\s*호)?|\\d{1,4}\\s*[-–]\\s*\\d{1,5}\\s*호?|제?\\d{1,5}\\s*호)\\s*\\)?\\s*$/i;
+  const COMPLEX_NAME = /(?:아파트|오피스텔|빌라|맨션|주상복합|단지|apt\.?$)/i;
+  const RESIDENTIAL_TAIL = /[\s,，(]+(?:제?\d{1,4}\s*동(?:\s*제?\d{1,5}\s*호)?|\d{1,4}\s*[-–]\s*\d{1,5}\s*호?|제?\d{1,5}\s*호)\s*\)?\s*$/i;
   const NEIGHBORHOOD = /(?:동|리|가)$/;
-  const normalizeName = value => String(value || '').normalize('NFKC').replace(/[\\s()·._-]+/g, '').toLowerCase();
+  const normalizeName = value => String(value || '').normalize('NFKC').replace(/[\s()·._-]+/g, '').toLowerCase();
   const trim = value => String(value || '').normalize('NFKC').replace(/\s+/g, ' ').trim();
   function occurrences(value, pattern, type) {
     const matches = [];
