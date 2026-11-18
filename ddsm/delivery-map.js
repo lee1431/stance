@@ -6,10 +6,11 @@
     && p.lat >= -90 && p.lat <= 90 && p.lng >= -180 && p.lng <= 180;
   const key = s => String(s.roundNo) + ':' + String(s.id);
   let map = null, maps = null, currentDate = '', markers = new Map();
-  let selectedSignature = '', initialFitDone = false, active = false, loadPromise = null;
+  let selectedSignature = '', initialFitDone = false, userInteracted = false, active = false, loadPromise = null;
   let onSelect = null, onGeocoded = null, geocodeGeneration = 0;
   let failed = new Set();
   let requestQueue = [], working = 0;
+  const inFlight = new Set();
 
   function status(message, error = false) {
     const el = $('deliveryMapEmpty');
@@ -81,7 +82,7 @@
       $('deliveryMapCount').textContent = '지도 표시 ' + markers.size + '곳 / 전체 ' + stops.length + '건'
         + (missing ? ' · 위치 미확인 ' + missing + '건' : '');
     }
-    if (!initialFitDone && markers.size) {
+    if (markers.size && !userInteracted) {
       initialFitDone = true;
       requestAnimationFrame(fit);
     }
@@ -96,6 +97,7 @@
       zoomControlOptions: { position: n.Position.TOP_RIGHT },
       mapDataControl: false, scaleControl: false, logoControl: true
     });
+    n.Event.addListener(map, 'dragstart', () => { userInteracted = true; });
   }
   function queueGeocodes(stops, date) {
     // Revisions of order or completion must not invalidate geocoding for this day.
@@ -103,7 +105,7 @@
     const existing = new Set(requestQueue.map(s => s.id + ':' + s.roundNo));
     for (const s of stops) {
       const lookup = key(s) + ':' + s.address;
-      if (!s.address || s.address.length < 4 || valid(s) || failed.has(lookup) || existing.has(key(s))) continue;
+      if (!s.address || s.address.length < 4 || valid(s) || failed.has(lookup) || existing.has(key(s)) || inFlight.has(lookup)) continue;
       requestQueue.push({ ...s, date, lookup, generation });
       existing.add(key(s));
     }
@@ -115,9 +117,11 @@
       const s = requestQueue.shift();
       if (!s || s.generation !== geocodeGeneration || s.date !== currentDate) continue;
       working++;
+      inFlight.add(s.lookup);
       try {
         maps.Service.geocode({ query: s.address }, (responseStatus, response) => {
           working--;
+          inFlight.delete(s.lookup);
           if (s.generation === geocodeGeneration && s.date === currentDate) {
             const first = response && response.v2 && Array.isArray(response.v2.addresses)
               ? response.v2.addresses[0] : null;
@@ -135,6 +139,7 @@
         });
       } catch (_) {
         working--;
+        inFlight.delete(s.lookup);
         failed.add(s.lookup);
       }
     }
@@ -146,6 +151,7 @@
     if (currentDate !== date) {
       currentDate = date;
       initialFitDone = false;
+      userInteracted = false;
       ++geocodeGeneration;
       requestQueue = [];
       failed = new Set();
@@ -184,6 +190,7 @@
     ++geocodeGeneration;
     requestQueue = [];
     initialFitDone = false;
+    userInteracted = false;
     selectedSignature = '';
   }
   root.DDSM_DeliveryMap = Object.freeze({ render, pause, fit });
