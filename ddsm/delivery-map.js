@@ -19,18 +19,29 @@
     el.classList.remove('hidden');
     el.classList.toggle('map-error', error);
   }
+  // NAVER icon content is HTML: always escape names entered by users.
+  const escapeHtml = value => String(value).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[ch]);
+  function recipientName(stop) {
+    const full = String(stop.recipient || '').trim();
+    if (!full) return '미입력';
+    const letters = Array.from(full);
+    return letters.length > 8 ? letters.slice(0, 8).join('') + '…' : full;
+  }
+  function markerTitle(stop) {
+    return String(stop.position) + '번 · ' + (String(stop.recipient || '').trim() || '수취인 미입력');
+  }
   function icon(stop) {
     const complete = stop.status === 'done';
     const color = complete ? '#16855B' : '#087F8C';
     const number = String(stop.position);
-    const label = String(stop.roundNo) + '회차 ' + number + '번';
-    // The custom marker contains no customer details, only trusted integer indices.
     const content = '<div class="ddsm-map-marker' + (complete ? ' is-done' : '')
-      + '" style="--marker-color:' + color + '" title="' + label + '">'
-      + '<span class="ddsm-map-pin-order">' + number + '</span>'
-      + '<span class="ddsm-map-pin-round">' + Number(stop.roundNo) + '차</span>'
+      + '" style="--marker-color:' + color + '" title="' + escapeHtml(markerTitle(stop)) + '">'
+      + '<span class="ddsm-map-pin-order">' + escapeHtml(number) + '</span>'
+      + '<span class="ddsm-map-pin-name">' + escapeHtml(recipientName(stop)) + '</span>'
       + '</div>';
-    return { content, size: new maps.Size(51, 56), anchor: new maps.Point(25, 52) };
+    return { content, size: new maps.Size(94, 64), anchor: new maps.Point(47, 61) };
   }
   function boundsAll() {
     if (!map || !maps) return;
@@ -61,7 +72,7 @@
       const coords = new maps.LatLng(s.lat, s.lng);
       let marker = markers.get(id);
       if (!marker) {
-        marker = new maps.Marker({ map, position: coords, icon: icon(s), clickable: true, title: s.roundNo + '회차 ' + s.position + '번' });
+        marker = new maps.Marker({ map, position: coords, icon: icon(s), clickable: true, title: markerTitle(s) });
         maps.Event.addListener(marker, 'click', () => {
           if (active && typeof onSelect === 'function') onSelect(s.id, s.roundNo);
         });
@@ -69,6 +80,7 @@
       } else {
         marker.setPosition(coords);
         marker.setIcon(icon(s));
+        if (typeof marker.setTitle === 'function') marker.setTitle(markerTitle(s));
       }
     }
     for (const [id, marker] of markers) {
@@ -171,7 +183,7 @@
       });
     }
     const signature = date + '|' + stops.map(s => [
-      s.roundNo, s.id, s.position, s.status, s.lat, s.lng, s.address
+      s.roundNo, s.id, s.position, s.status, s.lat, s.lng, s.address, s.recipient
     ].join(':')).join('|');
     if (signature === selectedSignature && map) {
       maps.Event.trigger(map, 'resize');
