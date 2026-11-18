@@ -448,7 +448,7 @@
   async function lookupWaybill(raw, dateKey) {
     const parsed = window.DDSM_Waybill?.parse(raw);
     if (!parsed?.valid) throw Error('운송장번호는 기본 13자리 또는 물품 16자리여야 합니다.');
-    if (!driverToken) throw Error('서버 조회를 위해 승인된 배송기사 계정으로 로그인하세요.');
+    if (!driverToken) throw Error('서버 조회를 위해 휴대폰 번호로 로그인하세요.');
     const response = await fetch(
       DRIVER_API_BASE+'ddsm/waybill?date='+encodeURIComponent(dateKey)
         +'&barcode='+encodeURIComponent(parsed.scanned),
@@ -886,7 +886,7 @@
         throw new Error(result?.error || '인증 API 연결 또는 응답을 확인하세요.');
       }
       // DDSM courier tokens are in memory only, never browser storage.
-      // Lookup requires center approval and does not synchronize local stops.
+      // Login is required; it does not synchronize local delivery stops.
       if (action === 'login' && typeof result.access_token !== 'string')
         throw new Error('배송기사 인증 토큰이 없습니다. S10의 API를 업데이트하세요.');
       const previous = identityPhone;
@@ -907,7 +907,7 @@
         requestAnimationFrame(openScan);
       }
       toast(action === 'register'
-        ? '가입 완료 · 센터 승인 후 로그인하면 원본 조회 가능'
+        ? '가입 완료 · 로그인 후 운송장 스캔 가능'
         : '배송기사 로그인 완료 · 이제 스캔 시 S10 원본 조회');
     } catch (e) {
       error.textContent = e.name === 'AbortError'
