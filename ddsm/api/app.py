@@ -55,6 +55,7 @@ def create_app() -> Flask:
         conn = sqlite3.connect(str(db_path), timeout=10)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA busy_timeout=10000")
+        conn.execute("PRAGMA foreign_keys=ON")
         return conn
 
     with closing(connect()) as db:
