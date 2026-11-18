@@ -343,7 +343,7 @@ def install_admin(app, connect, require_session=None, throttled=None):
     # DDSM drivers receive scoped bearer tokens, never the administrator token.
     # Only explicitly allowed phone accounts may read recipient information.
     allowed_drivers = {
-        re.sub(r"\\D", "", number) for number in
+        re.sub(r"\D", "", number) for number in
         os.getenv("dsd_DRIVER_PHONES", "").split(",") if number.strip()
     }
     with closing(connect()) as db:
@@ -376,7 +376,7 @@ def install_admin(app, connect, require_session=None, throttled=None):
         data = request.get_json(silent=True)
         if not isinstance(data, dict):
             return jsonify(ok=False, error="로그인 정보를 확인하세요."), 400
-        phone = re.sub(r"\\D", "", str(data.get("phone", "")))
+        phone = re.sub(r"\D", "", str(data.get("phone", "")))
         password = data.get("password")
         if not re.fullmatch(r"01[016789][0-9]{7,8}", phone) or not isinstance(password, str) or not 1 <= len(password) <= 128:
             return jsonify(ok=False, error="휴대폰 번호 또는 비밀번호를 확인하세요."), 400
@@ -409,7 +409,7 @@ def install_admin(app, connect, require_session=None, throttled=None):
         value = request.args.get("barcode", "")
         if not valid_date(target) or not isinstance(value, str) or len(value) > 40:
             return jsonify(ok=False, error="배송일 또는 바코드 형식이 잘못되었습니다."), 400
-        digits = re.sub(r"[\\s-]", "", value)
+        digits = re.sub(r"[\s-]", "", value)
         if not re.fullmatch(r"(?:[0-9]{13}|[0-9]{16})", digits):
             return jsonify(ok=False, error="기본 운송장 13자리 또는 물품 바코드 16자리를 입력하세요."), 400
         master = digits[:13]
