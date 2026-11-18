@@ -8,6 +8,9 @@
   // geocodable building numbers. The original full address stays untouched.
   const COMPLEX_NAME = /(?:아파트|오피스텔|빌라|맨션|주상복합|단지|apt\.?$)/i;
   const RESIDENTIAL_TAIL = /[\s,，(]+(?:제?\d{1,4}\s*동(?:\s*제?\d{1,5}\s*호)?|\d{1,4}\s*[-–]\s*\d{1,5}\s*호?|제?\d{1,5}\s*호)\s*\)?\s*$/i;
+  // Some exports attach the unit directly to the complex name:
+  // '영진브랑아파트101-306' or '주공3단지아파트307동302호'.
+  const ATTACHED_COMPLEX_UNIT = /((?:아파트|오피스텔|빌라|맨션|주상복합|단지))(?:제?\d{1,4}\s*동(?:\s*제?\d{1,5}\s*호)?|\d{1,4}\s*[-–]\s*\d{1,5}\s*호?)\s*$/i;
   const NEIGHBORHOOD = /(?:동|리|가)$/;
   const normalizeName = value => String(value || '').normalize('NFKC').replace(/[\s()·._-]+/g, '').toLowerCase();
   const trim = value => String(value || '').normalize('NFKC').replace(/\s+/g, ' ').trim();
@@ -37,7 +40,7 @@
     // Remove a terminal apartment unit such as '307-302호', '307동 302호',
     // '101동' or '302호' ONLY when the input names a residential building.
     for (let i = 0; i < 2; i++) {
-      const next = trim(base.replace(RESIDENTIAL_TAIL, ''));
+      const next = trim(base.replace(RESIDENTIAL_TAIL, '').replace(ATTACHED_COMPLEX_UNIT, '$1'));
       if (next === base) break;
       base = next;
     }
