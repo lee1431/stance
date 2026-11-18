@@ -218,6 +218,7 @@
     say('importStatus','원본 엑셀을 분석하고 모든 행을 저장하는 중…');
     try {
       const result=await post('admin/import',body);
+      geocodeTried.clear();
       await loadDay();
       say('importStatus',file.name+' · '+result.imported+'행 반영 · 신규 '+result.added+'건 / 갱신 '+result.updated+'건');
     }catch(e){say('importStatus','업로드 실패: '+e.message);}
@@ -380,6 +381,7 @@
     }catch(e){say('locationHint','위치 저장 실패: '+e.message);}
   }
   let geocodeRunning=false;
+  const geocodeTried=new Set();
   async function autoGeocode(limit=60){
     if(geocodeRunning)return;
     geocodeRunning=true;
@@ -387,13 +389,15 @@
       await ensureMap();
       const targetDate=$('deliveryDate').value;
       let stored=0,attempted=0;
-      const unresolved=rows.filter(x=>!x.located&&x.source_address?.trim().length>=4);
+      const unresolved=rows.filter(x=>!x.located&&x.source_address?.trim().length>=4
+        && !geocodeTried.has(targetDate+'|'+x.id+'|'+x.source_address));
       // Cache lookups per address so recurring shipments do not waste API quota.
       const addressCache=new Map();
       for(const row of unresolved.slice(0,limit)){
         if(targetDate!==$('deliveryDate').value)break;
         attempted++;
         const address=row.source_address.trim();
+        geocodeTried.add(targetDate+'|'+row.id+'|'+row.source_address);
         let coords=addressCache.get(address);
         if(coords===undefined){
           coords=await lookupCoordinates(address);
