@@ -104,7 +104,9 @@ def fixed_dsd_start(headers):
     The supplied Excel example has a leading numeric '1' column before the date
     in some exports. It must not shift recipient and address positions.
     """
-    for start in range(min(4, max(0, len(headers) - len(FIXED_DSD_HEADERS)) + 1)):
+    if len(headers) < len(FIXED_DSD_HEADERS):
+        return None
+    for start in range(min(4, len(headers) - len(FIXED_DSD_HEADERS)) + 1):
         if all(
             compact(headers[start + i]) == compact(label)
             for i, label in enumerate(FIXED_DSD_HEADERS)
