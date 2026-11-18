@@ -1,9 +1,9 @@
-/* DDSM daily / scan / delivery. Scans require authenticated S10 manifest lookup; local delivery lists remain intact. */
+/* DDSM daily / scan / delivery. Scans require authenticated G10 manifest lookup; local delivery lists remain intact. */
 (function () {
   'use strict';
 
-  const AUTH_API_BASE = 'https://mrdindoin.ddns.net/dsd/api/auth/';
-  const DRIVER_API_BASE = 'https://mrdindoin.ddns.net/dsd-center-api/';
+  const AUTH_API_BASE = 'https://mrdindoin.ddns.net/ddsm/api/auth/';
+  const DRIVER_API_BASE = 'https://mrdindoin.ddns.net/ddsm/api/driver/';
   const LEGACY_STORAGE_KEY = 'ddsm:data:v1';
   const IDENTITY_KEY = 'ddsm:identity:phone:v1';
   const MIGRATION_KEY = 'ddsm:identity:migrated-legacy:v1';
@@ -28,7 +28,7 @@
   let resumeScanAfterLogin = false;
   // Central server owns day state; localStorage remains a recovery backup.
   let syncedDate = '', serverRevision = 0, syncBusy = false, syncPending = false, syncBlocked = false, syncEpoch = 0;
-  const WORK_API = DRIVER_API_BASE + 'ddsm/work-day';
+  const WORK_API = DRIVER_API_BASE + 'work-day';
   function archiveLocal(dayKey) {
     try {
       const item = data.days[dayKey];
@@ -42,7 +42,7 @@
       headers:{Authorization:'Bearer '+token},credentials:'omit',cache:'no-store'
     });
     const body = await res.json().catch(()=>null);
-    if (res.status===404) throw Error('S10 배송 작업 API가 없습니다. 서버 admin.py 업데이트 및 재시작이 필요합니다.');
+    if (res.status===404) throw Error('G10 배송 작업 API가 없습니다. 서버 admin.py 업데이트 및 재시작이 필요합니다.');
     if (!res.ok || body?.ok!==true || !body.day) throw Error(body?.error||'서버 배송 목록 조회 실패');
     return body;
   }
@@ -521,7 +521,7 @@
   function openScan() {
     if (driverToken && (syncedDate !== date || syncBlocked)) { toast('서버 배송 목록 동기화 후 스캔하세요.');return; }
     if (!driverToken) {
-      // No silent local registration. A scanned barcode must resolve on S10.
+      // No silent local registration. A scanned barcode must resolve on G10.
       resumeScanAfterLogin = true;
       openIdentityDialog();
       $('identityError').textContent = '운송장 조회를 위해 배송기사 로그인이 필요합니다. 로그인 후 스캔이 열립니다.';
@@ -530,7 +530,7 @@
     }
     const dialog = $('scanDialog');
     const input = $('waybillInput');
-    $('scanResult').textContent = date+' · '+round().no+'회차 · S10 서버 원본 조회 후 등록';
+    $('scanResult').textContent = date+' · '+round().no+'회차 · G10 서버 원본 조회 후 등록';
     input.value = '';
     // Handheld barcode readers act like physical keyboards. Keep input focused
     // but suppress the soft keyboard until the user explicitly taps to type.
@@ -550,7 +550,7 @@
     if (!parsed?.valid) throw Error('운송장번호는 기본 13자리 또는 물품 16자리여야 합니다.');
     if (!driverToken) throw Error('서버 조회를 위해 휴대폰 번호로 로그인하세요.');
     const response = await fetch(
-      DRIVER_API_BASE+'ddsm/waybill?date='+encodeURIComponent(dateKey)
+      DRIVER_API_BASE+'waybill?date='+encodeURIComponent(dateKey)
         +'&barcode='+encodeURIComponent(parsed.scanned),
       {method:'GET',headers:{Authorization:'Bearer '+driverToken},credentials:'omit',cache:'no-store'}
     );
@@ -977,7 +977,7 @@
     const timeout = setTimeout(() => controller.abort(), 8000);
     try {
       const response = await fetch(
-        action === 'login' ? DRIVER_API_BASE + 'ddsm/login' : AUTH_API_BASE + 'register', {
+        action === 'login' ? AUTH_API_BASE + 'login' : AUTH_API_BASE + 'register', {
         method: 'POST', credentials: 'omit',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, password }),
@@ -986,8 +986,8 @@
       const result = await response.json().catch(() => null);
       if (response.status === 404) {
         throw new Error(action === 'login'
-          ? 'S10 로그인 API가 없습니다(404). 서버 admin.py를 업데이트하고 Waitress를 재시작하세요.'
-          : '가입 API가 없습니다(404). S10 인증 라우트를 확인하세요.');
+          ? 'G10 로그인 API가 없습니다(404). 서버 admin.py를 업데이트하고 Waitress를 재시작하세요.'
+          : '가입 API가 없습니다(404). G10 인증 라우트를 확인하세요.');
       }
       if (!response.ok || !result || result.ok !== true || result.phone !== phone) {
         throw new Error(result?.error || '인증 API 연결 또는 응답을 확인하세요.');
@@ -995,7 +995,7 @@
       // DDSM courier tokens are in memory only, never browser storage.
       // Login is required; it does not synchronize local delivery stops.
       if (action === 'login' && typeof result.access_token !== 'string')
-        throw new Error('배송기사 인증 토큰이 없습니다. S10의 API를 업데이트하세요.');
+        throw new Error('배송기사 인증 토큰이 없습니다. G10의 API를 업데이트하세요.');
       const previous = identityPhone;
       if (previous && previous !== phone &&
           !confirm('다른 번호의 로컬 작업으로 전환합니다. 계속할까요?')) return;
@@ -1018,11 +1018,11 @@
       }
       toast(action === 'register'
         ? '가입 완료 · 로그인 후 운송장 스캔 가능'
-        : '배송기사 로그인 완료 · 이제 스캔 시 S10 원본 조회');
+        : '배송기사 로그인 완료 · 이제 스캔 시 G10 원본 조회');
     } catch (e) {
       error.textContent = e.name === 'AbortError'
         ? '서버 응답 시간이 초과되었습니다. API 상태를 확인하세요.'
-        : e instanceof TypeError ? 'S10 API 연결 또는 CORS 오류입니다. API 주소와 Origin 허용 설정을 확인하세요.'
+        : e instanceof TypeError ? 'G10 API 연결 또는 CORS 오류입니다. API 주소와 Origin 허용 설정을 확인하세요.'
         : e.message || 'API 연결에 실패했습니다.';
       error.classList.remove('hidden');
     } finally {
