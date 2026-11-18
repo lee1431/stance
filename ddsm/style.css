@@ -360,3 +360,27 @@
   #scanDialog .secondary-action { margin-top: 8px; }
   #scanDialog .scan-footnote { display: none; }
 }
+
+/* Brief scan acknowledgment: flash the whole scan field, regardless of match. */
+@keyframes ddsm-scan-field-flash {
+  0%, 100% { border-color: #D2E4DE; box-shadow: none; background: #FFFFFF; }
+  15%, 58% { border-color: #00A99B; box-shadow: 0 0 0 4px #00A99B38, 0 0 15px #00A99B55; background: #ECFFF8; }
+}
+@keyframes ddsm-scan-form-flash {
+  0%, 100% { box-shadow: none; }
+  20%, 62% { box-shadow: 0 0 0 5px #00A99B35; }
+}
+#scanDialog.scan-read-flash #waybillInput {
+  animation: ddsm-scan-field-flash 540ms ease-out both;
+}
+#scanDialog.scan-read-flash #scanForm {
+  border-radius: 13px;
+  animation: ddsm-scan-form-flash 540ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  #scanDialog.scan-read-flash #waybillInput {
+    animation: none !important;
+    border-color: #00A99B !important;
+    box-shadow: 0 0 0 3px #00A99B38 !important;
+  }
+}
