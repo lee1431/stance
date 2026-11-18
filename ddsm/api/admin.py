@@ -29,15 +29,28 @@ MAX_SHEETS = 20
 # Canonical labels: unrecognized spreadsheet columns remain available in raw_json.
 ALIASES = {
     "waybill": ["운송장번호", "운송장", "송장번호", "송장", "화물번호", "바코드", "trackingnumber", "trackingno", "waybill", "invoice"],
-    "address": ["수취인주소", "수령인주소", "받는분주소", "받는사람주소", "배송지주소", "도착주소", "배달주소", "배송주소", "주소", "도로명주소", "지번주소", "destinationaddress"],
-    "recipient": ["수취인명", "수취인", "수령인명", "수령인", "받는분", "받는사람", "받을사람", "상호명", "거래처명", "업체명", "납품처", "배송처", "고객명", "recipient", "consignee", "receiver", "customer"],
-    "sender": ["발송인명", "발송인", "보내는분", "보내는사람", "송하인", "출고처", "송화인", "sender", "shipper"],
+    "address": ["수화주도로명주소", "수화주지번주소", "수취인주소", "수령인주소", "받는분주소", "받는사람주소", "배송지주소", "도착주소", "배달주소", "배송주소", "주소", "도로명주소", "지번주소", "destinationaddress"],
+    "recipient": ["수화주", "수취인명", "수취인", "수령인명", "수령인", "받는분", "받는사람", "받을사람", "상호명", "거래처명", "업체명", "납품처", "배송처", "고객명", "recipient", "consignee", "receiver", "customer"],
+    "sender": ["발화주", "발송인명", "발송인", "보내는분", "보내는사람", "송하인", "출고처", "송화인", "sender", "shipper"],
     "phone": ["수취인전화번호", "수취인연락처", "받는분전화", "받는분연락처", "연락처", "핸드폰", "휴대폰번호", "전화번호", "수령인전화", "receiverphone", "consigneephone"],
     "item": ["물품명", "품목명", "상품명", "제품명", "내용품", "내용물", "품명", "품목", "itemname", "productname", "description"],
     "cod": ["착불금액", "착불비용", "착불운임", "착불액", "받을금액", "수금액", "codamount", "cod"],
     "driver": ["배정기사", "담당기사", "배송기사", "배달기사", "기사명", "배정자", "driver"],
     "status": ["배송상태", "배송여부", "완료여부", "배송완료", "처리상태", "상태", "deliverystatus"],
 }
+# Known freight export: column A is an index, B-R are fixed fields.
+FIXED_FREIGHT_HEADERS = (
+    "일자", "발송지", "운송장번호", "발화주", "수화주",
+    "품명", "포장", "상품", "수량", "상태", "현불운임",
+    "착불운임", "출고제비용", "합계", "특기사항",
+    "수화주 지번주소", "수화주 도로명주소",
+)
+FIXED_FREIGHT_FIELDS = {
+    "waybill": 2, "sender": 3, "recipient": 4, "item": 5,
+    "quantity": 8, "status": 9, "cod": 11,
+    "lot_address": 15, "road_address": 16,
+}
+
 LABEL_INDEX = {}
 for _field, _names in ALIASES.items():
     for _name in _names:
@@ -92,6 +105,18 @@ def unique_headers(values):
     return result
 
 
+def fixed_freight_start(headers):
+    if len(headers) < len(FIXED_FREIGHT_HEADERS):
+        return None
+    for start in range(min(4, len(headers) - len(FIXED_FREIGHT_HEADERS)) + 1):
+        if all(
+            compact(headers[start + i]) == compact(label)
+            for i, label in enumerate(FIXED_FREIGHT_HEADERS)
+        ):
+            return start
+    return None
+
+
 def parse_grid(sheet_name, rows):
     sample = list(islice(rows, 15))
     if not sample:
@@ -109,7 +134,14 @@ def parse_grid(sheet_name, rows):
     if len(raw_headers) > MAX_COLUMNS:
         raise ValueError(f"{sheet_name}: 열이 {MAX_COLUMNS}개를 초과합니다.")
     headers = unique_headers(raw_headers)
-    fields = pick_columns(headers)
+    fixed = fixed_freight_start(headers)
+    fields = ({name: fixed + index for name, index in FIXED_FREIGHT_FIELDS.items()}
+              if fixed is not None else pick_columns(headers))
+    if fixed is None:
+        for index, title in enumerate(headers):
+            if "도로명" in title and "주소" in title:
+                fields["address"] = index
+                break
     outputs = []
     def walk():
         for offset, row in enumerate(sample[header_at + 1:], start=header_at + 2):
@@ -127,6 +159,8 @@ def parse_grid(sheet_name, rows):
             continue
         row = dict(zip(headers, cells))
         standard = {field: cells[i] for field, i in fields.items()}
+        if fixed is not None:
+            standard["address"] = standard["road_address"] or standard["lot_address"]
         outputs.append({"sheet": sheet_name, "row_number": row_number, "raw": row, "standard": standard})
         if len(outputs) > MAX_ROWS:
             raise ValueError("파일당 최대 15,000행을 초과했습니다.")
