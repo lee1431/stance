@@ -496,7 +496,7 @@ def install_admin(app, connect, require_session=None, throttled=None):
                 wb = raw_stop.get("waybill")
                 if not isinstance(uid, str) or not 1 <= len(uid) <= 100 or not re.fullmatch(r"[A-Za-z0-9_-]+", uid):
                     raise ValueError("배송지 식별자 오류")
-                if not isinstance(wb, str) or not 4 <= len(wb) <= 100 or re.search(r"[<>\\x00-\\x1f]", wb):
+                if not isinstance(wb, str) or not 4 <= len(wb) <= 100 or re.search(r"[<>\x00-\x1f]", wb):
                     raise ValueError("운송장번호 오류")
                 if uid in seen_ids or wb in seen_waybills:
                     raise ValueError("동일 회차에 중복된 배송지 또는 운송장이 있습니다.")
