@@ -320,7 +320,15 @@
     const stop = stops().find(x => x.id === id);
     if (!stop) return;
     editingId = id;
-    $('editWaybill').textContent = '운송장 ' + stop.waybill;
+    $('editWaybill').textContent = '운송장 ' + stop.waybill + ' · ' + round().no + '회차';
+    const orderPicker = $('editOrderSelect');
+    orderPicker.replaceChildren();
+    stops().forEach((_, index) => {
+      const opt = node('option', '', (index + 1) + '번');
+      opt.value = String(index);
+      orderPicker.append(opt);
+    });
+    orderPicker.value = String(stops().findIndex(x => x.id === id));
     $('recipientInput').value = stop.recipient;
     $('addressInput').value = stop.address;
     $('phoneInput').value = stop.phone;
@@ -335,6 +343,11 @@
     const stop = stops().find(x => x.id === editingId);
     if (!stop) return;
     const before = { recipient: stop.recipient, address: stop.address, phone: stop.phone, memo: stop.memo, lat: stop.lat, lng: stop.lng };
+    const list = stops();
+    const oldIndex = list.findIndex(x => x.id === editingId);
+    const wantedIndex = Number($('editOrderSelect').value);
+    const moveIndex = Number.isInteger(wantedIndex) && wantedIndex >= 0
+      && wantedIndex < list.length ? wantedIndex : oldIndex;
     stop.recipient = clean($('recipientInput').value, 100);
     stop.address = clean($('addressInput').value, 250);
     stop.phone = clean($('phoneInput').value, 25);
@@ -348,7 +361,18 @@
       delete stop.lat;
       delete stop.lng;
     }
-    if (!persist()) { Object.assign(stop, before); return; }
+    if (oldIndex >= 0 && moveIndex !== oldIndex) {
+      list.splice(oldIndex, 1);
+      list.splice(moveIndex, 0, stop);
+    }
+    if (!persist()) {
+      Object.assign(stop, before);
+      if (oldIndex >= 0 && moveIndex !== oldIndex) {
+        list.splice(moveIndex, 1);
+        list.splice(oldIndex, 0, stop);
+      }
+      return;
+    }
     $('editDialog').close();
     render();
     toast('배송 정보를 저장했습니다.');
