@@ -6,10 +6,10 @@
 <meta name="theme-color" content="#F8F7F4">
 <title>DDSM | 센터 관리콘솔</title>
 <link rel="icon" href="../favicon.svg?v=vehicle-20261118" type="image/svg+xml">
-<link rel="stylesheet" href="admin.css?v=3-master">
+<link rel="stylesheet" href="admin.css?v=4-address-entry">
 <script src="../naver-map.js?v=3-shared-sdk" defer></script>
 <script src="../address-utils.js?v=3-attached-units" defer></script>
-<script src="admin.js?v=7-shared-master" defer></script>
+<script src="admin.js?v=8-address-entry" defer></script>
 </head>
 <body>
 <div class="shell">
@@ -89,6 +89,19 @@
    <p id="tableInfo">당일 원본 파일을 업로드하면 모든 행이 표시됩니다.</p>
    <button id="showMoreBtn" type="button" hidden>다음 250행 더 보기</button>
   </section>
+  <dialog id="addressDialog" class="address-dialog" aria-labelledby="addressDialogTitle">
+   <form id="addressForm">
+    <h2 id="addressDialogTitle">배송 주소 입력</h2>
+    <p id="addressRowInfo"></p>
+    <label for="newAddress">배송 주소</label>
+    <input id="newAddress" type="text" placeholder="도로명 또는 지번 주소" maxlength="250" required autofocus>
+    <p id="addressError" class="error" role="alert"></p>
+    <div class="address-dialog-actions">
+     <button id="cancelAddressBtn" type="button">취소</button>
+     <button id="saveAddressBtn" type="submit" class="primary">주소 저장</button>
+    </div>
+   </form>
+  </dialog>
  </main>
 </div>
 </body>

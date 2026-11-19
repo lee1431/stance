@@ -11,3 +11,20 @@
 
 .map-pin-save-bar{position:absolute;left:50%;top:50%;transform:translate(-50%,74px);z-index:25}
 .map-pin-save-bar button{border-radius:999px;padding:12px 20px;box-shadow:0 7px 23px #1734513A}
+
+.row-actions { display: flex; align-items: center; gap: 6px; }
+.row-actions button { padding: 8px 9px; white-space: nowrap; }
+.address-dialog {
+  width: min(460px, calc(100% - 24px));
+  border: 1px solid #DEE9E4;
+  border-radius: 16px;
+  padding: 20px;
+  color: var(--navy);
+}
+.address-dialog::backdrop { background: #17345166; }
+.address-dialog form { display: grid; gap: 8px; }
+.address-dialog h2, .address-dialog p { margin: 0; }
+.address-dialog label { margin-top: 8px; font-size: 13px; font-weight: 800; }
+.address-dialog p { font-size: 13px; overflow-wrap: anywhere; }
+#addressError:empty { display: none; }
+.address-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }

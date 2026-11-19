@@ -10,6 +10,7 @@
   let authToken = '', rows = [], columns = [], map = null, maps = null, markers = [], selected = null;
   let updateSeq = 0, mapLoading = null, editorOpen = false, fitOnce = false;
   let currentPage = 0, visibleFiltered = [];
+  let addressRow = null, autoLocationWrite = null;
   const chunkSize = 250;
   const valid = p => Number.isFinite(p.lat) && Number.isFinite(p.lng)
     && p.lat >= -90 && p.lat <= 90 && p.lng >= -180 && p.lng <= 180;
@@ -200,7 +201,7 @@
       try { await ensureMap();drawMap();} catch (_) {}
       if(token!==updateSeq)return;
       // Use a bounded number of address queries; avoids unexpectedly exhausting map quota.
-      if(rows.length&&rows.some(x=>!x.located&&x.source_address)) autoGeocode(60);
+      if(rows.length&&rows.some(x=>!x.located&&(x.registry_address||x.source_address))) autoGeocode(60);
     } catch(e){if(token===updateSeq)say('importStatus','조회 실패: '+e.message);}
   }
   async function importExcel(event) {
@@ -228,7 +229,7 @@
       if(filter==='missing'&&r.located)return false;
       if(filter==='mapped'&&!r.located)return false;
       if(!q)return true;
-      return [r.waybill,r.business_name,r.source_address,
+      return [r.waybill,r.business_name,r.registry_address,r.source_address,
         ...Object.values(r.raw||{})].some(x=>String(x||'').toLocaleLowerCase().includes(q));
     });
   }
@@ -237,10 +238,14 @@
     for(const row of visibleFiltered.slice(currentPage*chunkSize,(currentPage+1)*chunkSize)){
       const tr=document.createElement('tr');tr.dataset.id=String(row.id);
       const action=document.createElement('td');
+      const actions=document.createElement('div');actions.className='row-actions';
       const button=document.createElement('button');button.type='button';
       button.className='row-edit';button.textContent=row.located?'위치 수정':'위치 지정';
       button.addEventListener('click',()=>selectRow(row.id));
-      action.append(button);tr.append(action);
+      const addressButton=document.createElement('button');addressButton.type='button';
+      addressButton.textContent='주소 입력';
+      addressButton.addEventListener('click',()=>openAddressDialog(row.id));
+      actions.append(button,addressButton);action.append(actions);tr.append(action);
       const state=textCell(row.located?'● 지도 표시':'○ 위치 미확인');
       state.className=row.located?'mapped':'missing';tr.append(state);
       tr.append(textCell(row.business_name||'상호 미입력'));
@@ -268,6 +273,53 @@
     document.querySelectorAll('.row-selected').forEach(el=>el.classList.remove('row-selected'));
     const match=[...$('rawBody').children].find(tr=>tr.dataset.id===String(id));
     if(match){match.classList.add('row-selected');match.scrollIntoView({block:'nearest',behavior:'smooth'});}
+  }
+  function openAddressDialog(id) {
+    const row = rows.find(item => item.id === id);
+    if (!row) return;
+    addressRow = row;
+    say('addressRowInfo', rowName(row) + ' · 운송장 ' + (row.waybill || '미등록'));
+    $('newAddress').value = row.registry_address || row.source_address || '';
+    say('addressError', '');
+    $('addressDialog').showModal();
+    $('newAddress').select();
+  }
+  async function saveAddress(event) {
+    event.preventDefault();
+    const dialog = $('addressDialog');
+    const button = $('saveAddressBtn');
+    const input = $('newAddress');
+    const row = addressRow;
+    if (!row || button.disabled) return;
+    const address = input.value.trim();
+    if (!address) {
+      say('addressError', '배송 주소를 입력하세요.');
+      input.focus();
+      return;
+    }
+    const cancel = $('cancelAddressBtn');
+    button.disabled = cancel.disabled = input.readOnly = true;
+    say('addressError', '');
+    try {
+      // Finish any existing automatic write before applying the manual correction.
+      if (autoLocationWrite?.id === row.id) await autoLocationWrite.done.catch(() => {});
+      await post('admin/deliveries/' + row.id + '/location', { address });
+      closeEditor();
+      try {
+        await loadDayWithoutGeocode();
+        const registered = rows.find(item => item.id === row.id)?.registry_address;
+        say('importStatus', registered && registered !== address
+          ? '기존 배송지 주소로 연결했습니다. ' + registered
+          : '배송 주소를 저장했습니다.');
+      } catch (error) {
+        say('importStatus', '배송 주소를 저장했습니다. 목록 조회 실패: ' + error.message);
+      }
+      dialog.close();
+    } catch (error) {
+      say('addressError', '주소 저장 실패: ' + error.message);
+    } finally {
+      button.disabled = cancel.disabled = input.readOnly = false;
+    }
   }
   function selectRow(id) {
     const row=rows.find(r=>r.id===id);if(!row)return;
@@ -377,40 +429,52 @@
     try {
       await ensureMap();
       const targetDate=$('deliveryDate').value;
+      const daySequence=updateSeq;
       let stored=0,attempted=0;
       const unresolved=rows.filter(x=>!x.located&&addressValues(x).some(value=>value.trim().length>=4)
-        && !geocodeTried.has(targetDate+'|'+x.id+'|'+x.source_address));
+        && !geocodeTried.has(targetDate+'|'+x.id+'|'+addressValues(x)[0]));
       // Cache lookups per address so recurring shipments do not waste API quota.
       const addressCache=new Map();
       for(const row of unresolved.slice(0,limit)){
-        if(targetDate!==$('deliveryDate').value)break;
+        if(daySequence!==updateSeq || targetDate!==$('deliveryDate').value)break;
+        if(addressRow?.id===row.id)continue;
         attempted++;
         const values=addressValues(row);
         const address=values[0]?.trim()||'';
         const cacheKey=values.join('\u001f');
-        geocodeTried.add(targetDate+'|'+row.id+'|'+row.source_address);
         let coords=addressCache.get(cacheKey);
         if(coords===undefined){
           coords=await lookupCoordinates(values);
           addressCache.set(cacheKey,coords);
         }
+        const current = rows.find(item => item.id === row.id);
+        if(daySequence!==updateSeq || targetDate!==$('deliveryDate').value)break;
+        if(!current || addressRow?.id===row.id || addressValues(current)[0]!==values[0])continue;
+        geocodeTried.add(targetDate+'|'+row.id+'|'+values[0]);
         if(coords){
+          const done = post('admin/deliveries/'+row.id+'/location',{
+            address,business_name:row.business_name,lat:coords.lat,lng:coords.lng
+          });
+          autoLocationWrite = { id: row.id, done };
           try {
-            await post('admin/deliveries/'+row.id+'/location',{
-              address,business_name:row.business_name,lat:coords.lat,lng:coords.lng
-            });
+            await done;
             stored++;
-          } catch(_){}
+          } catch(_){} finally { autoLocationWrite = null; }
         }
         if(attempted%10===0)say('importStatus','주소 좌표 자동 조회 '+attempted+'건 · 저장 '+stored+'건');
       }
-      if(stored)await loadDayWithoutGeocode();
-      say('importStatus','주소 좌표 확인 완료 · 조회 '+attempted+'건 / 저장 '+stored+'건. 미확인은 목록에서 관리하세요.');
+      if(daySequence===updateSeq && targetDate===$('deliveryDate').value && !addressRow){
+        if(stored)await loadDayWithoutGeocode();
+        say('importStatus','주소 좌표 확인 완료 · 조회 '+attempted+'건 / 저장 '+stored+'건. 미확인은 목록에서 관리하세요.');
+      }
     }catch(e){say('importStatus','주소 좌표 찾기 실패: '+e.message);}
     finally{geocodeRunning=false;}
   }
   async function loadDayWithoutGeocode(){
-    const response=await get('admin/deliveries?date='+encodeURIComponent($('deliveryDate').value));
+    const date=$('deliveryDate').value;
+    const token=++updateSeq;
+    const response=await get('admin/deliveries?date='+encodeURIComponent(date));
+    if(token!==updateSeq)return;
     rows=response.rows;columns=response.columns;
     say('totalCount',String(response.total));
     say('mapCount',String(response.located));
@@ -434,6 +498,12 @@
     });
     $('fitBtn').addEventListener('click',fit);
     $('geocodeBtn').addEventListener('click',()=>autoGeocode(200));
+    $('addressForm').addEventListener('submit',saveAddress);
+    $('cancelAddressBtn').addEventListener('click',()=>$('addressDialog').close());
+    $('addressDialog').addEventListener('cancel',event=>{
+      if ($('saveAddressBtn').disabled) event.preventDefault();
+    });
+    $('addressDialog').addEventListener('close',()=>{addressRow=null;});
     $('cancelLocationBtn').addEventListener('click',closeEditor);
     $('saveCenterBtn').addEventListener('click',saveCenter);
     $('mapPinSaveBtn').addEventListener('click',saveCenter);
