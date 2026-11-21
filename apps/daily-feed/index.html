@@ -4,27 +4,29 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#101915">
-<meta name="description" content="오늘을 한 줄씩 기록하는 작은 피드. 날짜별 할 일과 기록을 JSON 서버에 저장합니다.">
-<title>당일피드 | DAILY FEED</title>
+<meta name="description" content="당일·주간·월간을 한 줄로 기록하는 피드. 날짜별 기록을 JSON 서버에 저장합니다.">
+<title>한줄피드 | 당일·주간·월간</title>
 <style>
 :root{color-scheme:dark;--bg:#101915;--card:#19251e;--line:#304236;--text:#f0f2e8;--muted:#9cae9e;--accent:#d0ee90;--surface:#233328;--bad:#efb0a7}
 *{box-sizing:border-box}html{font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}body{margin:0;background:var(--bg);color:var(--text);min-height:100vh}button,input,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.45;cursor:default}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 main{max-width:760px;margin:0 auto;padding:42px 18px 90px}.eyebrow{font-size:12px;letter-spacing:.24em;color:var(--accent);font-weight:800}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:12px 0 35px}h1{font-size:clamp(36px,7vw,56px);letter-spacing:-.09em;line-height:1.1;margin:0 0 12px}p{margin:0}.intro{color:var(--muted);font-size:14px;line-height:1.7}.date-big{white-space:nowrap;text-align:right;color:var(--muted);font-size:12px;line-height:1.6;padding-top:5px}.date-big strong{display:block;color:var(--accent);font-size:28px;letter-spacing:-.06em}
 .composer{padding:20px;border:1px solid var(--line);border-radius:18px;background:var(--card)}.composer label{font-size:12px;color:var(--muted);display:block;margin-bottom:12px;font-weight:700}.compose-row{display:flex;gap:8px}#text{flex:1;min-width:0;border:1px solid #425647;background:#111d16;color:var(--text);padding:15px 14px;border-radius:12px;font-size:16px}#text::placeholder{color:#819384}.primary{border:0;border-radius:12px;background:var(--accent);color:#1b2b1b;font-weight:800;padding:0 20px;white-space:nowrap}.options{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-top:12px}.options select,.options input{color:var(--text);border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:8px 10px;font-size:13px}.options .help{margin-left:auto;color:var(--muted);font-size:12px}.state{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:22px 0 20px;color:var(--muted);font-size:12px;min-height:20px}.state.error{color:var(--bad)}.small-btn{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:9px;padding:7px 12px}
-.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line);padding-bottom:14px}.filter{border:1px solid transparent;background:transparent;color:var(--muted);border-radius:20px;padding:9px 14px;font-size:14px;font-weight:700}.filter.active{background:var(--accent);color:#152116}.filter-count{margin-left:auto;font-size:12px;color:var(--muted)}.list{padding:8px 0}.day-heading{margin:25px 0 10px;font-size:12px;font-weight:800;letter-spacing:.07em;color:var(--accent)}.item{display:flex;align-items:center;gap:12px;padding:17px 6px;border-bottom:1px solid var(--line)}.mark{width:22px;height:22px;min-width:22px;border:1px solid #687967;background:transparent;color:#1f291e;border-radius:7px;display:grid;place-items:center;font-size:14px;padding:0}.mark.done{background:var(--accent);border-color:var(--accent)}.dot{width:6px;height:6px;min-width:6px;background:#829a78;border-radius:50%;margin:0 8px}.content{flex:1;min-width:0}.item-text{font-size:16px;line-height:1.5;overflow-wrap:anywhere}.item-text.done{text-decoration:line-through;color:var(--muted)}.meta{margin-top:4px;font-size:11px;color:var(--muted)}.meta .tag{color:#c9daa4}.empty{padding:65px 8px;text-align:center;color:var(--muted);font-size:14px;line-height:1.8}.seed{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 2px;border-top:1px solid var(--line);margin-top:16px}.seed p{color:var(--muted);font-size:12px;line-height:1.7}.seed strong{display:block;color:var(--text);font-size:14px;margin-bottom:2px}.seed button{border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:11px;padding:11px 13px;white-space:nowrap;font-size:12px;font-weight:800}footer{margin-top:35px;font-size:11px;color:#8a9e90;line-height:1.75}footer a{color:#bace8f;text-decoration:none}@media(max-width:520px){main{padding:26px 14px 80px}.top{margin-bottom:25px}.date-big strong{font-size:23px}.composer{padding:14px}.compose-row{gap:6px}.primary{padding:0 13px}.options .help{width:100%;margin:0}.item{gap:9px}.seed{align-items:flex-start;flex-direction:column}.seed button{align-self:flex-start}}
+.filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;border-bottom:1px solid var(--line);padding-bottom:14px}.filter{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:12px;padding:12px 6px;font-size:14px;font-weight:700}.filter.active{border-color:var(--accent);background:var(--accent);color:#152116}.period-nav{display:flex;align-items:center;gap:9px;margin-top:17px}.period-label{flex:1;min-width:0;color:var(--text);font-weight:800;font-size:14px;text-align:center}.nav-btn{width:37px;height:36px;flex-shrink:0;border:1px solid var(--line);background:var(--surface);border-radius:10px;color:var(--text)}.jump{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:9px;padding:8px 11px;font-size:12px}.filter-count{color:var(--muted);font-size:12px;text-align:right;margin:12px 2px 2px}.list{padding:8px 0}.day-heading{margin:25px 0 10px;font-size:12px;font-weight:800;letter-spacing:.07em;color:var(--accent)}.item{display:flex;align-items:center;gap:12px;padding:17px 6px;border-bottom:1px solid var(--line)}.mark{width:22px;height:22px;min-width:22px;border:1px solid #687967;background:transparent;color:#1f291e;border-radius:7px;display:grid;place-items:center;font-size:14px;padding:0}.mark.done{background:var(--accent);border-color:var(--accent)}.dot{width:6px;height:6px;min-width:6px;background:#829a78;border-radius:50%;margin:0 8px}.content{flex:1;min-width:0}.item-text{font-size:16px;line-height:1.5;overflow-wrap:anywhere}.item-text.done{text-decoration:line-through;color:var(--muted)}.meta{margin-top:4px;font-size:11px;color:var(--muted)}.meta .tag{color:#c9daa4}.empty{padding:65px 8px;text-align:center;color:var(--muted);font-size:14px;line-height:1.8}.seed{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 2px;border-top:1px solid var(--line);margin-top:16px}.seed p{color:var(--muted);font-size:12px;line-height:1.7}.seed strong{display:block;color:var(--text);font-size:14px;margin-bottom:2px}.seed button{border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:11px;padding:11px 13px;white-space:nowrap;font-size:12px;font-weight:800}footer{margin-top:35px;font-size:11px;color:#8a9e90;line-height:1.75}footer a{color:#bace8f;text-decoration:none}@media(max-width:520px){main{padding:26px 14px 80px}.top{margin-bottom:25px}.date-big strong{font-size:23px}.composer{padding:14px}.compose-row{gap:6px}.primary{padding:0 13px}.options .help{width:100%;margin:0}.item{gap:9px}.seed{align-items:flex-start;flex-direction:column}.seed button{align-self:flex-start}}
 </style>
 </head>
 <body>
 <main>
-  <div class="eyebrow">DAILY FEED / ONE LINE ARCHIVE</div>
-  <div class="top"><div><h1>당일피드<span style="color:var(--accent)">.</span></h1><p class="intro">오늘의 생각과 할 일, 한 줄이면 충분하다.<br>오늘을 적고, 어제는 남긴다.</p></div><div class="date-big"><span id="weekday"></span><strong id="today-number"></strong><span id="today-year"></span></div></div>
+  <div class="eyebrow">ONE LINE FEED / DAILY · WEEKLY · MONTHLY</div>
+  <div class="top"><div><h1>한줄피드<span style="color:var(--accent)">.</span></h1><p class="intro">하루, 한 주, 한 달.<br>생각과 할 일을 한 줄씩 남긴다.</p></div><div class="date-big"><span id="weekday"></span><strong id="today-number"></strong><span id="today-year"></span></div></div>
   <form id="form" class="composer">
-    <label for="text">한 줄 남기기</label>
+    <label for="text" id="compose-label">당일피드에 한 줄 남기기</label>
     <div class="compose-row"><input id="text" type="text" maxlength="140" autocomplete="off" placeholder="지금 기록할 한 줄" required><button id="submit" type="submit" class="primary">등록</button></div>
     <div class="options"><select id="kind" aria-label="유형"><option value="note">기록</option><option value="todo">할 일</option></select><input id="date" type="date" aria-label="기록 날짜" required><span class="help"><span id="count">0</span>/140자 · 서버에 JSON 저장</span></div>
   </form>
   <div class="state" id="state"><span id="status" role="status">서버 연결 확인 중…</span><button id="reload" class="small-btn" type="button">새로고침</button></div>
-  <div class="filters" role="group" aria-label="피드 필터"><button class="filter active" type="button" data-filter="today">오늘</button><button class="filter" type="button" data-filter="all">전체 기록</button><button class="filter" type="button" data-filter="selected">선택 날짜</button><span id="result-count" class="filter-count"></span></div>
+  <div class="filters" role="tablist" aria-label="피드 기간"><button class="filter active" role="tab" aria-selected="true" type="button" data-filter="day">당일피드</button><button class="filter" role="tab" aria-selected="false" type="button" data-filter="week">주간피드</button><button class="filter" role="tab" aria-selected="false" type="button" data-filter="month">월간피드</button></div>
+  <div class="period-nav"><button id="prev" type="button" class="nav-btn" aria-label="이전 기간">‹</button><span id="period-label" class="period-label"></span><button id="next" type="button" class="nav-btn" aria-label="다음 기간">›</button><button id="jump-today" class="jump" type="button">오늘</button></div>
+  <div id="result-count" class="filter-count"></div>
   <div id="list" class="list" aria-live="polite"><div class="empty">불러오는 중…</div></div>
   <div class="seed"><p><strong>첫 기록 · 2026년 11월 22일</strong>공방 주제, 베스트 음원 10곡, 빙어 전동릴 디자인.<br>이전에 정한 할 일 3개를 한 번에 등록할 수 있어요.</p><button id="seed" type="button">할 일 3개 등록</button></div>
   <footer>저장소: JSONHub / localflow / daily-feed<br>이 버전은 별도 로그인 없이 JSON API에 접근합니다. 민감한 정보는 입력하지 마세요. 여러 사람이 동시에 수정하면 최근 저장본이 우선할 수 있습니다.<br><a href="/">STANCE 홈</a></footer>
@@ -44,7 +46,33 @@ main{max-width:760px;margin:0 auto;padding:42px 18px 90px}.eyebrow{font-size:12p
   $('today-year').textContent=day.slice(0,4)+'년';
   $('date').value=day;
   $('text').addEventListener('input',()=>$('count').textContent=$('text').value.length);
-  let doc={version:1,entries:[]},filter='today',busy=false,known=false;
+  let doc={version:1,entries:[]},filter='day',busy=false,known=false;
+  const labels={day:'당일피드',week:'주간피드',month:'월간피드'};
+  // All comparisons use calendar dates in Asia/Seoul (YYYY-MM-DD).
+  const iso=d=>d.toISOString().slice(0,10);
+  const fromIso=str=>new Date(str+'T12:00:00Z');
+  function range(date,scope){
+    const d=fromIso(date);
+    if(scope==='day')return {start:date,end:date,label:date.replaceAll('-','.')};
+    if(scope==='week'){
+      const monday=new Date(d);monday.setUTCDate(monday.getUTCDate()-((monday.getUTCDay()+6)%7));
+      const sunday=new Date(monday);sunday.setUTCDate(sunday.getUTCDate()+6);
+      return {start:iso(monday),end:iso(sunday),label:iso(monday).replaceAll('-','.')+' ~ '+iso(sunday).slice(5).replaceAll('-','.')};
+    }
+    const start=date.slice(0,7)+'-01';
+    const end=iso(new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0,12)));
+    return {start,end,label:date.slice(0,7).replace('-','.')+'월'};
+  }
+  function moveDate(distance){
+    const d=fromIso($('date').value||today());
+    if(filter==='month'){
+      const currentDay=d.getUTCDate();
+      d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+distance);
+      const last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0,12)).getUTCDate();
+      d.setUTCDate(Math.min(currentDay,last));
+    } else d.setUTCDate(d.getUTCDate()+(filter==='week'?distance*7:distance));
+    $('date').value=iso(d);render();
+  }
   function status(message,bad=false){$('status').textContent=message;$('state').classList.toggle('error',bad)}
   function safeDoc(value){if(!value||typeof value!=='object')return {version:1,entries:[]};if(!Array.isArray(value.entries))throw Error('기존 JSON 형식이 맞지 않습니다');return {version:1,entries:value.entries.filter(x=>x&&typeof x.text==='string'&&typeof x.date==='string'&&typeof x.id==='string')}}
   async function getRemote(){
@@ -60,20 +88,21 @@ main{max-width:760px;margin:0 auto;padding:42px 18px 90px}.eyebrow{font-size:12p
     catch(err){known=false;status('불러오기 실패 · '+err.message,true);$('list').replaceChildren(Object.assign(document.createElement('div'),{className:'empty',textContent:'서버 연결을 확인해 주세요. 기존 기록을 임의로 덮어쓰지 않습니다.'}));}
     finally{busy=false;$('reload').disabled=false}
   }
-  function makeItem(text,date,kind){return {id:(crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2)),text,date,kind,done:false,createdAt:new Date().toISOString()}}
+  function makeItem(text,date,kind,scope=filter){return {id:(crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2)),text,date,kind,scope,done:false,createdAt:new Date().toISOString()}}
   function el(name,cls,content){const e=document.createElement(name);if(cls)e.className=cls;if(content!==undefined)e.textContent=content;return e}
-  function showSeed(){const existing=new Set(doc.entries.filter(x=>x.date===seedDate&&x.kind==='todo').map(x=>x.text));$('seed').disabled=initialTasks.every(x=>existing.has(x))||busy;$('seed').textContent=initialTasks.every(x=>existing.has(x))?'등록 완료':'할 일 3개 등록'}
+  function showSeed(){const existing=new Set(doc.entries.filter(x=>x.date===seedDate&&x.kind==='todo'&&(!x.scope||x.scope==='day')).map(x=>x.text));$('seed').disabled=initialTasks.every(x=>existing.has(x))||busy;$('seed').textContent=initialTasks.every(x=>existing.has(x))?'등록 완료':'할 일 3개 등록'}
   function render(){
-    const current=today();
-    let items=[...doc.entries].sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
-    if(filter==='today')items=items.filter(x=>x.date===current);
-    if(filter==='selected')items=items.filter(x=>x.date===$('date').value);
-    $('result-count').textContent=items.length+'개';
+    const chosen=$('date').value||today(), period=range(chosen,filter);
+    $('period-label').textContent=period.label;
+    $('compose-label').textContent=labels[filter]+'에 한 줄 남기기';
+    let items=doc.entries.filter(x=>(x.scope||'day')===filter&&x.date>=period.start&&x.date<=period.end)
+      .sort((a,b)=>b.date.localeCompare(a.date)||String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+    $('result-count').textContent=items.length+'개 기록';
     const list=$('list');list.replaceChildren();showSeed();
-    if(!items.length){list.append(el('div','empty',filter==='today'?'오늘의 기록이 아직 없습니다.\n첫 한 줄을 남겨보세요.':'해당하는 기록이 없습니다.'));return}
+    if(!items.length){list.append(el('div','empty','이 기간의 '+labels[filter]+' 기록이 없습니다.\n첫 한 줄을 남겨보세요.'));return}
     let previous='';
     for(const item of items){
-      if(filter==='all'&&item.date!==previous){list.append(el('div','day-heading',item.date));previous=item.date}
+      if(filter!=='day'&&item.date!==previous){list.append(el('div','day-heading',item.date));previous=item.date}
       const line=el('div','item'); const isTodo=item.kind==='todo';
       if(isTodo){
         const btn=el('button','mark'+(item.done?' done':''),item.done?'✓':'');
@@ -106,9 +135,9 @@ main{max-width:760px;margin:0 auto;padding:42px 18px 90px}.eyebrow{font-size:12p
   $('form').addEventListener('submit',async event=>{
     event.preventDefault();const value=$('text').value.trim(),when=$('date').value,kind=$('kind').value;
     if(!value||value.length>140||!when||busy)return;
-    const item=makeItem(value,when,kind);
+    const item=makeItem(value,when,kind,filter);
     if(await save(latest=>{latest.entries.push(item);return true},verify=>verify.entries.some(x=>x.id===item.id))){
-      $('text').value='';$('count').textContent='0';filter=when===today()?'today':'selected';selectFilter();$('text').focus();
+      $('text').value='';$('count').textContent='0';selectFilter();$('text').focus();
     }
   });
   async function changeDone(id,newValue){
@@ -118,15 +147,24 @@ main{max-width:760px;margin:0 auto;padding:42px 18px 90px}.eyebrow{font-size:12p
   $('seed').addEventListener('click',async()=>{
     if(!confirm('2026년 11월 22일의 할 일 3개를 JSON 서버에 등록할까요?'))return;
     const keys=[];const ok=await save(latest=>{
-      const previous=new Set(latest.entries.filter(x=>x.date===seedDate&&x.kind==='todo').map(x=>x.text));
-      for(const task of initialTasks){if(!previous.has(task)){const item=makeItem(task,seedDate,'todo');latest.entries.push(item);keys.push(item.id)}}
+      const previous=new Set(latest.entries.filter(x=>x.date===seedDate&&x.kind==='todo'&&(!x.scope||x.scope==='day')).map(x=>x.text));
+      for(const task of initialTasks){if(!previous.has(task)){const item=makeItem(task,seedDate,'todo','day');latest.entries.push(item);keys.push(item.id)}}
       return keys.length>0;
     },verify=>keys.every(id=>verify.entries.some(x=>x.id===id)));
-    if(ok){$('date').value=seedDate;filter='selected';selectFilter()}
+    if(ok){$('date').value=seedDate;filter='day';selectFilter()}
   });
-  function selectFilter(){document.querySelectorAll('[data-filter]').forEach(btn=>{const selected=btn.dataset.filter===filter;btn.classList.toggle('active',selected);btn.setAttribute('aria-pressed',String(selected))});render()}
+  function selectFilter(){
+    document.querySelectorAll('[data-filter]').forEach(btn=>{
+      const selected=btn.dataset.filter===filter;
+      btn.classList.toggle('active',selected);btn.setAttribute('aria-selected',String(selected));
+    });
+    render();
+  }
   document.querySelectorAll('[data-filter]').forEach(btn=>btn.addEventListener('click',()=>{filter=btn.dataset.filter;selectFilter()}));
-  $('date').addEventListener('change',()=>{if(filter==='selected')render()});
+  $('date').addEventListener('change',render);
+  $('prev').addEventListener('click',()=>moveDate(-1));
+  $('next').addEventListener('click',()=>moveDate(1));
+  $('jump-today').addEventListener('click',()=>{$('date').value=today();render()});
   $('reload').addEventListener('click',refresh);
   refresh();
 })();
