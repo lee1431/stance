@@ -37,7 +37,7 @@
     <span id="fileName" class="file-name">선택된 파일 없음</span>
     <button type="submit" class="primary" id="importBtn">당일 원본 업로드</button>
    </form>
-   <p id="importStatus" role="status">원본의 모든 열을 저장하고 누적 배송지 이력을 조회합니다.</p>
+   <p id="importStatus" role="status">수취인명·주소·착불유무·연락처만 가져옵니다. 운송장번호는 스캔 매칭에만 사용합니다.</p>
   </section>
   <section class="stat-grid" aria-label="배송 통계">
    <div><strong id="totalCount">0</strong><span>당일 전체</span></div>
@@ -79,9 +79,9 @@
   </section>
   <section class="data-panel">
    <div class="section-head">
-    <div><h2>당일 원본 물품 목록</h2><p>인식되지 않은 엑셀 열도 모두 유지합니다.</p></div>
+    <div><h2>당일 배송 목록</h2><p>고객정보 4개 항목만 표시합니다. 도로명주소 우선, 지번주소 대체입니다.</p></div>
     <div class="filters">
-     <label for="searchInput" class="sr-only">배송지 검색</label><input id="searchInput" type="search" placeholder="상호·주소·송장·원본열 검색">
+     <label for="searchInput" class="sr-only">배송지 검색</label><input id="searchInput" type="search" placeholder="수취인·주소·연락처·운송장 검색">
      <select id="filterSelect" aria-label="지도 위치 필터"><option value="all">전체 목록</option><option value="missing">위치 미확인만</option><option value="mapped">지도 표시만</option></select>
     </div>
    </div>
