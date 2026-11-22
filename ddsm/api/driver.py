@@ -117,9 +117,9 @@ def install_driver(app, connect, authenticated_user):
         suffix = digits[13:] if len(digits) == 16 else None
         with closing(connect()) as db:
             records = db.execute("""
-                SELECT s.waybill, s.business_name, s.sender_name, s.source_address,
-                       s.recipient_phone, s.item_name, s.cod_amount, s.delivery_status,
-                       s.raw_json, d.address AS saved_address, d.lat, d.lng
+                SELECT s.waybill, s.business_name, s.source_address,
+                       s.recipient_phone, s.cod_amount,
+                       d.address AS saved_address, d.lat, d.lng
                 FROM admin_deliveries s
                 LEFT JOIN destinations d ON d.id=s.destination_id
                 WHERE s.delivery_date=?
@@ -137,18 +137,13 @@ def install_driver(app, connect, authenticated_user):
         if len(identities) != 1:
             return jsonify(ok=False, error="같은 송장에 다른 수취인·주소가 있습니다. 관리자에게 확인하세요."), 409
         record = records[0]
-        raw = json.loads(record["raw_json"])
-        quantity = next(
-            (str(v) for k, v in raw.items() if re.sub(r"[\W_]+", "", k) in ("수량", "박스수", "화물수량")),
-            "",
-        )
+        from admin import cod_flag
         return jsonify(
             ok=True, date=target, master_waybill=master, item_suffix=suffix,
             waybill=record["waybill"], recipient=record["business_name"],
             address=record["saved_address"] or record["source_address"],
-            phone=record["recipient_phone"], sender=record["sender_name"],
-            item=record["item_name"], quantity=quantity, cod=record["cod_amount"],
-            status=record["delivery_status"], lat=record["lat"], lng=record["lng"],
+            phone=record["recipient_phone"], cod=cod_flag(record["cod_amount"]),
+            lat=record["lat"], lng=record["lng"],
         )
 
     @app.post("/ddsm/api/driver/destination")
