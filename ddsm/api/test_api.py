@@ -162,5 +162,39 @@ class DDSMApiTest(unittest.TestCase):
         self.assertEqual(inherited.get_json()["lat"], 36.99)
 
 
+    def test_import_keeps_only_four_customer_fields_and_two_address_variants(self):
+        from admin import parse_grid
+        fixed = [
+            "일자", "발송지", "운송장번호", "발화주", "수화주",
+            "품명", "포장", "상품", "수량", "상태", "현불운임",
+            "착불운임", "출고제비용", "합계", "특기사항",
+            "수화주 지번주소", "수화주 도로명주소",
+        ]
+        headers = ["번호", *fixed, "수화주 연락처", "발송인 전화번호"]
+        def record(waybill, road, lot, amount):
+            data = {
+                "운송장번호": waybill, "발화주": "보내는 사람", "수화주": "받는 사람",
+                "수화주 도로명주소": road, "수화주 지번주소": lot,
+                "착불운임": amount, "품명": "비공개 상품명",
+                "수화주 연락처": "01098765432", "발송인 전화번호": "01012341234",
+            }
+            return [data.get(label, "") for label in headers]
+        rows = parse_grid("수화주 주소", iter([
+            headers,
+            record("2139602023214", "충주시 도로명로 10", "충주시 지번동 12", "2500"),
+            record("2139602023215", "", "충주시 지번동 13", "0"),
+        ]))
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["standard"]["waybill"], "2139602023214")
+        self.assertEqual(rows[0]["raw"], {
+            "수취인명": "받는 사람", "주소": "충주시 도로명로 10",
+            "착불유무": "착불", "연락처": "01098765432",
+        })
+        self.assertEqual(rows[1]["raw"]["주소"], "충주시 지번동 13")
+        self.assertEqual(rows[1]["raw"]["착불유무"], "선불")
+        self.assertNotIn("비공개 상품명", str(rows))
+        self.assertNotIn("01012341234", str(rows))
+
+
 if __name__ == "__main__":
     unittest.main()
