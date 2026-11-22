@@ -114,7 +114,7 @@ main{max-width:760px;margin:0 auto;padding:42px 18px 90px}.eyebrow{font-size:12p
     busy=true;$('reload').disabled=true;status('서버에서 불러오는 중…');
     try{doc=await getRemote();known=true;render();status('JSON 서버 연결됨 · '+doc.entries.length+'건');}
     catch(err){known=false;status('불러오기 실패 · '+err.message,true);$('list').replaceChildren(Object.assign(document.createElement('div'),{className:'empty',textContent:'서버 연결을 확인해 주세요. 기존 기록을 임의로 덮어쓰지 않습니다.'}));}
-    finally{busy=false;$('reload').disabled=false}
+    finally{busy=false;$('reload').disabled=false;if(known)render();else showSeed()}
   }
   function makeItem(text,date,kind,scope=filter){return {id:(crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2)),text,date,kind,scope,done:false,createdAt:new Date().toISOString()}}
   function el(name,cls,content){const e=document.createElement(name);if(cls)e.className=cls;if(content!==undefined)e.textContent=content;return e}
@@ -243,7 +243,7 @@ main{max-width:760px;margin:0 auto;padding:42px 18px 90px}.eyebrow{font-size:12p
       if(!check(verify))throw Error('재조회에서 변경사항이 확인되지 않았습니다');
       doc=verify;known=true;render();status('서버 저장 및 재조회 확인 · '+doc.entries.length+'건');return true;
     }catch(err){status('저장 확인 실패 · '+err.message,true);return false}
-    finally{busy=false;$('submit').disabled=false;$('reload').disabled=false;showSeed()}
+    finally{busy=false;$('submit').disabled=false;$('reload').disabled=false;if(known)render();else showSeed()}
   }
   $('form').addEventListener('submit',async event=>{
     event.preventDefault();const value=$('text').value.trim(),when=$('date').value,kind=$('kind').value;
