@@ -230,7 +230,7 @@
       if(filter==='mapped'&&!r.located)return false;
       if(!q)return true;
       return [r.waybill,r.business_name,r.registry_address,r.source_address,
-        ...Object.values(r.raw||{})].some(x=>String(x||'').toLocaleLowerCase().includes(q));
+        r.cod_amount,r.recipient_phone].some(x=>String(x||'').toLocaleLowerCase().includes(q));
     });
   }
   function appendPage() {
@@ -248,11 +248,11 @@
       actions.append(button,addressButton);action.append(actions);tr.append(action);
       const state=textCell(row.located?'● 지도 표시':'○ 위치 미확인');
       state.className=row.located?'mapped':'missing';tr.append(state);
-      tr.append(textCell(row.business_name||'상호 미입력'));
-      tr.append(textCell(row.registry_address||row.source_address||'주소 없음'));
-      tr.append(textCell(addressPlan(row).label));
       tr.append(textCell(row.waybill));
-      for(const col of columns)tr.append(textCell((row.raw||{})[col]||''));
+      tr.append(textCell(row.business_name||'수취인 미입력'));
+      tr.append(textCell(row.registry_address||row.source_address||'주소 없음'));
+      tr.append(textCell(row.cod_amount||'미확인'));
+      tr.append(textCell(row.recipient_phone||'연락처 없음'));
       tbody.append(tr);
     }
     currentPage++;
@@ -264,7 +264,7 @@
   function renderTable() {
     const head=$('rawHeader'),body=$('rawBody');head.replaceChildren();body.replaceChildren();
     const tr=document.createElement('tr');
-    ['작업','지도 상태','수취인/상호','배송 주소','주소 유형','운송장',...columns].forEach(c=>{
+    ['작업','지도 상태','운송장','수취인명','주소','착불유무','연락처'].forEach(c=>{
       const th=document.createElement('th');th.textContent=c;tr.append(th);
     });head.append(tr);
     visibleFiltered=displayedRows();currentPage=0;appendPage();
