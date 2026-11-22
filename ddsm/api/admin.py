@@ -26,17 +26,13 @@ MAX_ROWS = 15000
 MAX_COLUMNS = 160
 MAX_SHEETS = 20
 
-# Canonical labels: unrecognized spreadsheet columns remain available in raw_json.
+# Import four customer fields only. Waybill is an operational scan key, not customer data.
 ALIASES = {
     "waybill": ["운송장번호", "운송장", "송장번호", "송장", "화물번호", "바코드", "trackingnumber", "trackingno", "waybill", "invoice"],
     "address": ["수화주도로명주소", "수화주지번주소", "수취인주소", "수령인주소", "받는분주소", "받는사람주소", "배송지주소", "도착주소", "배달주소", "배송주소", "주소", "도로명주소", "지번주소", "destinationaddress"],
     "recipient": ["수화주", "수취인명", "수취인", "수령인명", "수령인", "받는분", "받는사람", "받을사람", "상호명", "거래처명", "업체명", "납품처", "배송처", "고객명", "recipient", "consignee", "receiver", "customer"],
-    "sender": ["발화주", "발송인명", "발송인", "보내는분", "보내는사람", "송하인", "출고처", "송화인", "sender", "shipper"],
-    "phone": ["수취인전화번호", "수취인연락처", "받는분전화", "받는분연락처", "연락처", "핸드폰", "휴대폰번호", "전화번호", "수령인전화", "receiverphone", "consigneephone"],
-    "item": ["물품명", "품목명", "상품명", "제품명", "내용품", "내용물", "품명", "품목", "itemname", "productname", "description"],
-    "cod": ["착불금액", "착불비용", "착불운임", "착불액", "받을금액", "수금액", "codamount", "cod"],
-    "driver": ["배정기사", "담당기사", "배송기사", "배달기사", "기사명", "배정자", "driver"],
-    "status": ["배송상태", "배송여부", "완료여부", "배송완료", "처리상태", "상태", "deliverystatus"],
+    "phone": ["수화주전화번호", "수화주연락처", "수화주휴대폰", "수화주핸드폰", "수취인전화번호", "수취인연락처", "수취인휴대폰", "받는분전화", "받는분연락처", "받는사람휴대폰", "연락처", "핸드폰", "휴대폰번호", "전화번호", "수령인전화", "receiverphone", "consigneephone"],
+    "cod": ["착불여부", "착불유무", "착불금액", "착불비용", "착불운임", "착불액", "받을금액", "수금액", "codamount", "cod"],
 }
 # Known freight export: column A is an index, B-R are fixed fields.
 FIXED_FREIGHT_HEADERS = (
@@ -46,8 +42,7 @@ FIXED_FREIGHT_HEADERS = (
     "수화주 지번주소", "수화주 도로명주소",
 )
 FIXED_FREIGHT_FIELDS = {
-    "waybill": 2, "sender": 3, "recipient": 4, "item": 5,
-    "quantity": 8, "status": 9, "cod": 11,
+    "waybill": 2, "recipient": 4, "cod": 11,
     "lot_address": 15, "road_address": 16,
 }
 
@@ -92,6 +87,13 @@ def pick_columns(headers):
         field = canonical_key(header)
         if field and field not in result:
             result[field] = index
+    # Reject sender contact fields when the receiver number is not provided.
+    phone_index = result.get("phone")
+    if phone_index is not None and any(
+        word in compact(headers[phone_index])
+        for word in ("발송", "발화주", "송화인", "보내는", "출고", "발신")
+    ):
+        result.pop("phone", None)
     return result
 
 
@@ -117,6 +119,22 @@ def fixed_freight_start(headers):
     return None
 
 
+def cod_flag(value):
+    """Store only COD yes/no, not an amount."""
+    text = cell_text(value).strip()
+    if not text:
+        return ""
+    normalized = compact(text)
+    if normalized in ("착불", "후불", "cod", "y", "yes", "true", "o", "유", "있음"):
+        return "착불"
+    if normalized in ("선불", "현불", "n", "no", "false", "x", "무", "없음"):
+        return "선불"
+    amount = re.sub(r"[,\s원₩]", "", text)
+    if re.fullmatch(r"-?\d+(?:\.\d+)?", amount):
+        return "착불" if float(amount) > 0 else "선불"
+    return ""
+
+
 def parse_grid(sheet_name, rows):
     sample = list(islice(rows, 15))
     if not sample:
@@ -137,6 +155,11 @@ def parse_grid(sheet_name, rows):
     fixed = fixed_freight_start(headers)
     fields = ({name: fixed + index for name, index in FIXED_FREIGHT_FIELDS.items()}
               if fixed is not None else pick_columns(headers))
+    if fixed is not None:
+        # Contact data can be in additional columns after the fixed freight layout.
+        phone_index = pick_columns(headers).get("phone")
+        if phone_index is not None:
+            fields["phone"] = phone_index
     if fixed is None:
         for index, title in enumerate(headers):
             if "도로명" in title and "주소" in title:
@@ -157,11 +180,18 @@ def parse_grid(sheet_name, rows):
         # Ignore exact repeated header rows, not arbitrary unrecognized columns.
         if cells == headers:
             continue
-        row = dict(zip(headers, cells))
         standard = {field: cells[i] for field, i in fields.items()}
         if fixed is not None:
+            # Receiver has road-name and lot-number addresses. Road-name wins.
             standard["address"] = standard["road_address"] or standard["lot_address"]
-        outputs.append({"sheet": sheet_name, "row_number": row_number, "raw": row, "standard": standard})
+        standard["cod"] = cod_flag(standard.get("cod", ""))
+        customer = {
+            "수취인명": standard.get("recipient", ""),
+            "주소": standard.get("address", ""),
+            "착불유무": standard["cod"],
+            "연락처": standard.get("phone", ""),
+        }
+        outputs.append({"sheet": sheet_name, "row_number": row_number, "raw": customer, "standard": standard})
         if len(outputs) > MAX_ROWS:
             raise ValueError("파일당 최대 15,000행을 초과했습니다.")
     return outputs
@@ -421,7 +451,10 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
             return jsonify(ok=False, error="날짜가 올바르지 않습니다."), 400
         with closing(connect()) as db:
             rows = db.execute(
-                """SELECT s.*, d.address AS registry_address, d.lat, d.lng, d.business_name AS registry_name
+                """SELECT s.id, s.waybill, s.business_name, s.source_address,
+                          s.recipient_phone, s.cod_amount, s.destination_id,
+                          s.sheet_name, s.source_row,
+                          d.address AS registry_address, d.lat, d.lng
                    FROM admin_deliveries s
                    LEFT JOIN destinations d ON d.id = s.destination_id
                    WHERE s.delivery_date = ?
@@ -431,16 +464,19 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
                 """SELECT filename, created_at FROM import_batches
                    WHERE delivery_date=? ORDER BY id DESC LIMIT 1""", (target,)
             ).fetchone()
-        output, headers = [], []
+        output, headers = [], ["수취인명", "주소", "착불유무", "연락처"]
         for row in rows:
             obj = dict(row)
-            obj["raw"] = json.loads(obj.pop("raw_json"))
             obj["address"] = obj["registry_address"] or obj["source_address"] or ""
+            obj["cod_amount"] = cod_flag(obj["cod_amount"])
+            obj["raw"] = {
+                "수취인명": obj["business_name"],
+                "주소": obj["source_address"],
+                "착불유무": obj["cod_amount"],
+                "연락처": obj["recipient_phone"],
+            }
             obj["located"] = obj["lat"] is not None and obj["lng"] is not None
             obj["registered"] = obj["destination_id"] is not None
-            for column in obj["raw"]:
-                if column not in headers:
-                    headers.append(column)
             output.append(obj)
         return jsonify(
             ok=True, date=target, total=len(output),
@@ -493,9 +529,9 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
                         (item["sheet"] + "|" + str(item["row_number"]) + "|" + raw).encode()
                     ).hexdigest()
                 params = (
-                    target, signature, waybill, business, std.get("sender", ""), address,
-                    std.get("phone", ""), std.get("item", ""), std.get("cod", ""),
-                    std.get("driver", ""), std.get("status", ""), destination_id, raw,
+                    target, signature, waybill, business, "", address,
+                    std.get("phone", ""), "", std.get("cod", ""),
+                    "", "", destination_id, raw,
                     item["sheet"], item["row_number"], filename, batch
                 )
                 existed = db.execute(
