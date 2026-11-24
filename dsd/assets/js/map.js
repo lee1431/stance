@@ -102,15 +102,14 @@
       this.markers.clear();
       if (this.drivingRouteStopId && this.drivingRouteStopId !== targetId) this.clearDrivingRoute();
       for (const stop of stops) {
-        if (stop.status === 'done') continue; // Completed stops remain in history/list, not active map.
         const lat = stop.parking_lat == null ? stop.lat : stop.parking_lat;
         const lng = stop.parking_lng == null ? stop.lng : stop.parking_lng;
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
         const cls = stop.status === 'done' ? 'done' : stop.id === targetId ? 'active' : '';
         const marker = new n.Marker({
           position: new n.LatLng(lat, lng), map: this.map, draggable: false,
-          zIndex: stop.id === targetId ? 200 : 100 - Math.min(stop.position, 90),
-          title: (stop.company || '배송지') + ' · ' + stop.position + '번',
+          zIndex: stop.status === 'done' ? 0 : stop.id === targetId ? 200 : 100 - Math.min(stop.position, 90),
+          title: (stop.company || '배송지') + ' · ' + stop.position + '번' + (stop.status === 'done' ? ' · 완료' : ''),
           icon: { content: '<div class="stop-pin ' + cls + '"><span>' + Number(stop.position) + '</span></div>',
                   size: new n.Size(34, 34), anchor: new n.Point(17, 25) }
         });
