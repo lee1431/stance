@@ -708,3 +708,8 @@ body[data-page="list"] #backButton,body[data-page="list"] #workScanButton{displa
 .map-controls .map-round-button:disabled{opacity:.85}
 .ddsm-current-location{position:relative;width:28px;height:28px;border-radius:50%;background:#2589f438;box-sizing:border-box;display:grid;place-items:center;pointer-events:none}
 .ddsm-current-location::after{content:"";width:13px;height:13px;border:2px solid #fff;border-radius:50%;background:#087cf0;box-shadow:0 1px 5px #123d7050}
+
+.map-controls #mapRefresh[aria-busy=true]{opacity:.75;cursor:progress}
+.map-controls #mapRefresh[aria-busy=true] svg{animation:ddsm-refresh-spin .9s linear infinite}
+@keyframes ddsm-refresh-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.map-controls #mapRefresh[aria-busy=true] svg{animation:none}}
