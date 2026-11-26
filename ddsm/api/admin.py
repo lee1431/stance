@@ -324,6 +324,65 @@ def destination_id_for(db, name, address):
         return db.execute("SELECT id FROM destinations WHERE identity_key=?", (identity,)).fetchone()[0]
     return None
 
+def name_only_source(name, address):
+    return not compact(address) or compact(address) == compact(name)
+
+
+def phone_key(phone):
+    return re.sub(r"[^0-9]", "", str(phone or ""))
+
+
+def recurring_destination(db, name, phone):
+    """An explicitly confirmed name alias wins only when unambiguous."""
+    key = compact(name)
+    if not key:
+        return False, None
+    rows = db.execute(
+        "SELECT phone_key,destination_id FROM recurring_recipients WHERE name_key=?",
+        (key,)
+    ).fetchall()
+    if not rows:
+        return False, None
+    number = phone_key(phone)
+    candidates = {r[1] for r in rows if r[0] == number} if number else {r[1] for r in rows}
+    # A phone-less alias is not proof of identity for a different known phone.
+    if len(candidates) != 1:
+        return True, None
+    if not number:
+        other = db.execute(
+            "SELECT id FROM destinations WHERE name_key=? AND (address_key<>'' OR lat IS NOT NULL)",
+            (key,)
+        ).fetchall()
+        candidates.update(r[0] for r in other)
+    return True, next(iter(candidates)) if len(candidates) == 1 else None
+
+
+def remember_recipient(db, shipment, destination_id):
+    name = shipment["business_name"]
+    key = compact(name)
+    if not key:
+        return
+    number = phone_key(shipment["recipient_phone"])
+    db.execute(
+        """INSERT INTO recurring_recipients(name_key,phone_key,recipient_name,destination_id)
+           VALUES (?,?,?,?) ON CONFLICT(name_key,phone_key,destination_id)
+           DO UPDATE SET updated_at=CURRENT_TIMESTAMP,recipient_name=excluded.recipient_name""",
+        (key, number, name, destination_id)
+    )
+    # Reuse the verified alias for unresolved name-only rows already imported today.
+    for row in db.execute(
+        """SELECT id,business_name,recipient_phone,source_address FROM admin_deliveries
+           WHERE delivery_date=? AND id<>?""",
+        (shipment["delivery_date"], shipment["id"])
+    ).fetchall():
+        if compact(row["business_name"]) != key or not name_only_source(row["business_name"], row["source_address"]):
+            continue
+        _, match = recurring_destination(db,row["business_name"],row["recipient_phone"])
+        if match is not None:
+            db.execute("UPDATE admin_deliveries SET destination_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                       (match,row["id"]))
+
+
 def initialize(db):
     db.executescript(
         """CREATE TABLE IF NOT EXISTS destinations (
@@ -343,6 +402,16 @@ def initialize(db):
             destination_id INTEGER NOT NULL REFERENCES destinations(id),
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS recurring_recipients (
+            id INTEGER PRIMARY KEY,
+            name_key TEXT NOT NULL,
+            phone_key TEXT NOT NULL DEFAULT '',
+            recipient_name TEXT NOT NULL,
+            destination_id INTEGER NOT NULL REFERENCES destinations(id),
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(name_key,phone_key,destination_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_recurring_name ON recurring_recipients(name_key);
         CREATE TABLE IF NOT EXISTS import_batches (
             id INTEGER PRIMARY KEY,
             delivery_date TEXT NOT NULL,
@@ -477,6 +546,7 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
             }
             obj["located"] = obj["lat"] is not None and obj["lng"] is not None
             obj["registered"] = obj["destination_id"] is not None
+            obj["name_only"] = name_only_source(obj["business_name"], obj["source_address"])
             output.append(obj)
         return jsonify(
             ok=True, date=target, total=len(output),
@@ -519,7 +589,12 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
                 waybill = std.get("waybill", "").replace(" ", "")
                 business = std.get("recipient", "").strip()
                 address = std.get("address", "").strip()
-                destination_id = destination_id_for(db, business, address)
+                if name_only_source(business, address):
+                    handled, destination_id = recurring_destination(db, business, std.get("phone", ""))
+                    if not handled:
+                        destination_id = destination_id_for(db, business, "")
+                else:
+                    destination_id = destination_id_for(db, business, address)
                 if waybill:
                     normalized_waybill = compact(waybill)
                     seen_waybills[normalized_waybill] = seen_waybills.get(normalized_waybill, 0) + 1
@@ -551,7 +626,7 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
                         recipient_phone=excluded.recipient_phone, item_name=excluded.item_name,
                         cod_amount=excluded.cod_amount, driver_name=excluded.driver_name,
                         delivery_status=excluded.delivery_status,
-                        destination_id=COALESCE(excluded.destination_id, admin_deliveries.destination_id),
+                        destination_id=excluded.destination_id,
                         raw_json=excluded.raw_json, sheet_name=excluded.sheet_name,
                         source_row=excluded.source_row, source_file=excluded.source_file,
                         import_id=excluded.import_id, updated_at=CURRENT_TIMESTAMP""",
@@ -580,6 +655,32 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
                 ("%" + query + "%", "%" + query + "%")
             ).fetchall()
         return jsonify(ok=True, destinations=[dict(r) for r in rows])
+
+    @app.get("/ddsm/api/admin/recurring-recipients")
+    def admin_recurring_recipients():
+        denied = protected()
+        if denied:
+            return denied
+        query = compact(request.args.get("q", ""))[:80]
+        with closing(connect()) as db:
+            rows = db.execute(
+                """SELECT r.id,r.recipient_name,r.phone_key AS phone,d.address,d.lat,d.lng,r.updated_at
+                   FROM recurring_recipients r JOIN destinations d ON d.id=r.destination_id
+                   WHERE r.name_key LIKE ? OR d.address_key LIKE ?
+                   ORDER BY r.updated_at DESC,r.id DESC LIMIT 500""",
+                ("%"+query+"%", "%"+query+"%")
+            ).fetchall()
+        return jsonify(ok=True, recipients=[dict(row) for row in rows])
+
+    @app.post("/ddsm/api/admin/recurring-recipients/<int:alias_id>/remove")
+    def admin_remove_recurring(alias_id):
+        denied = writable()
+        if denied:
+            return denied
+        with closing(connect()) as db:
+            db.execute("DELETE FROM recurring_recipients WHERE id=?", (alias_id,))
+            db.commit()
+        return jsonify(ok=True)
 
     @app.post("/ddsm/api/admin/deliveries/<int:shipment_id>/location")
     def update_location(shipment_id):
@@ -619,7 +720,7 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
             )
             # Keep a stable mapping from the spreadsheet's original address
             # to the manually corrected canonical destination.
-            if shipment["source_address"].strip():
+            if not name_only_source(shipment["business_name"], shipment["source_address"]):
                 old_key = hashlib.sha256(
                     ("address:" + compact(shipment["source_address"])).encode("utf-8")
                 ).hexdigest()
@@ -630,6 +731,11 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
                            updated_at=CURRENT_TIMESTAMP""",
                     (old_key, chosen_id),
                 )
+            if data.get("remember_recipient") is True:
+                dest = db.execute("SELECT address,lat,lng FROM destinations WHERE id=?", (chosen_id,)).fetchone()
+                if not dest["address"] and (dest["lat"] is None or dest["lng"] is None):
+                    return jsonify(ok=False, error="정기배송 고객의 주소 또는 위치를 입력하세요."), 400
+                remember_recipient(db, shipment, chosen_id)
             db.commit()
         return jsonify(ok=True, destination_id=chosen_id)
 
