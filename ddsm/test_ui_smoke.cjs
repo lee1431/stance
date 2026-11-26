@@ -14,6 +14,9 @@ const clone = x => JSON.parse(JSON.stringify(x));
 const response = data => Promise.resolve({ok:true,status:200,json:async()=>clone(data)});
 w.localStorage.setItem('ddsm:center:driver:v1','d_a_'+'d'.repeat(64));
 w.scrollTo=()=>{};
+w.confirm=()=>true;
+w.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
+w.HTMLDialogElement.prototype.close=function(){if(!this.hasAttribute('open'))return;this.removeAttribute('open');this.dispatchEvent(new w.Event('close'));};
 w.fetch=(url, opts={})=>{
   if(url.includes('work-day')) {
     if(opts.method==='PUT'){currentDay=JSON.parse(opts.body).day;revision++;return response({ok:true,revision});}
@@ -65,5 +68,26 @@ w.eval(read('waybill.js'));w.eval(read('app.js'));
   assert.match($('stopList').firstElementChild.textContent,/완료/);
   $('scanTab').click();await tick();
   assert.equal(d.body.dataset.page,'scan');assert.ok(autofocus>=2);
+  assert.equal($('roundScanCount').textContent,'3건 등록');
+  $('settingsButton').click();
+  assert.ok($('settingsDialog').open);
+  assert.ok($('recoveryTools').classList.contains('hidden'));
+  $('soundToggle').click();assert.equal(w.localStorage.getItem('ddsm:pref:sound'),'off');
+  $('openStats').click();await tick();
+  assert.ok($('statsDialog').open);
+  assert.equal($('statsContent').querySelectorAll('.stats-metric').length,3);
+  assert.match($('statsContent').textContent,/전체 배송3/);
+  assert.match($('statsContent').textContent,/1회차/);
+  $('statsPrev').click();await tick();
+  assert.match($('statsStatus').textContent,/서버 저장 내역/);
+  $('closeStats').click();await tick();
+  $('settingsButton').click();$('openCenterSettings').click();
+  assert.ok($('centerSettingsDialog').open);
+  assert.match($('centerDetails').textContent,/연결되어/);
+  $('logoutDriver').click();await tick();
+  assert.equal(w.localStorage.getItem('ddsm:center:driver:v1'),null);
+  assert.ok(!$('loginLinkForm').classList.contains('hidden'));
+  assert.equal($('roundScanCount').textContent,'0건 등록');
+  assert.equal(currentDay.rounds[0].stops.length,3,'logout does not delete server work');
   console.log('DDSM UI smoke OK');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>dom.window.close());
