@@ -5,11 +5,11 @@
   const DRIVER_API_BASE = 'https://mrdindoin.ddns.net/ddsm/api/driver/';
   const TOKEN_KEY = 'ddsm:center:driver:v1';
   let driverToken = '';
-  let connecting = null;
+  let connecting = null, syncFault=false;
   let syncedDate = '', serverRevision = 0, syncBusy = false, syncPending = false, syncBlocked = false, syncEpoch = 0;
   const WORK_API = DRIVER_API_BASE + 'work-day';
   function invalidateDriverAuth(notify = false) {
-    driverToken = '';
+    driverToken = '';syncFault=false;
     ++syncEpoch; syncedDate = ''; syncPending = false; syncBlocked = false;
     data = freshData(); closeMapPopup(); render();
     if (notify) toast('연결이 끊겼습니다. 센터에서 받은 연결 링크를 확인하세요.');
@@ -59,7 +59,7 @@
       const remote=await serverDay(dayKey,token);
       if (epoch!==syncEpoch || token!==driverToken || date!==dayKey) return false;
       const local=data.days[dayKey];
-      serverRevision=remote.revision;
+      serverRevision=remote.revision;syncFault=false;
       // Only migrate a legacy day when the central day has never been written.
       if (!remote.revision && local?.rounds?.some(r=>r.stops?.length)) {
         archiveLocal(dayKey);
@@ -73,13 +73,13 @@
       try { localStorage.setItem(activeStorageKey(),JSON.stringify(data)); } catch (_) {}
       render();return true;
     } catch(e) {
-      if (epoch===syncEpoch) toast('서버 동기화 실패: '+e.message);
+      if (epoch===syncEpoch) {syncFault=true;renderSettings();toast('서버 동기화 실패: '+e.message);}
       return false;
     }
   }
   async function flushDay() {
     if (syncBusy || !syncPending || syncBlocked || !driverToken || syncedDate!==date) return;
-    syncBusy=true;
+    syncBusy=true;renderSettings();
     const token=driverToken, dayKey=date, epoch=syncEpoch;
     try {
       while(syncPending && !syncBlocked && epoch===syncEpoch && syncedDate===dayKey) {
@@ -98,33 +98,34 @@
         }
         if(res.status===409) {
           syncBlocked=true;syncPending=false;
-          toast('다른 기기와 저장 충돌: JSON 백업 후 새로고침하세요.');
+          toast('저장 충돌: 설정에서 작업 사본을 저장하고 센터에 문의하세요.');
           break;
         }
         if(!res.ok || body?.ok!==true) {
-          syncPending=true;
+          syncFault=true;syncPending=true;
           toast('서버 저장 대기: '+(body?.error||'연결 오류'));break;
         }
-        serverRevision=body.revision;
+        serverRevision=body.revision;syncFault=false;
       }
     } catch(_) {
-      if(epoch===syncEpoch){syncPending=true;toast('서버 연결 오류 · 자동 재전송 대기');}
-    } finally {syncBusy=false;}
+      if(epoch===syncEpoch){syncFault=true;syncPending=true;toast('서버 연결 오류 · 자동 재전송 대기');}
+    } finally {syncBusy=false;renderSettings();}
   }
   async function refreshDay() {
     if(!driverToken || syncedDate!==date || syncPending || syncBusy || syncBlocked ||
-       document.hidden || $('editDialog')?.open || scanWorkerActive || pendingScans.length || mapSelected || pinDraft) return;
+       document.hidden || document.querySelector('dialog[open]') || scanWorkerActive || pendingScans.length || mapSelected || pinDraft) return;
     const token=driverToken, dayKey=date, epoch=syncEpoch;
     try {
       const remote=await serverDay(dayKey,token);
       if(epoch!==syncEpoch || token!==driverToken || date!==dayKey || syncPending || syncBusy || scanWorkerActive || mapSelected || pinDraft) return;
+      syncFault=false;renderSettings();
       if(remote.revision>serverRevision) {
         serverRevision=remote.revision;
         data.days[dayKey]=remote.day;
         try {localStorage.setItem(activeStorageKey(),JSON.stringify(data));}catch(_){}
         render();toast('다른 기기의 변경사항을 동기화했습니다.');
       }
-    } catch(_) {}
+    } catch(_) {if(token===driverToken&&dayKey===date){syncFault=true;renderSettings();}}
   }
 
   const activeStorageKey = () => driverToken ? 'ddsm:center:data:v1:' + driverToken : 'ddsm:center:offline:v1';
@@ -153,6 +154,9 @@
   let workTab = 'map';
   let mapSelected = null, pinDraft = null, wheelValue = 1, wheelDrag = null, wheelFrame = 0;
   const recentScanTimes = new Map();
+  let statsRequest=0;
+  const pref=(key)=>{try{return localStorage.getItem('ddsm:pref:'+key)!=='off';}catch(_){return true;}};
+  let scanSound=pref('sound'),scanVibration=pref('vibration');
   let editingId = '';
   let toastTimer = null;
   let cameraStream = null;
@@ -184,7 +188,7 @@
       if(driverToken && syncedDate===date && !syncBlocked) {
         syncPending=true;void flushDay();
       } else if(driverToken && syncBlocked) {
-        toast('저장 충돌 상태입니다. JSON 백업 후 새로고침하세요.');
+        toast('저장 충돌: 설정에서 작업 사본을 저장하고 센터에 문의하세요.');
       }
       return true;
     } catch(_) {toast('브라우저 백업 저장 실패');return false;}
@@ -254,6 +258,8 @@
     });
     select.value = String(active.no);
     $('scanHint').textContent = c.total + '건';
+    $('roundScanCount').textContent=c.total+'건 등록';
+    renderSettings();
     const recent = $('recentScans');
     recent.replaceChildren();
     const items = active.stops.slice().sort((a,b) =>
@@ -635,7 +641,7 @@
     stops().push(stop);
     if (!persist()) {stops().pop();return {error:'저장하지 못했습니다. 저장 공간을 확인하세요.'};}
     recentScanTimes.set(stop.id,Date.now());render();
-    if (navigator.vibrate) navigator.vibrate(45);
+    if (scanVibration&&navigator.vibrate) navigator.vibrate(45);
     return {stop,suffix};
   }
 
@@ -684,7 +690,7 @@
   function scanReadFeedback() {
     const dialog = $('scanDialog');
     if (view!=='home') return;
-    scanShutterSound();
+    if(scanSound)scanShutterSound();
     clearTimeout(scanFlashTimer);
     dialog.classList.remove('scan-read-flash');
     // Restart animation on consecutive scans, including a duplicate code.
@@ -694,6 +700,7 @@
   }
   function openScan() {
     if(view!=='home'){showView('home');return;}
+    if(!driverToken||syncedDate!==date||syncBlocked||document.querySelector('dialog[open]'))return;
     const input=$('waybillInput');
     input.setAttribute('inputmode','none');
     prepareScanAudio();
@@ -747,7 +754,7 @@
     } finally {scanWorkerActive=false;}
   }
   function processScan(raw, camera = false) {
-    if (!String(raw||'').trim()) return false;
+    if (!String(raw||'').trim()||view!=='home'||document.querySelector('dialog[open]')) return false;
     if (syncedDate !== date || syncBlocked) { toast('서버 동기화가 필요합니다.'); return false; }
     if (!driverToken) {
       const message='센터 연결 후 다시 스캔하세요.';
@@ -942,7 +949,7 @@
     const generation = ++cameraGeneration;
     const video = $('cameraVideo');
     const control = $('cameraButton');
-    if(view!=='home'||control.disabled)return;
+    if(view!=='home'||control.disabled||!driverToken||syncedDate!==date||syncBlocked||document.querySelector('dialog[open]'))return;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       $('scanResult').textContent = '이 브라우저에서는 카메라를 사용할 수 없습니다. 운송장번호를 직접 입력하세요.';
       return;
@@ -1023,56 +1030,116 @@
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 10000);
-    toast('JSON 백업 파일을 만들었습니다.');
+    toast('작업 사본을 저장했습니다.');
   }
-  function validateBackup(value) {
-    if (!isData(value) || Object.keys(value.days).length > 730) throw Error('지원되지 않는 백업 형식입니다.');
-    const result = freshData();
-    for (const [key, d] of Object.entries(value.days)) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(key) || !d || !Array.isArray(d.rounds) || d.rounds.length > 100) throw Error('백업 데이터가 올바르지 않습니다.');
-      const used = new Set();
-      const rounds = d.rounds.map(r => {
-        if (!Number.isInteger(r.no) || r.no < 1 || r.no > 100 || used.has(r.no) || !Array.isArray(r.stops) || r.stops.length > 5000) throw Error('회차 데이터 오류');
-        used.add(r.no);
-        const codes = new Set();
-        const stops = r.stops.map(s => {
-          if (!s || !s.waybill || typeof s.waybill !== 'string') throw Error('운송장 데이터 오류');
-          const waybill = clean(s.waybill, 100);
-          if (codes.has(waybill)) throw Error('운송장 중복');
-          codes.add(waybill);
-          return {
-            id: makeId(), waybill, recipient: clean(s.recipient,100),
-            address: clean(s.address,250), phone: clean(s.phone,25),
-            memo: clean(s.memo,500), status: s.status === 'done' ? 'done' : 'pending',
-            createdAt: clean(s.createdAt,80),
-            scannedItems: Array.isArray(s.scannedItems) ? [...new Set(s.scannedItems.filter(x=>/^\d{3}$/.test(x)))].slice(0,999) : [],
-            ...(validCoordinates(s) ? { lat: s.lat, lng: s.lng } : {})
-          };
-        });
-        return { no: r.no, stops };
-      });
-      result.days[key] = { selected: used.has(d.selected) ? d.selected : (rounds[0] ? rounds[0].no : 1), rounds: rounds.length ? rounds : [{ no: 1, stops: [] }] };
+  function centerId(){return /^d_([A-Za-z0-9-]{1,40})_/.exec(driverToken)?.[1]||'';}
+  function centerDisplay(){const id=centerId();return id==='chungju'?'충주센터':id||'연결 대기';}
+  function renderSettings(){
+    const state=syncBlocked?'저장 충돌 · 센터 문의':!driverToken?'센터 연결 필요':syncedDate!==date?'동기화 필요':syncFault?'서버 연결 확인 필요':syncPending||syncBusy?'서버 저장 중':'서버 저장 완료';
+    $('syncLabel').textContent=state;$('dailyPhoneLabel').textContent=state;
+    $('settingsDateLabel').textContent=dateText(date);
+    $('centerLabel').textContent=driverToken?centerDisplay()+' · 연결됨':'로그인 필요';
+    $('centerDetails').textContent=driverToken?centerDisplay()+'에 연결되어 있습니다.':'센터에서 받은 연결 링크로 로그인하세요.';
+    $('logoutDriver').classList.toggle('hidden',!driverToken);
+    $('loginLinkForm').classList.toggle('hidden',Boolean(driverToken));
+    $('recoveryTools').classList.toggle('hidden',!syncBlocked);
+    $('soundToggle').checked=scanSound;$('vibrationToggle').checked=scanVibration;
+  }
+  function openDriverDialog(id){
+    stopCamera();$('settingsDialog').close();
+    renderSettings();$(id).showModal();
+  }
+  function resumeScan(){if(view==='home'&&driverToken&&syncedDate===date&&!document.querySelector('dialog[open]'))openScan();}
+  async function manualSync(){
+    if(!driverToken){openDriverDialog('centerSettingsDialog');return;}
+    if(syncBlocked){toast('저장 충돌 상태입니다. 작업 사본을 저장하고 센터에 문의하세요.');return;}
+    if(scanWorkerActive||pendingScans.length||syncBusy){toast('작업 처리 중입니다. 완료 후 다시 시도하세요.');return;}
+    if(syncPending){await flushDay();renderSettings();if(syncPending||syncBlocked)return;}
+    try{
+      if(syncedDate!==date){if(!await activateDay(date))return;}
+      else{
+        const token=driverToken,dayKey=date,epoch=syncEpoch;
+        const remote=await serverDay(dayKey,token);
+        if(token!==driverToken||date!==dayKey||epoch!==syncEpoch||syncPending||syncBusy)return;
+        syncFault=false;
+        if(remote.revision>=serverRevision){
+          serverRevision=remote.revision;data.days[dayKey]=remote.day;
+          try{localStorage.setItem(activeStorageKey(),JSON.stringify(data));}catch(_){}
+          render();
+        }
+      }
+      renderSettings();toast('서버 동기화 완료');
+    }catch(e){syncFault=true;renderSettings();toast(e.message||'동기화 실패');}
+  }
+  function renderStats(value){
+    const rounds=(value?.rounds||[]).slice().sort((a,b)=>a.no-b.no);
+    const all=rounds.flatMap(r=>r.stops||[]),done=all.filter(s=>s.status==='done').length;
+    const root=$('statsContent');root.replaceChildren();
+    const summary=node('div','stats-summary');
+    for(const [label,count] of [['전체 배송',all.length],['배송 예정',all.length-done],['배송 완료',done]]){
+      const item=node('div','stats-metric');item.append(node('span','',label),node('strong','',String(count)));summary.append(item);
     }
-    return result;
+    const percent=all.length?Math.round(done/all.length*100):0;
+    const progress=node('div','stats-overall');progress.append(node('strong','','완료율 '+percent+'%'));
+    const track=node('div','stats-track'),fill=node('div','stats-fill');fill.style.width=percent+'%';track.append(fill);progress.append(track);
+    root.append(summary,progress,node('h3','stats-heading','회차별 배송'));
+    for(const r of rounds){
+      const items=r.stops||[],completed=items.filter(s=>s.status==='done').length;
+      const details=node('details','stats-round'),head=node('summary','');
+      head.append(node('strong','',r.no+'회차'),node('span','',completed+' / '+items.length+'건 완료'));
+      details.append(head);
+      if(!items.length)details.append(node('p','stats-empty','배송 내역 없음'));
+      for(const s of items){
+        const row=node('div','stats-stop');
+        const info=node('div','');info.append(node('strong','',s.recipient||s.waybill),node('small','',s.address||'주소 미지정'));
+        row.append(info,node('span',s.status==='done'?'stats-done':'stats-pending',s.status==='done'?'완료':'예정'));details.append(row);
+      }
+      root.append(details);
+    }
+    if(!all.length)root.append(node('p','stats-empty','선택한 날짜의 배송 내역이 없습니다.'));
   }
-  async function importData(file) {
-    if (!file) return;
-    try {
-      if (file.size > 3 * 1024 * 1024) throw Error('3MB 이하 JSON 파일만 가져올 수 있습니다.');
-      const incoming = validateBackup(JSON.parse(await file.text()));
-      if (!confirm('현재 이 브라우저에 있는 DDSM 데이터를 모두 백업 내용으로 바꿀까요?')) return;
-      const previous = data;
-      data = incoming;
-      if (!persist()) { data = previous; return; }
-      $('settingsDialog').close();
-      render();
-      toast('백업을 불러왔습니다.');
-    } catch (error) { toast('가져오기 실패: ' + (error.message || 'JSON 형식을 확인하세요.')); }
-    finally { $('importInput').value = ''; }
+  async function loadStats(){
+    const key=$('statsDate').value,token=driverToken,request=++statsRequest;
+    $('statsNext').disabled=key>=today();$('statsContent').replaceChildren();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(key)||key>today()){ $('statsStatus').textContent='배송일을 확인하세요.';return;}
+    if(!token){$('statsStatus').textContent='센터에 로그인한 후 배송 현황을 확인하세요.';return;}
+    if(key===date&&syncedDate===date){
+      $('statsStatus').textContent=syncPending||syncBusy||syncBlocked||syncFault?'현재 기기 작업 기준 · 서버 저장 상태 확인 필요':'현재 배송 작업 기준';
+      renderStats(day());return;
+    }
+    $('statsStatus').textContent='서버에서 배송 내역을 불러오는 중…';
+    try{
+      const remote=await serverDay(key,token);
+      if(request!==statsRequest||token!==driverToken||!$('statsDialog').open)return;
+      $('statsStatus').textContent='서버 저장 내역 기준';renderStats(remote.day);
+    }catch(e){if(request===statsRequest&&$('statsDialog').open)$('statsStatus').textContent=e.message||'배송 현황 조회 실패';}
   }
-
+  function stepStats(delta){
+    const value=$('statsDate').value;if(!value)return;
+    const d=new Date(value+'T12:00:00');d.setDate(d.getDate()+delta);
+    const key=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+    if(key>today())return;$('statsDate').value=key;void loadStats();
+  }
+  function logoutDriver(){
+    if(syncPending||syncBusy||syncBlocked||scanWorkerActive||pendingScans.length||connecting){toast('서버 저장 및 스캔 처리 완료 후 로그아웃하세요.');return;}
+    if(!driverToken)return;
+    if(syncedDate!==date){toast('서버 동기화 후 로그아웃하세요.');return;}
+    if(!confirm('센터 연결을 종료할까요? 다시 로그인하려면 센터 연결 링크가 필요합니다.'))return;
+    stopCamera();
+    try{localStorage.removeItem(TOKEN_KEY);}catch(_){toast('로그아웃 실패');return;}
+    invalidateDriverAuth();++statsRequest;recentScanTimes.clear();$('statsContent').replaceChildren();$('scanResult').textContent='센터에 로그인하세요.';
+    renderSettings();toast('로그아웃 완료');
+  }
+  function loginWithLink(event){
+    event.preventDefault();
+    try{
+      const url=new URL($('loginLink').value.trim()),p=new URLSearchParams(url.hash.slice(1));
+      if(url.origin!==location.origin||!['/ddsm/','/ddsm/connect/'].includes(url.pathname)||!p.get('center')||!p.get('invite')||p.has('admin'))throw Error('기사 연결 링크를 확인하세요.');
+      $('loginLink').value='';location.replace('connect/'+url.hash);
+    }catch(e){toast(e.message||'센터 연결 링크를 확인하세요.');}
+  }
   function bind() {
-    $('myPhoneButton').addEventListener('click',()=>{if(!syncPending&&!syncBusy)void restoreConnection();});
+    $('myPhoneButton').addEventListener('click',()=>{if(!driverToken)openDriverDialog('centerSettingsDialog');else void manualSync();});
     $('dateButton').addEventListener('click', chooseDate);
     $('dateInput').addEventListener('change', async e => {
       const value = e.target.value;
@@ -1081,7 +1148,7 @@
         toast('서버 저장 완료 후 날짜를 변경하세요.');e.target.value=date;return;
       }
       date=value;render();
-      if(driverToken) await activateDay(value);
+      if(driverToken) {await activateDay(value);resumeScan();}
     });
     $('roundSelect').addEventListener('change', e => {
       setSelectedRound(e.target.value);
@@ -1114,10 +1181,22 @@
     $('closeEdit').addEventListener('click', () => $('editDialog').close());
     $('addressInput').addEventListener('input', updateAddressMap);
     $('editDialog').addEventListener('close', closeAddressMap);
-    $('settingsButton').addEventListener('click', () => $('settingsDialog').showModal());
-    $('closeSettings').addEventListener('click', () => $('settingsDialog').close());
-    $('exportButton').addEventListener('click', exportData);
-    $('importInput').addEventListener('change', e => importData(e.target.files[0]));
+    $('settingsButton').addEventListener('click',()=>openDriverDialog('settingsDialog'));
+    $('closeSettings').addEventListener('click',()=>$('settingsDialog').close());
+    $('settingsDate').addEventListener('click',()=>{$('settingsDialog').close();chooseDate();});
+    $('openStats').addEventListener('click',()=>{openDriverDialog('statsDialog');$('statsDate').max=today();$('statsDate').value=date>today()?today():date;void loadStats();});
+    $('closeStats').addEventListener('click',()=>$('statsDialog').close());
+    $('statsDate').addEventListener('change',loadStats);$('statsPrev').addEventListener('click',()=>stepStats(-1));$('statsNext').addEventListener('click',()=>stepStats(1));
+    $('syncNow').addEventListener('click',manualSync);
+    $('openCenterSettings').addEventListener('click',()=>openDriverDialog('centerSettingsDialog'));
+    $('closeCenterSettings').addEventListener('click',()=>$('centerSettingsDialog').close());
+    $('logoutDriver').addEventListener('click',logoutDriver);$('loginLinkForm').addEventListener('submit',loginWithLink);
+    $('soundToggle').addEventListener('change',e=>{scanSound=e.target.checked;try{localStorage.setItem('ddsm:pref:sound',scanSound?'on':'off');}catch(_){}});
+    $('vibrationToggle').addEventListener('change',e=>{scanVibration=e.target.checked;try{localStorage.setItem('ddsm:pref:vibration',scanVibration?'on':'off');}catch(_){}});
+    $('exportButton').addEventListener('click',exportData);
+    for(const id of ['settingsDialog','statsDialog','centerSettingsDialog']){
+      $(id).addEventListener('close',()=>{if(id==='statsDialog')++statsRequest;resumeScan();});
+    }
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) stopCamera(); else if(view==='home')openScan();
     });
