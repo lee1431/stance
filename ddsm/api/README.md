@@ -36,7 +36,7 @@ cid = input("센터 ID: ").strip()
 name = input("센터명: ").strip()
 key = secrets.token_urlsafe(48)
 centers = {cid: {"name": name, "invite": secrets.token_urlsafe(48)}}
-p.write_text("export DDSM_CENTERS_JSON=" + shlex.quote(json.dumps(centers, ensure_ascii=False)) + "\\nexport DDSM_ADMIN_ACCESS_KEY=" + shlex.quote(key) + "\\n")
+p.write_text("export DDSM_CENTERS_JSON=" + shlex.quote(json.dumps(centers, ensure_ascii=False)) + "\nexport DDSM_ADMIN_ACCESS_KEY=" + shlex.quote(key) + "\n")
 print("관리자 전용 연결 링크: https://llsshh.com/ddsm/admin/#admin=" + key)
 PY
 ```
