@@ -167,24 +167,119 @@
     markers.forEach(item=>item.marker.setMap(null));
     markers=[];
   }
+  let recurringMap=null,recurringMaps=null,recurringDraft=null,recurringSeq=0,manualLocationBusy=false;
+  const recurringEdits=new Map();
+  function recurringField(row,key,label,limit){
+    const input=document.createElement('input');input.type=key==='phone'?'tel':'text';
+    input.value=recurringEdits.get(row.id)?.[key]??row[key]??'';input.maxLength=limit;
+    input.setAttribute('aria-label',label+' · '+row.recipient_name);
+    input.placeholder=label;
+    if(key==='address')input.className='recurring-address';
+    input.addEventListener('input',()=>{
+      const edit=recurringEdits.get(row.id)||{recipient_name:row.recipient_name,phone:row.phone||'',address:row.address||''};
+      edit[key]=input.value;recurringEdits.set(row.id,edit);
+    });
+    const cell=document.createElement('td');cell.append(input);return {cell,input};
+  }
+  async function beforeManualLocation(){
+    // Stop the automatic geocode batch before writing a manual correction.
+    ++updateSeq;
+    if(autoLocationWrite)await autoLocationWrite.done.catch(()=>{});
+  }
+  async function refreshSaved(message){
+    const results=await Promise.allSettled([loadDayWithoutGeocode(),loadRecurring()]);
+    const failed=results.filter(r=>r.status==='rejected'||r.value===false);
+    say('importStatus',message+(failed.length?' · 목록 갱신 실패: '+(failed[0].reason?.message||'정기배송 목록 조회 실패'):' · 목록 및 지도 갱신 완료'));
+    return !failed.length;
+  }
+  async function persistRecurring(row,fields,point=null){
+    if(manualLocationBusy)return false;
+    manualLocationBusy=true;
+    try{
+      await beforeManualLocation();
+      await post('admin/recurring-recipients/'+row.id+'/update',{...fields,...(point||{})});
+      recurringEdits.delete(row.id);
+      const refreshed=await refreshSaved('정기배송 고객 저장 완료');
+      if(!refreshed)say('recurringStatus','저장 완료 · 목록 새로고침이 필요합니다.');
+      return true;
+    }finally{manualLocationBusy=false;}
+  }
+  async function openRecurringMap(row,fields){
+    const seq=++recurringSeq;recurringDraft={row,fields};
+    $('recurringMapAddress').value=fields.address;
+    say('recurringMapName',fields.recipient_name);
+    say('recurringMapStatus','지도를 불러오는 중…');
+    $('recurringMapSave').disabled=true;
+    $('recurringMapDialog').showModal();
+    try{
+      recurringMaps=await window.DDSM_NaverMap.loadSdk();
+      if(seq!==recurringSeq||!$('recurringMapDialog').open)return;
+      const n=recurringMaps;
+      const initial=valid(row)?new n.LatLng(row.lat,row.lng):(map?map.getCenter():new n.LatLng(36.991,127.925));
+      if(!recurringMap)recurringMap=new n.Map($('recurringMapCanvas'),{center:initial,zoom:valid(row)?17:12,zoomControl:true,scaleControl:false,mapDataControl:false});
+      else{recurringMap.setCenter(initial);recurringMap.setZoom(valid(row)?17:12);}
+      n.Event.trigger(recurringMap,'resize');
+      $('recurringMapSave').disabled=false;
+      say('recurringMapStatus','지도를 움직여 중앙 핀을 정확한 배송지에 맞추세요.');
+    }catch(e){say('recurringMapStatus','지도 연결 실패: '+e.message);}
+  }
+  async function searchRecurringMap(){
+    if(!recurringDraft||!recurringMap)return;
+    const address=$('recurringMapAddress').value.trim(),seq=recurringSeq;
+    if(address.length<4){say('recurringMapStatus','정확한 주소를 입력하세요.');return;}
+    say('recurringMapStatus','주소 검색 중…');
+    $('recurringMapSearch').disabled=true;$('recurringMapSave').disabled=true;
+    try{
+      const p=await window.DDSM_Address.resolve(recurringMaps,[address],{manual:true});
+      if(seq!==recurringSeq)return;
+      if(!p){say('recurringMapStatus','주소를 찾지 못했습니다. 지도에서 직접 지정하세요.');return;}
+      recurringMap.setCenter(new recurringMaps.LatLng(p.lat,p.lng));recurringMap.setZoom(17);
+      say('recurringMapStatus','지도 중앙 핀을 실제 배송지에 맞춘 뒤 저장하세요.');
+    }catch(e){if(seq===recurringSeq)say('recurringMapStatus',e.message);}
+    finally{$('recurringMapSearch').disabled=false;if(seq===recurringSeq)$('recurringMapSave').disabled=false;}
+  }
+  async function saveRecurringMap(){
+    if(!recurringDraft||!recurringMap||$('recurringMapSave').disabled||manualLocationBusy)return;
+    const {row,fields}=recurringDraft,center=recurringMap.getCenter();
+    $('recurringMapSave').disabled=true;$('recurringMapCancel').disabled=true;$('recurringMapSearch').disabled=true;
+    try{
+      if(await persistRecurring(row,{...fields,address:$('recurringMapAddress').value.trim()},{lat:center.lat(),lng:center.lng()}))$('recurringMapDialog').close();
+    }catch(e){say('recurringMapStatus','저장 실패: '+e.message);}
+    finally{$('recurringMapSave').disabled=false;$('recurringMapCancel').disabled=false;$('recurringMapSearch').disabled=false;}
+  }
   async function loadRecurring() {
     try {
       const result=await get('admin/recurring-recipients?q='+encodeURIComponent($('recurringSearch').value.trim()));
       const root=$('recurringBody');root.replaceChildren();
       result.recipients.forEach(row=>{
         const tr=document.createElement('tr');
-        tr.append(textCell(row.recipient_name),textCell(row.phone||'없음'),textCell(row.address||'좌표 등록'));
-        const td=document.createElement('td'),button=document.createElement('button');
-        button.type='button';button.textContent='등록 해제';
-        button.addEventListener('click',async()=>{
-          if(!confirm('이 고객의 자동 참조 등록을 해제할까요?'))return;
-          try{await post('admin/recurring-recipients/'+row.id+'/remove',{});await loadRecurring();}
+        const name=recurringField(row,'recipient_name','수취인명',160);
+        const phone=recurringField(row,'phone','연락처',40);
+        const address=recurringField(row,'address','주소',250);
+        const fields=()=>({recipient_name:name.input.value.trim(),phone:phone.input.value.trim(),address:address.input.value.trim()});
+        tr.append(name.cell,phone.cell,address.cell);
+        const location=document.createElement('td'),pin=document.createElement('button');
+        pin.type='button';pin.textContent=valid(row)?'위치 수정':'위치 지정';
+        pin.className=valid(row)?'mapped':'missing';pin.addEventListener('click',()=>void openRecurringMap(row,fields()));
+        location.append(pin);tr.append(location);
+        const td=document.createElement('td'),actions=document.createElement('div'),save=document.createElement('button'),remove=document.createElement('button');
+        actions.className='recurring-actions';save.type=remove.type='button';save.className='primary';save.textContent='저장';remove.textContent='등록 해제';
+        save.addEventListener('click',async()=>{
+          if(manualLocationBusy)return;save.disabled=true;remove.disabled=true;
+          try{await persistRecurring(row,fields());}
+          catch(e){say('recurringStatus','저장 실패: '+e.message);}
+          finally{save.disabled=false;remove.disabled=false;}
+        });
+        remove.addEventListener('click',async()=>{
+          if(manualLocationBusy||!confirm('이 고객의 자동 참조 등록을 해제할까요?'))return;
+          try{await post('admin/recurring-recipients/'+row.id+'/remove',{});recurringEdits.delete(row.id);await loadRecurring();}
           catch(e){say('recurringStatus',e.message);}
         });
-        td.append(button);tr.append(td);root.append(tr);
+        actions.append(save,remove);td.append(actions);tr.append(td);root.append(tr);
       });
-      say('recurringStatus','등록 고객 '+result.recipients.length+'건 (최대 500건 표시)');
-    } catch(e){say('recurringStatus','조회 실패: '+e.message);}
+      say('recurringStatus','등록 고객 '+result.recipients.length+'건 · 각 항목 수정 후 저장 (최대 500건 표시)');
+    } catch(e){say('recurringStatus','조회 실패: '+e.message);return false;}
+    return true;
   }
   function renderUnlocated() {
     const missing=rows.filter(row=>!row.located);
@@ -376,7 +471,7 @@
     const button = $('saveAddressBtn');
     const input = $('newAddress');
     const row = addressRow;
-    if (!row || button.disabled) return;
+    if (!row || button.disabled || manualLocationBusy) return;
     const address = input.value.trim();
     if (!address) {
       say('addressError', '배송 주소를 입력하세요.');
@@ -384,27 +479,20 @@
       return;
     }
     const cancel = $('cancelAddressBtn');
+    manualLocationBusy=true;
     button.disabled = cancel.disabled = input.readOnly = true;
     say('addressError', '');
     try {
       // Finish any existing automatic write before applying the manual correction.
-      if (autoLocationWrite?.id === row.id) await autoLocationWrite.done.catch(() => {});
+      await beforeManualLocation();
       await post('admin/deliveries/' + row.id + '/location', { address, remember_recipient:$('rememberAddress').checked });
       closeEditor();
-      try {
-        await loadDayWithoutGeocode();
-        const registered = rows.find(item => item.id === row.id)?.registry_address;
-        say('importStatus', registered && registered !== address
-          ? '기존 배송지 주소로 연결했습니다. ' + registered
-          : '배송 주소를 저장했습니다.');
-      } catch (error) {
-        say('importStatus', '배송 주소를 저장했습니다. 목록 조회 실패: ' + error.message);
-      }
       dialog.close();
-      void loadRecurring();
+      await refreshSaved('배송 주소 저장 완료');
     } catch (error) {
       say('addressError', '주소 저장 실패: ' + error.message);
     } finally {
+      manualLocationBusy=false;
       button.disabled = cancel.disabled = input.readOnly = false;
     }
   }
@@ -450,14 +538,17 @@
     }catch(_){}
   }
   async function linkSaved() {
-    if(!selected)return;
+    if(!selected||manualLocationBusy)return;
     const destinationId=Number($('savedDestinationSelect').value);
     if(!Number.isSafeInteger(destinationId))return;
+    manualLocationBusy=true;$('linkDestinationBtn').disabled=true;
     try {
-      await post('admin/deliveries/'+selected.id+'/location',{destination_id:destinationId,remember_recipient:$('rememberLocation').checked});
-      closeEditor();await loadDay();void loadRecurring();
-      say('importStatus','기존 배송지 연결 완료');
+      const row=selected,remember=$('rememberLocation').checked;
+      await beforeManualLocation();
+      await post('admin/deliveries/'+row.id+'/location',{destination_id:destinationId,remember_recipient:remember});
+      closeEditor();await refreshSaved('기존 배송지 연결 완료');
     }catch(e){say('locationHint','연결 실패: '+e.message);}
+    finally{manualLocationBusy=false;$('linkDestinationBtn').disabled=false;}
   }
   function addressValues(row, override = null) {
     const primary = override === null ? (row?.registry_address || row?.source_address || '') : override;
@@ -496,23 +587,25 @@
     }catch(e){say('locationHint',e.message);}
   }
   async function saveCenter() {
-    if(!selected||!map)return;
+    if(!selected||!map||manualLocationBusy)return;
     const address=$('editAddress').value.trim();
     if(!address && !selected.business_name.trim()) {say('locationHint','주소 또는 상호명이 필요합니다.');return;}
-    const center=map.getCenter();
+    const center=map.getCenter(),row=selected,remember=$('rememberLocation').checked;
+    manualLocationBusy=true;$('saveCenterBtn').disabled=$('mapPinSaveBtn').disabled=true;
     try{
-      await post('admin/deliveries/'+selected.id+'/location',{
-        address, business_name:selected.business_name,
-        lat:center.lat(), lng:center.lng(), remember_recipient:$('rememberLocation').checked
+      await beforeManualLocation();
+      await post('admin/deliveries/'+row.id+'/location',{
+        address, business_name:row.business_name,
+        lat:center.lat(), lng:center.lng(), remember_recipient:remember
       });
-      closeEditor();await loadDay();void loadRecurring();
-      say('importStatus',address ? '공용 배송지 마스터의 주소와 좌표를 저장했습니다.' : '상호명만으로 공용 배송지 마스터의 좌표를 저장했습니다.');
+      closeEditor();await refreshSaved('배송 위치 저장 완료');
     }catch(e){say('locationHint','위치 저장 실패: '+e.message);}
+    finally{manualLocationBusy=false;$('saveCenterBtn').disabled=$('mapPinSaveBtn').disabled=false;}
   }
   let geocodeRunning=false;
   const geocodeTried=new Set();
   async function autoGeocode(limit=60){
-    if(geocodeRunning)return;
+    if(geocodeRunning||manualLocationBusy)return;
     geocodeRunning=true;
     try {
       await ensureMap();
@@ -525,7 +618,7 @@
       const addressCache=new Map();
       for(const row of unresolved.slice(0,limit)){
         if(daySequence!==updateSeq || targetDate!==$('deliveryDate').value)break;
-        if(addressRow?.id===row.id)continue;
+        if(addressRow?.id===row.id||selected?.id===row.id||manualLocationBusy)continue;
         attempted++;
         const values=addressValues(row);
         const address=values[0]?.trim()||'';
@@ -537,7 +630,7 @@
         }
         const current = rows.find(item => item.id === row.id);
         if(daySequence!==updateSeq || targetDate!==$('deliveryDate').value)break;
-        if(!current || addressRow?.id===row.id || addressValues(current)[0]!==values[0])continue;
+        if(!current || addressRow?.id===row.id || selected?.id===row.id || manualLocationBusy || addressValues(current)[0]!==values[0])continue;
         geocodeTried.add(targetDate+'|'+row.id+'|'+values[0]);
         if(coords){
           const done = post('admin/deliveries/'+row.id+'/location',{
@@ -567,7 +660,10 @@
     say('totalCount',String(response.total));
     say('mapCount',String(response.located));
     say('missingCount',String(response.unlocated));
+    const scroll=$('rawTable').parentElement,top=scroll.scrollTop,left=scroll.scrollLeft;
     renderTable();renderUnlocated();drawMap();
+    scroll.scrollTop=top;scroll.scrollLeft=left;
+    return true;
   }
   function bind(){
     $('deliveryDate').value=dateString();
@@ -582,6 +678,11 @@
     $('deliveryDate').addEventListener('change',loadDay);
     $('refreshBtn').addEventListener('click',loadDay);
     $('refreshRecurring').addEventListener('click',loadRecurring);
+    $('recurringMapSearch').addEventListener('click',searchRecurringMap);
+    $('recurringMapSave').addEventListener('click',saveRecurringMap);
+    $('recurringMapCancel').addEventListener('click',()=>$('recurringMapDialog').close());
+    $('recurringMapDialog').addEventListener('cancel',e=>{if(manualLocationBusy)e.preventDefault();});
+    $('recurringMapDialog').addEventListener('close',()=>{++recurringSeq;recurringDraft=null;});
     $('recurringSearch').addEventListener('change',loadRecurring);
     $('excelFile').addEventListener('change',()=>say('fileName',$('excelFile').files[0]?.name||'선택된 파일 없음'));
     $('importForm').addEventListener('submit',importExcel);

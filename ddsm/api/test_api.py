@@ -41,6 +41,60 @@ class DDSMApiTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.get_json())
         return {"Authorization": "Bearer " + response.get_json()["access_token"]}
 
+    def test_recurring_customer_edit_and_location_refresh(self):
+        import json
+        from unittest.mock import patch
+        from app import create_app
+        config = {"DDSM_CENTERS_JSON": json.dumps({"edit-a":{"name":"A","invite":"a"*64},
+                                                   "edit-b":{"name":"B","invite":"b"*64}}),
+                  "DDSM_ADMIN_ACCESS_KEY":"k"*64,"DDSM_ENABLE_LEGACY_AUTH":"0"}
+        with patch.dict(os.environ,config):
+            client=create_app().test_client()
+            base="/ddsm/api/"
+            admin={"Authorization":"Bearer a_edit-a_"+"k"*64}
+            other={"Authorization":"Bearer a_edit-b_"+"k"*64}
+            date="2026-11-26"
+            csv="운송장번호,수취인,주소,연락처\n1234567890123,고객A,충주시 문화동,01011112222\n1234567890124,고객B,충주시 문화동,01033334444\n".encode("utf-8-sig")
+            self.assertEqual(client.post(base+"admin/import",headers=admin,data={"date":date,"file":(io.BytesIO(csv),"manifest.csv")}).status_code,200)
+            def daily():
+                return client.get(base+"admin/deliveries",headers=admin,query_string={"date":date}).get_json()
+            def recurring():
+                return client.get(base+"admin/recurring-recipients",headers=admin).get_json()["recipients"]
+            initial=daily()["rows"]
+            self.assertEqual(initial[0]["destination_id"],initial[1]["destination_id"])
+            for row in initial:
+                self.assertEqual(client.post(base+"admin/deliveries/"+str(row["id"])+"/location",
+                    headers=admin,json={"address":"충주시 문화동","remember_recipient":True}).status_code,200)
+            a=next(r for r in recurring() if r["recipient_name"]=="고객A")
+            url=base+"admin/recurring-recipients/"+str(a["id"])+"/update"
+            payload={"recipient_name":"고객A 수정","phone":"010-5555-6666","address":"충주시 금봉로 21","lat":36.99,"lng":127.92}
+            self.assertEqual(client.post(url,json=payload).status_code,401)
+            self.assertEqual(client.post(url,headers=other,json=payload).status_code,404)
+            self.assertEqual(client.post(url,headers=admin,json={**payload,"lat":100}).status_code,400)
+            result=client.post(url,headers=admin,json=payload)
+            self.assertEqual(result.status_code,200,result.get_json())
+            saved=next(r for r in recurring() if r["id"]==a["id"])
+            self.assertEqual(saved["recipient_name"],"고객A 수정")
+            self.assertEqual(saved["phone"],"01055556666")
+            self.assertEqual(saved["address"],"충주시 금봉로 21")
+            self.assertEqual(saved["lat"],36.99)
+            rows=daily()["rows"]
+            self.assertEqual(rows[0]["registry_address"],"충주시 금봉로 21")
+            self.assertTrue(rows[0]["located"])
+            self.assertEqual(rows[1]["registry_address"],"충주시 문화동")
+            self.assertFalse(rows[1]["located"])
+            self.assertEqual(daily()["located"],1)
+            # Name and phone edit alone keeps verified coordinates.
+            second={**payload,"phone":"01077778888"}
+            second.pop("lat");second.pop("lng")
+            self.assertEqual(client.post(url,headers=admin,json=second).status_code,200)
+            self.assertEqual(daily()["rows"][0]["lat"],36.99)
+            # A different address without a verified pin must not retain the old pin.
+            second["address"]="충주시 금봉로 25"
+            self.assertEqual(client.post(url,headers=admin,json=second).status_code,200)
+            self.assertFalse(daily()["rows"][0]["located"])
+            self.assertEqual(daily()["rows"][0]["registry_address"],"충주시 금봉로 25")
+
     def test_direct_center_admin_login(self):
         import json
         import time

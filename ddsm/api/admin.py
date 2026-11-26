@@ -380,6 +380,11 @@ def remember_recipient(db, shipment, destination_id):
            DO UPDATE SET updated_at=CURRENT_TIMESTAMP,recipient_name=excluded.recipient_name""",
         (key, number, name, destination_id)
     )
+    alias_id = db.execute("SELECT id FROM recurring_recipients WHERE name_key=? AND phone_key=? AND destination_id=?",
+                          (key,number,destination_id)).fetchone()[0]
+    db.execute("""INSERT INTO recurring_delivery_links(shipment_id,alias_id) VALUES(?,?)
+                  ON CONFLICT(shipment_id) DO UPDATE SET alias_id=excluded.alias_id""",
+               (shipment["id"],alias_id))
     # Reuse the verified alias for unresolved name-only rows already imported today.
     for row in db.execute(
         """SELECT id,business_name,recipient_phone,source_address FROM admin_deliveries
@@ -455,7 +460,12 @@ def initialize(db):
             UNIQUE(delivery_date, row_key)
         );
         CREATE INDEX IF NOT EXISTS idx_delivery_date ON admin_deliveries(delivery_date);
-        CREATE INDEX IF NOT EXISTS idx_delivery_destination ON admin_deliveries(destination_id);"""
+        CREATE INDEX IF NOT EXISTS idx_delivery_destination ON admin_deliveries(destination_id);
+        CREATE TABLE IF NOT EXISTS recurring_delivery_links (
+            shipment_id INTEGER PRIMARY KEY REFERENCES admin_deliveries(id) ON DELETE CASCADE,
+            alias_id INTEGER NOT NULL REFERENCES recurring_recipients(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_recurring_delivery_alias ON recurring_delivery_links(alias_id);"""
     )
 
 
@@ -685,12 +695,106 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
             ).fetchall()
         return jsonify(ok=True, recipients=[dict(row) for row in rows])
 
+    @app.post("/ddsm/api/admin/recurring-recipients/<int:alias_id>/update")
+    def admin_update_recurring(alias_id):
+        denied = writable()
+        if denied:
+            return denied
+        data = request.get_json(silent=True) or {}
+        name, phone, address = (data.get(k) for k in ("recipient_name", "phone", "address"))
+        if not all(isinstance(v, str) for v in (name, phone, address)):
+            return jsonify(ok=False, error="고객명, 연락처, 주소를 확인하세요."), 400
+        name, phone, address = name.strip(), phone.strip(), address.strip()
+        if not compact(name) or len(name)>160 or len(phone)>40 or len(address)>250:
+            return jsonify(ok=False, error="고객명 또는 입력 길이를 확인하세요."), 400
+        if phone and (not phone_key(phone) or not re.fullmatch(r"[0-9+() -]+", phone)):
+            return jsonify(ok=False, error="연락처 형식을 확인하세요."), 400
+        supplied = "lat" in data or "lng" in data
+        lat, lng = data.get("lat"), data.get("lng")
+        if supplied and (type(lat) not in (int, float) or type(lng) not in (int, float)
+                         or not -90<=lat<=90 or not -180<=lng<=180):
+            return jsonify(ok=False, error="지도 좌표를 확인하세요."), 400
+        with closing(connect()) as db:
+            db.execute("BEGIN IMMEDIATE")
+            old = db.execute(
+                """SELECT r.*,d.address,d.address_key,d.lat,d.lng FROM recurring_recipients r
+                   JOIN destinations d ON d.id=r.destination_id WHERE r.id=?""", (alias_id,)
+            ).fetchone()
+            if not old:
+                return jsonify(ok=False, error="등록 고객을 찾을 수 없습니다."), 404
+            old_id = old["destination_id"]
+            key, number, address_key = compact(name), phone_key(phone), compact(address)
+            changed = address_key != old["address_key"]
+            if not supplied and not changed:
+                lat,lng=old["lat"],old["lng"]
+            if not address_key and (lat is None or lng is None):
+                return jsonify(ok=False, error="주소 또는 지도 위치를 지정하세요."), 400
+            linked = db.execute(
+                """SELECT s.id,s.business_name,s.recipient_phone,l.alias_id AS linked_alias
+                   FROM admin_deliveries s LEFT JOIN recurring_delivery_links l ON l.shipment_id=s.id
+                   WHERE s.destination_id=?""", (old_id,)
+            ).fetchall()
+            matching = [row["id"] for row in linked if row["linked_alias"]==alias_id or
+                        (row["linked_alias"] is None and compact(row["business_name"])==old["name_key"]
+                         and phone_key(row["recipient_phone"])==old["phone_key"])]
+            exclusive = len(matching)==len(linked) and not db.execute(
+                "SELECT 1 FROM recurring_recipients WHERE destination_id=? AND id<>? LIMIT 1",
+                (old_id,alias_id)
+            ).fetchone()
+            chosen = old_id
+            if changed:
+                exact = db.execute("SELECT id,lat,lng FROM destinations WHERE address_key=? AND id<>? LIMIT 2",
+                                   (address_key,old_id)).fetchall() if address_key else []
+                if len(exact)>1:
+                    return jsonify(ok=False,error="같은 주소의 배송지 마스터가 여러 개입니다. 먼저 중복 배송지를 확인하세요."),409
+                if exact:
+                    chosen=exact[0]["id"]
+                    if not supplied:
+                        lat,lng=exact[0]["lat"],exact[0]["lng"]
+                elif not exclusive:
+                    # Do not move unrelated customers sharing the original master.
+                    identity=hashlib.sha256(("recurring:"+str(alias_id)+":"+address_key).encode()).hexdigest()
+                    db.execute("""INSERT INTO destinations(identity_key,business_name,address,name_key,address_key)
+                                  VALUES(?,?,?,?,?) ON CONFLICT(identity_key) DO NOTHING""",
+                               (identity,name,address,key,address_key))
+                    chosen=db.execute("SELECT id FROM destinations WHERE identity_key=?",(identity,)).fetchone()[0]
+            duplicate=db.execute("""SELECT id FROM recurring_recipients WHERE name_key=? AND phone_key=?
+                                    AND destination_id=? AND id<>?""",(key,number,chosen,alias_id)).fetchone()
+            if duplicate:
+                return jsonify(ok=False,error="동일 고객과 배송지가 이미 등록되어 있습니다. 중복 등록을 해제한 뒤 수정하세요."),409
+            if chosen==old_id and exclusive:
+                db.execute("""UPDATE destinations SET business_name=?,name_key=?,address=?,address_key=?,
+                              lat=?,lng=?,last_seen_at=CURRENT_TIMESTAMP WHERE id=?""",
+                           (name,key,address,address_key,lat,lng,chosen))
+            elif supplied or changed:
+                db.execute("UPDATE destinations SET lat=?,lng=?,last_seen_at=CURRENT_TIMESTAMP WHERE id=?",
+                           (lat,lng,chosen))
+            db.execute("""UPDATE recurring_recipients SET recipient_name=?,name_key=?,phone_key=?,
+                          destination_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?""",
+                       (name,key,number,chosen,alias_id))
+            db.executemany("""INSERT INTO recurring_delivery_links(shipment_id,alias_id) VALUES(?,?)
+                              ON CONFLICT(shipment_id) DO UPDATE SET alias_id=excluded.alias_id""",
+                           [(i,alias_id) for i in matching])
+            if chosen!=old_id:
+                db.executemany("UPDATE admin_deliveries SET destination_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                               [(chosen,i) for i in matching])
+                if exclusive:
+                    db.execute("UPDATE destination_aliases SET destination_id=?,updated_at=CURRENT_TIMESTAMP WHERE destination_id=?",
+                               (chosen,old_id))
+            if changed and address_key:
+                source=hashlib.sha256(("address:"+address_key).encode()).hexdigest()
+                db.execute("INSERT INTO destination_aliases(source_key,destination_id) VALUES(?,?) ON CONFLICT(source_key) DO NOTHING",
+                           (source,chosen))
+            db.commit()
+        return jsonify(ok=True,destination_id=chosen,linked_count=len(matching))
+
     @app.post("/ddsm/api/admin/recurring-recipients/<int:alias_id>/remove")
     def admin_remove_recurring(alias_id):
         denied = writable()
         if denied:
             return denied
         with closing(connect()) as db:
+            db.execute("DELETE FROM recurring_delivery_links WHERE alias_id=?", (alias_id,))
             db.execute("DELETE FROM recurring_recipients WHERE id=?", (alias_id,))
             db.commit()
         return jsonify(ok=True)
@@ -744,6 +848,9 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
                            updated_at=CURRENT_TIMESTAMP""",
                     (old_key, chosen_id),
                 )
+            # A manually changed destination invalidates a stale explicit recurring association.
+            db.execute("""DELETE FROM recurring_delivery_links WHERE shipment_id=? AND alias_id IN
+                          (SELECT id FROM recurring_recipients WHERE destination_id<>?)""",(shipment_id,chosen_id))
             if data.get("remember_recipient") is True:
                 dest = db.execute("SELECT address,lat,lng FROM destinations WHERE id=?", (chosen_id,)).fetchone()
                 if not dest["address"] and (dest["lat"] is None or dest["lng"] is None):
