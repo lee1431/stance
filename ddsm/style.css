@@ -694,3 +694,5 @@ body[data-page="list"] #backButton,body[data-page="list"] #workScanButton{displa
 .qr-login-stage{height:clamp(280px,44dvh,440px)}.qr-login-frame{width:min(68%,220px);max-height:80%;border-width:2px}.qr-alternatives{display:grid;grid-template-columns:1fr 1fr;gap:8px}.qr-alternatives .secondary-action{font-size:14px}.qr-diagnostics{font-size:11px;color:var(--text-muted);margin:6px 0 0;font-variant-numeric:tabular-nums}.qr-diagnostics:empty{display:none}
 
 .center-code-input{display:block;width:100%;box-sizing:border-box;text-align:center;font-size:28px!important;font-variant-numeric:tabular-nums;letter-spacing:.15em;min-height:64px;margin:12px 0}.center-code-input::placeholder{font-size:16px;letter-spacing:0}#centerCodeStatus{margin-top:10px;min-height:20px}
+
+.scan-details{font-size:12px;line-height:1.5;color:var(--text-muted);overflow-wrap:anywhere;margin:2px 0 10px;font-variant-numeric:tabular-nums}

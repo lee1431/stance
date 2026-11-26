@@ -7,7 +7,7 @@ const dom = new JSDOM(read('index.html'), {url:'https://llsshh.com/ddsm/',runScr
 const w = dom.window, d = w.document, $ = id => d.getElementById(id);
 const tick = () => new Promise(resolve => setTimeout(resolve,25));
 const iosMode=process.env.DDSM_TEST_IOS==='1';
-let showBarcode=false;
+let showBarcode=false,lookupRequests=[];
 let currentDay = {selected:1,rounds:[{no:1,stops:[
   {id:'a',waybill:'1234567890123',recipient:'첫 배송지',address:'충주시 금봉로 21',phone:'',memo:'',status:'pending',createdAt:'2026-11-26T01:00:00Z',lat:36.99,lng:127.92,scannedItems:[]},
   {id:'b',waybill:'1234567890124',recipient:'둘째 배송지',address:'충주시 금봉로 22',phone:'',memo:'',status:'pending',createdAt:'2026-11-26T01:01:00Z',lat:36.98,lng:127.91,scannedItems:[]}
@@ -31,7 +31,15 @@ w.fetch=(url, opts={})=>{
     if(opts.method==='PUT'){currentDay=JSON.parse(opts.body).day;revision++;return response({ok:true,revision});}
     return response({ok:true,revision,day:currentDay});
   }
-  if(url.includes('waybill?'))return response({ok:true,master_waybill:'1234567890125',recipient:'최신 배송지',address:'충주시 금봉로 23',phone:'',lat:36.97,lng:127.93});
+  if(url.includes('waybill?')){
+    const query=new URL(url).searchParams,code=query.get('barcode');
+    lookupRequests.push(code);
+    assert.match(code,/^(?:[0-9]{13}|[0-9]{16})$/);
+    assert.match(query.get('date'),/^\d{4}-\d{2}-\d{2}$/);
+    if(code==='9999999999999')return Promise.resolve({ok:false,status:404,json:async()=>({ok:false,error:'해당 날짜 원본 데이터에서 운송장을 찾지 못했습니다.'})});
+    assert.equal(code.slice(0,13),'1234567890125');
+    return response({ok:true,master_waybill:'1234567890125',recipient:'최신 배송지',address:'충주시 금봉로 23',phone:'',lat:36.97,lng:127.93});
+  }
   if(url.endsWith('destination')){destinationWrites++;return response({ok:true});}
   throw Error('Unexpected fetch: '+url);
 };
@@ -69,6 +77,10 @@ Object.defineProperties($('pinPopup'),{offsetWidth:{value:235},offsetHeight:{val
 w.eval(read('waybill.js'));w.eval(read('center-link.js'));w.eval(read('app.js'));
 (async()=>{
   await tick();await tick();
+  assert.equal(w.DDSM_Waybill.parse(']C0\u001d1234-567890125001\r').digits,'1234567890125001');
+  assert.equal(w.DDSM_Waybill.parse('１２３４５６７８９０１２５').digits,'1234567890125');
+  assert.equal(w.DDSM_Waybill.parse('12345678901250').valid,false);
+  assert.equal(w.DDSM_Waybill.parse('1234567890125x').valid,false);
   assert.equal(d.body.dataset.page,'scan');assert.ok(autofocus>0,'continuous autofocus requested');
   assert.match($('recentScans').firstElementChild.textContent,/둘째 배송지/);
   if(iosMode){
@@ -77,12 +89,30 @@ w.eval(read('waybill.js'));w.eval(read('center-link.js'));w.eval(read('app.js'))
     showBarcode=false;
     assert.equal(currentDay.rounds[0].stops.length,3,'Safari-compatible engine decoded a real Code128 pixel frame');
   }else{
-    $('waybillInput').value='1234567890125';
+    $('waybillInput').value=']C0 1234-567890125';
     $('scanForm').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
     await tick();await tick();
   }
   assert.match($('recentScans').firstElementChild.textContent,/최신 배송지/);
   assert.equal(currentDay.rounds[0].stops.length,3);
+  assert.equal(lookupRequests[0],'1234567890125');
+  assert.match($('scanDetails').textContent,/1234567890125/);
+  assert.match($('scanDetails').textContent,/13자리/);
+  $('waybillInput').value='12345678901250';
+  $('scanForm').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+  await tick();
+  assert.match($('scanResult').textContent,/형식 오류/);
+  assert.equal(lookupRequests.length,1);
+  $('waybillInput').value='9999999999999';
+  $('scanForm').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+  await tick();await tick();
+  assert.match($('scanResult').textContent,/HTTP 404/);
+  assert.match($('scanDetails').textContent,/9999999999999/);
+  $('waybillInput').value=']C0 1234567890125-001';
+  $('scanForm').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+  await tick();await tick();
+  assert.equal(lookupRequests.at(-1),'1234567890125001');
+  assert.equal(currentDay.rounds[0].stops.find(s=>s.waybill==='1234567890125').scannedItems[0],'001');
   $('mapTab').click();await tick();
   assert.equal(d.body.dataset.page,'map');assert.ok(cameraStops>0);
   assert.equal(mapState.stops.length,3);
