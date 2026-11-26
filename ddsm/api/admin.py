@@ -380,6 +380,11 @@ def remember_recipient(db, shipment, destination_id):
            DO UPDATE SET updated_at=CURRENT_TIMESTAMP,recipient_name=excluded.recipient_name""",
         (key, number, name, destination_id)
     )
+    alias_id = db.execute("SELECT id FROM recurring_recipients WHERE name_key=? AND phone_key=? AND destination_id=?",
+                          (key,number,destination_id)).fetchone()[0]
+    db.execute("""INSERT INTO recurring_delivery_links(shipment_id,alias_id) VALUES(?,?)
+                  ON CONFLICT(shipment_id) DO UPDATE SET alias_id=excluded.alias_id""",
+               (shipment["id"],alias_id))
     # Reuse the verified alias for unresolved name-only rows already imported today.
     for row in db.execute(
         """SELECT id,business_name,recipient_phone,source_address FROM admin_deliveries
@@ -455,7 +460,12 @@ def initialize(db):
             UNIQUE(delivery_date, row_key)
         );
         CREATE INDEX IF NOT EXISTS idx_delivery_date ON admin_deliveries(delivery_date);
-        CREATE INDEX IF NOT EXISTS idx_delivery_destination ON admin_deliveries(destination_id);"""
+        CREATE INDEX IF NOT EXISTS idx_delivery_destination ON admin_deliveries(destination_id);
+        CREATE TABLE IF NOT EXISTS recurring_delivery_links (
+            shipment_id INTEGER PRIMARY KEY REFERENCES admin_deliveries(id) ON DELETE CASCADE,
+            alias_id INTEGER NOT NULL REFERENCES recurring_recipients(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_recurring_delivery_alias ON recurring_delivery_links(alias_id);"""
     )
 
 
@@ -720,11 +730,13 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
             if not address_key and (lat is None or lng is None):
                 return jsonify(ok=False, error="주소 또는 지도 위치를 지정하세요."), 400
             linked = db.execute(
-                "SELECT id,business_name,recipient_phone FROM admin_deliveries WHERE destination_id=?",
-                (old_id,)
+                """SELECT s.id,s.business_name,s.recipient_phone,l.alias_id AS linked_alias
+                   FROM admin_deliveries s LEFT JOIN recurring_delivery_links l ON l.shipment_id=s.id
+                   WHERE s.destination_id=?""", (old_id,)
             ).fetchall()
-            matching = [row["id"] for row in linked if compact(row["business_name"])==old["name_key"]
-                        and phone_key(row["recipient_phone"])==old["phone_key"]]
+            matching = [row["id"] for row in linked if row["linked_alias"]==alias_id or
+                        (row["linked_alias"] is None and compact(row["business_name"])==old["name_key"]
+                         and phone_key(row["recipient_phone"])==old["phone_key"])]
             exclusive = len(matching)==len(linked) and not db.execute(
                 "SELECT 1 FROM recurring_recipients WHERE destination_id=? AND id<>? LIMIT 1",
                 (old_id,alias_id)
@@ -760,6 +772,9 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
             db.execute("""UPDATE recurring_recipients SET recipient_name=?,name_key=?,phone_key=?,
                           destination_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?""",
                        (name,key,number,chosen,alias_id))
+            db.executemany("""INSERT INTO recurring_delivery_links(shipment_id,alias_id) VALUES(?,?)
+                              ON CONFLICT(shipment_id) DO UPDATE SET alias_id=excluded.alias_id""",
+                           [(i,alias_id) for i in matching])
             if chosen!=old_id:
                 db.executemany("UPDATE admin_deliveries SET destination_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
                                [(chosen,i) for i in matching])
@@ -779,6 +794,7 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
         if denied:
             return denied
         with closing(connect()) as db:
+            db.execute("DELETE FROM recurring_delivery_links WHERE alias_id=?", (alias_id,))
             db.execute("DELETE FROM recurring_recipients WHERE id=?", (alias_id,))
             db.commit()
         return jsonify(ok=True)
@@ -832,6 +848,9 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
                            updated_at=CURRENT_TIMESTAMP""",
                     (old_key, chosen_id),
                 )
+            # A manually changed destination invalidates a stale explicit recurring association.
+            db.execute("""DELETE FROM recurring_delivery_links WHERE shipment_id=? AND alias_id IN
+                          (SELECT id FROM recurring_recipients WHERE destination_id<>?)""",(shipment_id,chosen_id))
             if data.get("remember_recipient") is True:
                 dest = db.execute("SELECT address,lat,lng FROM destinations WHERE id=?", (chosen_id,)).fetchone()
                 if not dest["address"] and (dest["lat"] is None or dest["lng"] is None):
