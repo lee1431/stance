@@ -7,12 +7,12 @@
   <meta name="description" content="DDSM - Daily, Scan, Delivery. 서버 동기화 기반 배송 스캔 대시보드">
   <title>DDSM | Daily · Scan · Delivery</title>
   <link rel="icon" href="favicon.svg?v=vehicle-20261118" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=16-three-tabs">
+  <link rel="stylesheet" href="style.css?v=17-mobile-app">
   <script src="naver-map.js?v=4-address-classification" defer></script>
   <script src="address-utils.js?v=3-attached-units" defer></script>
-  <script src="delivery-map.js?v=6-round-filter" defer></script>
+  <script src="delivery-map.js?v=7-floating-picker" defer></script>
   <script src="waybill.js?v=1-master-13" defer></script>
-  <script src="app.js?v=27-center" defer></script>
+  <script src="app.js?v=28-mobile-app" defer></script>
   <script src="theme.js?v=1" defer></script>
 </head>
 <body>
@@ -54,38 +54,21 @@
           <button id="newRoundButton" class="round-add" type="button" aria-label="새 회차 추가">＋</button>
         </div>
       </div>
-      <section class="home-main">
-        <p class="intro-kicker">매일의 배송을 더 쉽게</p>
-        <h1>스캔하고, 바로 출발하세요.</h1>
-        <div class="scan-wrapper">
-          <span class="scan-pulse" aria-hidden="true"></span>
-          <button id="scanButton" class="scan-button" type="button" aria-label="운송장 스캔 시작">
-            <svg class="scan-symbol" width="41" height="41" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10M7 8v8M11 8v8M15 8v8"/></svg>
-            <span class="scan-title">SCAN</span>
-            <span class="scan-caption">운송장 스캔</span>
-          </button>
+      <section id="scanDialog" class="scan-page" aria-label="운송장 스캔">
+        <div class="scan-camera-stage">
+          <video id="cameraVideo" class="camera-preview hidden" autoplay playsinline muted></video>
+          <div class="scan-frame" aria-hidden="true"><i></i><i></i><i></i><i></i><span></span></div>
+          <button id="cameraButton" type="button" class="camera-control">카메라 켜기</button>
         </div>
-        <p id="scanHint" class="scan-hint">현재 회차 배송지 0건</p>
+        <form id="scanForm" class="scan-form">
+          <label for="waybillInput" class="sr-only">운송장번호</label>
+          <input id="waybillInput" placeholder="운송장번호 직접 입력" autocomplete="off" inputmode="none" spellcheck="false" maxlength="100" required>
+          <button type="submit" class="primary-action">등록</button>
+        </form>
+        <p id="scanResult" class="scan-status" role="status" aria-live="polite">카메라 준비 중</p>
+        <div class="recent-heading"><strong>스캔 목록</strong><span id="scanHint">0건</span></div>
+        <div id="recentScans" class="recent-scans"></div>
       </section>
-      <footer class="home-footer">
-        <div class="stats" aria-label="배송 현황 요약" aria-live="polite">
-          <div class="stat"><span>전체</span><strong id="totalCount">0</strong></div>
-          <div class="stat"><span><i class="stat-dot pending" aria-hidden="true"></i>배송 예정</span><strong id="pendingCount">0</strong></div>
-          <div class="stat"><span><i class="stat-dot done" aria-hidden="true"></i>완료</span><strong id="doneCount">0</strong></div>
-        </div>
-        <button id="deliveryButton" class="delivery-button" type="button" disabled>
-          <span class="delivery-letter" aria-hidden="true">
-            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
-          </span>
-          <span class="delivery-title" id="deliveryButtonLabel">지도</span>
-          <span class="arrow" aria-hidden="true">›</span>
-        </button>
-        <p id="deliveryHint" class="footer-note">운송장을 스캔하면 배송을 시작할 수 있습니다.</p>
-        <button id="listButton" class="text-link" type="button">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
-          목록
-        </button>
-      </footer>
     </main>
     <section id="deliveryScreen" class="screen delivery-screen hidden" aria-labelledby="deliveryHeading">
       <div class="delivery-map-view">
@@ -102,24 +85,24 @@
           <label for="deliveryRoundSelect">배송 목록 회차</label>
           <select id="deliveryRoundSelect" aria-label="배송 목록 회차 선택"></select>
         </div>
-        <nav class="work-tabs" aria-label="작업 화면"><button id="listTab" type="button" aria-pressed="false">목록</button><button id="mapTab" type="button" aria-pressed="true">지도</button></nav>
-        <section id="mapPanel" class="delivery-map-panel" aria-labelledby="deliveryMapHeading">
-          <div class="delivery-map-header">
-            <div>
-              <h3 id="deliveryMapHeading">선택 회차 배송 지도</h3>
-              <p id="deliveryMapCount">오늘의 배송지를 지도에 표시합니다.</p>
-            </div>
-            <button id="deliveryMapFitBtn" class="map-fit-button" type="button">◎ 회차 전체</button>
-          </div>
-          <div class="map-order-tools"><button id="resetMapOrder" type="button">1번부터 지정</button><button id="undoMapOrder" type="button" disabled>한 단계 취소</button></div>
+        <section id="mapPanel" class="delivery-map-panel" aria-label="배송 지도">
+          <span id="deliveryMapCount" class="sr-only"></span>
           <div id="deliveryMapStage" class="delivery-map-stage">
             <div id="deliveryMapCanvas" class="delivery-map-canvas" role="region" aria-label="선택 회차의 배송지 네이버 지도"></div>
             <div id="deliveryMapEmpty" class="delivery-map-empty" role="status">지도 준비 중입니다.</div>
-          </div>
-          <div class="delivery-map-footer">
-            <span><i class="map-legend-dot pending"></i>배송 예정</span>
-            <span><i class="map-legend-dot done"></i>완료</span>
-            <span id="mapOrderHint">마커를 순서대로 누르세요</span>
+            <div id="mapPopup" class="map-mini-popup hidden" role="group" aria-label="배송지 조작">
+              <strong id="mapPopupName" class="map-popup-name"></strong>
+              <div id="orderWheel" class="order-wheel" role="spinbutton" tabindex="0" aria-label="배송 순번" aria-valuemin="1" aria-valuemax="1" aria-valuenow="1">
+                <div class="wheel-selection"></div><div id="wheelNumbers" class="wheel-numbers"></div>
+              </div>
+              <button id="mapOrderSave" class="map-order-save" type="button">순번 변경</button>
+              <div class="map-popup-actions"><button id="mapEdit" type="button">수정</button><a id="mapNav" href="#">내비</a></div>
+            </div>
+            <div id="pinPopup" class="map-mini-popup pin-popup hidden" role="group" aria-label="위치 지정">
+              <strong>이 위치로 핀 지정</strong>
+              <select id="pinStopSelect" aria-label="배송지 선택"></select>
+              <div class="map-popup-actions"><button id="pinCancel" type="button">취소</button><button id="pinSave" type="button">저장</button></div>
+            </div>
           </div>
         </section>
       </div>
@@ -134,21 +117,12 @@
         <div id="stopList" class="stop-list"></div>
       </div>
     </section>
+    <nav class="bottom-nav" aria-label="배송 작업">
+      <button id="scanTab" type="button" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 8V3h5m8 0h5v5m0 8v5h-5m-8 0H3v-5M7 7v10m3-10v10m4-10v10m3-10v10"/></svg><span>스캔</span></button>
+      <button id="mapTab" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16m6-14v16"/></svg><span>지도</span></button>
+      <button id="listTab" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>목록</span></button>
+    </nav>
   </div>
-
-  <dialog id="scanDialog" class="sheet-dialog scan-dialog" aria-labelledby="scanTitle">
-    <div class="dialog-head"><h2 id="scanTitle">운송장 스캔</h2><button id="closeScan" class="close-button" type="button" aria-label="닫기">✕</button></div>
-    <p class="dialog-description">바코드를 스캔하거나 운송장번호를 입력하세요.</p>
-    <video id="cameraVideo" class="camera-preview hidden" autoplay playsinline muted></video>
-    <form id="scanForm" class="scan-form">
-      <label for="waybillInput" class="sr-only">운송장번호</label>
-      <input id="waybillInput" placeholder="운송장번호" autocomplete="off" inputmode="text" spellcheck="false" maxlength="100" required>
-      <button type="submit" class="primary-action">추가</button>
-    </form>
-    <button id="cameraButton" type="button" class="secondary-action">카메라 켜기</button>
-    <p id="scanResult" class="dialog-message" role="status" aria-live="polite">센터 원본에서 확인된 운송장만 등록합니다.</p>
-    <nav class="work-tabs"><button id="scanToList" type="button">목록</button><button id="scanToMap" type="button">지도 · 순번 지정</button></nav>
-  </dialog>
 
   <dialog id="editDialog" class="sheet-dialog" aria-labelledby="editTitle">
     <form id="editForm">
@@ -195,7 +169,7 @@
       <label for="importInput" class="secondary-action file-label">JSON 백업 불러오기</label>
       <input id="importInput" type="file" accept=".json,application/json" class="hidden">
       <p class="dialog-footnote">원본 엑셀은 S10 서버에 저장됩니다. 센터·기기·배송일을 기준으로 서버에 저장합니다. 기존 계정 자료는 자동으로 이전되지 않습니다. 서버 저장 대기·충돌 표시가 있으면 JSON 백업을 보관하세요. 수취인 정보가 포함된 백업 파일은 안전하게 보관하세요.</p>
-      <a class="old-version-link" href="admin/">센터 관리자 페이지 열기</a>
+
       
     </div>
   </dialog>

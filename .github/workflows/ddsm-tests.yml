@@ -1,7 +1,7 @@
 name: DDSM tests
 on:
   push:
-    branches: [main, ddsm-center-loginless]
+    branches: [main, ddsm-center-loginless, ddsm-mobile-app-ui]
     paths: ['ddsm/**', '.github/workflows/ddsm-tests.yml']
   pull_request:
     paths: ['ddsm/**', '.github/workflows/ddsm-tests.yml']
@@ -23,3 +23,8 @@ jobs:
           node --check ddsm/app.js
           node --check ddsm/admin/admin.js
           node --check ddsm/delivery-map.js
+          node --check ddsm/connect/connect.js
+      - run: python ddsm/test_ui_contract.py
+
+      - run: npm install --no-save --no-package-lock --prefix /tmp/ddsm-ui jsdom@26
+      - run: NODE_PATH=/tmp/ddsm-ui/node_modules node ddsm/test_ui_smoke.cjs

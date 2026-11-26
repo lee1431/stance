@@ -11,7 +11,7 @@
   function invalidateDriverAuth(notify = false) {
     driverToken = '';
     ++syncEpoch; syncedDate = ''; syncPending = false; syncBlocked = false;
-    data = freshData(); render();
+    data = freshData(); closeMapPopup(); render();
     if (notify) toast('연결이 끊겼습니다. 센터에서 받은 연결 링크를 확인하세요.');
   }
   async function restoreConnection() {
@@ -20,21 +20,7 @@
       try {
         const params = new URLSearchParams(location.hash.slice(1));
         if (params.has('center') && params.has('invite')) {
-          const center = params.get('center'), invite = params.get('invite');
-          const key = 'ddsm:device:v1:' + center;
-          let device = localStorage.getItem(key);
-          if (!/^[a-f0-9]{64}$/.test(device || '')) {
-            device = Array.from(crypto.getRandomValues(new Uint8Array(32)), x=>x.toString(16).padStart(2,'0')).join('');
-            localStorage.setItem(key,device);
-          }
-          const response = await fetch(DRIVER_API_BASE.replace(/driver\/$/,'connection/driver'), {
-            method:'POST', credentials:'omit', cache:'no-store',
-            headers:{'Content-Type':'application/json'}, body:JSON.stringify({center,invite,device})
-          });
-          const result = await response.json().catch(()=>null);
-          if (!response.ok || !result?.token) throw Error(result?.error || '센터 연결 실패 (HTTP '+response.status+')');
-          localStorage.setItem(TOKEN_KEY,result.token);
-          history.replaceState(null,'',location.pathname+location.search);
+          location.replace('connect/' + location.hash); return false;
         }
         const token = localStorage.getItem(TOKEN_KEY) || '';
         if (!/^d_[A-Za-z0-9-]{1,40}_[A-Za-z0-9_-]{43,128}$/.test(token)) {
@@ -127,11 +113,11 @@
   }
   async function refreshDay() {
     if(!driverToken || syncedDate!==date || syncPending || syncBusy || syncBlocked ||
-       document.hidden || $('editDialog')?.open || $('scanDialog')?.open) return;
+       document.hidden || $('editDialog')?.open || scanWorkerActive || pendingScans.length || mapSelected || pinDraft) return;
     const token=driverToken, dayKey=date, epoch=syncEpoch;
     try {
       const remote=await serverDay(dayKey,token);
-      if(epoch!==syncEpoch || token!==driverToken || date!==dayKey || syncPending) return;
+      if(epoch!==syncEpoch || token!==driverToken || date!==dayKey || syncPending || syncBusy || scanWorkerActive || mapSelected || pinDraft) return;
       if(remote.revision>serverRevision) {
         serverRevision=remote.revision;
         data.days[dayKey]=remote.day;
@@ -164,7 +150,9 @@
   let data = readData();
   let date = today();
   let view = 'home';
-  let workTab = 'map', orderCursor = 0, orderContext = '', orderHistory = [];
+  let workTab = 'map';
+  let mapSelected = null, pinDraft = null, wheelValue = 1, wheelDrag = null, wheelFrame = 0;
+  const recentScanTimes = new Map();
   let editingId = '';
   let toastTimer = null;
   let cameraStream = null;
@@ -248,7 +236,8 @@
   }
 
   function renderHome() {
-    $('myPhoneLabel').textContent = driverToken ? '센터 연결됨' : '연결 확인';
+    $('myPhoneLabel').textContent = driverToken ? '동기화 확인' : '센터 연결 확인';
+    $('myPhoneButton').classList.toggle('hidden',Boolean(driverToken&&syncedDate===date));
     $('dailyPhoneLabel').textContent = driverToken ? '배송 준비' : '연결 대기';
     document.documentElement.dataset.ddsmConnected = driverToken ? 'true' : 'false';
     const d = day();
@@ -264,16 +253,20 @@
       select.append(opt);
     });
     select.value = String(active.no);
-    $('totalCount').textContent = String(c.total);
-    $('pendingCount').textContent = String(c.pending);
-    $('doneCount').textContent = String(c.done);
-    $('scanHint').textContent = '현재 회차 배송지 ' + c.total + '건'
-      + (driverToken ? ' · 서버 조회 가능' : ' · 연결 대기');
-    $('deliveryButton').disabled = false;
-    $('deliveryButtonLabel').textContent = '지도';
-    $('deliveryHint').textContent = c.pending
-      ? '배송 예정 ' + c.pending + '건 · 누르면 목록으로 이동합니다.'
-      : c.total ? '현재 회차의 배송을 모두 완료했습니다.' : '운송장을 스캔하면 배송을 시작할 수 있습니다.';
+    $('scanHint').textContent = c.total + '건';
+    const recent = $('recentScans');
+    recent.replaceChildren();
+    const items = active.stops.slice().sort((a,b) =>
+      (recentScanTimes.get(b.id)||Date.parse(b.createdAt)||0)-(recentScanTimes.get(a.id)||Date.parse(a.createdAt)||0));
+    if (!items.length) recent.append(node('p','recent-empty','스캔된 운송장이 없습니다.'));
+    for (const stop of items) {
+      const row=node('article','recent-scan-row');
+      const head=node('div','recent-scan-head');
+      head.append(node('strong','',stop.recipient||stop.waybill));
+      head.append(node('span','recent-scan-ok',stop.status==='done'?'배송 완료':'등록 완료'));
+      row.append(head,node('div','recent-address',stop.address||'위치 미지정'),node('div','recent-meta',stop.waybill+(stop.scannedItems?.length?' · '+stop.scannedItems.length+'개 물품':'')));
+      recent.append(row);
+    }
   }
   function selectedRoundStops() {
     const selected = round();
@@ -298,43 +291,96 @@
       renderDayMap();
     }
   }
-  function resetMapOrder() {
-    orderCursor = 0; orderContext = date + ':' + round().no; orderHistory = [];
-    render();
+  function closeMapPopup() {
+    cancelAnimationFrame(wheelFrame); wheelFrame=0; wheelDrag=null;
+    mapSelected=null; pinDraft=null;
+    $('mapPopup').classList.add('hidden'); $('pinPopup').classList.add('hidden');
+    window.DDSM_DeliveryMap?.clearDraft();
   }
-  function updateOrderHint() {
-    if (orderContext !== date + ':' + round().no) { orderCursor = 0; orderContext = date + ':' + round().no; orderHistory = []; }
-    orderCursor = Math.min(orderCursor, stops().length);
-    $('mapOrderHint').textContent = !stops().length ? '스캔 후 순번 지정' : orderCursor >= stops().length ? '순번 지정 완료' : '다음 ' + (orderCursor + 1) + '번 · 마커 선택';
-    $('undoMapOrder').disabled = !orderHistory.length;
+  const wrapOrder = n => { const count=Math.max(1,stops().length);return ((n-1)%count+count)%count+1; };
+  function renderWheel(offset=0) {
+    const root=$('wheelNumbers'); root.replaceChildren();
+    const count=stops().length;
+    for(let i=-2;i<=2;i++){
+      const line=node('div','wheel-number'+(i===0?' current':''),count>1||i===0?String(wrapOrder(wheelValue+i)):'');
+      line.style.transform='translateY('+offset+'px)';root.append(line);
+    }
+    const wheel=$('orderWheel');wheel.setAttribute('aria-valuemax',String(Math.max(1,count)));wheel.setAttribute('aria-valuenow',String(wheelValue));
+    $('mapOrderSave').textContent=wheelValue+'번으로 변경';
+  }
+  function placePopup(id, point) {
+    const popup=$(id),stage=$('deliveryMapStage');
+    if (!point || point.x<0 || point.y<0 || point.x>stage.clientWidth || point.y>stage.clientHeight) {popup.classList.add('hidden');return;}
+    popup.classList.remove('hidden');
+    const w=popup.offsetWidth,h=popup.offsetHeight;
+    const right=point.x+22,left=point.x-w-22;
+    popup.style.left=Math.max(6,Math.min(stage.clientWidth-w-6,right+w<=stage.clientWidth-6?right:left))+'px';
+    popup.style.top=Math.max(6,Math.min(stage.clientHeight-h-6,point.y-h/2))+'px';
+  }
+  function positionMapPopup() {
+    const dm=window.DDSM_DeliveryMap;
+    if(pinDraft)placePopup('pinPopup',dm?.project(pinDraft));
+    else if(mapSelected) {
+      const stop=stops().find(s=>s.id===mapSelected);
+      if(!stop||!validCoordinates(stop)){closeMapPopup();return;}
+      placePopup('mapPopup',dm?.project(stop));
+    }
   }
   function selectMapStop(id, roundNo) {
-    if (round().no !== roundNo || workTab !== 'map') return;
-    updateOrderHint();
-    const list = stops(), from = list.findIndex(s => s.id === id);
-    if (from < 0 || from < orderCursor || orderCursor >= list.length) return;
-    const before = list.map(s => s.id), to = orderCursor;
-    const moved = list.splice(from,1)[0];
-    list.splice(to,0,moved);
-    if (!persist()) { list.splice(to,1); list.splice(from,0,moved); return; }
-    orderHistory.push({before, after:list.map(s=>s.id)});
-    orderCursor++;
-    render();
+    if(round().no!==roundNo||view!=='delivery'||workTab!=='map')return;
+    const stop=stops().find(s=>s.id===id);if(!stop)return;
+    closeMapPopup(); mapSelected=id; wheelValue=stops().indexOf(stop)+1;
+    $('mapPopupName').textContent=stop.recipient||stop.waybill;
+    const link=$('mapNav');configureNavigationLink(link,stop);link.textContent='내비';
+    renderWheel();positionMapPopup();
   }
-  function undoMapOrder() {
-    const entry = orderHistory[orderHistory.length-1];
-    if (!entry) return;
-    const list = stops();
-    if (entry.after.join('|') !== list.map(s=>s.id).join('|')) { resetMapOrder(); return; }
-    const previous = list.slice(), byId = new Map(list.map(s=>[s.id,s]));
-    list.splice(0,list.length,...entry.before.map(id=>byId.get(id)));
-    if (!persist()) { list.splice(0,list.length,...previous); return; }
-    orderHistory.pop(); orderCursor = Math.max(0,orderCursor-1); render();
+  function onMapLongPress(point) {
+    if(view!=='delivery'||workTab!=='map'||!stops().length)return;
+    const selected=mapSelected;
+    const list=stops();closeMapPopup();
+    pinDraft=point;window.DDSM_DeliveryMap?.showDraft(point);
+    const picker=$('pinStopSelect');picker.replaceChildren();
+    list.forEach((s,i)=>{const opt=node('option','', (i+1)+'. '+(s.recipient||s.waybill)+(validCoordinates(s)?'':' · 위치 미지정'));opt.value=s.id;picker.append(opt);});
+    const target=list.find(s=>s.id===selected)||list.find(s=>!validCoordinates(s));
+    if(target)picker.value=target.id;
+    else {const placeholder=node('option','','배송지 선택');placeholder.value='';picker.prepend(placeholder);picker.value='';}
+    $('pinSave').disabled=!picker.value;
+    positionMapPopup();
   }
-  function openWorkTab(tab) { workTab = tab; showView('delivery'); }
+  async function saveMapPin() {
+    const stop=stops().find(s=>s.id===$('pinStopSelect').value);
+    if(!stop||!validCoordinates(pinDraft))return;
+    const point=pinDraft, old={lat:stop.lat,lng:stop.lng},savedDate=date,token=driverToken;
+    stop.lat=point.lat;stop.lng=point.lng;
+    if(!persist()){Object.assign(stop,old);return;}
+    closeMapPopup();render();
+    if(!stop.address){toast('핀 저장 완료 · 주소 입력 후 공용 주소록에 반영할 수 있습니다.');return;}
+    try {
+      const res=await fetch(DRIVER_API_BASE+'destination',{method:'POST',credentials:'omit',cache:'no-store',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({date:savedDate,waybill:stop.waybill,address:stop.address,lat:point.lat,lng:point.lng})});
+      const payload=await res.json();if(!res.ok||!payload.ok)throw Error(payload.error||'HTTP '+res.status);
+      toast('핀과 공용 배송지 저장 완료');
+    }catch(e){toast('기사 핀 저장됨 · 공용 주소록 반영 실패: '+e.message);}
+  }
+  function bindMapWheel() {
+    const wheel=$('orderWheel'),row=37;
+    const finish=()=>{wheelFrame=0;renderWheel();};
+    const cancel=()=>{cancelAnimationFrame(wheelFrame);wheelFrame=0;};
+    wheel.addEventListener('wheel',e=>{e.preventDefault();cancel();wheelValue=wrapOrder(wheelValue+Math.sign(e.deltaY)*Math.max(1,Math.round(Math.abs(e.deltaY)/50)));renderWheel();},{passive:false});
+    wheel.addEventListener('keydown',e=>{if(!['ArrowUp','ArrowDown','PageUp','PageDown','Home','End'].includes(e.key))return;e.preventDefault();cancel();wheelValue=e.key==='Home'?1:e.key==='End'?stops().length:wrapOrder(wheelValue+({ArrowUp:-1,ArrowDown:1,PageUp:-10,PageDown:10}[e.key]||0));renderWheel();});
+    wheel.addEventListener('pointerdown',e=>{e.preventDefault();cancel();wheelDrag={start:e.clientY,last:e.clientY,base:wheelValue,t:performance.now(),v:0};wheel.setPointerCapture(e.pointerId);});
+    wheel.addEventListener('pointermove',e=>{if(!wheelDrag)return;const now=performance.now(),delta=(wheelDrag.start-e.clientY)/row,step=Math.round(delta);wheelDrag.v=.5*wheelDrag.v+.5*(wheelDrag.last-e.clientY)/Math.max(8,now-wheelDrag.t);wheelDrag.last=e.clientY;wheelDrag.t=now;wheelValue=wrapOrder(wheelDrag.base+step);renderWheel((step-delta)*row);});
+    wheel.addEventListener('pointerup',()=>{if(!wheelDrag)return;let remaining=performance.now()-wheelDrag.t<100?Math.max(-40,Math.min(40,wheelDrag.v*9)):0;wheelDrag=null;
+      function glide(){if(Math.abs(remaining)<.7){finish();return;}const step=Math.sign(remaining)*Math.max(1,Math.round(Math.abs(remaining)*.24));wheelValue=wrapOrder(wheelValue+step);renderWheel();remaining*=.74;wheelFrame=requestAnimationFrame(glide);}glide();});
+    wheel.addEventListener('pointercancel',()=>{wheelDrag=null;cancel();finish();});
+    $('mapOrderSave').addEventListener('click',()=>{const id=mapSelected,target=wheelValue-1;closeMapPopup();if(id)moveStopOrder(id,target);});
+    $('mapEdit').addEventListener('click',()=>{const id=mapSelected;closeMapPopup();if(id)openEdit(id);});
+    $('mapNav').addEventListener('click',e=>{const stop=stops().find(s=>s.id===mapSelected);if(!stop){e.preventDefault();return;}if(!naverNavigationUrl(stop)&&/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){e.preventDefault();if(!stop.address){toast('주소 또는 위치를 먼저 지정하세요.');return;}void locateAndLaunchNavigation(e.currentTarget,stop);}});
+    $('pinStopSelect').addEventListener('change',e=>{$('pinSave').disabled=!e.target.value;});
+    $('pinCancel').addEventListener('click',closeMapPopup);$('pinSave').addEventListener('click',saveMapPin);
+  }
+  function openWorkTab(tab) { if(scanWorkerActive||pendingScans.length){toast('스캔 처리 중');return;} workTab = tab; showView('delivery'); }
   function renderDayMap() {
     if (view !== 'delivery' || workTab !== 'map') return;
-    updateOrderHint();
     const message = $('deliveryMapEmpty');
     if (!window.DDSM_DeliveryMap || typeof window.DDSM_DeliveryMap.render !== 'function') {
       message.textContent = '배송 지도 모듈을 불러오지 못했습니다. 브라우저 새로고침 후 다시 확인하세요.';
@@ -352,7 +398,10 @@
     const selected = selectedRoundStops();
     Promise.resolve(window.DDSM_DeliveryMap.render(date, selected, {
       onSelect: selectMapStop,
-      onGeocoded: persistGeocoded
+      onGeocoded: persistGeocoded,
+      onLongPress: onMapLongPress,
+      onDismiss: closeMapPopup,
+      onViewport: positionMapPopup
     }, selectedRoundNo)).catch(error => {
       message.textContent = '배송 지도 오류: ' + (error.message || String(error));
       message.classList.remove('hidden');
@@ -363,7 +412,9 @@
     const d = day();
     const next = Number(value);
     if (!d.rounds.some(r => r.no === next) || d.selected === next) return;
+    if(scanWorkerActive||pendingScans.length){toast('스캔 처리 완료 후 회차를 변경하세요.');render();return;}
     const old = d.selected;
+    closeMapPopup();
     d.selected = next;
     if (!persist()) { d.selected = old; return; }
     render();
@@ -419,7 +470,7 @@
       link.removeAttribute('rel');
     } else {
       link.textContent = '지도 검색';
-      link.href = 'https://map.naver.com/p/search/' + encodeURIComponent(stop.address);
+      link.href = 'https://map.naver.com/p/search/' + encodeURIComponent(stop.address || (stop.lat+','+stop.lng));
       link.setAttribute('aria-label', '네이버 지도에서 주소 검색');
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
@@ -502,7 +553,7 @@
       card.append(head);
       const actions = node('div', 'stop-actions');
       actions.append(button(done ? '완료 취소' : '완료', done ? 'undo' : 'complete', () => setDone(stop.id, !done)));
-      if (stop.address) {
+      if (stop.address || validCoordinates(stop)) {
         const link = node('a', '');
         link.dataset.navigationStopId = String(stop.id);
         configureNavigationLink(link, stop);
@@ -520,23 +571,29 @@
   }
   function render() {
     renderHome();
+    $('scanTab').setAttribute('aria-pressed',String(view==='home'));
+    $('mapTab').setAttribute('aria-pressed',String(view==='delivery'&&workTab==='map'));
+    $('listTab').setAttribute('aria-pressed',String(view==='delivery'&&workTab==='list'));
     if (view === 'delivery') {
-      $('deliveryHeading').textContent = workTab === 'map' ? '배송 지도' : '배송 목록';
-      $('mapPanel').classList.toggle('hidden', workTab !== 'map');
-      $('listPanel').classList.toggle('hidden', workTab !== 'list');
-      $('mapTab').setAttribute('aria-pressed', String(workTab === 'map'));
-      $('listTab').setAttribute('aria-pressed', String(workTab === 'list'));
+      $('deliveryHeading').textContent = '배송 목록';
+      $('mapPanel').classList.toggle('hidden',workTab!=='map');
+      $('listPanel').classList.toggle('hidden',workTab!=='list');
       renderDelivery();
-      if (workTab === 'map') renderDayMap(); else window.DDSM_DeliveryMap?.pause();
+      if(workTab==='map')renderDayMap();else window.DDSM_DeliveryMap?.pause();
     }
   }
   function showView(next) {
-    view = next;
-    if (next !== 'delivery' && window.DDSM_DeliveryMap) window.DDSM_DeliveryMap.pause();
-    $('homeScreen').classList.toggle('hidden', next !== 'home');
-    $('deliveryScreen').classList.toggle('hidden', next !== 'delivery');
+    const changed=view!==next||document.body.dataset.page!==(next==='home'?'scan':workTab);
+    if(changed&& (scanWorkerActive||pendingScans.length)) {toast('스캔 처리 완료 후 이동하세요.');return;}
+    view=next;
+    document.body.dataset.page=next==='home'?'scan':workTab;
+    if(next!=='delivery'||workTab!=='map') {closeMapPopup();window.DDSM_DeliveryMap?.pause();}
+    if(next!=='home')stopCamera();
+    $('homeScreen').classList.toggle('hidden',next!=='home');
+    $('deliveryScreen').classList.toggle('hidden',next!=='delivery');
     render();
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    if(changed)window.scrollTo({top:0,behavior:'instant'});
+    if(next==='home'&&changed)openScan();
   }
   function addWaybill(raw, remote = null) {
     if (!remote || remote.ok !== true) return {error:'서버 조회에 성공한 운송장만 등록할 수 있습니다.'};
@@ -564,7 +621,7 @@
         if (!existing.phone) existing.phone = clean(remote.phone,25);
       }
       if (!persist()) {Object.assign(existing,snapshot);return {error:'물품 스캔을 저장하지 못했습니다.'};}
-      render();
+      recentScanTimes.set(existing.id,Date.now());render();
       return {stop:existing,existing:true,suffix};
     }
     const stop = {
@@ -577,7 +634,7 @@
     };
     stops().push(stop);
     if (!persist()) {stops().pop();return {error:'저장하지 못했습니다. 저장 공간을 확인하세요.'};}
-    render();
+    recentScanTimes.set(stop.id,Date.now());render();
     if (navigator.vibrate) navigator.vibrate(45);
     return {stop,suffix};
   }
@@ -626,7 +683,7 @@
   }
   function scanReadFeedback() {
     const dialog = $('scanDialog');
-    if (!dialog.open) return;
+    if (view!=='home') return;
     scanShutterSound();
     clearTimeout(scanFlashTimer);
     dialog.classList.remove('scan-read-flash');
@@ -635,34 +692,13 @@
     dialog.classList.add('scan-read-flash');
     scanFlashTimer = setTimeout(() => dialog.classList.remove('scan-read-flash'), 540);
   }
-  function syncScanViewport() {
-    const dialog = $('scanDialog');
-    if (!dialog.open) return;
-    const viewport = window.visualViewport;
-    dialog.style.setProperty('--scan-viewport-height', (viewport ? viewport.height : window.innerHeight) + 'px');
-    dialog.style.setProperty('--scan-viewport-top', (viewport ? viewport.offsetTop : 0) + 'px');
-  }
   function openScan() {
-    if (!driverToken || syncedDate !== date || syncBlocked) {
-      toast('센터 연결 및 동기화가 필요합니다.');
-      if (!driverToken) void restoreConnection();
-      return;
-    }
-    const dialog = $('scanDialog');
-    const input = $('waybillInput');
-    $('scanResult').textContent = date+' · '+round().no+'회차 · G10 서버 원본 조회 후 등록';
-    input.value = '';
-    // Handheld barcode readers act like physical keyboards. Keep input focused
-    // but suppress the soft keyboard until the user explicitly taps to type.
-    input.setAttribute('inputmode', 'none');
-    if (!dialog.open) dialog.showModal();
+    if(view!=='home'){showView('home');return;}
+    const input=$('waybillInput');
+    input.setAttribute('inputmode','none');
     prepareScanAudio();
-    if (!cameraStream && !zxingControls) void startCamera();
-    syncScanViewport();
-    input.focus({ preventScroll: true });
-    requestAnimationFrame(() => {
-      if (dialog.open && document.activeElement !== input) input.focus({preventScroll:true});
-    });
+    if(!cameraStream&&!zxingControls&&!$('cameraButton').disabled)void startCamera();
+    input.focus({preventScroll:true});
   }
   const pendingScans = [];
   let scanWorkerActive = false;
@@ -703,7 +739,7 @@
           $('scanResult').textContent=message;
           if(!job.camera)toast(message);
         } finally {
-          if (!job.camera && $('scanDialog').open) {
+          if (!job.camera && view === 'home') {
             $('waybillInput').focus({preventScroll:true});
           }
         }
@@ -801,7 +837,7 @@
       if (moveRound) { targetRound.stops.pop(); list.splice(oldIndex,0,stop); }
       return;
     }
-    orderCursor=0; orderHistory=[];
+    closeMapPopup();
     $('editDialog').close();
     render();
     // Only address and point edits affect the shared master. Personal notes and
@@ -840,6 +876,7 @@
     el.click();
   }
   function addRound() {
+    if(scanWorkerActive||pendingScans.length){toast('스캔 처리 완료 후 회차를 추가하세요.');return;}
     const d = day();
     const next = Math.max(0, ...d.rounds.map(x => x.no)) + 1;
     if (next > 100) { toast('회차는 100개까지 만들 수 있습니다.'); return; }
@@ -862,7 +899,8 @@
     video.pause();
     video.srcObject = null;
     video.classList.add('hidden');
-    $('cameraButton').textContent = '▣ 카메라로 스캔';
+    $('cameraButton').disabled=false;
+    $('cameraButton').textContent = '카메라 켜기';
   }
   function cameraDetected(value) {
     const now = Date.now();
@@ -904,6 +942,7 @@
     const generation = ++cameraGeneration;
     const video = $('cameraVideo');
     const control = $('cameraButton');
+    if(view!=='home'||control.disabled)return;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       $('scanResult').textContent = '이 브라우저에서는 카메라를 사용할 수 없습니다. 운송장번호를 직접 입력하세요.';
       return;
@@ -918,7 +957,7 @@
             width:{ideal:1280},height:{ideal:720}
           }, audio:false
         });
-        if (generation !== cameraGeneration || !$('scanDialog').open) {
+        if (generation !== cameraGeneration || view !== 'home') {
           stream.getTracks().forEach(track => track.stop()); return;
         }
         cameraStream = stream;
@@ -943,7 +982,7 @@
         detect();
       } else {
         const zxing = await loadZXing();
-        if (generation !== cameraGeneration || !$('scanDialog').open) return;
+        if (generation !== cameraGeneration || view !== 'home') return;
         const Reader = zxing.BrowserMultiFormatOneDReader || zxing.BrowserMultiFormatReader;
         if (!Reader) throw new Error('카메라 스캔 모듈을 사용할 수 없습니다.');
         const reader = new Reader();
@@ -957,17 +996,19 @@
             video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}
           },video,callback)
           : await reader.decodeFromVideoDevice(undefined,video,callback);
-        if (generation === cameraGeneration) await enableContinuousFocus(video);
         if (generation !== cameraGeneration) { controls.stop(); return; }
         zxingControls = controls;
+        await enableContinuousFocus(video);
+        if (generation !== cameraGeneration) return;
       }
       control.textContent = '카메라 끄기';
-      $('scanResult').textContent = '카메라 준비 완료 · 바코드에 맞추면 자동으로 초점을 조절합니다(기기 지원 시).';
+      $('scanResult').textContent = '카메라 준비 완료 · 자동 초점 (기기 지원 시)';
     } catch (error) {
+      if(generation!==cameraGeneration)return;
       stopCamera();
       $('scanResult').textContent = '카메라 실행 실패: ' + (error.message || '권한과 브라우저 설정을 확인하세요.');
     } finally {
-      control.disabled = false;
+      if(generation===cameraGeneration)control.disabled = false;
     }
   }
 
@@ -1031,12 +1072,12 @@
   }
 
   function bind() {
-    $('myPhoneButton').addEventListener('click',()=>void restoreConnection());
+    $('myPhoneButton').addEventListener('click',()=>{if(!syncPending&&!syncBusy)void restoreConnection();});
     $('dateButton').addEventListener('click', chooseDate);
     $('dateInput').addEventListener('change', async e => {
       const value = e.target.value;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return;
-      if(syncPending || syncBusy || syncBlocked) {
+      if(syncPending || syncBusy || syncBlocked || scanWorkerActive || pendingScans.length) {
         toast('서버 저장 완료 후 날짜를 변경하세요.');e.target.value=date;return;
       }
       date=value;render();
@@ -1046,35 +1087,14 @@
       setSelectedRound(e.target.value);
     });
     $('newRoundButton').addEventListener('click', addRound);
-    $('scanButton').addEventListener('click', openScan);
-    $('workScanButton').addEventListener('click', openScan);
-    $('deliveryButton').addEventListener('click', () => openWorkTab('map'));
-    $('listButton').addEventListener('click', () => openWorkTab('list'));
-    $('mapTab').addEventListener('click', () => openWorkTab('map'));
-    $('listTab').addEventListener('click', () => openWorkTab('list'));
-    $('resetMapOrder').addEventListener('click',resetMapOrder);
-    $('undoMapOrder').addEventListener('click',undoMapOrder);
-    $('scanToMap').addEventListener('click', () => {
-      if (scanWorkerActive || pendingScans.length) { $('scanResult').textContent='스캔 처리 중'; return; }
-      $('scanDialog').close(); resetMapOrder(); openWorkTab('map');
-    });
-    $('scanToList').addEventListener('click', () => {
-      if (scanWorkerActive || pendingScans.length) { $('scanResult').textContent='스캔 처리 중'; return; }
-      $('scanDialog').close(); openWorkTab('list');
-    });
-    $('deleteEditStop').addEventListener('click',()=>{ const id=editingId; $('editDialog').close(); removeStop(id); resetMapOrder(); });
-    $('backButton').addEventListener('click', () => showView('home'));
-    $('deliveryMapFitBtn').addEventListener('click', () => window.DDSM_DeliveryMap?.fit());
-    $('deliveryRoundSelect').addEventListener('change', e => setSelectedRound(e.target.value));
-    $('closeScan').addEventListener('click', () => $('scanDialog').close());
-    $('scanDialog').addEventListener('close', () => {
-      clearTimeout(scanFlashTimer);
-      $('scanDialog').classList.remove('scan-read-flash');
-      stopCamera();
-      $('waybillInput').setAttribute('inputmode', 'none');
-      $('scanDialog').style.removeProperty('--scan-viewport-height');
-      $('scanDialog').style.removeProperty('--scan-viewport-top');
-    });
+    $('scanTab').addEventListener('click',()=>showView('home'));
+    $('workScanButton').addEventListener('click',()=>showView('home'));
+    $('mapTab').addEventListener('click',()=>openWorkTab('map'));
+    $('listTab').addEventListener('click',()=>openWorkTab('list'));
+    $('deleteEditStop').addEventListener('click',()=>{const id=editingId;$('editDialog').close();removeStop(id);closeMapPopup();});
+    $('backButton').addEventListener('click',()=>showView('home'));
+    $('deliveryRoundSelect').addEventListener('change',e=>setSelectedRound(e.target.value));
+    bindMapWheel();
     $('waybillInput').addEventListener('pointerdown', event => {
       // An intentional touch on the field enables the touchscreen keyboard.
       if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
@@ -1085,10 +1105,6 @@
       input.blur();
       input.focus({ preventScroll: true });
     });
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', syncScanViewport);
-      window.visualViewport.addEventListener('scroll', syncScanViewport);
-    }
     $('scanForm').addEventListener('submit', e => { e.preventDefault(); processScan($('waybillInput').value); });
     $('cameraButton').addEventListener('click', () => {
       prepareScanAudio();
@@ -1103,7 +1119,7 @@
     $('exportButton').addEventListener('click', exportData);
     $('importInput').addEventListener('change', e => importData(e.target.files[0]));
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden && (cameraStream || zxingControls)) stopCamera();
+      if (document.hidden) stopCamera(); else if(view==='home')openScan();
     });
     window.addEventListener('storage', e => {
       if (e.key === activeStorageKey() && driverToken) {
@@ -1116,6 +1132,7 @@
   }
   bind();
   setInterval(()=>{if(syncPending) void flushDay();else void refreshDay();},3000);
+  document.body.dataset.page='scan';
   render();
-  void restoreConnection();
+  void restoreConnection().then(ok=>{if(ok&&view==='home')openScan();else if(view==='home')$('scanResult').textContent='센터 연결 및 서버 동기화 후 스캔할 수 있습니다.';});
 })();
