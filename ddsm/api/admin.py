@@ -341,9 +341,20 @@ def recurring_destination(db, name, phone):
         "SELECT phone_key,destination_id FROM recurring_recipients WHERE name_key=?",
         (key,)
     ).fetchall()
-    if not rows:
-        return False, None
     number = phone_key(phone)
+    if not rows:
+        if number:
+            # A name shared by two contacts is never a sufficient identity.
+            known = db.execute(
+                """SELECT DISTINCT d.id,s.recipient_phone FROM admin_deliveries s
+                   JOIN destinations d ON d.id=s.destination_id
+                   WHERE (d.address_key<>'' OR d.lat IS NOT NULL)
+                   AND s.business_name=?""",
+                (name,)
+            ).fetchall()
+            matches = {r[0] for r in known if phone_key(r[1]) == number}
+            return True, next(iter(matches)) if len(matches) == 1 else None
+        return False, None
     candidates = {r[1] for r in rows if r[0] == number} if number else {r[1] for r in rows}
     # A phone-less alias is not proof of identity for a different known phone.
     if len(candidates) != 1:
@@ -538,7 +549,7 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
         output, headers = [], ["수취인명", "주소", "착불유무", "연락처"]
         for row in rows:
             obj = dict(row)
-            obj["address"] = obj["registry_address"] or obj["source_address"] or ""
+            obj["address"] = obj["registry_address"] or ("" if name_only_source(obj["business_name"], obj["source_address"]) else obj["source_address"])
             obj["cod_amount"] = cod_flag(obj["cod_amount"])
             obj["raw"] = {
                 "수취인명": obj["business_name"],
