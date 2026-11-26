@@ -5,11 +5,11 @@
   const DRIVER_API_BASE = 'https://mrdindoin.ddns.net/ddsm/api/driver/';
   const TOKEN_KEY = 'ddsm:center:driver:v1';
   let driverToken = '';
-  let connecting = null;
+  let connecting = null, syncFault=false;
   let syncedDate = '', serverRevision = 0, syncBusy = false, syncPending = false, syncBlocked = false, syncEpoch = 0;
   const WORK_API = DRIVER_API_BASE + 'work-day';
   function invalidateDriverAuth(notify = false) {
-    driverToken = '';
+    driverToken = '';syncFault=false;
     ++syncEpoch; syncedDate = ''; syncPending = false; syncBlocked = false;
     data = freshData(); closeMapPopup(); render();
     if (notify) toast('연결이 끊겼습니다. 센터에서 받은 연결 링크를 확인하세요.');
@@ -59,7 +59,7 @@
       const remote=await serverDay(dayKey,token);
       if (epoch!==syncEpoch || token!==driverToken || date!==dayKey) return false;
       const local=data.days[dayKey];
-      serverRevision=remote.revision;
+      serverRevision=remote.revision;syncFault=false;
       // Only migrate a legacy day when the central day has never been written.
       if (!remote.revision && local?.rounds?.some(r=>r.stops?.length)) {
         archiveLocal(dayKey);
@@ -73,7 +73,7 @@
       try { localStorage.setItem(activeStorageKey(),JSON.stringify(data)); } catch (_) {}
       render();return true;
     } catch(e) {
-      if (epoch===syncEpoch) toast('서버 동기화 실패: '+e.message);
+      if (epoch===syncEpoch) {syncFault=true;renderSettings();toast('서버 동기화 실패: '+e.message);}
       return false;
     }
   }
@@ -98,17 +98,17 @@
         }
         if(res.status===409) {
           syncBlocked=true;syncPending=false;
-          toast('다른 기기와 저장 충돌: JSON 백업 후 새로고침하세요.');
+          toast('저장 충돌: 설정에서 작업 사본을 저장하고 센터에 문의하세요.');
           break;
         }
         if(!res.ok || body?.ok!==true) {
-          syncPending=true;
+          syncFault=true;syncPending=true;
           toast('서버 저장 대기: '+(body?.error||'연결 오류'));break;
         }
-        serverRevision=body.revision;
+        serverRevision=body.revision;syncFault=false;
       }
     } catch(_) {
-      if(epoch===syncEpoch){syncPending=true;toast('서버 연결 오류 · 자동 재전송 대기');}
+      if(epoch===syncEpoch){syncFault=true;syncPending=true;toast('서버 연결 오류 · 자동 재전송 대기');}
     } finally {syncBusy=false;renderSettings();}
   }
   async function refreshDay() {
@@ -118,13 +118,14 @@
     try {
       const remote=await serverDay(dayKey,token);
       if(epoch!==syncEpoch || token!==driverToken || date!==dayKey || syncPending || syncBusy || scanWorkerActive || mapSelected || pinDraft) return;
+      syncFault=false;renderSettings();
       if(remote.revision>serverRevision) {
         serverRevision=remote.revision;
         data.days[dayKey]=remote.day;
         try {localStorage.setItem(activeStorageKey(),JSON.stringify(data));}catch(_){}
         render();toast('다른 기기의 변경사항을 동기화했습니다.');
       }
-    } catch(_) {if(token===driverToken&&dayKey===date){$('syncLabel').textContent='서버 연결 확인 필요';}}
+    } catch(_) {if(token===driverToken&&dayKey===date){syncFault=true;renderSettings();}}
   }
 
   const activeStorageKey = () => driverToken ? 'ddsm:center:data:v1:' + driverToken : 'ddsm:center:offline:v1';
@@ -187,7 +188,7 @@
       if(driverToken && syncedDate===date && !syncBlocked) {
         syncPending=true;void flushDay();
       } else if(driverToken && syncBlocked) {
-        toast('저장 충돌 상태입니다. JSON 백업 후 새로고침하세요.');
+        toast('저장 충돌: 설정에서 작업 사본을 저장하고 센터에 문의하세요.');
       }
       return true;
     } catch(_) {toast('브라우저 백업 저장 실패');return false;}
@@ -1034,7 +1035,7 @@
   function centerId(){return /^d_([A-Za-z0-9-]{1,40})_/.exec(driverToken)?.[1]||'';}
   function centerDisplay(){const id=centerId();return id==='chungju'?'충주센터':id||'연결 대기';}
   function renderSettings(){
-    const state=syncBlocked?'저장 충돌 · 센터 문의':!driverToken?'센터 연결 필요':syncedDate!==date?'동기화 필요':syncPending||syncBusy?'서버 저장 중':'서버 저장 완료';
+    const state=syncBlocked?'저장 충돌 · 센터 문의':!driverToken?'센터 연결 필요':syncedDate!==date?'동기화 필요':syncFault?'서버 연결 확인 필요':syncPending||syncBusy?'서버 저장 중':'서버 저장 완료';
     $('syncLabel').textContent=state;$('dailyPhoneLabel').textContent=state;
     $('settingsDateLabel').textContent=dateText(date);
     $('centerLabel').textContent=driverToken?centerDisplay()+' · 연결됨':'로그인 필요';
@@ -1060,6 +1061,7 @@
         const token=driverToken,dayKey=date,epoch=syncEpoch;
         const remote=await serverDay(dayKey,token);
         if(token!==driverToken||date!==dayKey||epoch!==syncEpoch||syncPending||syncBusy)return;
+        syncFault=false;
         if(remote.revision>=serverRevision){
           serverRevision=remote.revision;data.days[dayKey]=remote.day;
           try{localStorage.setItem(activeStorageKey(),JSON.stringify(data));}catch(_){}
@@ -1067,7 +1069,7 @@
         }
       }
       renderSettings();toast('서버 동기화 완료');
-    }catch(e){$('syncLabel').textContent='서버 연결 확인 필요';toast(e.message||'동기화 실패');}
+    }catch(e){syncFault=true;renderSettings();toast(e.message||'동기화 실패');}
   }
   function renderStats(value){
     const rounds=(value?.rounds||[]).slice().sort((a,b)=>a.no-b.no);
@@ -1102,7 +1104,7 @@
     if(!/^\d{4}-\d{2}-\d{2}$/.test(key)||key>today()){ $('statsStatus').textContent='배송일을 확인하세요.';return;}
     if(!token){$('statsStatus').textContent='센터에 로그인한 후 배송 현황을 확인하세요.';return;}
     if(key===date&&syncedDate===date){
-      $('statsStatus').textContent=syncPending||syncBusy||syncBlocked?'현재 기기 작업 기준 · 서버 저장 상태 확인 필요':'현재 배송 작업 기준';
+      $('statsStatus').textContent=syncPending||syncBusy||syncBlocked||syncFault?'현재 기기 작업 기준 · 서버 저장 상태 확인 필요':'현재 배송 작업 기준';
       renderStats(day());return;
     }
     $('statsStatus').textContent='서버에서 배송 내역을 불러오는 중…';
@@ -1121,6 +1123,7 @@
   function logoutDriver(){
     if(syncPending||syncBusy||syncBlocked||scanWorkerActive||pendingScans.length||connecting){toast('서버 저장 및 스캔 처리 완료 후 로그아웃하세요.');return;}
     if(!driverToken)return;
+    if(syncedDate!==date){toast('서버 동기화 후 로그아웃하세요.');return;}
     if(!confirm('센터 연결을 종료할까요? 다시 로그인하려면 센터 연결 링크가 필요합니다.'))return;
     stopCamera();
     try{localStorage.removeItem(TOKEN_KEY);}catch(_){toast('로그아웃 실패');return;}
