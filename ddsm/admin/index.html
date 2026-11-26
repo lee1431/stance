@@ -6,10 +6,11 @@
 <meta name="theme-color" content="#F8F7F4">
 <title>DDSM | 센터 관리콘솔</title>
 <link rel="icon" href="../favicon.svg?v=vehicle-20261118" type="image/svg+xml">
-<link rel="stylesheet" href="admin.css?v=4-address-entry">
+<link rel="stylesheet" href="admin.css?v=5-driver-qr">
 <script src="../naver-map.js?v=3-shared-sdk" defer></script>
 <script src="../address-utils.js?v=3-attached-units" defer></script>
-<script src="admin.js?v=11-connect" defer></script>
+<script src="../vendor/qrcode.js?v=1" defer></script>
+<script src="admin.js?v=12-driver-qr" defer></script>
 </head>
 <body>
 <div class="shell">
@@ -27,7 +28,7 @@
   <button id="retryCenter" type="button">다시 연결</button>
  </section>
  <main id="dashboard" hidden>
-  <section class="toolbar"><button id="copyDriverLink" type="button">기사 연결 링크 복사</button><p id="driverLinkStatus" role="status">기사에게 최초 한 번만 전달하면 됩니다.</p></section>
+  <section class="toolbar"><button id="showDriverQr" class="primary" type="button">기사 연결 QR</button><button id="copyDriverLink" type="button">기사 연결 링크 복사</button><p id="driverLinkStatus" role="status">기사에게 QR을 보여주거나 연결 링크를 전달하세요.</p></section>
   <section class="toolbar">
    <div class="date-box"><label for="deliveryDate">조회 날짜</label><input id="deliveryDate" type="date"><button id="refreshBtn" type="button">새로고침</button></div>
    <form id="importForm" class="import-box">
@@ -95,6 +96,13 @@
    <p id="tableInfo">당일 원본 파일을 업로드하면 모든 행이 표시됩니다.</p>
    <button id="showMoreBtn" type="button" hidden>다음 250행 더 보기</button>
   </section>
+  <dialog id="driverQrDialog" class="address-dialog driver-qr-dialog" aria-labelledby="driverQrTitle">
+    <h2 id="driverQrTitle">기사 연결 QR</h2><p id="driverQrCenter"></p>
+    <div id="driverQrCode" class="driver-qr-code" aria-label="기사 연결용 QR 코드"></div>
+    <p id="driverQrStatus" role="status">기사 화면의 소속 센터 → QR 스캔에서 읽어주세요.</p>
+    <p>센터 기사에게만 보여주세요. 이 QR은 센터 연결 권한을 부여합니다.</p>
+    <button id="closeDriverQr" type="button" class="primary">닫기</button>
+  </dialog>
   <dialog id="addressDialog" class="address-dialog" aria-labelledby="addressDialogTitle">
    <form id="addressForm">
     <h2 id="addressDialogTitle">배송 주소 입력</h2>
