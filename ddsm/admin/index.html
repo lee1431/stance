@@ -6,25 +6,28 @@
 <meta name="theme-color" content="#F8F7F4">
 <title>DDSM | 센터 관리콘솔</title>
 <link rel="icon" href="../favicon.svg?v=vehicle-20261118" type="image/svg+xml">
-<link rel="stylesheet" href="admin.css?v=8-code">
+<link rel="stylesheet" href="admin.css?v=9-center-login">
 <script src="../naver-map.js?v=3-shared-sdk" defer></script>
 <script src="../address-utils.js?v=3-attached-units" defer></script>
-<script src="admin.js?v=15-code" defer></script>
+<script src="admin.js?v=16-center-login" defer></script>
 </head>
 <body>
 <div class="shell">
  <header class="topbar">
   <div class="branding"><a href="../" class="home-link" aria-label="DDSM 홈으로">D</a>
    <div><span class="eyebrow">DDSM CENTER</span><h1>센터 관리콘솔</h1></div></div>
-  <div class="top-actions"><span id="authBadge">센터 선택</span><button id="changeCenter" type="button" hidden>센터 변경</button></div>
+  <div class="top-actions"><span id="authBadge">센터 선택</span><button id="changeCenter" type="button" hidden>센터 변경 · 로그아웃</button></div>
  </header>
  <section id="centerPanel" class="auth-panel">
   <h2>센터 선택</h2>
   <p id="centerStatus" role="status">센터 목록을 불러오는 중입니다.</p>
-  <label for="centerSelect">센터</label>
-  <select id="centerSelect" disabled></select>
-  <button id="openCenter" class="primary" type="button" disabled>센터 열기</button>
-  <button id="retryCenter" type="button">다시 연결</button>
+  <form id="centerLoginForm">
+   <label for="centerSelect">센터</label>
+   <select id="centerSelect" required disabled></select>
+   <div id="adminPasswordRow"><label for="adminPassword">관리자 비밀번호</label><input id="adminPassword" type="password" autocomplete="current-password" maxlength="128" placeholder="센터 관리자 비밀번호" required></div>
+   <button id="openCenter" class="primary" type="submit" disabled>센터 열기</button>
+   <button id="retryCenter" type="button">센터 목록 새로고침</button>
+  </form>
  </section>
  <main id="dashboard" hidden>
   <section class="toolbar"><button id="showDriverCode" class="primary" type="button">기사 연결 코드</button><p id="driverCodeStatus" role="status">기사에게 숫자 8자리 코드를 전달하세요.</p></section>
