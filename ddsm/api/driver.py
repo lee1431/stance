@@ -105,7 +105,7 @@ def install_driver(app, connect, authenticated_user):
     def driver_waybill():
         user = authenticated_user()
         if not user:
-            return jsonify(ok=False, error="기사 로그인이 필요합니다."), 401
+            return jsonify(ok=False, error="센터 기기 연결이 필요합니다."), 401
         target = request.args.get("date", "")
         barcode = request.args.get("barcode", "")
         if not valid_date(target) or not isinstance(barcode, str) or len(barcode) > 40:
@@ -130,8 +130,11 @@ def install_driver(app, connect, authenticated_user):
             return jsonify(ok=False, error="해당 날짜 원본 데이터에서 운송장을 찾지 못했습니다."), 404
         if len(records) > 50:
             return jsonify(ok=False, error="같은 송장번호가 지나치게 많습니다."), 409
+        from admin import name_only_source
+        def resolved_address(row):
+            return row["saved_address"] or ("" if name_only_source(row["business_name"], row["source_address"]) else row["source_address"])
         identities = {
-            (r["business_name"].strip(), (r["saved_address"] or r["source_address"]).strip())
+            (r["business_name"].strip(), resolved_address(r).strip())
             for r in records
         }
         if len(identities) != 1:
@@ -141,7 +144,7 @@ def install_driver(app, connect, authenticated_user):
         return jsonify(
             ok=True, date=target, master_waybill=master, item_suffix=suffix,
             waybill=record["waybill"], recipient=record["business_name"],
-            address=record["saved_address"] or record["source_address"],
+            address=resolved_address(record),
             phone=record["recipient_phone"], cod=cod_flag(record["cod_amount"]),
             lat=record["lat"], lng=record["lng"],
         )
@@ -151,7 +154,7 @@ def install_driver(app, connect, authenticated_user):
         """Save a scanned shipment's address/point into the shared destination master."""
         user = authenticated_user()
         if not user:
-            return jsonify(ok=False, error="기사 로그인이 필요합니다."), 401
+            return jsonify(ok=False, error="센터 기기 연결이 필요합니다."), 401
         value = request.get_json(silent=True)
         if not isinstance(value, dict) or not valid_date(value.get("date")):
             return jsonify(ok=False, error="배송일이 올바르지 않습니다."), 400
@@ -208,7 +211,7 @@ def install_driver(app, connect, authenticated_user):
     def driver_work_day():
         user = authenticated_user()
         if not user:
-            return jsonify(ok=False, error="기사 로그인이 필요합니다."), 401
+            return jsonify(ok=False, error="센터 기기 연결이 필요합니다."), 401
         if request.method == "GET":
             target = request.args.get("date", "")
             if not valid_date(target):
