@@ -106,7 +106,8 @@ def create_app() -> Flask:
         if request.method == "OPTIONS":
             return app.make_default_options_response()
         path = request.path
-        token = request.headers.get("Authorization", "").removeprefix("Bearer ")
+        header = request.headers.get("Authorization", "")
+        token = header[7:] if header.startswith("Bearer ") else ""
         if path in ("/ddsm/api/health", "/ddsm/api/connection/centers", "/ddsm/api/connection/driver"):
             return None
         match = re.fullmatch(r"(a|d)_([A-Za-z0-9-]{1,40})_([A-Za-z0-9_-]{43,128})", token)
@@ -171,12 +172,12 @@ def create_app() -> Flask:
 
     @app.get("/ddsm/api/health")
     def health():
-        return jsonify(ok=True, service="ddsm", status="ready")
+        return jsonify(ok=True, service="ddsm", status="ready", center_connection=True)
 
     @app.get("/ddsm/api/connection/centers")
     def list_centers():
         header = request.headers.get("Authorization", "")
-        if not admin_key or not hmac.compare_digest(header, "Bearer adm_" + admin_key):
+        if not admin_key or not header.isascii() or not hmac.compare_digest(header, "Bearer adm_" + admin_key):
             return jsonify(ok=False, error="관리자 연결 링크가 필요합니다."), 403
         return jsonify(ok=True, centers=[{"id": cid, "name": config["name"], "invite": config["invite"]} for cid, config in centers.items()])
 
@@ -186,7 +187,7 @@ def create_app() -> Flask:
         cid, invite, device = value.get("center"), value.get("invite"), value.get("device")
         if not isinstance(cid, str) or cid not in centers or not isinstance(invite, str) or not isinstance(device, str) or not key_pattern.fullmatch(device):
             return jsonify(ok=False, error="기사 연결 정보가 올바르지 않습니다."), 400
-        if not hmac.compare_digest(invite, centers[cid]["invite"]):
+        if not key_pattern.fullmatch(invite) or not hmac.compare_digest(invite, centers[cid]["invite"]):
             return jsonify(ok=False, error="유효하지 않은 기사 연결 링크입니다."), 403
         g.center_db = center_dir / (cid + ".sqlite")
         token = "d_" + cid + "_" + device
