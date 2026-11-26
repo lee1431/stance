@@ -86,7 +86,15 @@
     $('driverQrDialog').showModal();
     try{
       if(typeof window.QRCode!=='function')throw Error('QR 모듈을 불러올 수 없습니다.');
-      new window.QRCode(root,{text:link,width:252,height:252,colorDark:'#000000',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});
+      // Render exact QR modules into a vector image with a four-module quiet zone.
+      const scratch=document.createElement('div');
+      const code=new window.QRCode(scratch,{text:link,width:256,height:256,useSVG:true,colorDark:'#000000',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});
+      const matrix=code._oQRCode,n=matrix.getModuleCount(),ns='http://www.w3.org/2000/svg';
+      const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 '+(n+8)+' '+(n+8));svg.setAttribute('width','360');svg.setAttribute('height','360');svg.setAttribute('shape-rendering','crispEdges');
+      const bg=document.createElementNS(ns,'rect');bg.setAttribute('width',String(n+8));bg.setAttribute('height',String(n+8));bg.setAttribute('fill','#fff');svg.append(bg);
+      const shape=document.createElementNS(ns,'path');let d='';
+      for(let row=0;row<n;row++)for(let col=0;col<n;col++)if(matrix.isDark(row,col))d+='M'+(col+4)+' '+(row+4)+'h1v1h-1z';
+      shape.setAttribute('d',d);shape.setAttribute('fill','#000');svg.append(shape);root.append(svg);
       say('driverQrStatus','기사 화면의 소속 센터 → QR 스캔에서 읽어주세요.');
     }catch(e){say('driverQrStatus','QR 생성 실패 · 연결 링크 복사를 사용하세요.');}
   }

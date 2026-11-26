@@ -30,3 +30,5 @@
 .address-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 
 .driver-qr-dialog{text-align:center;max-width:min(360px,calc(100vw - 24px));box-sizing:border-box}.driver-qr-code{display:flex;justify-content:center;align-items:center;background:#fff;padding:24px;margin:12px auto;width:max-content;max-width:100%;box-sizing:border-box}.driver-qr-code img,.driver-qr-code canvas{max-width:100%;height:auto;image-rendering:pixelated}.driver-qr-dialog p{font-size:13px;line-height:1.5}.driver-qr-dialog button{width:100%}
+
+.driver-qr-dialog{max-width:min(440px,calc(100vw - 16px));width:440px}.driver-qr-code{width:min(360px,100%);padding:0}.driver-qr-code svg{display:block;width:100%;height:auto;max-width:360px;background:#fff}

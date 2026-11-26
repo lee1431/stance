@@ -688,3 +688,5 @@ body[data-page="list"] #backButton,body[data-page="list"] #workScanButton{displa
 #logoutDriver{color:var(--danger,#a4493d)}
 
 .qr-login-action{font-size:16px;margin-top:6px}.qr-login-stage{position:relative;background:#111922;overflow:hidden;border-radius:12px;margin-top:12px;height:clamp(190px,32vh,290px)}.qr-login-stage video{width:100%;height:100%;object-fit:cover}.qr-login-frame{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(62%,180px);aspect-ratio:1;border:3px solid #fff;border-radius:12px;box-shadow:0 0 0 160px #0005;pointer-events:none}
+
+.qr-login-stage{height:clamp(240px,40dvh,380px)}.qr-login-stage video{object-fit:contain}.qr-login-frame{width:min(72%,240px);box-shadow:none}.qr-login-stage .qr-login-frame{border-color:#fff9}.qr-login-action:disabled{opacity:.65}
