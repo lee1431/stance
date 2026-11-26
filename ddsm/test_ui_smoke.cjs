@@ -6,6 +6,8 @@ const read = p => fs.readFileSync(path.join(__dirname,p),'utf8');
 const dom = new JSDOM(read('index.html'), {url:'https://llsshh.com/ddsm/',runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:new VirtualConsole()});
 const w = dom.window, d = w.document, $ = id => d.getElementById(id);
 const tick = () => new Promise(resolve => setTimeout(resolve,25));
+const iosMode=process.env.DDSM_TEST_IOS==='1';
+let showBarcode=false;
 let currentDay = {selected:1,rounds:[{no:1,stops:[
   {id:'a',waybill:'1234567890123',recipient:'첫 배송지',address:'충주시 금봉로 21',phone:'',memo:'',status:'pending',createdAt:'2026-11-26T01:00:00Z',lat:36.99,lng:127.92,scannedItems:[]},
   {id:'b',waybill:'1234567890124',recipient:'둘째 배송지',address:'충주시 금봉로 22',phone:'',memo:'',status:'pending',createdAt:'2026-11-26T01:01:00Z',lat:36.98,lng:127.91,scannedItems:[]}
@@ -38,7 +40,26 @@ w.HTMLMediaElement.prototype.pause=()=>{};
 const track={getCapabilities:()=>({focusMode:['continuous']}),applyConstraints:async c=>{assert.equal(c.advanced[0].focusMode,'continuous');autofocus++;},stop:()=>cameraStops++};
 Object.defineProperty(w.navigator,'mediaDevices',{value:{getUserMedia:async()=>({getTracks:()=>[track],getVideoTracks:()=>[track]})}});
 let codeRequests=0;
-w.BarcodeDetector=class {async detect(){return [];}};
+if(!iosMode)w.BarcodeDetector=class {async detect(){return [];}};
+else{
+  const bundle=path.join(path.dirname(require.resolve('@zxing/browser/package.json')),'umd','zxing-browser.min.js');
+  w.eval(fs.readFileSync(bundle,'utf8'));
+  assert.ok(w.ZXingBrowser.BrowserMultiFormatOneDReader);
+  const runs=[2,1,1,2,1,4,1,2,3,2,2,1,2,2,3,2,1,1,2,2,1,1,3,2,2,2,1,2,3,1,2,1,3,2,1,2,2,2,3,1,1,2,3,1,2,1,3,1,3,1,1,2,2,2,3,2,1,1,2,2,1,2,3,1,2,2,1,2,3,2,2,1,2,2,3,2,1,1,2,1,3,2,1,2,4,1,2,1,2,1,2,3,3,1,1,1,2];
+  Object.defineProperties($('cameraVideo'),{readyState:{value:4},videoWidth:{value:1280},videoHeight:{value:720}});
+  w.HTMLCanvasElement.prototype.getContext=function(){const canvas=this;return {drawImage(){},getImageData(){
+    const width=canvas.width,height=canvas.height,data=new w.Uint8ClampedArray(width*height*4);data.fill(255);
+    if(showBarcode){
+      const scale=4,total=runs.reduce((a,b)=>a+b,0)*scale;let x=Math.floor((width-total)/2);
+      for(let i=0;i<runs.length;i++){
+        const next=x+runs[i]*scale;
+        if(i%2===0)for(let yy=0;yy<height;yy++)for(let xx=x;xx<next;xx++){const j=(yy*width+xx)*4;data[j]=data[j+1]=data[j+2]=0;}
+        x=next;
+      }
+    }
+    return {data,width,height};
+  }}};
+}
 w.localStorage.setItem('ddsm:device:v1:a','d'.repeat(64));
 w.DDSM_NaverMap={loadSdk:async()=>({}),open:()=>{},close:()=>{}};
 w.DDSM_DeliveryMap={render:async(date,stops,callbacks,round)=>{mapState={stops,callbacks,round};},pause:()=>{},project:()=>({x:120,y:200}),showDraft:()=>{},clearDraft:()=>{}};
@@ -50,9 +71,16 @@ w.eval(read('waybill.js'));w.eval(read('center-link.js'));w.eval(read('app.js'))
   await tick();await tick();
   assert.equal(d.body.dataset.page,'scan');assert.ok(autofocus>0,'continuous autofocus requested');
   assert.match($('recentScans').firstElementChild.textContent,/둘째 배송지/);
-  $('waybillInput').value='1234567890125';
-  $('scanForm').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
-  await tick();await tick();
+  if(iosMode){
+    showBarcode=true;
+    for(let i=0;i<30&&currentDay.rounds[0].stops.length!==3;i++)await new Promise(r=>setTimeout(r,100));
+    showBarcode=false;
+    assert.equal(currentDay.rounds[0].stops.length,3,'Safari-compatible engine decoded a real Code128 pixel frame');
+  }else{
+    $('waybillInput').value='1234567890125';
+    $('scanForm').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+    await tick();await tick();
+  }
   assert.match($('recentScans').firstElementChild.textContent,/최신 배송지/);
   assert.equal(currentDay.rounds[0].stops.length,3);
   $('mapTab').click();await tick();

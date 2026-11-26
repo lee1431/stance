@@ -57,6 +57,14 @@ jobs:
           else
             echo "::warning::Unable to inspect stale Pages deployment"
           fi
+      - name: Bundle pinned DDSM barcode decoder
+        run: |
+          set -euo pipefail
+          npm pack @zxing/browser@0.1.5 --pack-destination /tmp
+          tar -xzf /tmp/zxing-browser-0.1.5.tgz -C /tmp package/umd/zxing-browser.min.js package/LICENSE
+          mkdir -p ddsm/vendor
+          cp /tmp/package/umd/zxing-browser.min.js ddsm/vendor/zxing-browser-0.1.5.min.js
+          cp /tmp/package/LICENSE ddsm/vendor/zxing-browser-0.1.5.LICENSE.txt
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

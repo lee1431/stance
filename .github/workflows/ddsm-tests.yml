@@ -29,6 +29,7 @@ jobs:
           node --check ddsm/vendor/jsQR.js
       - run: python ddsm/test_ui_contract.py
 
-      - run: npm install --no-save --no-package-lock --prefix /tmp/ddsm-ui jsdom@26
+      - run: npm install --no-save --no-package-lock --prefix /tmp/ddsm-ui jsdom@26 @zxing/browser@0.1.5 @zxing/library@0.21.3
       - run: NODE_PATH=/tmp/ddsm-ui/node_modules node ddsm/test_qr_roundtrip.cjs
       - run: NODE_PATH=/tmp/ddsm-ui/node_modules node ddsm/test_ui_smoke.cjs
+      - run: NODE_PATH=/tmp/ddsm-ui/node_modules node ddsm/test_ios_barcode.cjs
