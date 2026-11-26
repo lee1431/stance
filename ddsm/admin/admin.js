@@ -697,7 +697,17 @@
     scroll.scrollTop=top;scroll.scrollLeft=left;
     return true;
   }
+  function setRecurringCollapsed(collapsed){
+    $('recurringContent').hidden=collapsed;
+    $('toggleRecurring').textContent=collapsed?'펼치기 ▾':'접기 ▴';
+    $('toggleRecurring').setAttribute('aria-expanded',String(!collapsed));
+    try{sessionStorage.setItem('ddsm:admin:recurring-collapsed:v1',collapsed?'1':'0');}catch(_){}
+  }
   function bind(){
+    let collapsed=false;
+    try{collapsed=sessionStorage.getItem('ddsm:admin:recurring-collapsed:v1')==='1';}catch(_){}
+    setRecurringCollapsed(collapsed);
+    $('toggleRecurring').addEventListener('click',()=>setRecurringCollapsed(!$('recurringContent').hidden));
     $('deliveryDate').value=dateString();
     $('centerLoginForm').addEventListener('submit',openCenter);
     $('retryCenter').addEventListener('click',validateSession);
