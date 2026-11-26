@@ -471,7 +471,7 @@
     const button = $('saveAddressBtn');
     const input = $('newAddress');
     const row = addressRow;
-    if (!row || button.disabled) return;
+    if (!row || button.disabled || manualLocationBusy) return;
     const address = input.value.trim();
     if (!address) {
       say('addressError', '배송 주소를 입력하세요.');
@@ -479,6 +479,7 @@
       return;
     }
     const cancel = $('cancelAddressBtn');
+    manualLocationBusy=true;
     button.disabled = cancel.disabled = input.readOnly = true;
     say('addressError', '');
     try {
@@ -486,20 +487,12 @@
       await beforeManualLocation();
       await post('admin/deliveries/' + row.id + '/location', { address, remember_recipient:$('rememberAddress').checked });
       closeEditor();
-      try {
-        await loadDayWithoutGeocode();
-        const registered = rows.find(item => item.id === row.id)?.registry_address;
-        say('importStatus', registered && registered !== address
-          ? '기존 배송지 주소로 연결했습니다. ' + registered
-          : '배송 주소를 저장했습니다.');
-      } catch (error) {
-        say('importStatus', '배송 주소를 저장했습니다. 목록 조회 실패: ' + error.message);
-      }
       dialog.close();
-      await loadRecurring();
+      await refreshSaved('배송 주소 저장 완료');
     } catch (error) {
       say('addressError', '주소 저장 실패: ' + error.message);
     } finally {
+      manualLocationBusy=false;
       button.disabled = cancel.disabled = input.readOnly = false;
     }
   }
@@ -545,15 +538,17 @@
     }catch(_){}
   }
   async function linkSaved() {
-    if(!selected)return;
+    if(!selected||manualLocationBusy)return;
     const destinationId=Number($('savedDestinationSelect').value);
     if(!Number.isSafeInteger(destinationId))return;
+    manualLocationBusy=true;$('linkDestinationBtn').disabled=true;
     try {
       const row=selected,remember=$('rememberLocation').checked;
       await beforeManualLocation();
       await post('admin/deliveries/'+row.id+'/location',{destination_id:destinationId,remember_recipient:remember});
       closeEditor();await refreshSaved('기존 배송지 연결 완료');
     }catch(e){say('locationHint','연결 실패: '+e.message);}
+    finally{manualLocationBusy=false;$('linkDestinationBtn').disabled=false;}
   }
   function addressValues(row, override = null) {
     const primary = override === null ? (row?.registry_address || row?.source_address || '') : override;
@@ -665,7 +660,10 @@
     say('totalCount',String(response.total));
     say('mapCount',String(response.located));
     say('missingCount',String(response.unlocated));
+    const scroll=$('rawTable').parentElement,top=scroll.scrollTop,left=scroll.scrollLeft;
     renderTable();renderUnlocated();drawMap();
+    scroll.scrollTop=top;scroll.scrollLeft=left;
+    return true;
   }
   function bind(){
     $('deliveryDate').value=dateString();
