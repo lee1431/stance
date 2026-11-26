@@ -166,7 +166,7 @@ class DDSMApiTest(unittest.TestCase):
         # Addressless recurring business: the shared master is created during import,
         # then the driver supplies a location used by the next day's export.
         recurring_day = "2026-11-19"
-        name_only = "운송장번호,상호명,물품명\\n2139602023215,정기배송상점,부품\\n".encode("utf-8-sig")
+        name_only = "운송장번호,상호명,물품명\n2139602023215,정기배송상점,부품\n".encode("utf-8-sig")
         uploaded = self.client.post(
             "/ddsm/api/admin/import",
             data={"date": recurring_day, "file": (io.BytesIO(name_only), "recurring.csv")},
@@ -196,7 +196,7 @@ class DDSMApiTest(unittest.TestCase):
         self.assertTrue(updated[0]["located"])
 
         next_day = "2026-11-20"
-        later = "운송장번호,상호명,물품명\\n2139602023216,정기배송상점,자재\\n".encode("utf-8-sig")
+        later = "운송장번호,상호명,물품명\n2139602023216,정기배송상점,자재\n".encode("utf-8-sig")
         self.client.post(
             "/ddsm/api/admin/import",
             data={"date": next_day, "file": (io.BytesIO(later), "later.csv")},
