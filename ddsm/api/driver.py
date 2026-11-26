@@ -158,8 +158,8 @@ def install_driver(app, connect, authenticated_user):
         value = request.get_json(silent=True)
         if not isinstance(value, dict) or not valid_date(value.get("date")):
             return jsonify(ok=False, error="배송일이 올바르지 않습니다."), 400
-        digits = re.sub(r"[\\s-]", "", str(value.get("waybill") or ""))
-        if not re.fullmatch(r"\\d{13}(?:\\d{3})?", digits):
+        digits = re.sub(r"[\s-]", "", str(value.get("waybill") or ""))
+        if not re.fullmatch(r"\d{13}(?:\d{3})?", digits):
             return jsonify(ok=False, error="운송장번호가 올바르지 않습니다."), 400
         master = digits[:13]
         address = value.get("address")
