@@ -9,26 +9,25 @@
 <link rel="stylesheet" href="admin.css?v=4-address-entry">
 <script src="../naver-map.js?v=3-shared-sdk" defer></script>
 <script src="../address-utils.js?v=3-attached-units" defer></script>
-<script src="admin.js?v=8-address-entry" defer></script>
+<script src="admin.js?v=10-center" defer></script>
 </head>
 <body>
 <div class="shell">
  <header class="topbar">
   <div class="branding"><a href="../" class="home-link" aria-label="DDSM 홈으로">D</a>
    <div><span class="eyebrow">DDSM CENTER</span><h1>센터 관리콘솔</h1></div></div>
-  <div class="top-actions"><span id="authBadge">관리자 인증 필요</span><button id="logoutBtn" type="button" hidden>잠금</button></div>
+  <div class="top-actions"><span id="authBadge">센터 선택</span><button id="changeCenter" type="button" hidden>센터 변경</button></div>
  </header>
- <section id="authPanel" class="auth-panel">
-  <div><h2>관리자 로그인</h2><p>서버 사용자 계정과 별도 관리자 비밀번호로 접근합니다. 배송 자료는 승인된 관리자만 볼 수 있습니다.</p></div>
-  <form id="authForm" autocomplete="on">
-   <label>휴대폰 번호<input id="loginPhone" type="tel" inputmode="tel" autocomplete="username" placeholder="010-1234-5678" required></label>
-   <label>사용자 비밀번호<input id="loginPassword" type="password" autocomplete="current-password" placeholder="DDSM 사용자 비밀번호"></label>
-   <label>관리자 비밀번호<input id="adminPassword" type="password" autocomplete="off" placeholder="별도 관리자 비밀번호" required></label>
-   <button type="submit" class="primary">관리콘솔 열기</button>
-  </form>
-  <p id="authError" class="error" role="alert"></p>
+ <section id="centerPanel" class="auth-panel">
+  <h2>센터 선택</h2>
+  <p id="centerStatus" role="status">센터 목록을 불러오는 중입니다.</p>
+  <label for="centerSelect">센터</label>
+  <select id="centerSelect" disabled></select>
+  <button id="openCenter" class="primary" type="button" disabled>센터 열기</button>
+  <button id="retryCenter" type="button">다시 연결</button>
  </section>
  <main id="dashboard" hidden>
+  <section class="toolbar"><button id="copyDriverLink" type="button">기사 연결 링크 복사</button><p id="driverLinkStatus" role="status">기사에게 최초 한 번만 전달하면 됩니다.</p></section>
   <section class="toolbar">
    <div class="date-box"><label for="deliveryDate">조회 날짜</label><input id="deliveryDate" type="date"><button id="refreshBtn" type="button">새로고침</button></div>
    <form id="importForm" class="import-box">
@@ -63,6 +62,12 @@
     <button id="filterMissingBtn" type="button">미확인 목록 전체 보기</button></div>
    <div id="unlocatedChips" class="unlocated-chips"></div>
   </section>
+  <section class="data-panel">
+   <div class="section-head"><div><h2>정기배송 고객 주소록</h2><p>주소 없이 들어오는 수취인을 등록하면 다음 원본 업로드에서 자동 참조합니다.</p></div><button id="refreshRecurring" type="button">조회</button></div>
+   <input id="recurringSearch" type="search" placeholder="등록 고객명 또는 주소 검색" aria-label="정기배송 고객 검색">
+   <p id="recurringStatus" role="status"></p>
+   <div class="table-scroll"><table><thead><tr><th>수취인명</th><th>연락처</th><th>등록 주소</th><th>관리</th></tr></thead><tbody id="recurringBody"></tbody></table></div>
+  </section>
   <section id="locationEditor" class="location-panel" hidden>
    <div><strong id="editName">배송 위치 수정</strong><p id="editInfo"></p></div>
    <div class="location-fields">
@@ -71,6 +76,7 @@
     <button id="saveCenterBtn" class="primary" type="button">지도 중앙 위치 저장</button>
     <button id="cancelLocationBtn" type="button">취소</button>
    </div>
+   <label><input id="rememberLocation" type="checkbox"> 정기배송 고객으로 등록</label>
    <p id="locationHint" role="status">지도를 움직여 중앙의 마커 끝을 배송지에 맞춘 뒤 저장하세요.</p>
    <div id="savedDestinationPanel" hidden><label for="savedDestinationSelect">과거 저장된 상호명 배송지</label>
      <select id="savedDestinationSelect"></select>
@@ -82,7 +88,7 @@
     <div><h2>당일 배송 목록</h2><p>고객정보 4개 항목만 표시합니다. 도로명주소 우선, 지번주소 대체입니다.</p></div>
     <div class="filters">
      <label for="searchInput" class="sr-only">배송지 검색</label><input id="searchInput" type="search" placeholder="수취인·주소·연락처·운송장 검색">
-     <select id="filterSelect" aria-label="지도 위치 필터"><option value="all">전체 목록</option><option value="missing">위치 미확인만</option><option value="mapped">지도 표시만</option></select>
+     <select id="filterSelect" aria-label="지도 위치 필터"><option value="all">전체 목록</option><option value="missing">위치 미확인만</option><option value="name-only">상호·이름만 온 고객</option><option value="mapped">지도 표시만</option></select>
     </div>
    </div>
    <div class="table-scroll"><table id="rawTable"><thead id="rawHeader"><tr><th>배송 목록 없음</th></tr></thead><tbody id="rawBody"></tbody></table></div>
@@ -95,6 +101,7 @@
     <p id="addressRowInfo"></p>
     <label for="newAddress">배송 주소</label>
     <input id="newAddress" type="text" placeholder="도로명 또는 지번 주소" maxlength="250" required autofocus>
+    <label><input id="rememberAddress" type="checkbox"> 정기배송 고객으로 등록</label>
     <p id="addressError" class="error" role="alert"></p>
     <div class="address-dialog-actions">
      <button id="cancelAddressBtn" type="button">취소</button>
