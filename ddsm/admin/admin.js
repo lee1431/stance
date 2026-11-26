@@ -90,7 +90,7 @@
       const scratch=document.createElement('div');
       const code=new window.QRCode(scratch,{text:link,width:256,height:256,useSVG:true,colorDark:'#000000',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});
       const matrix=code._oQRCode,n=matrix.getModuleCount(),ns='http://www.w3.org/2000/svg';
-      const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 '+(n+8)+' '+(n+8));svg.setAttribute('width','360');svg.setAttribute('height','360');svg.setAttribute('shape-rendering','crispEdges');
+      const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 '+(n+8)+' '+(n+8));svg.setAttribute('width','520');svg.setAttribute('height','520');svg.setAttribute('shape-rendering','crispEdges');
       const bg=document.createElementNS(ns,'rect');bg.setAttribute('width',String(n+8));bg.setAttribute('height',String(n+8));bg.setAttribute('fill','#fff');svg.append(bg);
       const shape=document.createElementNS(ns,'path');let d='';
       for(let row=0;row<n;row++)for(let col=0;col<n;col++)if(matrix.isDark(row,col))d+='M'+(col+4)+' '+(row+4)+'h1v1h-1z';
@@ -98,11 +98,20 @@
       say('driverQrStatus','기사 화면의 소속 센터 → QR 스캔에서 읽어주세요.');
     }catch(e){say('driverQrStatus','QR 생성 실패 · 연결 링크 복사를 사용하세요.');}
   }
+  function saveDriverQr(){
+    const svg=$('driverQrCode').querySelector('svg');if(!svg)return;
+    const copy=svg.cloneNode(true);copy.setAttribute('xmlns','http://www.w3.org/2000/svg');
+    const size=Number(svg.getAttribute('viewBox').split(' ')[2])*12;copy.setAttribute('width',String(size));copy.setAttribute('height',String(size));
+    const source=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(copy)],{type:'image/svg+xml;charset=utf-8'}));
+    const image=new Image();image.onload=()=>{
+      try{const canvas=document.createElement('canvas');canvas.width=canvas.height=size;const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;ctx.drawImage(image,0,0);const a=document.createElement('a');a.href=canvas.toDataURL('image/png');a.download='ddsm-center-qr.png';a.click();}finally{URL.revokeObjectURL(source);}
+    };image.onerror=()=>{URL.revokeObjectURL(source);say('driverQrStatus','QR 이미지 저장 실패');};image.src=source;
+  }
   async function copyDriverLink() {
     const link=driverLink();if(!link)return;
     try {
       await navigator.clipboard.writeText(link);
-      say('driverLinkStatus','기사 연결 링크 복사 완료');
+      say('driverLinkStatus','기사 연결 링크 복사 완료');say('driverQrStatus','기사 연결 링크 복사 완료');
     } catch(_) {
       say('driverLinkStatus','복사 실패 · 브라우저 클립보드 권한을 확인하세요.');
     }
@@ -544,6 +553,8 @@
     $('changeCenter').addEventListener('click',()=>location.reload());
     $('copyDriverLink').addEventListener('click',copyDriverLink);
     $('showDriverQr').addEventListener('click',showDriverQr);
+    $('saveDriverQr').addEventListener('click',saveDriverQr);
+    $('copyDriverQrLink').addEventListener('click',copyDriverLink);
     $('closeDriverQr').addEventListener('click',()=>$('driverQrDialog').close());
     $('driverQrDialog').addEventListener('close',()=>$('driverQrCode').replaceChildren());
     $('deliveryDate').addEventListener('change',loadDay);
