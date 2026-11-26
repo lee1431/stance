@@ -7,12 +7,12 @@
   <meta name="description" content="DDSM - Daily, Scan, Delivery. 서버 동기화 기반 배송 스캔 대시보드">
   <title>DDSM | Daily · Scan · Delivery</title>
   <link rel="icon" href="favicon.svg?v=vehicle-20261118" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=15-delivery-map-layout">
+  <link rel="stylesheet" href="style.css?v=16-three-tabs">
   <script src="naver-map.js?v=4-address-classification" defer></script>
   <script src="address-utils.js?v=3-attached-units" defer></script>
   <script src="delivery-map.js?v=6-round-filter" defer></script>
   <script src="waybill.js?v=1-master-13" defer></script>
-  <script src="app.js?v=25-round-filter" defer></script>
+  <script src="app.js?v=26-three-tabs" defer></script>
   <script src="theme.js?v=1" defer></script>
 </head>
 <body>
@@ -77,13 +77,13 @@
           <span class="delivery-letter" aria-hidden="true">
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
           </span>
-          <span class="delivery-title" id="deliveryButtonLabel">운송장을 스캔하면 출발 가능</span>
+          <span class="delivery-title" id="deliveryButtonLabel">지도</span>
           <span class="arrow" aria-hidden="true">›</span>
         </button>
         <p id="deliveryHint" class="footer-note">운송장을 스캔하면 배송을 시작할 수 있습니다.</p>
         <button id="listButton" class="text-link" type="button">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
-          배송 목록 보기
+          목록
         </button>
       </footer>
     </main>
@@ -102,7 +102,8 @@
           <label for="deliveryRoundSelect">배송 목록 회차</label>
           <select id="deliveryRoundSelect" aria-label="배송 목록 회차 선택"></select>
         </div>
-        <section class="delivery-map-panel" aria-labelledby="deliveryMapHeading">
+        <nav class="work-tabs" aria-label="작업 화면"><button id="listTab" type="button" aria-pressed="false">목록</button><button id="mapTab" type="button" aria-pressed="true">지도</button></nav>
+        <section id="mapPanel" class="delivery-map-panel" aria-labelledby="deliveryMapHeading">
           <div class="delivery-map-header">
             <div>
               <h3 id="deliveryMapHeading">선택 회차 배송 지도</h3>
@@ -110,6 +111,7 @@
             </div>
             <button id="deliveryMapFitBtn" class="map-fit-button" type="button">◎ 회차 전체</button>
           </div>
+          <div class="map-order-tools"><button id="resetMapOrder" type="button">1번부터 지정</button><button id="undoMapOrder" type="button" disabled>한 단계 취소</button></div>
           <div id="deliveryMapStage" class="delivery-map-stage">
             <div id="deliveryMapCanvas" class="delivery-map-canvas" role="region" aria-label="선택 회차의 배송지 네이버 지도"></div>
             <div id="deliveryMapEmpty" class="delivery-map-empty" role="status">지도 준비 중입니다.</div>
@@ -117,17 +119,17 @@
           <div class="delivery-map-footer">
             <span><i class="map-legend-dot pending"></i>배송 예정</span>
             <span><i class="map-legend-dot done"></i>완료</span>
-            <span>번호를 눌러 배송지 수정</span>
+            <span id="mapOrderHint">마커를 순서대로 누르세요</span>
           </div>
         </section>
       </div>
-      <div class="delivery-list">
+      <div id="listPanel" class="delivery-list hidden">
         <div class="progress-wrap">
           <div class="progress-heading"><strong id="progressLabel">완료 0 / 0</strong><span id="remainingLabel">남은 배송 0건</span></div>
           <div class="progress-track" role="progressbar" aria-label="배송 완료율" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressTrack"><div id="progressFill"></div></div>
         </div>
         <div class="list-heading">
-          <strong>배송지 · 순번 변경</strong><span>↑↓ 또는 순번 이동으로 정렬 · 지도 번호와 연동</span>
+          <strong>배송 목록</strong><span>지도 순번대로 표시</span>
         </div>
         <div id="stopList" class="stop-list"></div>
       </div>
@@ -160,23 +162,23 @@
   <dialog id="scanDialog" class="sheet-dialog scan-dialog" aria-labelledby="scanTitle">
     <div class="dialog-head"><h2 id="scanTitle">운송장 스캔</h2><button id="closeScan" class="close-button" type="button" aria-label="닫기">✕</button></div>
     <p class="dialog-description">바코드를 스캔하거나 운송장번호를 입력하세요.</p>
+    <video id="cameraVideo" class="camera-preview hidden" autoplay playsinline muted></video>
     <form id="scanForm" class="scan-form">
       <label for="waybillInput" class="sr-only">운송장번호</label>
       <input id="waybillInput" placeholder="운송장번호" autocomplete="off" inputmode="text" spellcheck="false" maxlength="100" required>
       <button type="submit" class="primary-action">추가</button>
     </form>
-    <button id="cameraButton" type="button" class="secondary-action">▣ 카메라로 스캔</button>
-    <video id="cameraVideo" class="camera-preview hidden" autoplay playsinline muted></video>
+    <button id="cameraButton" type="button" class="secondary-action">카메라 켜기</button>
     <p id="scanResult" class="dialog-message" role="status" aria-live="polite">스캔 전에 서버 로그인이 필요합니다. S10 원본 조회에 성공한 송장만 등록합니다.</p>
-    <p class="dialog-footnote scan-footnote">주소·수취인은 배송 목록에서 수정할 수 있습니다.</p>
+    <nav class="work-tabs"><button id="scanToList" type="button">목록</button><button id="scanToMap" type="button">지도 · 순번 지정</button></nav>
   </dialog>
 
   <dialog id="editDialog" class="sheet-dialog" aria-labelledby="editTitle">
     <form id="editForm">
       <div class="dialog-head"><h2 id="editTitle">배송 정보</h2><button id="closeEdit" class="close-button" type="button" aria-label="닫기">✕</button></div>
       <p id="editWaybill" class="edit-waybill"></p>
-      <label class="input-label" for="editOrderSelect">방문 순번</label>
-      <select id="editOrderSelect" class="edit-order-select" aria-label="이 배송지의 방문 순번"></select>
+      <label class="input-label" for="editRoundSelect">회차 변경</label>
+      <select id="editRoundSelect" class="edit-order-select" aria-label="배송 회차"></select>
       <label class="input-label" for="recipientInput">받는 분 / 업체명</label>
       <input id="recipientInput" maxlength="100" placeholder="선택 입력">
       <label class="input-label" for="addressInput">배송 주소</label>
@@ -204,6 +206,7 @@
       <label class="input-label" for="memoInput">메모</label>
       <textarea id="memoInput" rows="3" maxlength="500" placeholder="예: 경비실에 맡김"></textarea>
       <button type="submit" class="primary-action full-width">저장</button>
+      <button id="deleteEditStop" type="button" class="secondary-action">삭제</button>
     </form>
   </dialog>
 
