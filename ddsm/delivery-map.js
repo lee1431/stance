@@ -9,6 +9,9 @@
   let selectedSignature = '', initialFitDone = false, userInteracted = false, active = false, loadPromise = null;
   let onSelect = null, onGeocoded = null, geocodeGeneration = 0;
   let failed = new Set();
+  let onLongPress=null,onDismiss=null,onViewport=null,draftMarker=null,lastMarkerClick=0,lastLongPress=0;
+  let pointer=null;
+  let locationSignature='';
   let requestQueue = [], working = 0;
   const inFlight = new Set();
 
@@ -77,7 +80,7 @@
       if (!marker) {
         marker = new maps.Marker({ map, position: coords, icon: icon(s), clickable: true, title: markerTitle(s) });
         maps.Event.addListener(marker, 'click', () => {
-          if (active && typeof onSelect === 'function') onSelect(s.id, s.roundNo);
+          if (active && typeof onSelect === 'function' && Date.now()-lastLongPress>500) {lastMarkerClick=Date.now();userInteracted=true;onSelect(s.id,s.roundNo);}
         });
         markers.set(id, marker);
       } else {
@@ -101,10 +104,11 @@
     } else {
       $('deliveryMapEmpty').classList.add('hidden');
     }
-    if (markers.size && !userInteracted) {
-      initialFitDone = true;
-      requestAnimationFrame(fit);
+    const locations=stops.filter(valid).map(s=>key(s)+':'+s.lat+':'+s.lng).sort().join('|');
+    if (markers.size && !userInteracted && (!initialFitDone||locations!==locationSignature)) {
+      initialFitDone=true;requestAnimationFrame(fit);
     }
+    locationSignature=locations;onViewport?.();
   }
   function createMap() {
     if (map) return;
@@ -112,11 +116,32 @@
     map = new n.Map($('deliveryMapCanvas'), {
       center: new n.LatLng(36.991, 127.925),
       zoom: 12,
-      zoomControl: true,
+      zoomControl: false,
       zoomControlOptions: { position: n.Position.TOP_RIGHT },
       mapDataControl: false, scaleControl: false, logoControl: true
     });
-    n.Event.addListener(map, 'dragstart', () => { userInteracted = true; });
+    n.Event.addListener(map,'dragstart',()=>{userInteracted=true;pointer=null;});
+    n.Event.addListener(map,'bounds_changed',()=>onViewport?.());
+    n.Event.addListener(map,'idle',()=>onViewport?.());
+    n.Event.addListener(map,'click',()=>{if(Date.now()-lastMarkerClick>300&&Date.now()-lastLongPress>500)onDismiss?.();});
+    const canvas=$('deliveryMapCanvas');
+    canvas.addEventListener('pointerdown',e=>{
+      userInteracted=true;
+      if(!e.isPrimary||e.button!==0||pointer){pointer=null;return;}
+      pointer={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now()};
+    },true);
+    canvas.addEventListener('pointermove',e=>{if(pointer&&Math.hypot(e.clientX-pointer.x,e.clientY-pointer.y)>12)pointer=null;},true);
+    canvas.addEventListener('pointercancel',()=>{pointer=null;},true);
+    canvas.addEventListener('pointerup',e=>{
+      const p=pointer;pointer=null;
+      if(!active||!p||p.id!==e.pointerId||performance.now()-p.t<500||Math.hypot(e.clientX-p.x,e.clientY-p.y)>12)return;
+      const r=canvas.getBoundingClientRect();
+      const coord=map.getProjection().fromOffsetToCoord(new n.Point(e.clientX-r.left,e.clientY-r.top));
+      const point={lat:coord.lat(),lng:coord.lng()};
+      if(valid(point)){lastLongPress=Date.now();onLongPress?.(point);}
+    },true);
+    canvas.addEventListener('contextmenu',e=>e.preventDefault());
+
   }
   function queueGeocodes(stops, date) {
     // Revisions of order or completion must not invalidate geocoding for this day.
@@ -169,10 +194,11 @@
     active = true;
     onSelect = callbacks.onSelect;
     onGeocoded = callbacks.onGeocoded;
+    onLongPress=callbacks.onLongPress;onDismiss=callbacks.onDismiss;onViewport=callbacks.onViewport;
     if (currentDate !== date) {
       currentDate = date;
       initialFitDone = false;
-      userInteracted = false;
+      userInteracted = false;locationSignature='';clearDraft();
       ++geocodeGeneration;
       requestQueue = [];
       failed = new Set();
@@ -182,7 +208,7 @@
     if (currentRound !== roundNo) {
       currentRound = roundNo;
       initialFitDone = false;
-      userInteracted = false;
+      userInteracted = false;locationSignature='';clearDraft();
       // Pending geocoding from another round must not delay this round.
       ++geocodeGeneration;
       requestQueue = [];
@@ -203,7 +229,7 @@
       s.roundNo, s.id, s.position, s.status, s.lat, s.lng, s.address, s.recipient
     ].join(':')).join('|');
     if (signature === selectedSignature && map) {
-      maps.Event.trigger(map, 'resize');
+      maps.Event.trigger(map, 'resize');onViewport?.();
       return;
     }
     selectedSignature = signature;
@@ -218,9 +244,18 @@
     active = false;
     ++geocodeGeneration;
     requestQueue = [];
-    initialFitDone = false;
-    userInteracted = false;
+    clearDraft();pointer=null;
     selectedSignature = '';
   }
-  root.DDSM_DeliveryMap = Object.freeze({ render, pause, fit });
+  function project(point) {
+    if(!active||!map||!valid(point))return null;
+    return map.getProjection().fromCoordToOffset(new maps.LatLng(point.lat,point.lng));
+  }
+  function clearDraft(){if(draftMarker){draftMarker.setMap(null);draftMarker=null;}}
+  function showDraft(point){
+    clearDraft();if(!map||!valid(point))return;
+    draftMarker=new maps.Marker({map,position:new maps.LatLng(point.lat,point.lng),clickable:false,zIndex:10000,
+      icon:{content:'<div class="draft-map-pin"></div>',size:new maps.Size(26,34),anchor:new maps.Point(13,30)}});
+  }
+  root.DDSM_DeliveryMap = Object.freeze({ render, pause, fit, project,showDraft,clearDraft });
 })(window);
