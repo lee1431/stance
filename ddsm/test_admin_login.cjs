@@ -7,6 +7,14 @@ const dom=new JSDOM(read('admin/index.html'),{url:'https://llsshh.com/ddsm/admin
 const w=dom.window,$=id=>w.document.getElementById(id);
 let oldApi=true,requests=[],token='s_a_'+'k'.repeat(64);
 let recurring={id:1,recipient_name:'고객A',phone:'',address:'충주시 문화동',lat:null,lng:null},updates=0;
+let deliveries=[],coordinateWrites=0,lookups=0;
+class LatLng{constructor(lat,lng){this.a=lat;this.b=lng;}lat(){return this.a;}lng(){return this.b;}}
+class MapMock{constructor(){}setCenter(){}setZoom(){}fitBounds(){}}
+class MarkerMock{constructor(o){this.position=o.position;}getPosition(){return this.position;}setMap(){}}
+const sdk={Map:MapMock,LatLng,Marker:MarkerMock,Size:class{},Point:class{},Position:{TOP_RIGHT:1},Event:{addListener(){},trigger(){}}};
+w.requestAnimationFrame=()=>0;
+w.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
+w.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');this.dispatchEvent(new w.Event('close'));};
 w.localStorage.setItem('ddsm:center:admin:v1','x'.repeat(64));
 w.DDSM_NaverMap={loadSdk:async()=>{throw Error('mock SDK disabled');}};
 function result(ok,status,body){return {ok,status,json:async()=>body};}
@@ -27,7 +35,15 @@ w.fetch=async(url,opts)=>{
  }
  assert.equal(opts.headers.Authorization,'Bearer '+token);
  if(endpoint==='admin/me')return result(true,200,{ok:true,admin:true});
- if(endpoint.startsWith('admin/deliveries?'))return result(true,200,{ok:true,total:0,located:0,unlocated:0,rows:[],columns:[]});
+ if(endpoint.startsWith('admin/deliveries?'))return result(true,200,{ok:true,total:deliveries.length,located:deliveries.filter(x=>x.located).length,unlocated:deliveries.filter(x=>!x.located).length,rows:deliveries.map(x=>({...x})),columns:[]});
+ if(endpoint.startsWith('admin/deliveries/')&&endpoint.endsWith('/location')){
+   const id=Number(endpoint.split('/')[2]),row=deliveries.find(x=>x.id===id),body=JSON.parse(opts.body);
+   if(body.address){row.registry_address=body.address;row.destination_id=id;
+     if(id===2){row.lat=36.99;row.lng=127.92;row.located=true;}
+   }
+   if(body.lat!==undefined){coordinateWrites++;row.lat=body.lat;row.lng=body.lng;row.located=true;}
+   return result(true,200,{ok:true,destination_id:id});
+ }
  if(endpoint.startsWith('admin/recurring-recipients?'))return result(true,200,{ok:true,recipients:[{...recurring}]});
  if(endpoint==='admin/recurring-recipients/1/update'){updates++;recurring={...recurring,...JSON.parse(opts.body)};return result(true,200,{ok:true});}
  throw Error('Unexpected endpoint '+endpoint);
@@ -72,5 +88,29 @@ w.fetch=async(url,opts)=>{
  assert.equal($('recurringBody').querySelectorAll('input')[1].value,'01012345678');
  assert.ok(requests.filter(x=>x.endpoint.startsWith('admin/deliveries?')).length>before);
  assert.match($('importStatus').textContent,/갱신 완료/);
- console.log('Direct admin login and recurring edit test passed');
+ w.DDSM_NaverMap={loadSdk:async()=>sdk};
+ w.DDSM_Address={resolve:async(_sdk,addresses)=>{lookups++;return addresses[0].includes('금봉로')?{lat:36.99,lng:127.92,verified:true}:{lat:36.98,lng:127.91,verified:false};}};
+ deliveries=[1,2,3].map(id=>({id,business_name:'테스트 '+id,waybill:String(id),source_address:'',registry_address:'',destination_id:null,lat:null,lng:null,located:false,name_only:true}));
+ $('refreshBtn').click();await tick();await tick();
+ $('filterSelect').value='missing';$('filterSelect').dispatchEvent(new w.Event('change'));
+ async function saveAddress(id,address){
+   const row=$('rawBody').querySelector('tr[data-id="'+id+'"]');
+   assert.ok(row);
+   row.querySelectorAll('button')[1].click();
+   $('newAddress').value=address;
+   $('addressForm').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+   await tick();await tick();await tick();
+   assert.equal($('addressDialog').open,false);
+ }
+ await saveAddress(1,'충주시 금봉로 21');
+ assert.equal(coordinateWrites,1);assert.equal(lookups,1);
+ assert.equal($('rawBody').querySelector('tr[data-id="1"]'),null);
+ await saveAddress(2,'충주시 금봉로 22');
+ assert.equal(coordinateWrites,1);assert.equal(lookups,1);
+ assert.equal($('rawBody').querySelector('tr[data-id="2"]'),null);
+ await saveAddress(3,'충주시 문화동');
+ assert.equal(coordinateWrites,1);assert.equal(lookups,2);
+ assert.ok($('rawBody').querySelector('tr[data-id="3"]'));
+ assert.match($('importStatus').textContent,/위치 미확인/);
+ console.log('Admin login, recurring edit and address geocode tests passed');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>dom.window.close());
