@@ -372,7 +372,7 @@ def remember_recipient(db, shipment, destination_id):
     # Reuse the verified alias for unresolved name-only rows already imported today.
     for row in db.execute(
         """SELECT id,business_name,recipient_phone,source_address FROM admin_deliveries
-           WHERE delivery_date=? AND id<>?""",
+           WHERE delivery_date=? AND id<>? AND (destination_id IS NULL OR destination_id IN (SELECT id FROM destinations WHERE address_key=\'\' AND lat IS NULL))""",
         (shipment["delivery_date"], shipment["id"])
     ).fetchall():
         if compact(row["business_name"]) != key or not name_only_source(row["business_name"], row["source_address"]):
@@ -701,7 +701,7 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
                 if not dest:
                     return jsonify(ok=False, error="저장된 배송지를 찾을 수 없습니다."), 404
             else:
-                address = str(data.get("address") or shipment["source_address"]).strip()[:250]
+                address = str(data.get("address") or ("" if name_only_source(shipment["business_name"], shipment["source_address"]) else shipment["source_address"])).strip()[:250]
                 business = str(data.get("business_name") or shipment["business_name"]).strip()[:160]
                 if not address and not business:
                     return jsonify(ok=False, error="주소 또는 상호명이 필요합니다."), 400
