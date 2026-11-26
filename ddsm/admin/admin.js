@@ -38,6 +38,7 @@
     $('logoutBtn').hidden = false;
     say('authBadge', '관리자 인증됨');
     loadDay();
+    loadRecurring();
   }
   async function validateSession() {
     if (!authToken) { $('authPanel').hidden = false; return; }
@@ -110,23 +111,50 @@
     markers.forEach(item=>item.marker.setMap(null));
     markers=[];
   }
+  async function loadRecurring() {
+    try {
+      const result=await get('admin/recurring-recipients?q='+encodeURIComponent($('recurringSearch').value.trim()));
+      const root=$('recurringBody');root.replaceChildren();
+      result.recipients.forEach(row=>{
+        const tr=document.createElement('tr');
+        tr.append(textCell(row.recipient_name),textCell(row.phone||'없음'),textCell(row.address||'좌표 등록'));
+        const td=document.createElement('td'),button=document.createElement('button');
+        button.type='button';button.textContent='등록 해제';
+        button.addEventListener('click',async()=>{
+          if(!confirm('이 고객의 자동 참조 등록을 해제할까요?'))return;
+          try{await post('admin/recurring-recipients/'+row.id+'/remove',{});await loadRecurring();}
+          catch(e){say('recurringStatus',e.message);}
+        });
+        td.append(button);tr.append(td);root.append(tr);
+      });
+      say('recurringStatus','등록 고객 '+result.recipients.length+'건 (최대 500건 표시)');
+    } catch(e){say('recurringStatus','조회 실패: '+e.message);}
+  }
   function renderUnlocated() {
     const missing=rows.filter(row=>!row.located);
     $('unlocatedPanel').hidden=missing.length===0;
     const target=$('unlocatedChips');target.replaceChildren();
     const LIMIT=100;
-    missing.slice(0,LIMIT).forEach(row=>{
+    const groups=new Map();
+    missing.forEach(row=>{
+      const name=String(row.business_name||'').trim();
+      const phone=String(row.recipient_phone||'').replace(/\D/g,'');
+      const key=row.name_only&&name ? JSON.stringify([name,phone]) : String(row.id);
+      const group=groups.get(key)||{row,count:0};group.count++;groups.set(key,group);
+    });
+    const grouped=[...groups.values()];
+    grouped.slice(0,LIMIT).forEach(({row,count})=>{
       const button=document.createElement('button');
       button.type='button';
       button.className='unlocated-chip';
-      button.textContent=(row.business_name||'상호 미입력') + (row.source_address?' · 주소 확인':' · 주소 없음');
+      button.textContent=(row.business_name||'상호 미입력') + (row.name_only?' · 주소 없음':' · 주소 확인') + (count>1?' · '+count+'건':'');
       button.title='배송지 위치 지정: '+(row.business_name||row.waybill||'미입력');
       button.addEventListener('click',()=>selectRow(row.id));
       target.append(button);
     });
-    if(missing.length>LIMIT){
+    if(grouped.length>LIMIT){
       const more=document.createElement('span');
-      more.textContent='외 '+(missing.length-LIMIT)+'건 · 미확인 목록 전체 보기에서 확인';
+      more.textContent='외 '+(grouped.length-LIMIT)+'건 · 미확인 목록 전체 보기에서 확인';
       more.className='unlocated-more';
       target.append(more);
     }
@@ -227,6 +255,7 @@
     const q=$('searchInput').value.trim().toLocaleLowerCase();
     return rows.filter(r=>{
       if(filter==='missing'&&r.located)return false;
+      if(filter==='name-only'&&!r.name_only)return false;
       if(filter==='mapped'&&!r.located)return false;
       if(!q)return true;
       return [r.waybill,r.business_name,r.registry_address,r.source_address,
@@ -279,7 +308,8 @@
     if (!row) return;
     addressRow = row;
     say('addressRowInfo', rowName(row) + ' · 운송장 ' + (row.waybill || '미등록'));
-    $('newAddress').value = row.registry_address || row.source_address || '';
+    $('newAddress').value = row.registry_address || (row.name_only?'':row.source_address) || '';
+    $('rememberAddress').checked=Boolean(row.name_only);
     say('addressError', '');
     $('addressDialog').showModal();
     $('newAddress').select();
@@ -303,7 +333,7 @@
     try {
       // Finish any existing automatic write before applying the manual correction.
       if (autoLocationWrite?.id === row.id) await autoLocationWrite.done.catch(() => {});
-      await post('admin/deliveries/' + row.id + '/location', { address });
+      await post('admin/deliveries/' + row.id + '/location', { address, remember_recipient:$('rememberAddress').checked });
       closeEditor();
       try {
         await loadDayWithoutGeocode();
@@ -315,6 +345,7 @@
         say('importStatus', '배송 주소를 저장했습니다. 목록 조회 실패: ' + error.message);
       }
       dialog.close();
+      void loadRecurring();
     } catch (error) {
       say('addressError', '주소 저장 실패: ' + error.message);
     } finally {
@@ -329,7 +360,8 @@
     $('mapPinSaveBar').hidden=false;
     say('editName','배송지 · '+rowName(row));
     say('editInfo','운송장 '+(row.waybill||'미등록')+' · 원본 '+row.sheet_name+' '+row.source_row+'행');
-    $('editAddress').value=row.registry_address||row.source_address||'';
+    $('editAddress').value=row.registry_address||(row.name_only?'':row.source_address)||'';
+    $('rememberLocation').checked=Boolean(row.name_only);
     const plan=addressPlan(row);
     say('locationHint','주소 판별: '+plan.label+' · 검색 후보: '+(plan.queries.join(' / ')||'없음')+'. 지도를 확인하고 중앙 마커를 조정한 뒤 저장하세요.');
     focusSelectedRow(id);
@@ -366,9 +398,9 @@
     const destinationId=Number($('savedDestinationSelect').value);
     if(!Number.isSafeInteger(destinationId))return;
     try {
-      await post('admin/deliveries/'+selected.id+'/location',{destination_id:destinationId});
-      closeEditor();await loadDay();
-      say('importStatus','기존 배송지와 연결했습니다. 이후 동일 상호의 재배송에도 참조됩니다.');
+      await post('admin/deliveries/'+selected.id+'/location',{destination_id:destinationId,remember_recipient:$('rememberLocation').checked});
+      closeEditor();await loadDay();void loadRecurring();
+      say('importStatus','기존 배송지 연결 완료');
     }catch(e){say('locationHint','연결 실패: '+e.message);}
   }
   function addressValues(row, override = null) {
@@ -415,9 +447,9 @@
     try{
       await post('admin/deliveries/'+selected.id+'/location',{
         address, business_name:selected.business_name,
-        lat:center.lat(), lng:center.lng()
+        lat:center.lat(), lng:center.lng(), remember_recipient:$('rememberLocation').checked
       });
-      closeEditor();await loadDay();
+      closeEditor();await loadDay();void loadRecurring();
       say('importStatus',address ? '공용 배송지 마스터의 주소와 좌표를 저장했습니다.' : '상호명만으로 공용 배송지 마스터의 좌표를 저장했습니다.');
     }catch(e){say('locationHint','위치 저장 실패: '+e.message);}
   }
@@ -487,6 +519,8 @@
     $('logoutBtn').addEventListener('click',lock);
     $('deliveryDate').addEventListener('change',loadDay);
     $('refreshBtn').addEventListener('click',loadDay);
+    $('refreshRecurring').addEventListener('click',loadRecurring);
+    $('recurringSearch').addEventListener('change',loadRecurring);
     $('excelFile').addEventListener('change',()=>say('fileName',$('excelFile').files[0]?.name||'선택된 파일 없음'));
     $('importForm').addEventListener('submit',importExcel);
     $('searchInput').addEventListener('input',renderTable);
