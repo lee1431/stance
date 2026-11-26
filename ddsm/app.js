@@ -5,13 +5,15 @@
   const DRIVER_API_BASE = 'https://mrdindoin.ddns.net/ddsm/api/driver/';
   const TOKEN_KEY = 'ddsm:center:driver:v1';
   let driverToken = '';
-  let connecting = null, syncFault=false;
+  let connecting = null, syncFault=false, manualSyncBusy=false, mapRefreshBusy=false;
+  const PAGE_KEY='ddsm:session:page:v1';
   let syncedDate = '', serverRevision = 0, syncBusy = false, syncPending = false, syncBlocked = false, syncEpoch = 0;
   const WORK_API = DRIVER_API_BASE + 'work-day';
   function invalidateDriverAuth(notify = false) {
     driverToken = '';syncFault=false;
     ++syncEpoch; syncedDate = ''; syncPending = false; syncBlocked = false;
-    data = freshData(); closeMapPopup(); render();
+    data = freshData(); closeMapPopup();
+    if(view==='delivery')showView('home');else render();
     if (notify) toast('연결이 끊겼습니다. 센터 관리자에게 새 접속 코드를 요청하세요.');
   }
   async function restoreConnection() {
@@ -112,12 +114,12 @@
     } finally {syncBusy=false;renderSettings();}
   }
   async function refreshDay() {
-    if(!driverToken || syncedDate!==date || syncPending || syncBusy || syncBlocked ||
+    if(!driverToken || syncedDate!==date || syncPending || syncBusy || syncBlocked || manualSyncBusy ||
        document.hidden || document.querySelector('dialog[open]') || scanWorkerActive || pendingScans.length || mapSelected || pinDraft) return;
     const token=driverToken, dayKey=date, epoch=syncEpoch;
     try {
       const remote=await serverDay(dayKey,token);
-      if(epoch!==syncEpoch || token!==driverToken || date!==dayKey || syncPending || syncBusy || scanWorkerActive || mapSelected || pinDraft) return;
+      if(epoch!==syncEpoch || token!==driverToken || date!==dayKey || syncPending || syncBusy || manualSyncBusy || scanWorkerActive || mapSelected || pinDraft) return;
       syncFault=false;renderSettings();
       if(remote.revision>serverRevision) {
         serverRevision=remote.revision;
@@ -150,6 +152,14 @@
 
   let data = readData();
   let date = today();
+  function rememberedPage(){
+    try{
+      const token=localStorage.getItem(TOKEN_KEY)||'';
+      const page=sessionStorage.getItem(PAGE_KEY);
+      if(/^d_[A-Za-z0-9-]{1,40}_[A-Za-z0-9_-]{43,128}$/.test(token)&&['scan','map','list'].includes(page))return page;
+    }catch(_){}
+    return 'scan';
+  }
   let view = 'home';
   let workTab = 'map';
   let mapSelected = null, pinDraft = null, wheelValue = 1, wheelDrag = null, wheelFrame = 0;
@@ -389,6 +399,7 @@
   function renderDayMap() {
     if (view !== 'delivery' || workTab !== 'map') return;
     const message = $('deliveryMapEmpty');
+    if(!driverToken||syncedDate!==date){message.textContent='배송 데이터 동기화 대기 중 · 새로고침을 눌러 다시 연결할 수 있습니다.';message.classList.remove('hidden');return;}
     if (!window.DDSM_DeliveryMap || typeof window.DDSM_DeliveryMap.render !== 'function') {
       message.textContent = '배송 지도 모듈을 불러오지 못했습니다. 브라우저 새로고침 후 다시 확인하세요.';
       message.classList.remove('hidden');
@@ -403,7 +414,7 @@
     }
     const selectedRoundNo = round().no;
     const selected = selectedRoundStops();
-    Promise.resolve(window.DDSM_DeliveryMap.render(date, selected, {
+    return Promise.resolve(window.DDSM_DeliveryMap.render(date, selected, {
       onSelect: selectMapStop,
       onGeocoded: persistGeocoded,
       onLongPress: onMapLongPress,
@@ -597,6 +608,7 @@
     if(changed&& (scanWorkerActive||pendingScans.length)) {toast('스캔 처리 완료 후 이동하세요.');return;}
     view=next;
     document.body.dataset.page=next==='home'?'scan':workTab;
+    try{sessionStorage.setItem(PAGE_KEY,document.body.dataset.page);}catch(_){}
     if(next!=='delivery'||workTab!=='map') {closeMapPopup();window.DDSM_DeliveryMap?.pause();}
     if(next!=='home')stopCamera();
     $('homeScreen').classList.toggle('hidden',next!=='home');
@@ -1059,16 +1071,20 @@
   }
   function resumeScan(){if(view==='home'&&driverToken&&syncedDate===date&&!document.querySelector('dialog[open]'))openScan();}
   async function manualSync(){
-    if(!driverToken){openDriverDialog('centerSettingsDialog');return;}
-    if(syncBlocked){toast('저장 충돌 상태입니다. 작업 사본을 저장하고 센터에 문의하세요.');return;}
-    if(scanWorkerActive||pendingScans.length||syncBusy){toast('작업 처리 중입니다. 완료 후 다시 시도하세요.');return;}
-    if(syncPending){await flushDay();renderSettings();if(syncPending||syncBlocked)return;}
+    if(!driverToken){openDriverDialog('centerSettingsDialog');return false;}
+    if(syncBlocked){toast('저장 충돌 상태입니다. 작업 사본을 저장하고 센터에 문의하세요.');return false;}
+    if(connecting||manualSyncBusy||scanWorkerActive||pendingScans.length||syncBusy){toast('작업 처리 중입니다. 완료 후 다시 시도하세요.');return false;}
+    manualSyncBusy=true;
+    const token=driverToken,dayKey=date;
     try{
-      if(syncedDate!==date){if(!await activateDay(date))return;}
+      if(syncPending){await flushDay();renderSettings();if(syncPending||syncBlocked||token!==driverToken||dayKey!==date)return false;}
+      if(syncedDate!==date){if(!await activateDay(date))return false;}
       else{
-        const token=driverToken,dayKey=date,epoch=syncEpoch;
+        const epoch=syncEpoch;
         const remote=await serverDay(dayKey,token);
-        if(token!==driverToken||date!==dayKey||epoch!==syncEpoch||syncPending||syncBusy)return;
+        if(token!==driverToken||date!==dayKey||epoch!==syncEpoch||syncPending||syncBusy||syncBlocked||scanWorkerActive||pendingScans.length){
+          toast('작업이 변경되었습니다. 저장 완료 후 다시 시도하세요.');return false;
+        }
         syncFault=false;
         if(remote.revision>=serverRevision){
           serverRevision=remote.revision;data.days[dayKey]=remote.day;
@@ -1076,8 +1092,26 @@
           render();
         }
       }
-      renderSettings();toast('서버 동기화 완료');
-    }catch(e){syncFault=true;renderSettings();toast(e.message||'동기화 실패');}
+      renderSettings();toast('서버 동기화 완료');return true;
+    }catch(e){
+      if(token===driverToken&&dayKey===date){syncFault=true;renderSettings();}
+      toast(e.message||'동기화 실패');return false;
+    }finally{manualSyncBusy=false;}
+  }
+  async function refreshMap(){
+    if(view!=='delivery'||workTab!=='map'||mapRefreshBusy)return;
+    mapRefreshBusy=true;
+    const button=$('mapRefresh'),dayKey=date,token=driverToken;
+    button.disabled=true;button.setAttribute('aria-busy','true');
+    closeMapPopup();
+    try{
+      if(!await manualSync())return;
+      if(view!=='delivery'||workTab!=='map'||date!==dayKey||driverToken!==token)return;
+      window.DDSM_DeliveryMap?.prepareRefresh?.();
+      await renderDayMap();
+    }finally{
+      mapRefreshBusy=false;button.disabled=false;button.setAttribute('aria-busy','false');
+    }
   }
   function renderStats(value){
     const rounds=(value?.rounds||[]).slice().sort((a,b)=>a.no-b.no);
@@ -1191,6 +1225,7 @@
       closeMapPopup();
       if(!window.DDSM_DeliveryMap?.fitAll())toast('현재 회차에 지도 표시 가능한 배송지가 없습니다.');
     });
+    $('mapRefresh').addEventListener('click',()=>void refreshMap());
     $('mapRound').addEventListener('click',()=>{
       const rounds=day().rounds.map(r=>r.no).sort((a,b)=>a-b);
       if(rounds.length<2)return;
@@ -1249,7 +1284,8 @@
   }
   bind();
   setInterval(()=>{if(syncPending) void flushDay();else void refreshDay();},3000);
-  document.body.dataset.page='scan';
-  render();
+  const initialPage=rememberedPage();
+  if(initialPage==='list'||initialPage==='map'){workTab=initialPage;showView('delivery');}
+  else{document.body.dataset.page='scan';render();}
   void restoreConnection().then(ok=>{if(ok&&view==='home')openScan();else if(view==='home')$('scanResult').textContent='센터 연결 및 서버 동기화 후 스캔할 수 있습니다.';});
 })();

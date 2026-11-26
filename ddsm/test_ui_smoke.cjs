@@ -114,7 +114,7 @@ w.eval(read('waybill.js'));w.eval(read('center-link.js'));w.eval(read('app.js'))
   assert.equal(lookupRequests.at(-1),'1234567890125001');
   assert.equal(currentDay.rounds[0].stops.find(s=>s.waybill==='1234567890125').scannedItems[0],'001');
   $('mapTab').click();await tick();
-  assert.equal(d.body.dataset.page,'map');assert.ok(cameraStops>0);
+  assert.equal(d.body.dataset.page,'map');assert.equal(w.sessionStorage.getItem('ddsm:session:page:v1'),'map');assert.ok(cameraStops>0);
   assert.equal(mapState.stops.length,3);
   assert.equal($('mapRoundLabel').textContent,'1회차');
   $('mapLocate').click();assert.equal(locateCalls,1);
@@ -138,11 +138,11 @@ w.eval(read('waybill.js'));w.eval(read('center-link.js'));w.eval(read('app.js'))
   $('pinSave').click();await tick();
   assert.equal(currentDay.rounds[0].stops.find(s=>s.id==='a').lat,36.9);
   assert.equal(destinationWrites,1);
-  $('listTab').click();assert.equal(d.body.dataset.page,'list');
+  $('listTab').click();assert.equal(d.body.dataset.page,'list');assert.equal(w.sessionStorage.getItem('ddsm:session:page:v1'),'list');
   assert.match($('stopList').firstElementChild.textContent,/최신 배송지/);
   assert.match($('stopList').firstElementChild.textContent,/완료/);
   $('scanTab').click();await tick();
-  assert.equal(d.body.dataset.page,'scan');assert.ok(autofocus>=2);
+  assert.equal(d.body.dataset.page,'scan');assert.equal(w.sessionStorage.getItem('ddsm:session:page:v1'),'scan');assert.ok(autofocus>=2);
   assert.equal($('roundScanCount').textContent,'3건 등록');
   $('settingsButton').click();
   assert.ok($('settingsDialog').open);

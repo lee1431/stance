@@ -296,6 +296,11 @@
     draw(stops, roundNo);
     queueGeocodes(stops, date);
   }
+  function prepareRefresh(){
+    // Redraw the current round, including retrying unresolved addresses, without resetting GPS or zoom.
+    selectedSignature='';renderedSignature='';failed.clear();
+    if(map)userInteracted=true;
+  }
   function pause() {
     active = false;
     ++geocodeGeneration;
@@ -313,5 +318,5 @@
     draftMarker=new maps.Marker({map,position:new maps.LatLng(point.lat,point.lng),clickable:false,zIndex:10000,
       icon:{content:'<div class="draft-map-pin"></div>',size:new maps.Size(26,34),anchor:new maps.Point(13,30)}});
   }
-  root.DDSM_DeliveryMap = Object.freeze({ render, pause, fit, fitAll, locate, project,showDraft,clearDraft });
+  root.DDSM_DeliveryMap = Object.freeze({ render, pause, prepareRefresh, fit, fitAll, locate, project,showDraft,clearDraft });
 })(window);
