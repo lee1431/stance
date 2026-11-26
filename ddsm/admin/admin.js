@@ -75,12 +75,25 @@
       await loadDay();void loadRecurring();
     }catch(e){say('centerStatus',e.message);$('openCenter').disabled=false;}
   }
-  async function copyDriverLink() {
-    if(!currentCenter)return;
+  function driverLink(){
+    if(!currentCenter)return null;
     const url=new URL('../connect/',location.href);
-    url.hash=new URLSearchParams({center:currentCenter.id,invite:currentCenter.invite}).toString();
+    url.hash=new URLSearchParams({center:currentCenter.id,invite:currentCenter.invite}).toString();return url.href;
+  }
+  function showDriverQr(){
+    const link=driverLink();if(!link)return;
+    const root=$('driverQrCode');root.replaceChildren();say('driverQrCenter',currentCenter.name);
+    $('driverQrDialog').showModal();
+    try{
+      if(typeof window.QRCode!=='function')throw Error('QR 모듈을 불러올 수 없습니다.');
+      new window.QRCode(root,{text:link,width:252,height:252,colorDark:'#000000',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});
+      say('driverQrStatus','기사 화면의 소속 센터 → QR 스캔에서 읽어주세요.');
+    }catch(e){say('driverQrStatus','QR 생성 실패 · 연결 링크 복사를 사용하세요.');}
+  }
+  async function copyDriverLink() {
+    const link=driverLink();if(!link)return;
     try {
-      await navigator.clipboard.writeText(url.href);
+      await navigator.clipboard.writeText(link);
       say('driverLinkStatus','기사 연결 링크 복사 완료');
     } catch(_) {
       say('driverLinkStatus','복사 실패 · 브라우저 클립보드 권한을 확인하세요.');
@@ -522,6 +535,9 @@
     $('retryCenter').addEventListener('click',validateSession);
     $('changeCenter').addEventListener('click',()=>location.reload());
     $('copyDriverLink').addEventListener('click',copyDriverLink);
+    $('showDriverQr').addEventListener('click',showDriverQr);
+    $('closeDriverQr').addEventListener('click',()=>$('driverQrDialog').close());
+    $('driverQrDialog').addEventListener('close',()=>$('driverQrCode').replaceChildren());
     $('deliveryDate').addEventListener('change',loadDay);
     $('refreshBtn').addEventListener('click',loadDay);
     $('refreshRecurring').addEventListener('click',loadRecurring);
