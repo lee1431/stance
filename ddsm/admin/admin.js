@@ -75,46 +75,39 @@
       await loadDay();void loadRecurring();
     }catch(e){say('centerStatus',e.message);$('openCenter').disabled=false;}
   }
-  function driverLink(){
-    if(!currentCenter)return null;
-    const url=new URL('../connect/',location.href);
-    url.hash=new URLSearchParams({center:currentCenter.id,invite:currentCenter.invite}).toString();return url.href;
+  let activeCode='',codeExpiry=0,codeTimer=null,codeRequest=0;
+  function clearDriverCode(){
+    codeRequest++;clearInterval(codeTimer);codeTimer=null;activeCode='';codeExpiry=0;
+    $('driverCodeValue').textContent='--------';$('copyDriverCode').disabled=true;
   }
-  function showDriverQr(){
-    const link=driverLink();if(!link)return;
-    const root=$('driverQrCode');root.replaceChildren();say('driverQrCenter',currentCenter.name);
-    $('driverQrDialog').showModal();
+  function updateCodeExpiry(){
+    const remaining=Math.max(0,Math.ceil(codeExpiry-Date.now()/1000));
+    if(!remaining){activeCode='';$('driverCodeValue').textContent='--------';$('copyDriverCode').disabled=true;say('driverCodeExpiry','코드 만료 · 새 코드를 발급하세요.');clearInterval(codeTimer);codeTimer=null;return;}
+    say('driverCodeExpiry','남은 시간 '+Math.floor(remaining/60)+':'+String(remaining%60).padStart(2,'0'));
+  }
+  async function issueDriverCode(renew=false){
+    if(!currentCenter)return;
+    clearDriverCode();const requestId=codeRequest,center=currentCenter.id;
+    $('renewDriverCode').disabled=true;say('driverCodeExpiry','코드 발급 중…');
     try{
-      if(typeof window.QRCode!=='function')throw Error('QR 모듈을 불러올 수 없습니다.');
-      // Render exact QR modules into a vector image with a four-module quiet zone.
-      const scratch=document.createElement('div');
-      const code=new window.QRCode(scratch,{text:link,width:256,height:256,useSVG:true,colorDark:'#000000',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});
-      const matrix=code._oQRCode,n=matrix.getModuleCount(),ns='http://www.w3.org/2000/svg';
-      const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 '+(n+8)+' '+(n+8));svg.setAttribute('width','520');svg.setAttribute('height','520');svg.setAttribute('shape-rendering','crispEdges');
-      const bg=document.createElementNS(ns,'rect');bg.setAttribute('width',String(n+8));bg.setAttribute('height',String(n+8));bg.setAttribute('fill','#fff');svg.append(bg);
-      const shape=document.createElementNS(ns,'path');let d='';
-      for(let row=0;row<n;row++)for(let col=0;col<n;col++)if(matrix.isDark(row,col))d+='M'+(col+4)+' '+(row+4)+'h1v1h-1z';
-      shape.setAttribute('d',d);shape.setAttribute('fill','#000');svg.append(shape);root.append(svg);
-      say('driverQrStatus','기사 화면의 소속 센터 → QR 스캔에서 읽어주세요.');
-    }catch(e){say('driverQrStatus','QR 생성 실패 · 연결 링크 복사를 사용하세요.');}
+      const result=await post('connection/code',{renew});
+      if(requestId!==codeRequest||!$('driverCodeDialog').open||currentCenter?.id!==center)return;
+      if(!/^[0-9]{8}$/.test(result.code||'')||!Number.isFinite(result.expires_at)||result.center!==center)throw Error('코드 발급 응답 오류');
+      activeCode=result.code;codeExpiry=result.expires_at;
+      $('driverCodeValue').textContent=activeCode.slice(0,4)+' '+activeCode.slice(4);
+      $('copyDriverCode').disabled=false;updateCodeExpiry();
+      if(activeCode)codeTimer=setInterval(updateCodeExpiry,1000);
+    }catch(e){if(requestId===codeRequest)say('driverCodeExpiry','코드 발급 실패 · '+(e.message||'센터 서버를 확인하세요.'));}
+    finally{if(requestId===codeRequest)$('renewDriverCode').disabled=false;}
   }
-  function saveDriverQr(){
-    const svg=$('driverQrCode').querySelector('svg');if(!svg)return;
-    const copy=svg.cloneNode(true);copy.setAttribute('xmlns','http://www.w3.org/2000/svg');
-    const size=Number(svg.getAttribute('viewBox').split(' ')[2])*12;copy.setAttribute('width',String(size));copy.setAttribute('height',String(size));
-    const source=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(copy)],{type:'image/svg+xml;charset=utf-8'}));
-    const image=new Image();image.onload=()=>{
-      try{const canvas=document.createElement('canvas');canvas.width=canvas.height=size;const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;ctx.drawImage(image,0,0);const a=document.createElement('a');a.href=canvas.toDataURL('image/png');a.download='ddsm-center-qr.png';a.click();}finally{URL.revokeObjectURL(source);}
-    };image.onerror=()=>{URL.revokeObjectURL(source);say('driverQrStatus','QR 이미지 저장 실패');};image.src=source;
+  function showDriverCode(){
+    if(!currentCenter)return;
+    say('driverCodeCenter',currentCenter.name);$('driverCodeDialog').showModal();void issueDriverCode();
   }
-  async function copyDriverLink() {
-    const link=driverLink();if(!link)return;
-    try {
-      await navigator.clipboard.writeText(link);
-      say('driverLinkStatus','기사 연결 링크 복사 완료');say('driverQrStatus','기사 연결 링크 복사 완료');
-    } catch(_) {
-      say('driverLinkStatus','복사 실패 · 브라우저 클립보드 권한을 확인하세요.');
-    }
+  async function copyDriverCode(){
+    if(!activeCode||Date.now()/1000>=codeExpiry){updateCodeExpiry();return;}
+    try{await navigator.clipboard.writeText(activeCode);say('driverCodeStatus','기사 연결 코드 복사 완료');}
+    catch(_){say('driverCodeStatus','코드를 직접 읽어서 전달하세요.');}
   }
   function mapNotice(message, small=false) {
     const el = $('mapPlaceholder');
@@ -551,12 +544,11 @@
     $('openCenter').addEventListener('click',openCenter);
     $('retryCenter').addEventListener('click',validateSession);
     $('changeCenter').addEventListener('click',()=>location.reload());
-    $('copyDriverLink').addEventListener('click',copyDriverLink);
-    $('showDriverQr').addEventListener('click',showDriverQr);
-    $('saveDriverQr').addEventListener('click',saveDriverQr);
-    $('copyDriverQrLink').addEventListener('click',copyDriverLink);
-    $('closeDriverQr').addEventListener('click',()=>$('driverQrDialog').close());
-    $('driverQrDialog').addEventListener('close',()=>$('driverQrCode').replaceChildren());
+    $('showDriverCode').addEventListener('click',showDriverCode);
+    $('renewDriverCode').addEventListener('click',()=>void issueDriverCode(true));
+    $('copyDriverCode').addEventListener('click',copyDriverCode);
+    $('closeDriverCode').addEventListener('click',()=>$('driverCodeDialog').close());
+    $('driverCodeDialog').addEventListener('close',clearDriverCode);
     $('deliveryDate').addEventListener('change',loadDay);
     $('refreshBtn').addEventListener('click',loadDay);
     $('refreshRecurring').addEventListener('click',loadRecurring);
