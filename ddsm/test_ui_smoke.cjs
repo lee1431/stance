@@ -6,6 +6,7 @@ const read = p => fs.readFileSync(path.join(__dirname,p),'utf8');
 const dom = new JSDOM(read('index.html'), {url:'https://llsshh.com/ddsm/',runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:new VirtualConsole()});
 const w = dom.window, d = w.document, $ = id => d.getElementById(id);
 const tick = () => new Promise(resolve => setTimeout(resolve,25));
+const qrTick = () => new Promise(resolve => setTimeout(resolve,550));
 let currentDay = {selected:1,rounds:[{no:1,stops:[
   {id:'a',waybill:'1234567890123',recipient:'첫 배송지',address:'충주시 금봉로 21',phone:'',memo:'',status:'pending',createdAt:'2026-11-26T01:00:00Z',lat:36.99,lng:127.92,scannedItems:[]},
   {id:'b',waybill:'1234567890124',recipient:'둘째 배송지',address:'충주시 금봉로 22',phone:'',memo:'',status:'pending',createdAt:'2026-11-26T01:01:00Z',lat:36.98,lng:127.91,scannedItems:[]}
@@ -104,19 +105,19 @@ w.eval(read('waybill.js'));w.eval(read('center-link.js'));w.eval(read('app.js'))
   for(const invalid of [valid.replace('llsshh.com','evil.example'),valid+'&admin=x',valid+'&center=other',valid.replace('/ddsm/connect/','/ddsm/admin/'),valid.replace('https:','http:'),valid.replace(invite,'short')])assert.throws(()=>w.DDSM_CenterLink.parse(invalid,w.location.origin));
   Object.defineProperty($('qrLoginVideo'),'readyState',{value:4});
   qrResult='https://evil.example/';
-  $('startQrLogin').click();await tick();await tick();
+  $('startQrLogin').click();await qrTick();
   assert.ok(!$('qrLoginStage').classList.contains('hidden'));
   assert.match($('qrLoginStatus').textContent,/기사 연결용 QR/);
   const stopsBefore=cameraStops;
   $('closeCenterSettings').click();await tick();
   assert.ok($('qrLoginStage').classList.contains('hidden'));assert.ok(cameraStops>stopsBefore);
   $('settingsButton').click();$('openCenterSettings').click();
-  qrResult=valid;$('startQrLogin').click();await tick();await tick();
+  qrResult=valid;$('startQrLogin').click();await qrTick();
   assert.match($('qrLoginStatus').textContent,/HTTP 403/);
   assert.ok($('centerSettingsDialog').open);
   assert.ok(!$('startQrLogin').disabled);
   assert.equal(w.localStorage.getItem('ddsm:center:driver:v1'),null);
-  qrLoginReject=false;$('startQrLogin').click();await tick();await tick();
+  qrLoginReject=false;$('startQrLogin').click();await qrTick();
   assert.equal(qrRequests,2);
   assert.match(w.localStorage.getItem('ddsm:center:driver:v1'),/^d_chungju_[a-f0-9]{64}$/);
   assert.ok(!$('centerSettingsDialog').open);
