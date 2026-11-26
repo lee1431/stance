@@ -1203,10 +1203,11 @@
   }
   async function scanQrPhoto(file){
     if(!file||driverToken||qrRedirecting)return;
-    stopQrLogin();$('qrLoginStatus').textContent='QR 이미지 확인 중…';
+    stopQrLogin();const generation=qrGeneration;$('qrLoginStatus').textContent='QR 이미지 확인 중…';
     const url=URL.createObjectURL(file);
     try{
       const image=new Image();image.src=url;await image.decode();
+      if(generation!==qrGeneration||!$('centerSettingsDialog').open)return;
       const raw=decodeQrImage(image,image.naturalWidth,image.naturalHeight);
       if(!raw)throw Error('사진에서 QR을 찾지 못했습니다. 코드 전체가 선명한 사진을 선택하세요.');
       await readQrResult(raw);
@@ -1233,8 +1234,7 @@
       let detector=null;
       if(typeof window.BarcodeDetector==='function'){
         try{
-          const formats=typeof window.BarcodeDetector.getSupportedFormats==='function'?await window.BarcodeDetector.getSupportedFormats():['qr_code'];
-          if(formats.includes('qr_code'))detector=new window.BarcodeDetector({formats:['qr_code']});
+          detector=new window.BarcodeDetector({formats:['qr_code']});
         }catch(_){}
       }
       if(!current())return;
