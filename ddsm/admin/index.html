@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="admin.css?v=10-recurring-edit">
 <script src="../naver-map.js?v=3-shared-sdk" defer></script>
 <script src="../address-utils.js?v=3-attached-units" defer></script>
-<script src="admin.js?v=19-address-geocode" defer></script>
+<script src="admin.js?v=20-recurring-collapse" defer></script>
 </head>
 <body>
 <div class="shell">
@@ -66,10 +66,12 @@
    <div id="unlocatedChips" class="unlocated-chips"></div>
   </section>
   <section class="data-panel">
-   <div class="section-head"><div><h2>정기배송 고객 주소록</h2><p>주소 없이 들어오는 수취인을 등록하면 다음 원본 업로드에서 자동 참조합니다.</p></div><button id="refreshRecurring" type="button">조회</button></div>
+   <div class="section-head"><div><h2>정기배송 고객 주소록</h2><p>주소 없이 들어오는 수취인을 등록하면 다음 원본 업로드에서 자동 참조합니다.</p></div><div class="map-actions"><button id="refreshRecurring" type="button">조회</button><button id="toggleRecurring" type="button" aria-expanded="true" aria-controls="recurringContent">접기 ▴</button></div></div>
+   <div id="recurringContent">
    <input id="recurringSearch" type="search" placeholder="등록 고객명 또는 주소 검색" aria-label="정기배송 고객 검색">
    <p id="recurringStatus" role="status"></p>
    <div class="table-scroll"><table><thead><tr><th>수취인명</th><th>연락처</th><th>등록 주소</th><th>지도 위치</th><th>관리</th></tr></thead><tbody id="recurringBody"></tbody></table></div>
+   </div>
   </section>
   <section id="locationEditor" class="location-panel" hidden>
    <div><strong id="editName">배송 위치 수정</strong><p id="editInfo"></p></div>
