@@ -7,13 +7,13 @@
   <meta name="description" content="DDSM - Daily, Scan, Delivery. 서버 동기화 기반 배송 스캔 대시보드">
   <title>DDSM | Daily · Scan · Delivery</title>
   <link rel="icon" href="favicon.svg?v=vehicle-20261118" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=24-map-controls">
+  <link rel="stylesheet" href="style.css?v=25-map-refresh">
   <script src="naver-map.js?v=4-address-classification" defer></script>
   <script src="address-utils.js?v=3-attached-units" defer></script>
-  <script src="delivery-map.js?v=8-map-controls" defer></script>
+  <script src="delivery-map.js?v=9-map-refresh" defer></script>
   <script src="waybill.js?v=2-normalized" defer></script>
   <script src="center-link.js?v=3-code" defer></script>
-  <script src="app.js?v=36-map-controls" defer></script>
+  <script src="app.js?v=37-map-refresh" defer></script>
   <script src="theme.js?v=1" defer></script>
 </head>
 <body>
@@ -95,6 +95,7 @@
             <div class="map-controls" role="group" aria-label="지도 조작">
               <button id="mapLocate" type="button" aria-label="내 위치 표시 및 이동" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg><span>내 위치</span></button>
               <button id="mapFitAll" type="button" aria-label="현재 회차 배송지 전체 보기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9V3h6m6 0h6v6m0 6v6h-6m-6 0H3v-6"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg><span>전체 보기</span></button>
+              <button id="mapRefresh" type="button" aria-label="배송 데이터 및 지도 새로고침" aria-busy="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14-5L3 9m0-6v6h6m-5 4a8 8 0 0 0 14 5l3-3m0 6v-6h-6"/></svg><span>새로고침</span></button>
               <button id="mapRound" class="map-round-button" type="button" aria-label="다음 배송 회차로 변경"><span id="mapRoundLabel">1회차</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/></svg></button>
             </div>
             <div id="mapPopup" class="map-mini-popup hidden" role="group" aria-label="배송지 조작">
