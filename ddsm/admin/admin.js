@@ -26,7 +26,7 @@
     const response = await fetch(API_BASE + path, opts);
     const json = await response.json().catch(() => null);
     if (!response.ok || !json || !json.ok) {
-      throw new Error(json?.error || 'API 응답 오류 (' + response.status + ')');
+      const error=new Error(json?.error || 'API 응답 오류 (' + response.status + ')');error.status=response.status;throw error;
     }
     return json;
   }
@@ -108,7 +108,7 @@
     if(authBusy)return;authBusy=true;
     $('changeCenter').disabled=true;
     try{if(authToken.startsWith('s_'))await post('connection/admin-logout',{});}
-    catch(e){say('authBadge','로그아웃 실패 · 다시 시도');$('changeCenter').disabled=false;authBusy=false;return;}
+    catch(e){if(e.status!==401&&e.status!==403){say('authBadge','로그아웃 실패 · 다시 시도');$('changeCenter').disabled=false;authBusy=false;return;}}
     forgetSession();location.reload();
   }
   let activeCode='',codeExpiry=0,codeTimer=null,codeRequest=0;
