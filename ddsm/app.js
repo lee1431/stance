@@ -918,15 +918,19 @@
     processScan(value, true);
   }
   function loadZXing() {
+    if(window.ZXingBrowser?.BrowserMultiFormatOneDReader||window.ZXingBrowser?.BrowserMultiFormatReader)return Promise.resolve(window.ZXingBrowser);
     if (barcodeDecoder) return barcodeDecoder;
-    barcodeDecoder = new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.1/umd/zxing-browser.min.js';
-      script.async = true;
-      script.onload = () => window.ZXingBrowser ? resolve(window.ZXingBrowser) : reject(new Error('바코드 모듈이 없습니다.'));
-      script.onerror = () => reject(new Error('바코드 모듈 다운로드 실패'));
-      document.head.append(script);
-    }).catch(error => { barcodeDecoder = null; throw error; });
+    // Pages includes a pinned same-origin bundle; CDN is a secondary fallback.
+    const urls=['vendor/zxing-browser-0.1.5.min.js','https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/zxing-browser.min.js','https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js'];
+    const load = url => new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      const fail=()=>{clearTimeout(timer);script.remove();reject(Error('바코드 인식 모듈 로딩 실패'));};
+      const timer=setTimeout(fail,4500);
+      script.src=url;script.async=true;
+      script.onload=()=>{clearTimeout(timer);if(window.ZXingBrowser?.BrowserMultiFormatOneDReader||window.ZXingBrowser?.BrowserMultiFormatReader)resolve(window.ZXingBrowser);else fail();};
+      script.onerror=fail;document.head.append(script);
+    });
+    barcodeDecoder=(async()=>{for(const url of urls){try{return await load(url);}catch(_){}}throw Error('바코드 인식 모듈을 불러올 수 없습니다.');})().catch(e=>{barcodeDecoder=null;throw e;});
     return barcodeDecoder;
   }
   async function enableContinuousFocus(video) {
@@ -947,77 +951,73 @@
     return false;
   }
   async function startCamera() {
-    const generation = ++cameraGeneration;
-    const video = $('cameraVideo');
-    const control = $('cameraButton');
-    if(view!=='home'||control.disabled||!driverToken||syncedDate!==date||syncBlocked||document.querySelector('dialog[open]'))return;
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      $('scanResult').textContent = '이 브라우저에서는 카메라를 사용할 수 없습니다. 운송장번호를 직접 입력하세요.';
-      return;
+    const video=$('cameraVideo'),control=$('cameraButton');
+    if(view!=='home'||control.disabled||cameraStream||!driverToken||syncedDate!==date||syncBlocked||document.querySelector('dialog[open]'))return;
+    const generation=++cameraGeneration;
+    const current=()=>generation===cameraGeneration&&view==='home'&&Boolean(driverToken)&&!document.hidden;
+    if(!navigator.mediaDevices?.getUserMedia){
+      $('scanResult').textContent='카메라를 사용할 수 없습니다. Safari 또는 Chrome에서 열거나 운송장번호를 직접 입력하세요.';return;
     }
-    control.disabled = true;
-    $('scanResult').textContent = '카메라를 준비하고 있습니다.';
-    try {
-      if (typeof window.BarcodeDetector === 'function') {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode:{ideal:'environment'},
-            width:{ideal:1280},height:{ideal:720}
-          }, audio:false
-        });
-        if (generation !== cameraGeneration || view !== 'home') {
-          stream.getTracks().forEach(track => track.stop()); return;
+    control.disabled=true;$('scanResult').textContent='카메라를 준비하고 있습니다.';
+    try{
+      // Acquire one rear-camera stream for both engines, including iOS Safari.
+      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
+      if(!current()){stream.getTracks().forEach(track=>track.stop());return;}
+      cameraStream=stream;video.muted=true;video.playsInline=true;video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');
+      video.srcObject=stream;video.classList.remove('hidden');await video.play();
+      if(!current())return;
+      void enableContinuousFocus(video);
+      let detector=null,reader=null,nativeBusy=false,nativeValue=null,misses=0,loading=false,softwareFailed=false;
+      try{if(typeof window.BarcodeDetector==='function')detector=new window.BarcodeDetector({formats:['code_128','code_39','ean_8','ean_13','itf']});}catch(_){}
+      const canvas=document.createElement('canvas');let ctx=null,frameNo=0;
+      const loadSoftware=async()=>{
+        if(loading||reader||softwareFailed)return;
+        loading=true;
+        try{
+          const mod=await loadZXing();if(!current())return;
+          const Reader=mod.BrowserMultiFormatOneDReader||mod.BrowserMultiFormatReader;
+          reader=new Reader();
+          if(typeof reader.decodeFromCanvas!=='function')throw Error('지원하지 않는 인식 모듈');
+          $('scanResult').textContent='카메라 준비 완료 · 호환 바코드 인식';
+        }catch(e){
+          if(current()){$('scanResult').textContent=detector?'기본 인식 사용 중 · 호환 모듈 로딩 실패':'바코드 인식 모듈 로딩 실패 · 카메라를 다시 켜거나 번호를 입력하세요.';softwareFailed=true;}
+        }finally{loading=false;}
+      };
+      // Start local decoding immediately when native detection is unavailable.
+      if(!detector)void loadSoftware();
+      const decodeSoftware=()=>{
+        const w=video.videoWidth,h=video.videoHeight;if(!reader||!w||!h)return null;
+        if(!ctx)ctx=canvas.getContext('2d',{willReadFrequently:true});
+        if(!ctx)throw Error('카메라 영상 처리 실패');
+        // Alternate full frame and central horizontal band without reducing
+        // horizontal resolution: narrow Code 128 bars need enough pixels.
+        const full=(frameNo++%3===2),sw=w,sh=full?h:Math.max(1,Math.round(h*.55)),sy=Math.round((h-sh)/2);
+        const scale=Math.min(1,1600/sw),dw=Math.max(1,Math.round(sw*scale)),dh=Math.max(1,Math.round(sh*scale));
+        if(canvas.width!==dw)canvas.width=dw;if(canvas.height!==dh)canvas.height=dh;
+        ctx.drawImage(video,0,sy,sw,sh,0,0,dw,dh);
+        try{return reader.decodeFromCanvas(canvas)?.getText()||null;}catch(_){return null;}
+      };
+      const detect=()=>{
+        if(!current())return;
+        if(video.readyState>=2){
+          let raw=nativeValue;nativeValue=null;
+          if(detector&&!nativeBusy){
+            nativeBusy=true;
+            Promise.resolve().then(()=>detector.detect(video)).then(found=>{if(current())nativeValue=found?.[0]?.rawValue||null;}).catch(()=>{detector=null;}).finally(()=>{nativeBusy=false;});
+          }
+          if(!raw){try{raw=decodeSoftware();}catch(e){if(current())$('scanResult').textContent='영상 처리 오류 · '+e.message;}}
+          if(raw){misses=0;cameraDetected(raw);}
+          else if(++misses>=6||!detector)void loadSoftware();
         }
-        cameraStream = stream;
-        video.srcObject = stream;
-        video.classList.remove('hidden');
-        await video.play();
-        const autoFocus = await enableContinuousFocus(video);
-        if (generation !== cameraGeneration) return;
-        $('scanResult').textContent = autoFocus ? '연속 자동 초점 활성화 · 바코드를 맞춰주세요.'
-          : '기본 카메라 자동 초점 · 바코드를 맞춰주세요.';
-        const detector = new window.BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_8', 'ean_13', 'itf'] });
-        const detect = async () => {
-          if (generation !== cameraGeneration) return;
-          try {
-            if (video.readyState >= 2) {
-              const found = await detector.detect(video);
-              if (found && found.length && found[0].rawValue) cameraDetected(found[0].rawValue);
-            }
-          } catch (_) {}
-          if (generation === cameraGeneration) nativeTimer = setTimeout(detect, 160);
-        };
-        detect();
-      } else {
-        const zxing = await loadZXing();
-        if (generation !== cameraGeneration || view !== 'home') return;
-        const Reader = zxing.BrowserMultiFormatOneDReader || zxing.BrowserMultiFormatReader;
-        if (!Reader) throw new Error('카메라 스캔 모듈을 사용할 수 없습니다.');
-        const reader = new Reader();
-        video.classList.remove('hidden');
-        const callback = result => {
-          if (generation === cameraGeneration && result) cameraDetected(result.getText());
-        };
-        // Prefer the back camera even when native BarcodeDetector is absent.
-        const controls = typeof reader.decodeFromConstraints === 'function'
-          ? await reader.decodeFromConstraints({
-            video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}
-          },video,callback)
-          : await reader.decodeFromVideoDevice(undefined,video,callback);
-        if (generation !== cameraGeneration) { controls.stop(); return; }
-        zxingControls = controls;
-        await enableContinuousFocus(video);
-        if (generation !== cameraGeneration) return;
-      }
-      control.textContent = '카메라 끄기';
-      $('scanResult').textContent = '카메라 준비 완료 · 자동 초점 (기기 지원 시)';
-    } catch (error) {
+        if(current())nativeTimer=setTimeout(detect,180);
+      };
+      control.textContent='카메라 끄기';
+      $('scanResult').textContent=detector?'카메라 준비 완료 · 바코드를 맞춰주세요.':'호환 바코드 인식 준비 중…';
+      detect();
+    }catch(error){
       if(generation!==cameraGeneration)return;
-      stopCamera();
-      $('scanResult').textContent = '카메라 실행 실패: ' + (error.message || '권한과 브라우저 설정을 확인하세요.');
-    } finally {
-      if(generation===cameraGeneration)control.disabled = false;
-    }
+      stopCamera();$('scanResult').textContent='카메라 실행 실패: '+(error.message||'카메라 권한을 확인하세요.');
+    }finally{if(generation===cameraGeneration)control.disabled=false;}
   }
 
   function exportData() {
