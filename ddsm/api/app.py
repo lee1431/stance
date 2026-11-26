@@ -220,6 +220,7 @@ def create_app() -> Flask:
     def login_center_code():
         value = body()
         code, device = value.get("code"), value.get("device")
+        requested_center = value.get("center")
         if not isinstance(code, str) or not re.fullmatch(r"[0-9]{8}", code):
             return jsonify(ok=False, error="숫자 8자리 센터 코드를 입력하세요."), 400
         if device is not None and (not isinstance(device, str) or not re.fullmatch(r"[a-f0-9]{64}", device)):
@@ -232,7 +233,7 @@ def create_app() -> Flask:
                 return jsonify(ok=False, error="인증 시도가 많습니다. 잠시 후 다시 시도하세요."), 429
             cid = next((c for c, (k, expiry) in center_codes.items()
                         if expiry > now and hmac.compare_digest(k, code)), None)
-            if cid is None:
+            if cid is None or (device is not None and requested_center != cid):
                 failed_codes.append(now)
                 return jsonify(ok=False, error="센터 코드가 틀렸거나 만료되었습니다."), 403
         # Resolve center first to reuse the existing per-center device identity.
