@@ -5,7 +5,8 @@ const read=p=>fs.readFileSync(path.join(__dirname,p),'utf8');
 const tick=()=>new Promise(r=>setTimeout(r,25));
 const dom=new JSDOM(read('admin/index.html'),{url:'https://llsshh.com/ddsm/admin/',runScripts:'outside-only'});
 const w=dom.window,$=id=>w.document.getElementById(id);
-let requests=[],token='s_a_'+'k'.repeat(64);
+let oldApi=true,requests=[],token='s_a_'+'k'.repeat(64);
+w.localStorage.setItem('ddsm:center:admin:v1','x'.repeat(64));
 w.DDSM_NaverMap={loadSdk:async()=>{throw Error('mock SDK disabled');}};
 function result(ok,status,body){return {ok,status,json:async()=>body};}
 w.fetch=async(url,opts)=>{
@@ -13,6 +14,7 @@ w.fetch=async(url,opts)=>{
  requests.push({endpoint,auth:opts.headers.Authorization});
  if(endpoint==='connection/admin-centers'){
    assert.equal(opts.headers.Authorization,undefined);
+   if(oldApi)return result(false,404,{ok:false,error:'old API'});
    return result(true,200,{ok:true,centers:[{id:'a',name:'충주센터'},{id:'b',name:'다른센터'}]});
  }
  if(endpoint==='connection/admin-login'){
@@ -30,6 +32,13 @@ w.fetch=async(url,opts)=>{
 };
 (async()=>{
  w.eval(read('admin/admin.js'));await tick();
+ assert.equal($('adminPasswordRow').hidden,false);
+ assert.equal($('adminPassword').required,true);
+ assert.equal($('openCenter').disabled,true);
+ assert.equal(w.localStorage.getItem('ddsm:center:admin:v1'),null);
+ assert.ok(!requests.some(x=>x.endpoint==='connection/centers'));
+ assert.match($('centerStatus').textContent,/S10/);
+ oldApi=false;$('retryCenter').click();await tick();
  assert.equal($('centerSelect').options.length,2);
  assert.equal($('dashboard').hidden,true);
  assert.equal($('centerSelect').disabled,false);
