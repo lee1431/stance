@@ -6,6 +6,8 @@ Bearer tokens are used because llsshh.com and mrdindoin.ddns.net are cross-site.
 from __future__ import annotations
 
 import hashlib
+import hmac
+import json
 import os
 import re
 import secrets
@@ -15,7 +17,7 @@ import time
 from contextlib import closing
 from pathlib import Path
 
-from flask import Flask, jsonify, request
+from flask import Flask, g, has_request_context, jsonify, request
 from werkzeug.security import check_password_hash, generate_password_hash
 
 PHONE_PATTERN = re.compile(r"^01[016789][0-9]{7,8}$")
@@ -37,11 +39,29 @@ def create_app() -> Flask:
         "DDSM_DB_PATH", str(Path(__file__).resolve().parent / "ddsm.db")
     ))
     db_path.parent.mkdir(parents=True, exist_ok=True)
+    # Explicit server configuration; never publish these secrets in GitHub.
+    raw_centers = json.loads(os.environ.get("DDSM_CENTERS_JSON", "{}"))
+    admin_key = os.environ.get("DDSM_ADMIN_ACCESS_KEY", "")
+    key_pattern = re.compile(r"^[A-Za-z0-9_-]{43,128}$")
+    center_pattern = re.compile(r"^[a-zA-Z0-9-]{1,40}$")
+    if not isinstance(raw_centers, dict):
+        raise ValueError("DDSM_CENTERS_JSON must be an object")
+    centers = {}
+    for cid, config in raw_centers.items():
+        if not center_pattern.fullmatch(cid) or not isinstance(config, dict) or not key_pattern.fullmatch(config.get("invite", "")):
+            raise ValueError("Invalid DDSM center configuration")
+        centers[cid] = {"name": str(config.get("name") or cid)[:100], "invite": config["invite"]}
+    if centers and not key_pattern.fullmatch(admin_key):
+        raise ValueError("DDSM_ADMIN_ACCESS_KEY must be a strong random key")
+    center_dir = db_path.parent / (db_path.name + ".centers")
+    center_dir.mkdir(mode=0o700, exist_ok=True)
+    legacy_enabled = os.environ.get("DDSM_ENABLE_LEGACY_AUTH", "0") == "1"
     app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
     app.json.ensure_ascii = False
 
     def connect() -> sqlite3.Connection:
-        db = sqlite3.connect(str(db_path), timeout=10)
+        path = getattr(g, "center_db", db_path) if has_request_context() else db_path
+        db = sqlite3.connect(str(path), timeout=10)
         db.row_factory = sqlite3.Row
         db.execute("PRAGMA busy_timeout=10000")
         db.execute("PRAGMA foreign_keys=ON")
@@ -85,6 +105,26 @@ def create_app() -> Flask:
         # CLI requests need no Origin; browser preflight is handled by Flask.
         if request.method == "OPTIONS":
             return app.make_default_options_response()
+        path = request.path
+        token = request.headers.get("Authorization", "").removeprefix("Bearer ")
+        if path in ("/ddsm/api/health", "/ddsm/api/connection/centers", "/ddsm/api/connection/driver"):
+            return None
+        match = re.fullmatch(r"(a|d)_([A-Za-z0-9-]{1,40})_([A-Za-z0-9_-]{43,128})", token)
+        if match:
+            role, cid, key = match.groups()
+            if cid not in centers:
+                return jsonify(ok=False, error="등록되지 않은 센터입니다."), 403
+            if role == "a" and not hmac.compare_digest(key, admin_key):
+                return jsonify(ok=False, error="관리자 연결 권한이 없습니다."), 403
+            g.center_db = center_dir / (cid + ".sqlite")
+            g.center_role = role
+            g.center_id = cid
+            if path.startswith("/ddsm/api/auth/") or path == "/ddsm/api/admin/unlock":
+                return jsonify(ok=False, error="기존 계정 API는 사용할 수 없습니다."), 404
+            if role == "a" and path.startswith("/ddsm/api/driver/"):
+                return jsonify(ok=False, error="기사 연결 링크를 사용하세요."), 403
+        elif not legacy_enabled:
+            return jsonify(ok=False, error="센터 연결 링크로 처음 한 번 연결하세요."), 401
 
     def throttled(phone: str) -> bool:
         key = (request.remote_addr or "unknown", phone)
@@ -105,6 +145,14 @@ def create_app() -> Flask:
         return hashlib.sha256(token.encode("ascii")).hexdigest() if TOKEN_PATTERN.fullmatch(token) else None
 
     def authenticated_user():
+        role = getattr(g, "center_role", None)
+        if role == "a":
+            return {"id": 1, "center_admin": True}
+        if role == "d":
+            digest = hashlib.sha256(request.headers["Authorization"][7:].encode("ascii")).hexdigest()
+            with closing(connect()) as db:
+                row = db.execute("SELECT user_id FROM ddsm_device_tokens WHERE token_hash=?", (digest,)).fetchone()
+            return {"id": row[0], "center_admin": False} if row else None
         digest = token_digest()
         if not digest:
             return None
@@ -124,6 +172,35 @@ def create_app() -> Flask:
     @app.get("/ddsm/api/health")
     def health():
         return jsonify(ok=True, service="ddsm", status="ready")
+
+    @app.get("/ddsm/api/connection/centers")
+    def list_centers():
+        header = request.headers.get("Authorization", "")
+        if not admin_key or not hmac.compare_digest(header, "Bearer adm_" + admin_key):
+            return jsonify(ok=False, error="관리자 연결 링크가 필요합니다."), 403
+        return jsonify(ok=True, centers=[{"id": cid, "name": config["name"], "invite": config["invite"]} for cid, config in centers.items()])
+
+    @app.post("/ddsm/api/connection/driver")
+    def connect_driver():
+        value = body()
+        cid, invite, device = value.get("center"), value.get("invite"), value.get("device")
+        if not isinstance(cid, str) or cid not in centers or not isinstance(invite, str) or not isinstance(device, str) or not key_pattern.fullmatch(device):
+            return jsonify(ok=False, error="기사 연결 정보가 올바르지 않습니다."), 400
+        if not hmac.compare_digest(invite, centers[cid]["invite"]):
+            return jsonify(ok=False, error="유효하지 않은 기사 연결 링크입니다."), 403
+        g.center_db = center_dir / (cid + ".sqlite")
+        token = "d_" + cid + "_" + device
+        digest = hashlib.sha256(token.encode("ascii")).hexdigest()
+        with closing(connect()) as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT user_id FROM ddsm_device_tokens WHERE token_hash=?", (digest,)).fetchone()
+            if not row:
+                if db.execute("SELECT COUNT(*) FROM ddsm_device_tokens").fetchone()[0] >= 5000:
+                    return jsonify(ok=False, error="센터 기기 등록 한도를 초과했습니다."), 503
+                user_id = db.execute("INSERT INTO users(phone,password_hash) VALUES (?, '!')", ("device:" + digest,)).lastrowid
+                db.execute("INSERT INTO ddsm_device_tokens(token_hash,user_id) VALUES (?,?)", (digest,user_id))
+            db.commit()
+        return jsonify(ok=True, token=token, center=cid)
 
     @app.post("/ddsm/api/auth/register")
     def register():
@@ -193,6 +270,36 @@ def create_app() -> Flask:
     from driver import install_driver
     install_admin(app, connect, authenticated_user, throttled, token_digest)
     install_driver(app, connect, authenticated_user)
+
+    from admin import initialize
+    # Each center has an independent database, including its address registry.
+    for cid in centers:
+        path = center_dir / (cid + ".sqlite")
+        if not path.exists():
+            try:
+                fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+                os.close(fd)
+            except FileExistsError:
+                pass
+        with closing(sqlite3.connect(str(path), timeout=10)) as db:
+            db.execute("PRAGMA foreign_keys=ON")
+            db.executescript("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, phone TEXT NOT NULL UNIQUE,
+                    password_hash TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS ddsm_device_tokens (
+                    token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id)
+                );
+                CREATE TABLE IF NOT EXISTS ddsm_driver_days (
+                    user_id INTEGER NOT NULL REFERENCES users(id), delivery_date TEXT NOT NULL,
+                    revision INTEGER NOT NULL DEFAULT 0, day_json TEXT NOT NULL,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(user_id, delivery_date)
+                );
+            """)
+            db.execute("INSERT OR IGNORE INTO users(id,phone,password_hash) VALUES(1,'center-admin','!')")
+            initialize(db)
+            db.commit()
     return app
 
 
