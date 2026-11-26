@@ -18,6 +18,13 @@ w.confirm=()=>true;
 w.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
 w.HTMLDialogElement.prototype.close=function(){if(!this.hasAttribute('open'))return;this.removeAttribute('open');this.dispatchEvent(new w.Event('close'));};
 w.fetch=(url, opts={})=>{
+  if(url.endsWith('connection/driver')){
+    qrRequests++;const req=JSON.parse(opts.body);
+    assert.equal(req.center,'chungju');
+    assert.match(req.device,/^[a-f0-9]{64}$/);
+    if(qrLoginReject)return Promise.resolve({ok:false,status:403,json:async()=>({ok:false,error:'유효하지 않은 기사 연결 링크입니다.'})});
+    return response({ok:true,token:'d_'+req.center+'_'+req.device,center:req.center});
+  }
   if(url.includes('work-day')) {
     if(opts.method==='PUT'){currentDay=JSON.parse(opts.body).day;revision++;return response({ok:true,revision});}
     return response({ok:true,revision,day:currentDay});
@@ -30,7 +37,7 @@ w.HTMLMediaElement.prototype.play=async()=>{};
 w.HTMLMediaElement.prototype.pause=()=>{};
 const track={getCapabilities:()=>({focusMode:['continuous']}),applyConstraints:async c=>{assert.equal(c.advanced[0].focusMode,'continuous');autofocus++;},stop:()=>cameraStops++};
 Object.defineProperty(w.navigator,'mediaDevices',{value:{getUserMedia:async()=>({getTracks:()=>[track],getVideoTracks:()=>[track]})}});
-let qrResult='';
+let qrResult='',qrLoginReject=true,qrRequests=0;
 w.BarcodeDetector=class {constructor(opts){this.qr=opts.formats.includes('qr_code');} static async getSupportedFormats(){return ['qr_code','code_128'];} async detect(){return this.qr&&qrResult?[{rawValue:qrResult}]:[];}};
 w.DDSM_NaverMap={loadSdk:async()=>({}),open:()=>{},close:()=>{}};
 w.DDSM_DeliveryMap={render:async(date,stops,callbacks,round)=>{mapState={stops,callbacks,round};},pause:()=>{},project:()=>({x:120,y:200}),showDraft:()=>{},clearDraft:()=>{}};
@@ -105,7 +112,15 @@ w.eval(read('waybill.js'));w.eval(read('center-link.js'));w.eval(read('app.js'))
   assert.ok($('qrLoginStage').classList.contains('hidden'));assert.ok(cameraStops>stopsBefore);
   $('settingsButton').click();$('openCenterSettings').click();
   qrResult=valid;$('startQrLogin').click();await tick();await tick();
-  assert.equal($('qrLoginStatus').textContent,'센터 연결 중…');
+  assert.match($('qrLoginStatus').textContent,/HTTP 403/);
+  assert.ok($('centerSettingsDialog').open);
+  assert.ok(!$('startQrLogin').disabled);
+  assert.equal(w.localStorage.getItem('ddsm:center:driver:v1'),null);
+  qrLoginReject=false;$('startQrLogin').click();await tick();await tick();
+  assert.equal(qrRequests,2);
+  assert.match(w.localStorage.getItem('ddsm:center:driver:v1'),/^d_chungju_[a-f0-9]{64}$/);
+  assert.ok(!$('centerSettingsDialog').open);
   assert.ok($('qrLoginStage').classList.contains('hidden'));
+  assert.equal($('roundScanCount').textContent,'3건 등록');
   console.log('DDSM UI smoke OK');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>dom.window.close());
