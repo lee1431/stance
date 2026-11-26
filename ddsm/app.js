@@ -215,6 +215,7 @@
   let data = readData();
   let date = today();
   let view = 'home';
+  let workTab = 'map', orderCursor = 0, orderContext = '', orderHistory = [];
   let editingId = '';
   let toastTimer = null;
   let cameraStream = null;
@@ -321,12 +322,8 @@
     $('doneCount').textContent = String(c.done);
     $('scanHint').textContent = '현재 회차 배송지 ' + c.total + '건'
       + (driverToken ? ' · 서버 조회 가능' : ' · 스캔하려면 서버 로그인');
-    $('deliveryButton').disabled = c.pending === 0 || !driverToken || syncedDate !== date || syncBlocked;
-    $('deliveryButtonLabel').textContent = c.pending > 0
-      ? (driverToken && syncedDate === date && !syncBlocked
-        ? '배송 시작 (' + c.pending + '건)'
-        : '로그인 · 서버 동기화 필요')
-      : c.total > 0 ? '현재 회차 배송 완료' : '운송장을 스캔하면 출발 가능';
+    $('deliveryButton').disabled = false;
+    $('deliveryButtonLabel').textContent = '지도';
     $('deliveryHint').textContent = c.pending
       ? '배송 예정 ' + c.pending + '건 · 누르면 목록으로 이동합니다.'
       : c.total ? '현재 회차의 배송을 모두 완료했습니다.' : '운송장을 스캔하면 배송을 시작할 수 있습니다.';
@@ -354,19 +351,43 @@
       renderDayMap();
     }
   }
-  function selectMapStop(id, roundNo) {
-    const d = day();
-    if (d.selected !== roundNo) {
-      const exists = d.rounds.some(r => r.no === roundNo);
-      if (!exists) return;
-      d.selected = roundNo;
-      persist();
-      render();
-    }
-    openEdit(id);
+  function resetMapOrder() {
+    orderCursor = 0; orderContext = date + ':' + round().no; orderHistory = [];
+    render();
   }
+  function updateOrderHint() {
+    if (orderContext !== date + ':' + round().no) { orderCursor = 0; orderContext = date + ':' + round().no; orderHistory = []; }
+    orderCursor = Math.min(orderCursor, stops().length);
+    $('mapOrderHint').textContent = !stops().length ? '스캔 후 순번 지정' : orderCursor >= stops().length ? '순번 지정 완료' : '다음 ' + (orderCursor + 1) + '번 · 마커 선택';
+    $('undoMapOrder').disabled = !orderHistory.length;
+  }
+  function selectMapStop(id, roundNo) {
+    if (round().no !== roundNo || workTab !== 'map') return;
+    updateOrderHint();
+    const list = stops(), from = list.findIndex(s => s.id === id);
+    if (from < 0 || from < orderCursor || orderCursor >= list.length) return;
+    const before = list.map(s => s.id), to = orderCursor;
+    const moved = list.splice(from,1)[0];
+    list.splice(to,0,moved);
+    if (!persist()) { list.splice(to,1); list.splice(from,0,moved); return; }
+    orderHistory.push({before, after:list.map(s=>s.id)});
+    orderCursor++;
+    render();
+  }
+  function undoMapOrder() {
+    const entry = orderHistory[orderHistory.length-1];
+    if (!entry) return;
+    const list = stops();
+    if (entry.after.join('|') !== list.map(s=>s.id).join('|')) { resetMapOrder(); return; }
+    const previous = list.slice(), byId = new Map(list.map(s=>[s.id,s]));
+    list.splice(0,list.length,...entry.before.map(id=>byId.get(id)));
+    if (!persist()) { list.splice(0,list.length,...previous); return; }
+    orderHistory.pop(); orderCursor = Math.max(0,orderCursor-1); render();
+  }
+  function openWorkTab(tab) { workTab = tab; showView('delivery'); }
   function renderDayMap() {
-    if (view !== 'delivery') return;
+    if (view !== 'delivery' || workTab !== 'map') return;
+    updateOrderHint();
     const message = $('deliveryMapEmpty');
     if (!window.DDSM_DeliveryMap || typeof window.DDSM_DeliveryMap.render !== 'function') {
       message.textContent = '배송 지도 모듈을 불러오지 못했습니다. 브라우저 새로고침 후 다시 확인하세요.';
@@ -532,26 +553,8 @@
       head.append(detail);
       head.append(node('span', 'status-tag', done ? '완료' : '배송 예정'));
       card.append(head);
-      const ordering = node('div', 'stop-ordering');
-      const up = button('↑', 'order-arrow', () => moveStopOrder(stop.id, index - 1));
-      up.disabled = index === 0;
-      up.setAttribute('aria-label', (index + 1) + '번 배송지를 위로');
-      const down = button('↓', 'order-arrow', () => moveStopOrder(stop.id, index + 1));
-      down.disabled = index === stops().length - 1;
-      down.setAttribute('aria-label', (index + 1) + '번 배송지를 아래로');
-      const jump = node('select', 'order-select');
-      jump.setAttribute('aria-label', '배송 순번 변경: ' + (index + 1) + '번');
-      for (let i = 0; i < stops().length; i++) {
-        const option = node('option', '', (i + 1) + '번');
-        option.value = String(i);
-        jump.append(option);
-      }
-      jump.value = String(index);
-      jump.addEventListener('change', () => moveStopOrder(stop.id, Number(jump.value)));
-      ordering.append(node('span', 'order-caption', '순번'), up, down, jump);
-      card.append(ordering);
       const actions = node('div', 'stop-actions');
-      actions.append(button('정보 수정', '', () => openEdit(stop.id)));
+      actions.append(button(done ? '완료 취소' : '완료', done ? 'undo' : 'complete', () => setDone(stop.id, !done)));
       if (stop.address) {
         const link = node('a', '');
         link.dataset.navigationStopId = String(stop.id);
@@ -563,8 +566,7 @@
         });
         actions.append(link);
       }
-      actions.append(button(done ? '완료 취소' : '배송 완료', done ? 'undo' : 'complete', () => setDone(stop.id, !done)));
-      actions.append(button('삭제', 'remove', () => removeStop(stop.id)));
+      actions.append(button('수정', '', () => openEdit(stop.id)));
       card.append(actions);
       root.append(card);
     });
@@ -572,8 +574,13 @@
   function render() {
     renderHome();
     if (view === 'delivery') {
+      $('deliveryHeading').textContent = workTab === 'map' ? '배송 지도' : '배송 목록';
+      $('mapPanel').classList.toggle('hidden', workTab !== 'map');
+      $('listPanel').classList.toggle('hidden', workTab !== 'list');
+      $('mapTab').setAttribute('aria-pressed', String(workTab === 'map'));
+      $('listTab').setAttribute('aria-pressed', String(workTab === 'list'));
       renderDelivery();
-      renderDayMap();
+      if (workTab === 'map') renderDayMap(); else window.DDSM_DeliveryMap?.pause();
     }
   }
   function showView(next) {
@@ -707,6 +714,7 @@
     input.setAttribute('inputmode', 'none');
     if (!dialog.open) dialog.showModal();
     prepareScanAudio();
+    if (!cameraStream && !zxingControls) void startCamera();
     syncScanViewport();
     input.focus({ preventScroll: true });
     requestAnimationFrame(() => {
@@ -745,10 +753,7 @@
             throw Error('배송일 또는 회차가 변경되었습니다. 다시 스캔하세요.');
           const result=addWaybill(job.raw,detail);
           if (result.error) throw Error(result.error);
-          const message=(result.existing?'같은 배송지 물품 추가':'서버 조회·등록 완료')
-            +' · '+(detail.recipient||result.stop.waybill)
-            +(result.suffix?' · 물품 '+result.suffix:'')
-            +(detail.address?' · 주소 확인':' · 주소 미등록');
+          const message='등록 · '+(detail.recipient||result.stop.waybill);
           $('scanResult').textContent=message;
         } catch(e) {
           const message=e.message||'운송장 조회 실패';
@@ -792,7 +797,7 @@
     target.status = value ? 'done' : 'pending';
     if (!persist()) { target.status = old; return; }
     render();
-    toast(value ? '배송 완료로 표시했습니다.' : '배송 예정으로 되돌렸습니다.');
+    toast(value ? '완료' : '완료 취소');
   }
   function removeStop(id) {
     const active = stops();
@@ -808,14 +813,12 @@
     if (!stop) return;
     editingId = id;
     $('editWaybill').textContent = '운송장 ' + stop.waybill + ' · ' + round().no + '회차';
-    const orderPicker = $('editOrderSelect');
-    orderPicker.replaceChildren();
-    stops().forEach((_, index) => {
-      const opt = node('option', '', (index + 1) + '번');
-      opt.value = String(index);
-      orderPicker.append(opt);
+    const roundPicker = $('editRoundSelect');
+    roundPicker.replaceChildren();
+    day().rounds.slice().sort((a,b)=>a.no-b.no).forEach(r=>{
+      const opt = node('option','',r.no+'회차'); opt.value=String(r.no); roundPicker.append(opt);
     });
-    orderPicker.value = String(stops().findIndex(x => x.id === id));
+    roundPicker.value = String(round().no);
     $('recipientInput').value = stop.recipient;
     $('addressInput').value = stop.address;
     $('phoneInput').value = stop.phone;
@@ -834,9 +837,8 @@
     const authAtEdit = driverToken;
     const list = stops();
     const oldIndex = list.findIndex(x => x.id === editingId);
-    const wantedIndex = Number($('editOrderSelect').value);
-    const moveIndex = Number.isInteger(wantedIndex) && wantedIndex >= 0
-      && wantedIndex < list.length ? wantedIndex : oldIndex;
+    const targetRound = day().rounds.find(r=>r.no===Number($('editRoundSelect').value));
+    const moveRound = targetRound && targetRound.stops !== list;
     stop.recipient = clean($('recipientInput').value, 100);
     stop.address = clean($('addressInput').value, 250);
     stop.phone = clean($('phoneInput').value, 25);
@@ -850,18 +852,13 @@
       delete stop.lat;
       delete stop.lng;
     }
-    if (oldIndex >= 0 && moveIndex !== oldIndex) {
-      list.splice(oldIndex, 1);
-      list.splice(moveIndex, 0, stop);
-    }
+    if (moveRound) { list.splice(oldIndex,1); targetRound.stops.push(stop); }
     if (!persist()) {
       Object.assign(stop, before);
-      if (oldIndex >= 0 && moveIndex !== oldIndex) {
-        list.splice(moveIndex, 1);
-        list.splice(oldIndex, 0, stop);
-      }
+      if (moveRound) { targetRound.stops.pop(); list.splice(oldIndex,0,stop); }
       return;
     }
+    orderCursor=0; orderHistory=[];
     $('editDialog').close();
     render();
     // Only address and point edits affect the shared master. Personal notes and
@@ -1254,8 +1251,21 @@
     $('newRoundButton').addEventListener('click', addRound);
     $('scanButton').addEventListener('click', openScan);
     $('workScanButton').addEventListener('click', openScan);
-    $('deliveryButton').addEventListener('click', () => showView('delivery'));
-    $('listButton').addEventListener('click', () => showView('delivery'));
+    $('deliveryButton').addEventListener('click', () => openWorkTab('map'));
+    $('listButton').addEventListener('click', () => openWorkTab('list'));
+    $('mapTab').addEventListener('click', () => openWorkTab('map'));
+    $('listTab').addEventListener('click', () => openWorkTab('list'));
+    $('resetMapOrder').addEventListener('click',resetMapOrder);
+    $('undoMapOrder').addEventListener('click',undoMapOrder);
+    $('scanToMap').addEventListener('click', () => {
+      if (scanWorkerActive || pendingScans.length) { $('scanResult').textContent='스캔 처리 중'; return; }
+      $('scanDialog').close(); resetMapOrder(); openWorkTab('map');
+    });
+    $('scanToList').addEventListener('click', () => {
+      if (scanWorkerActive || pendingScans.length) { $('scanResult').textContent='스캔 처리 중'; return; }
+      $('scanDialog').close(); openWorkTab('list');
+    });
+    $('deleteEditStop').addEventListener('click',()=>{ const id=editingId; $('editDialog').close(); removeStop(id); resetMapOrder(); });
     $('backButton').addEventListener('click', () => showView('home'));
     $('deliveryMapFitBtn').addEventListener('click', () => window.DDSM_DeliveryMap?.fit());
     $('deliveryRoundSelect').addEventListener('change', e => setSelectedRound(e.target.value));
