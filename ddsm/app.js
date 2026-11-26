@@ -710,21 +710,31 @@
   }
   const pendingScans = [];
   let scanWorkerActive = false;
+  function showScanDetails(parsed,dateKey,source){
+    // Display the exact detected value and lookup context locally only.
+    const text=String(parsed.scanned).replace(/[\x00-\x1f\x7f]/g,c=>'[0x'+c.charCodeAt(0).toString(16).padStart(2,'0')+']').slice(0,120);
+    $('scanDetails').textContent='인식 '+text+' · '+(parsed.valid?parsed.digits.length+'자리':'형식 오류')+' · '+source+' · '+dateKey+' · '+centerDisplay()+(parsed.valid&&parsed.scanned!==parsed.digits?' · 조회 '+parsed.digits:'');
+    $('scanDetails').classList.remove('hidden');
+  }
   async function lookupWaybill(raw, dateKey) {
-    const parsed = window.DDSM_Waybill?.parse(raw);
-    if (!parsed?.valid) throw Error('운송장번호는 기본 13자리 또는 물품 16자리여야 합니다.');
-    if (!driverToken) throw Error('센터 연결이 필요합니다.');
-    const response = await fetch(
-      DRIVER_API_BASE+'waybill?date='+encodeURIComponent(dateKey)
-        +'&barcode='+encodeURIComponent(parsed.scanned),
-      {method:'GET',headers:{Authorization:'Bearer '+driverToken},credentials:'omit',cache:'no-store'}
-    );
-    const payload = await response.json().catch(()=>null);
-    if (!response.ok || payload?.ok!==true) {
-      if (response.status===401) invalidateDriverAuth(true);
-      throw Error(payload?.error||'서버 운송장 조회 실패 (HTTP '+response.status+')');
+    const parsed = window.DDSM_Waybill.parse(raw);
+    if (!parsed.valid) throw Error('형식 오류 · 운송장번호는 13자리 또는 16자리여야 합니다.');
+    const token=driverToken;
+    if (!token) throw Error('센터 연결이 필요합니다.');
+    let response;
+    try{
+      response=await fetch(
+        DRIVER_API_BASE+'waybill?date='+encodeURIComponent(dateKey)+'&barcode='+encodeURIComponent(parsed.digits),
+        {method:'GET',headers:{Authorization:'Bearer '+token},credentials:'omit',cache:'no-store'}
+      );
+    }catch(_){throw Error('조회 연결 실패 · 네트워크 또는 브라우저 연결 상태를 확인하세요.');}
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||payload?.ok!==true){
+      if(response.status===401&&token===driverToken)invalidateDriverAuth(true);
+      throw Error((payload?.error||'서버 운송장 조회 실패')+' (HTTP '+response.status+')');
     }
-    if (payload.master_waybill!==parsed.master) throw Error('원본 운송장과 조회 결과가 일치하지 않습니다.');
+    if(token!==driverToken)throw Error('센터 연결이 변경되었습니다. 다시 스캔하세요.');
+    if(String(payload.master_waybill)!==parsed.master)throw Error('서버 조회 번호가 인식 번호와 일치하지 않습니다.');
     return payload;
   }
   async function drainScanQueue() {
@@ -733,48 +743,42 @@
     try {
       while (pendingScans.length) {
         const job=pendingScans.shift();
-        $('scanResult').textContent = '운송장 조회 중 · '+job.raw;
+        showScanDetails(job.parsed,job.date,job.source);
+        $('scanResult').textContent='운송장 조회 중 · '+job.parsed.digits;
         try {
-          const detail=await lookupWaybill(job.raw,job.date);
-          if (job.date!==date || job.roundNo!==round().no)
-            throw Error('배송일 또는 회차가 변경되었습니다. 다시 스캔하세요.');
-          const result=addWaybill(job.raw,detail);
-          if (result.error) throw Error(result.error);
-          const message='등록 · '+(detail.recipient||result.stop.waybill);
-          $('scanResult').textContent=message;
-        } catch(e) {
+          const detail=await lookupWaybill(job.parsed.digits,job.date);
+          if(job.token!==driverToken||job.date!==date||job.roundNo!==round().no)
+            throw Error('센터·배송일 또는 회차가 변경되었습니다. 다시 스캔하세요.');
+          const result=addWaybill(job.parsed.digits,detail);
+          if(result.error)throw Error(result.error);
+          $('scanResult').textContent='등록 · '+(detail.recipient||result.stop.waybill);
+        }catch(e){
           const message=e.message||'운송장 조회 실패';
           $('scanResult').textContent=message;
           if(!job.camera)toast(message);
-        } finally {
-          if (!job.camera && view === 'home') {
-            $('waybillInput').focus({preventScroll:true});
-          }
+        }finally{
+          if(!job.camera&&view==='home')$('waybillInput').focus({preventScroll:true});
         }
       }
-    } finally {scanWorkerActive=false;}
+    }finally{scanWorkerActive=false;}
   }
-  function processScan(raw, camera = false) {
-    if (!String(raw||'').trim()||view!=='home'||document.querySelector('dialog[open]')) return false;
-    if (syncedDate !== date || syncBlocked) { toast('서버 동기화가 필요합니다.'); return false; }
-    if (!driverToken) {
-      const message='센터 연결 후 다시 스캔하세요.';
-      $('scanResult').textContent=message;
-      toast(message);
+  function processScan(raw,camera=false,source=camera?'카메라':'직접 입력'){
+    if(!String(raw||'').trim()||view!=='home'||document.querySelector('dialog[open]'))return false;
+    const parsed=window.DDSM_Waybill.parse(raw);
+    if(!driverToken||syncedDate!==date||syncBlocked){
+      $('scanResult').textContent='센터 연결 및 서버 동기화가 필요합니다.';
+      toast('서버 동기화가 필요합니다.');return false;
+    }
+    if(!parsed.valid){
+      showScanDetails(parsed,date,source);
+      $('scanResult').textContent='형식 오류 · 13자리 또는 16자리 운송장인지 확인하세요.';
       return false;
     }
+    if(pendingScans.length>=20){$('scanResult').textContent='스캔 대기열이 가득 찼습니다. 조회 완료 후 다시 스캔하세요.';return false;}
     scanReadFeedback();
-    if (pendingScans.length>=20) {
-      $('scanResult').textContent='스캔 대기열이 가득 찼습니다. 조회 완료 후 다시 스캔하세요.';
-      return false;
-    }
-    pendingScans.push({raw:String(raw).trim(),camera,date,roundNo:round().no});
-    if (!camera) {
-      $('waybillInput').value='';
-      $('waybillInput').focus({preventScroll:true});
-    }
-    drainScanQueue();
-    return true;
+    pendingScans.push({parsed,camera,source,date,roundNo:round().no,token:driverToken});
+    if(!camera){$('waybillInput').value='';$('waybillInput').focus({preventScroll:true});}
+    void drainScanQueue();return true;
   }
 
   function setDone(id, value) {
@@ -910,12 +914,12 @@
     $('cameraButton').disabled=false;
     $('cameraButton').textContent = '카메라 켜기';
   }
-  function cameraDetected(value) {
-    const now = Date.now();
-    if (value === lastCameraValue && now - lastCameraAt < 2500) return;
-    lastCameraValue = value;
-    lastCameraAt = now;
-    processScan(value, true);
+  function cameraDetected(value,source) {
+    const parsed=window.DDSM_Waybill.parse(value),key=parsed.valid?parsed.digits:parsed.scanned;
+    const now=Date.now();
+    if(key===lastCameraValue&&now-lastCameraAt<2500)return;
+    lastCameraValue=key;lastCameraAt=now;
+    processScan(value,true,source);
   }
   function loadZXing() {
     if(window.ZXingBrowser?.BrowserMultiFormatOneDReader||window.ZXingBrowser?.BrowserMultiFormatReader)return Promise.resolve(window.ZXingBrowser);
@@ -1000,13 +1004,13 @@
       const detect=()=>{
         if(!current())return;
         if(video.readyState>=2){
-          let raw=nativeValue;nativeValue=null;
+          let raw=nativeValue,source='기본 인식';nativeValue=null;
           if(detector&&!nativeBusy){
             nativeBusy=true;
             Promise.resolve().then(()=>detector.detect(video)).then(found=>{if(current())nativeValue=found?.[0]?.rawValue||null;}).catch(()=>{detector=null;}).finally(()=>{nativeBusy=false;});
           }
-          if(!raw){try{raw=decodeSoftware();}catch(e){if(current())$('scanResult').textContent='영상 처리 오류 · '+e.message;}}
-          if(raw){misses=0;cameraDetected(raw);}
+          if(!raw){source='호환 인식';try{raw=decodeSoftware();}catch(e){if(current())$('scanResult').textContent='영상 처리 오류 · '+e.message;}}
+          if(raw){misses=0;cameraDetected(raw,source);}
           else if(++misses>=6||!detector)void loadSoftware();
         }
         if(current())nativeTimer=setTimeout(detect,180);
@@ -1128,7 +1132,7 @@
     if(!confirm('센터 연결을 종료할까요? 다시 로그인하려면 센터 코드가 필요합니다.'))return;
     stopCamera();
     try{localStorage.removeItem(TOKEN_KEY);}catch(_){toast('로그아웃 실패');return;}
-    invalidateDriverAuth();++statsRequest;recentScanTimes.clear();$('statsContent').replaceChildren();$('scanResult').textContent='센터에 로그인하세요.';
+    invalidateDriverAuth();$('scanDetails').textContent='';$('scanDetails').classList.add('hidden');++statsRequest;recentScanTimes.clear();$('statsContent').replaceChildren();$('scanResult').textContent='센터에 로그인하세요.';
     renderSettings();toast('로그아웃 완료');
   }
   async function loginWithCode(event){
