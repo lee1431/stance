@@ -532,6 +532,9 @@
       picker.append(option);
     });
     picker.value = String(round().no);
+    $('mapRoundLabel').textContent=round().no+'회차';
+    $('mapRound').disabled=day().rounds.length<2;
+    $('mapRound').setAttribute('aria-label',round().no+'회차 · 다음 회차로 변경');
     $('workDateLabel').textContent = dateText(date) + ' · ' + round().no + '회차';
     $('progressLabel').textContent = '완료 ' + c.done + ' / ' + c.total;
     $('remainingLabel').textContent = '남은 배송 ' + c.pending + '건';
@@ -1178,6 +1181,21 @@
     $('deleteEditStop').addEventListener('click',()=>{const id=editingId;$('editDialog').close();removeStop(id);closeMapPopup();});
     $('backButton').addEventListener('click',()=>showView('home'));
     $('deliveryRoundSelect').addEventListener('change',e=>setSelectedRound(e.target.value));
+    $('mapLocate').addEventListener('click',()=>{
+      closeMapPopup();
+      const dm=window.DDSM_DeliveryMap;
+      if(!dm?.locate){toast('지도 모듈을 확인하세요.');return;}
+      dm.locate(toast);
+    });
+    $('mapFitAll').addEventListener('click',()=>{
+      closeMapPopup();
+      if(!window.DDSM_DeliveryMap?.fitAll())toast('현재 회차에 지도 표시 가능한 배송지가 없습니다.');
+    });
+    $('mapRound').addEventListener('click',()=>{
+      const rounds=day().rounds.map(r=>r.no).sort((a,b)=>a-b);
+      if(rounds.length<2)return;
+      setSelectedRound(rounds[(rounds.indexOf(round().no)+1)%rounds.length]);
+    });
     bindMapWheel();
     $('waybillInput').addEventListener('pointerdown', event => {
       // An intentional touch on the field enables the touchscreen keyboard.
