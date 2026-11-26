@@ -41,6 +41,56 @@ class DDSMApiTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.get_json())
         return {"Authorization": "Bearer " + response.get_json()["access_token"]}
 
+    def test_direct_center_admin_login(self):
+        import json
+        import time
+        from unittest.mock import patch
+        from app import create_app
+        config = {
+            "DDSM_CENTERS_JSON": json.dumps({
+                "login-a": {"name": "센터 A", "invite": "a"*64,
+                            "admin_password_hash": generate_password_hash("test-password-A", method="scrypt")},
+                "login-b": {"name": "센터 B", "invite": "b"*64,
+                            "admin_password_hash": generate_password_hash("test-password-B", method="scrypt")},
+                "login-c": {"name": "센터 C", "invite": "c"*64},
+            }),
+            "DDSM_ADMIN_ACCESS_KEY": "k"*64,
+            "DDSM_ENABLE_LEGACY_AUTH": "0",
+        }
+        with patch.dict(os.environ, config):
+            client = create_app().test_client()
+            base = "/ddsm/api/"
+            centers = client.get(base+"connection/admin-centers").get_json()
+            self.assertEqual(centers["centers"][0], {"id":"login-a","name":"센터 A"})
+            self.assertEqual(len(centers["centers"]), 3)
+            self.assertEqual(client.get(base+"admin/me").status_code,401)
+            def login(cid,pw):
+                return client.post(base+"connection/admin-login",json={"center":cid,"password":pw})
+            self.assertEqual(login("login-a","test-password-B").status_code,403)
+            self.assertEqual(login("login-c","test-password-A").status_code,503)
+            response=login("login-a","test-password-A")
+            self.assertEqual(response.status_code,200,response.get_json())
+            session=response.get_json()
+            token=session["token"]
+            self.assertTrue(token.startswith("s_login-a_"))
+            headers={"Authorization":"Bearer "+token}
+            self.assertEqual(client.get(base+"admin/me",headers=headers).status_code,200)
+            self.assertEqual(client.post(base+"connection/code",headers=headers,json={}).get_json()["center"],"login-a")
+            self.assertEqual(client.get(base+"admin/me",headers={"Authorization":"Bearer "+token.replace("s_login-a_","s_login-b_",1)}).status_code,401)
+            self.assertEqual(client.get(base+"driver/work-day",headers=headers,query_string={"date":"2026-11-26"}).status_code,403)
+            self.assertEqual(client.get(base+"connection/centers",headers=headers).status_code,403)
+            # The session survives a process restart, but expires and can be revoked.
+            restarted=create_app().test_client()
+            self.assertEqual(restarted.get(base+"admin/me",headers=headers).status_code,200)
+            with patch("app.time.time",return_value=session["expires_at"]+1):
+                self.assertEqual(restarted.get(base+"admin/me",headers=headers).status_code,401)
+            self.assertEqual(client.post(base+"connection/admin-logout",headers=headers,json={}).status_code,200)
+            self.assertEqual(restarted.get(base+"admin/me",headers=headers).status_code,401)
+            with patch("app.check_password_hash",return_value=False):
+                for _ in range(9):
+                    denied=login("login-b","wrong-password")
+                self.assertEqual(denied.status_code,429)
+
     def test_short_center_code(self):
         import json
         import time

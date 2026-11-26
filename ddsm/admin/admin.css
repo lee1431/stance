@@ -36,3 +36,5 @@
 .driver-qr-dialog{width:580px;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);overflow:auto}.driver-qr-code{width:min(520px,100%);margin:8px auto}.driver-qr-code svg{max-width:520px}.driver-qr-dialog>button{margin-top:6px}
 
 .driver-code-dialog{text-align:center;width:min(420px,calc(100vw - 32px));max-width:100%;box-sizing:border-box}.driver-code-value{display:block;margin:18px 0;padding:16px 8px;font:700 clamp(24px,7vw,44px)/1.2 monospace;letter-spacing:.06em;background:#f0f6f4;color:#123f42;border-radius:12px;user-select:all}.driver-code-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.driver-code-dialog p{font-size:13px;line-height:1.5}
+
+#centerLoginForm #adminPasswordRow{display:grid;gap:6px}#centerLoginForm input,#centerLoginForm select{width:100%}#centerLoginForm #openCenter{min-height:44px}#centerLoginForm #retryCenter{min-height:40px}

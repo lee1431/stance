@@ -35,3 +35,4 @@ jobs:
       - run: NODE_PATH=/tmp/ddsm-ui/node_modules node ddsm/test_ios_barcode.cjs
       - run: NODE_PATH=/tmp/ddsm-ui/node_modules node ddsm/test_map_controls.cjs
       - run: NODE_PATH=/tmp/ddsm-ui/node_modules node ddsm/test_tab_refresh.cjs
+      - run: NODE_PATH=/tmp/ddsm-ui/node_modules node ddsm/test_admin_login.cjs

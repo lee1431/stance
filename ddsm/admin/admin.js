@@ -26,54 +26,90 @@
     const response = await fetch(API_BASE + path, opts);
     const json = await response.json().catch(() => null);
     if (!response.ok || !json || !json.ok) {
-      throw new Error(json?.error || 'API 응답 오류 (' + response.status + ')');
+      const error=new Error(json?.error || 'API 응답 오류 (' + response.status + ')');error.status=response.status;throw error;
     }
     return json;
   }
   const get = path => api(path);
   const post = (path, body) => api(path, { method:'POST', body });
-  const ADMIN_KEY = 'ddsm:center:admin:v1';
-  let adminKey = '', availableCenters = [], currentCenter = null;
-  async function validateSession() {
-    $('openCenter').disabled=true;
-    $('centerSelect').disabled=true;
-    say('centerStatus','센터 목록을 불러오는 중');
-    try {
-      const params = new URLSearchParams(location.hash.slice(1));
-      const provided = params.get('admin');
-      if(provided){location.replace('../connect/'+location.hash);return;}
-      adminKey = provided || localStorage.getItem(ADMIN_KEY) || '';
-      if (!/^[A-Za-z0-9_-]{43,128}$/.test(adminKey)) throw Error('센터 운영자에게 받은 관리자 연결 링크로 접속하세요.');
-      authToken = 'adm_'+adminKey;
-      const result=await get('connection/centers');
-      availableCenters=result.centers;
-      if (provided) {
-        localStorage.setItem(ADMIN_KEY,adminKey);
-        history.replaceState(null,'',location.pathname+location.search);
-      }
-      const picker=$('centerSelect');picker.replaceChildren();
-      for(const center of availableCenters){
-        const option=document.createElement('option');option.value=center.id;option.textContent=center.name;picker.append(option);
-      }
-      if(!availableCenters.length)throw Error('등록된 센터가 없습니다.');
-      picker.disabled=false;$('openCenter').disabled=false;
-      say('centerStatus','작업할 센터를 선택하세요.');
-    }catch(error){
-      authToken='';say('centerStatus',error.message || '센터 연결 실패');
-    }
+  const ADMIN_KEY='ddsm:center:admin:v1', SESSION_KEY='ddsm:admin:session:v2';
+  let adminKey='',availableCenters=[],currentCenter=null,legacyMode=false,authBusy=false;
+  function storedSession(){try{return JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null');}catch(_){return null;}}
+  function forgetSession(){try{sessionStorage.removeItem(SESSION_KEY);}catch(_){}}
+  function saveSession(result){try{sessionStorage.setItem(SESSION_KEY,JSON.stringify({token:result.token,center:result.center,expires_at:result.expires_at}));}catch(_){}}
+  function fillCenters(){
+    const picker=$('centerSelect');picker.replaceChildren();
+    for(const center of availableCenters){const option=document.createElement('option');option.value=center.id;option.textContent=center.name;picker.append(option);}
+    if(!availableCenters.length)throw Error('등록된 센터가 없습니다.');
+    picker.disabled=false;$('openCenter').disabled=false;
+    $('adminPasswordRow').hidden=legacyMode;$('adminPassword').required=!legacyMode;
+    say('centerStatus',legacyMode?'기존 관리자 인증으로 센터를 선택하세요.':'센터를 선택하고 관리자 비밀번호를 입력하세요.');
   }
-  async function openCenter() {
+  async function enterCenter(center){
+    await get('admin/me');currentCenter=center;
+    $('centerPanel').hidden=true;$('dashboard').hidden=false;$('changeCenter').hidden=false;
+    say('authBadge',center.name);
+    await loadDay();void loadRecurring();
+  }
+  async function validateSession(){
+    if(authBusy)return;authBusy=true;
+    $('openCenter').disabled=true;$('centerSelect').disabled=true;
+    say('centerStatus','센터 목록을 불러오는 중');
+    try{
+      const params=new URLSearchParams(location.hash.slice(1));
+      if(params.has('admin')){location.replace('../connect/'+location.hash);return;}
+      authToken='';legacyMode=false;
+      try{adminKey=localStorage.getItem(ADMIN_KEY)||'';}catch(_){adminKey='';}
+      try{
+        const result=await get('connection/admin-centers');availableCenters=result.centers;
+      }catch(e){
+        // Existing authorized PC remains usable before the S10 API is upgraded.
+        if(!/^[A-Za-z0-9_-]{43,128}$/.test(adminKey))throw Error('센터 목록 조회 실패 · 센터 서버의 관리자 로그인 API를 확인하세요.');
+        authToken='adm_'+adminKey;
+        const result=await get('connection/centers');availableCenters=result.centers;legacyMode=true;
+      }
+      fillCenters();
+      const saved=storedSession();
+      if(!legacyMode&&saved&&saved.expires_at>Date.now()/1000){
+        const center=availableCenters.find(c=>c.id===saved.center);
+        if(center&&typeof saved.token==='string'&&saved.token.startsWith('s_'+center.id+'_')){
+          $('centerSelect').value=center.id;authToken=saved.token;
+          try{await enterCenter(center);return;}catch(_){forgetSession();authToken='';say('centerStatus','관리자 세션이 만료되었습니다. 다시 로그인하세요.');}
+        }
+      }
+      forgetSession();authToken='';
+    }catch(e){authToken='';say('centerStatus',e.message||'센터 연결 실패');}
+    finally{authBusy=false;}
+  }
+  async function openCenter(event){
+    event?.preventDefault();
+    if(authBusy)return;
     const center=availableCenters.find(c=>c.id===$('centerSelect').value);
     if(!center)return;
-    $('openCenter').disabled=true;
-    authToken='a_'+center.id+'_'+adminKey;
+    authBusy=true;$('openCenter').disabled=true;$('centerSelect').disabled=true;$('adminPassword').disabled=true;
     try{
-      await get('admin/me');
-      currentCenter=center;
-      $('centerPanel').hidden=true;$('dashboard').hidden=false;$('changeCenter').hidden=false;
-      say('authBadge',center.name);
-      await loadDay();void loadRecurring();
-    }catch(e){say('centerStatus',e.message);$('openCenter').disabled=false;}
+      if(legacyMode)authToken='a_'+center.id+'_'+adminKey;
+      else{
+        const password=$('adminPassword').value;
+        if(!password)throw Error('관리자 비밀번호를 입력하세요.');
+        authToken='';
+        const result=await post('connection/admin-login',{center:center.id,password});
+        if(result.center!==center.id||typeof result.token!=='string'||!result.token.startsWith('s_'+center.id+'_')||!Number.isFinite(result.expires_at))throw Error('관리자 인증 응답 오류');
+        authToken=result.token;
+        saveSession(result);
+        try{localStorage.removeItem(ADMIN_KEY);}catch(_){}
+      }
+      $('adminPassword').value='';
+      await enterCenter(center);
+    }catch(e){forgetSession();authToken='';say('centerStatus',e.message);}
+    finally{authBusy=false;$('openCenter').disabled=false;$('centerSelect').disabled=false;$('adminPassword').disabled=false;}
+  }
+  async function leaveCenter(){
+    if(authBusy)return;authBusy=true;
+    $('changeCenter').disabled=true;
+    try{if(authToken.startsWith('s_'))await post('connection/admin-logout',{});}
+    catch(e){if(e.status!==401&&e.status!==403){say('authBadge','로그아웃 실패 · 다시 시도');$('changeCenter').disabled=false;authBusy=false;return;}}
+    forgetSession();location.reload();
   }
   let activeCode='',codeExpiry=0,codeTimer=null,codeRequest=0;
   function clearDriverCode(){
@@ -541,9 +577,9 @@
   }
   function bind(){
     $('deliveryDate').value=dateString();
-    $('openCenter').addEventListener('click',openCenter);
+    $('centerLoginForm').addEventListener('submit',openCenter);
     $('retryCenter').addEventListener('click',validateSession);
-    $('changeCenter').addEventListener('click',()=>location.reload());
+    $('changeCenter').addEventListener('click',leaveCenter);
     $('showDriverCode').addEventListener('click',showDriverCode);
     $('renewDriverCode').addEventListener('click',()=>void issueDriverCode(true));
     $('copyDriverCode').addEventListener('click',copyDriverCode);

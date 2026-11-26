@@ -50,7 +50,11 @@ def create_app() -> Flask:
     for cid, config in raw_centers.items():
         if not center_pattern.fullmatch(cid) or not isinstance(config, dict) or not key_pattern.fullmatch(config.get("invite", "")):
             raise ValueError("Invalid DDSM center configuration")
-        centers[cid] = {"name": str(config.get("name") or cid)[:100], "invite": config["invite"]}
+        password_hash = config.get("admin_password_hash", "")
+        if not isinstance(password_hash, str) or len(password_hash) > 512:
+            raise ValueError("Invalid center administrator password hash")
+        centers[cid] = {"name": str(config.get("name") or cid)[:100], "invite": config["invite"],
+                        "admin_password_hash": password_hash}
     if centers and not key_pattern.fullmatch(admin_key):
         raise ValueError("DDSM_ADMIN_ACCESS_KEY must be a strong random key")
     center_dir = db_path.parent / (db_path.name + ".centers")
@@ -64,6 +68,9 @@ def create_app() -> Flask:
     failed_codes = []
     CODE_TTL = 600
     CODE_FAILURE_LIMIT = 30
+    ADMIN_SESSION_TTL = 12 * 3600
+    admin_login_lock = threading.Lock()
+    admin_attempts = {}
 
     def connect() -> sqlite3.Connection:
         path = getattr(g, "center_db", db_path) if has_request_context() else db_path
@@ -88,6 +95,11 @@ def create_app() -> Flask:
             );
             CREATE INDEX IF NOT EXISTS idx_ddsm_tokens_expiry
                 ON ddsm_tokens(expires_at);
+            CREATE TABLE IF NOT EXISTS ddsm_center_admin_sessions (
+                token_hash TEXT PRIMARY KEY,
+                center_id TEXT NOT NULL,
+                expires_at INTEGER NOT NULL
+            );
         """)
         db.commit()
 
@@ -114,15 +126,28 @@ def create_app() -> Flask:
         path = request.path
         header = request.headers.get("Authorization", "")
         token = header[7:] if header.startswith("Bearer ") else ""
-        if path in ("/ddsm/api/health", "/ddsm/api/connection/centers", "/ddsm/api/connection/driver", "/ddsm/api/connection/code-login"):
+        if path in ("/ddsm/api/health", "/ddsm/api/connection/centers", "/ddsm/api/connection/driver", "/ddsm/api/connection/code-login",
+                    "/ddsm/api/connection/admin-centers", "/ddsm/api/connection/admin-login"):
             return None
-        match = re.fullmatch(r"(a|d)_([A-Za-z0-9-]{1,40})_([A-Za-z0-9_-]{43,128})", token)
+        match = re.fullmatch(r"(a|d|s)_([A-Za-z0-9-]{1,40})_([A-Za-z0-9_-]{43,128})", token)
         if match:
             role, cid, key = match.groups()
             if cid not in centers:
                 return jsonify(ok=False, error="등록되지 않은 센터입니다."), 403
             if role == "a" and not hmac.compare_digest(key, admin_key):
                 return jsonify(ok=False, error="관리자 연결 권한이 없습니다."), 403
+            if role == "s":
+                # Session tokens authorize only their own center, never a shared key.
+                digest = hashlib.sha256(token.encode("ascii")).hexdigest()
+                with closing(connect()) as db:
+                    row = db.execute(
+                        "SELECT 1 FROM ddsm_center_admin_sessions WHERE token_hash=? AND center_id=? AND expires_at>?",
+                        (digest, cid, int(time.time()))
+                    ).fetchone()
+                if not row:
+                    return jsonify(ok=False, error="관리자 로그인 세션이 만료되었습니다."), 401
+                g.admin_session_digest = digest
+                role = "a"
             g.center_db = center_dir / (cid + ".sqlite")
             g.center_role = role
             g.center_id = cid
@@ -178,7 +203,7 @@ def create_app() -> Flask:
 
     @app.get("/ddsm/api/health")
     def health():
-        return jsonify(ok=True, service="ddsm", status="ready", center_connection=True, center_code_login=True)
+        return jsonify(ok=True, service="ddsm", status="ready", center_connection=True, center_code_login=True, admin_center_login=True)
 
     @app.get("/ddsm/api/connection/centers")
     def list_centers():
@@ -186,6 +211,55 @@ def create_app() -> Flask:
         if not admin_key or not header.isascii() or not hmac.compare_digest(header, "Bearer adm_" + admin_key):
             return jsonify(ok=False, error="관리자 연결 링크가 필요합니다."), 403
         return jsonify(ok=True, centers=[{"id": cid, "name": config["name"], "invite": config["invite"]} for cid, config in centers.items()])
+
+    @app.get("/ddsm/api/connection/admin-centers")
+    def public_admin_centers():
+        # No invite keys, passwords, delivery counts or customer information.
+        return jsonify(ok=True, centers=[{"id": cid, "name": config["name"]}
+                                         for cid, config in centers.items()])
+
+    @app.post("/ddsm/api/connection/admin-login")
+    def login_admin_center():
+        value = body()
+        cid, password = value.get("center"), value.get("password")
+        if not isinstance(cid, str) or cid not in centers or not isinstance(password, str) or not 1 <= len(password) <= 128:
+            return jsonify(ok=False, error="센터와 관리자 비밀번호를 확인하세요."), 400
+        password_hash = centers[cid]["admin_password_hash"]
+        if not password_hash:
+            return jsonify(ok=False, error="센터 관리자 비밀번호가 아직 설정되지 않았습니다."), 503
+        now = int(time.time())
+        # Bound the number of guesses for each center even behind a reverse proxy.
+        with admin_login_lock:
+            recent = [t for t in admin_attempts.get(cid, []) if t > now - WINDOW_SECONDS]
+            if len(recent) >= LOGIN_LIMIT:
+                return jsonify(ok=False, error="관리자 인증 시도가 많습니다. 10분 후 다시 시도하세요."), 429
+            admin_attempts[cid] = recent + [now]
+        try:
+            valid_password = check_password_hash(password_hash, password)
+        except (ValueError, TypeError):
+            valid_password = False
+        if not valid_password:
+            return jsonify(ok=False, error="센터 또는 관리자 비밀번호가 일치하지 않습니다."), 403
+        token = "s_" + cid + "_" + secrets.token_urlsafe(48)
+        digest = hashlib.sha256(token.encode("ascii")).hexdigest()
+        expires = now + ADMIN_SESSION_TTL
+        with closing(connect()) as db:
+            db.execute("DELETE FROM ddsm_center_admin_sessions WHERE expires_at<=?", (now,))
+            db.execute("INSERT INTO ddsm_center_admin_sessions(token_hash,center_id,expires_at) VALUES(?,?,?)",
+                       (digest,cid,expires))
+            db.commit()
+        return jsonify(ok=True, token=token, center=cid, name=centers[cid]["name"], expires_at=expires)
+
+    @app.post("/ddsm/api/connection/admin-logout")
+    def logout_admin_center():
+        digest = getattr(g, "admin_session_digest", None)
+        if not digest:
+            return jsonify(ok=False, error="관리자 로그인 세션이 필요합니다."), 403
+        # Use the central session database, not the selected center's database.
+        with closing(sqlite3.connect(str(db_path), timeout=10)) as db:
+            db.execute("DELETE FROM ddsm_center_admin_sessions WHERE token_hash=?", (digest,))
+            db.commit()
+        return jsonify(ok=True)
 
     @app.post("/ddsm/api/connection/driver")
     def connect_driver():
