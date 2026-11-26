@@ -6,6 +6,7 @@ const tick=()=>new Promise(r=>setTimeout(r,25));
 const dom=new JSDOM(read('admin/index.html'),{url:'https://llsshh.com/ddsm/admin/',runScripts:'outside-only'});
 const w=dom.window,$=id=>w.document.getElementById(id);
 let oldApi=true,requests=[],token='s_a_'+'k'.repeat(64);
+let recurring={id:1,recipient_name:'고객A',phone:'',address:'충주시 문화동',lat:null,lng:null},updates=0;
 w.localStorage.setItem('ddsm:center:admin:v1','x'.repeat(64));
 w.DDSM_NaverMap={loadSdk:async()=>{throw Error('mock SDK disabled');}};
 function result(ok,status,body){return {ok,status,json:async()=>body};}
@@ -27,7 +28,8 @@ w.fetch=async(url,opts)=>{
  assert.equal(opts.headers.Authorization,'Bearer '+token);
  if(endpoint==='admin/me')return result(true,200,{ok:true,admin:true});
  if(endpoint.startsWith('admin/deliveries?'))return result(true,200,{ok:true,total:0,located:0,unlocated:0,rows:[],columns:[]});
- if(endpoint.startsWith('admin/recurring-recipients?'))return result(true,200,{ok:true,recipients:[]});
+ if(endpoint.startsWith('admin/recurring-recipients?'))return result(true,200,{ok:true,recipients:[{...recurring}]});
+ if(endpoint==='admin/recurring-recipients/1/update'){updates++;recurring={...recurring,...JSON.parse(opts.body)};return result(true,200,{ok:true});}
  throw Error('Unexpected endpoint '+endpoint);
 };
 (async()=>{
@@ -56,5 +58,19 @@ w.fetch=async(url,opts)=>{
  assert.equal(JSON.parse(w.sessionStorage.getItem('ddsm:admin:session:v2')).token,token);
  assert.equal(w.localStorage.getItem('ddsm:center:admin:v1'),null);
  assert.ok(requests.some(x=>x.endpoint==='admin/me'));
- console.log('Direct admin login test passed');
+ const fields=$('recurringBody').querySelectorAll('input');
+ assert.equal(fields.length,3);
+ fields[0].value='고객A 변경';fields[0].dispatchEvent(new w.Event('input'));
+ fields[1].value='01012345678';fields[1].dispatchEvent(new w.Event('input'));
+ fields[2].value='충주시 금봉로 21';fields[2].dispatchEvent(new w.Event('input'));
+ const before=requests.filter(x=>x.endpoint.startsWith('admin/deliveries?')).length;
+ $('recurringBody').querySelector('button.primary').click();
+ await tick();await tick();
+ assert.equal(updates,1);
+ assert.equal(recurring.recipient_name,'고객A 변경');
+ assert.equal(recurring.address,'충주시 금봉로 21');
+ assert.equal($('recurringBody').querySelectorAll('input')[1].value,'01012345678');
+ assert.ok(requests.filter(x=>x.endpoint.startsWith('admin/deliveries?')).length>before);
+ assert.match($('importStatus').textContent,/갱신 완료/);
+ console.log('Direct admin login and recurring edit test passed');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>dom.window.close());
