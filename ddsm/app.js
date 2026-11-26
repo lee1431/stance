@@ -11,7 +11,7 @@
   function invalidateDriverAuth(notify = false) {
     driverToken = '';
     ++syncEpoch; syncedDate = ''; syncPending = false; syncBlocked = false;
-    data = freshData(); render();
+    data = freshData(); closeMapPopup(); render();
     if (notify) toast('연결이 끊겼습니다. 센터에서 받은 연결 링크를 확인하세요.');
   }
   async function restoreConnection() {
@@ -113,11 +113,11 @@
   }
   async function refreshDay() {
     if(!driverToken || syncedDate!==date || syncPending || syncBusy || syncBlocked ||
-       document.hidden || $('editDialog')?.open || $('scanDialog')?.open) return;
+       document.hidden || $('editDialog')?.open || scanWorkerActive || pendingScans.length || mapSelected || pinDraft) return;
     const token=driverToken, dayKey=date, epoch=syncEpoch;
     try {
       const remote=await serverDay(dayKey,token);
-      if(epoch!==syncEpoch || token!==driverToken || date!==dayKey || syncPending) return;
+      if(epoch!==syncEpoch || token!==driverToken || date!==dayKey || syncPending || syncBusy || scanWorkerActive || mapSelected || pinDraft) return;
       if(remote.revision>serverRevision) {
         serverRevision=remote.revision;
         data.days[dayKey]=remote.day;
@@ -236,7 +236,8 @@
   }
 
   function renderHome() {
-    $('myPhoneLabel').textContent = driverToken ? '센터 연결됨' : '연결 확인';
+    $('myPhoneLabel').textContent = driverToken ? '동기화 확인' : '센터 연결 확인';
+    $('myPhoneButton').classList.toggle('hidden',Boolean(driverToken&&syncedDate===date));
     $('dailyPhoneLabel').textContent = driverToken ? '배송 준비' : '연결 대기';
     document.documentElement.dataset.ddsmConnected = driverToken ? 'true' : 'false';
     const d = day();
@@ -411,6 +412,7 @@
     const d = day();
     const next = Number(value);
     if (!d.rounds.some(r => r.no === next) || d.selected === next) return;
+    if(scanWorkerActive||pendingScans.length){toast('스캔 처리 완료 후 회차를 변경하세요.');render();return;}
     const old = d.selected;
     closeMapPopup();
     d.selected = next;
@@ -874,6 +876,7 @@
     el.click();
   }
   function addRound() {
+    if(scanWorkerActive||pendingScans.length){toast('스캔 처리 완료 후 회차를 추가하세요.');return;}
     const d = day();
     const next = Math.max(0, ...d.rounds.map(x => x.no)) + 1;
     if (next > 100) { toast('회차는 100개까지 만들 수 있습니다.'); return; }
@@ -993,9 +996,10 @@
             video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}
           },video,callback)
           : await reader.decodeFromVideoDevice(undefined,video,callback);
-        if (generation === cameraGeneration) await enableContinuousFocus(video);
         if (generation !== cameraGeneration) { controls.stop(); return; }
         zxingControls = controls;
+        await enableContinuousFocus(video);
+        if (generation !== cameraGeneration) return;
       }
       control.textContent = '카메라 끄기';
       $('scanResult').textContent = '카메라 준비 완료 · 자동 초점 (기기 지원 시)';
@@ -1068,12 +1072,12 @@
   }
 
   function bind() {
-    $('myPhoneButton').addEventListener('click',()=>void restoreConnection());
+    $('myPhoneButton').addEventListener('click',()=>{if(!syncPending&&!syncBusy)void restoreConnection();});
     $('dateButton').addEventListener('click', chooseDate);
     $('dateInput').addEventListener('change', async e => {
       const value = e.target.value;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return;
-      if(syncPending || syncBusy || syncBlocked) {
+      if(syncPending || syncBusy || syncBlocked || scanWorkerActive || pendingScans.length) {
         toast('서버 저장 완료 후 날짜를 변경하세요.');e.target.value=date;return;
       }
       date=value;render();
@@ -1130,5 +1134,5 @@
   setInterval(()=>{if(syncPending) void flushDay();else void refreshDay();},3000);
   document.body.dataset.page='scan';
   render();
-  void restoreConnection().then(()=>{if(view==='home')openScan();});
+  void restoreConnection().then(ok=>{if(ok&&view==='home')openScan();else if(view==='home')$('scanResult').textContent='센터 연결 및 서버 동기화 후 스캔할 수 있습니다.';});
 })();
