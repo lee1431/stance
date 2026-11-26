@@ -1169,6 +1169,7 @@
     if(video.srcObject?.getTracks)video.srcObject.getTracks().forEach(track=>track.stop());
     video.pause();video.srcObject=null;
     $('qrLoginStage').classList.add('hidden');
+    $('qrDiagnostics').textContent='';
     $('startQrLogin').textContent='▣ 센터 QR 스캔';
     $('startQrLogin').disabled=qrRedirecting;
   }
@@ -1176,26 +1177,42 @@
     try{return await acceptCenterLink(raw);}
     catch(e){$('qrLoginStatus').textContent=e.message||'기사 연결용 QR을 확인하세요.';return false;}
   }
-  function decodeQrImage(source,width,height){
+  let qrCanvas=null,qrContext=null;
+  function decodeQrImage(source,width,height,live=false){
     if(typeof window.jsQR!=='function'||!width||!height)return null;
-    const scale=Math.min(1,1100/Math.max(width,height));
-    const canvas=document.createElement('canvas');canvas.width=Math.round(width*scale);canvas.height=Math.round(height*scale);
-    const ctx=canvas.getContext('2d',{willReadFrequently:true});if(!ctx)return null;
-    ctx.drawImage(source,0,0,canvas.width,canvas.height);
-    const image=ctx.getImageData(0,0,canvas.width,canvas.height);
-    return window.jsQR(image.data,image.width,image.height,{inversionAttempts:'attemptBoth'})?.data||null;
+    if(!qrCanvas){qrCanvas=document.createElement('canvas');qrContext=qrCanvas.getContext('2d',{willReadFrequently:true});}
+    if(!qrContext)throw Error('카메라 영상 처리 기능을 사용할 수 없습니다.');
+    const short=Math.min(width,height);
+    // Preserve detail in the middle of the frame instead of shrinking the whole
+    // 1080p image. Try a wide crop, a tighter crop, then the complete image.
+    const regions=live?[.95,.65,1]:[1,.95,.65];
+    for(const ratio of regions){
+      const full=ratio===1,side=Math.floor(short*ratio);
+      const sw=full?width:side,sh=full?height:side;
+      const sx=Math.floor((width-sw)/2),sy=Math.floor((height-sh)/2);
+      const limit=live?(full?1280:1200):1800;
+      const scale=Math.min(1,limit/Math.max(sw,sh));
+      const dw=Math.max(1,Math.round(sw*scale)),dh=Math.max(1,Math.round(sh*scale));
+      if(qrCanvas.width!==dw)qrCanvas.width=dw;if(qrCanvas.height!==dh)qrCanvas.height=dh;
+      qrContext.drawImage(source,sx,sy,sw,sh,0,0,dw,dh);
+      const frame=qrContext.getImageData(0,0,dw,dh);
+      const found=window.jsQR(frame.data,dw,dh,{inversionAttempts:'attemptBoth'});
+      if(found?.data)return found.data;
+    }
+    return null;
   }
   async function scanQrPhoto(file){
     if(!file||driverToken||qrRedirecting)return;
-    stopQrLogin();$('qrLoginStatus').textContent='QR 이미지 확인 중…';
+    stopQrLogin();const generation=qrGeneration;$('qrLoginStatus').textContent='QR 이미지 확인 중…';
     const url=URL.createObjectURL(file);
     try{
       const image=new Image();image.src=url;await image.decode();
+      if(generation!==qrGeneration||!$('centerSettingsDialog').open)return;
       const raw=decodeQrImage(image,image.naturalWidth,image.naturalHeight);
       if(!raw)throw Error('사진에서 QR을 찾지 못했습니다. 코드 전체가 선명한 사진을 선택하세요.');
       await readQrResult(raw);
     }catch(e){$('qrLoginStatus').textContent=e.message||'QR 사진 확인 실패';}
-    finally{URL.revokeObjectURL(url);$('qrPhoto').value='';}
+    finally{URL.revokeObjectURL(url);$('qrPhoto').value='';$('qrCapture').value='';}
   }
   async function startQrLogin(){
     if(qrActive||driverToken||!$('centerSettingsDialog').open||qrRedirecting)return;
@@ -1209,33 +1226,45 @@
     try{
       const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
       if(!current()){stream.getTracks().forEach(track=>track.stop());return;}
-      qrStream=stream;video.srcObject=stream;await video.play();await enableContinuousFocus(video);
-      if(!current())return;
+      qrStream=stream;video.srcObject=stream;
+      video.setAttribute('playsinline','');video.muted=true;
+      await video.play();if(!current())return;
+      // Do not delay recognition while the camera negotiates focus settings.
+      void enableContinuousFocus(video);
       let detector=null;
       if(typeof window.BarcodeDetector==='function'){
         try{
-          const formats=typeof window.BarcodeDetector.getSupportedFormats==='function'?await window.BarcodeDetector.getSupportedFormats():['qr_code'];
-          if(formats.includes('qr_code'))detector=new window.BarcodeDetector({formats:['qr_code']});
+          detector=new window.BarcodeDetector({formats:['qr_code']});
         }catch(_){}
       }
       if(!current())return;
       if(!detector&&typeof window.jsQR!=='function')throw Error('QR 인식 모듈을 불러오지 못했습니다.');
-      $('qrLoginStatus').textContent='QR 전체가 보이도록 15~30cm 떨어져 맞춰주세요.';
-      let attempts=0;
+      $('qrLoginStatus').textContent='QR 전체를 가운데 사각형에 맞춰주세요.';
+      let attempts=0,nativeBusy=false,nativeResult=null;
+      $('qrDiagnostics').textContent='영상 대기 중…';
       const detect=async()=>{
         if(!current())return;
         if(video.readyState>=2){
-          let raw=null;
-          if(detector){
-            try{const found=await detector.detect(video);raw=found?.[0]?.rawValue||null;}catch(_){detector=null;}
+          // A stalled native detector must never block the software decoder.
+          let raw=nativeResult;nativeResult=null;
+          if(detector&&!nativeBusy){
+            nativeBusy=true;
+            Promise.resolve().then(()=>detector.detect(video)).then(found=>{
+              if(current())nativeResult=found?.[0]?.rawValue||null;
+            }).catch(()=>{detector=null;}).finally(()=>{nativeBusy=false;});
+          }
+          if(!raw){
+            try{raw=decodeQrImage(video,video.videoWidth,video.videoHeight,true);}
+            catch(e){$('qrDiagnostics').textContent='영상 처리 오류: '+(e.message||'카메라 확인');}
           }
           if(!current())return;
-          // Native recognition can silently miss QR codes. Always try local software
-          // decoding when the native detector yields no result.
-          if(!raw){try{raw=decodeQrImage(video,video.videoWidth,video.videoHeight);}catch(_){}}
           if(raw){await readQrResult(raw);}
-          else if(++attempts===15){$('qrLoginStatus').textContent='아직 인식되지 않았습니다. 화면 밝기를 높이고 QR을 조금 멀리 두세요. QR 사진도 사용할 수 있습니다.';}
-        }
+          else {
+            attempts++;
+            if(video.videoWidth&&video.videoHeight)$('qrDiagnostics').textContent=video.videoWidth+' × '+video.videoHeight+' · 인식 시도 '+attempts+'회';
+            if(attempts===15)$('qrLoginStatus').textContent='QR을 더 크게 맞추거나 아래 QR 촬영으로 시도하세요.';
+          }
+        }else if(++attempts===15){$('qrLoginStatus').textContent='카메라 영상이 아직 전달되지 않습니다. QR 촬영 또는 연결 링크를 이용하세요.';}
         if(current())qrTimer=setTimeout(detect,220);
       };
       void detect();
@@ -1297,6 +1326,8 @@
     $('logoutDriver').addEventListener('click',logoutDriver);$('loginLinkForm').addEventListener('submit',loginWithLink);
     $('startQrLogin').addEventListener('click',()=>{if(qrActive)stopQrLogin();else void startQrLogin();});
     $('qrPhoto').addEventListener('change',e=>void scanQrPhoto(e.target.files?.[0]));
+    $('qrCapture').addEventListener('change',e=>void scanQrPhoto(e.target.files?.[0]));
+    $('qrCaptureButton').addEventListener('click',()=>{stopQrLogin();$('qrCapture').click();});
     $('centerSettingsDialog').addEventListener('close',stopQrLogin);
     $('soundToggle').addEventListener('change',e=>{scanSound=e.target.checked;try{localStorage.setItem('ddsm:pref:sound',scanSound?'on':'off');}catch(_){}});
     $('vibrationToggle').addEventListener('change',e=>{scanVibration=e.target.checked;try{localStorage.setItem('ddsm:pref:vibration',scanVibration?'on':'off');}catch(_){}});
