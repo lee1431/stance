@@ -24,6 +24,8 @@ jobs:
           node --check ddsm/admin/admin.js
           node --check ddsm/delivery-map.js
           node --check ddsm/connect/connect.js
+          node --check ddsm/center-link.js
+          node --check ddsm/vendor/qrcode.js
       - run: python ddsm/test_ui_contract.py
 
       - run: npm install --no-save --no-package-lock --prefix /tmp/ddsm-ui jsdom@26
