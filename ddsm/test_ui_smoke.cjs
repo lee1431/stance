@@ -6,7 +6,6 @@ const read = p => fs.readFileSync(path.join(__dirname,p),'utf8');
 const dom = new JSDOM(read('index.html'), {url:'https://llsshh.com/ddsm/',runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:new VirtualConsole()});
 const w = dom.window, d = w.document, $ = id => d.getElementById(id);
 const tick = () => new Promise(resolve => setTimeout(resolve,25));
-const qrTick = () => new Promise(resolve => setTimeout(resolve,550));
 let currentDay = {selected:1,rounds:[{no:1,stops:[
   {id:'a',waybill:'1234567890123',recipient:'첫 배송지',address:'충주시 금봉로 21',phone:'',memo:'',status:'pending',createdAt:'2026-11-26T01:00:00Z',lat:36.99,lng:127.92,scannedItems:[]},
   {id:'b',waybill:'1234567890124',recipient:'둘째 배송지',address:'충주시 금봉로 22',phone:'',memo:'',status:'pending',createdAt:'2026-11-26T01:01:00Z',lat:36.98,lng:127.91,scannedItems:[]}
@@ -19,12 +18,12 @@ w.confirm=()=>true;
 w.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
 w.HTMLDialogElement.prototype.close=function(){if(!this.hasAttribute('open'))return;this.removeAttribute('open');this.dispatchEvent(new w.Event('close'));};
 w.fetch=(url, opts={})=>{
-  if(url.endsWith('connection/driver')){
-    qrRequests++;const req=JSON.parse(opts.body);
-    assert.equal(req.center,'chungju');
-    assert.match(req.device,/^[a-f0-9]{64}$/);
-    if(qrLoginReject)return Promise.resolve({ok:false,status:403,json:async()=>({ok:false,error:'유효하지 않은 기사 연결 링크입니다.'})});
-    return response({ok:true,token:'d_'+req.center+'_'+req.device,center:req.center});
+  if(url.endsWith('connection/code-login')){
+    codeRequests++;const req=JSON.parse(opts.body);
+    if(req.code!=='01234567')return Promise.resolve({ok:false,status:403,json:async()=>({ok:false,error:'센터 코드가 틀렸거나 만료되었습니다.'})});
+    if(!req.device)return response({ok:true,center:'a',name:'충주센터'});
+    assert.equal(req.center,'a');assert.equal(req.device,'d'.repeat(64));
+    return response({ok:true,token:'d_'+req.center+'_'+req.device,center:req.center,name:'충주센터'});
   }
   if(url.includes('work-day')) {
     if(opts.method==='PUT'){currentDay=JSON.parse(opts.body).day;revision++;return response({ok:true,revision});}
@@ -38,8 +37,9 @@ w.HTMLMediaElement.prototype.play=async()=>{};
 w.HTMLMediaElement.prototype.pause=()=>{};
 const track={getCapabilities:()=>({focusMode:['continuous']}),applyConstraints:async c=>{assert.equal(c.advanced[0].focusMode,'continuous');autofocus++;},stop:()=>cameraStops++};
 Object.defineProperty(w.navigator,'mediaDevices',{value:{getUserMedia:async()=>({getTracks:()=>[track],getVideoTracks:()=>[track]})}});
-let qrResult='',qrLoginReject=true,qrRequests=0,nativeHang=false;
-w.BarcodeDetector=class {constructor(opts){this.qr=opts.formats.includes('qr_code');} static async getSupportedFormats(){return ['qr_code','code_128'];} async detect(){if(this.qr&&nativeHang)return new Promise(()=>{});return this.qr&&qrResult?[{rawValue:qrResult}]:[];}};
+let codeRequests=0;
+w.BarcodeDetector=class {async detect(){return [];}};
+w.localStorage.setItem('ddsm:device:v1:a','d'.repeat(64));
 w.DDSM_NaverMap={loadSdk:async()=>({}),open:()=>{},close:()=>{}};
 w.DDSM_DeliveryMap={render:async(date,stops,callbacks,round)=>{mapState={stops,callbacks,round};},pause:()=>{},project:()=>({x:120,y:200}),showDraft:()=>{},clearDraft:()=>{}};
 Object.defineProperties($('deliveryMapStage'),{clientWidth:{value:390},clientHeight:{value:680}});
@@ -95,49 +95,27 @@ w.eval(read('waybill.js'));w.eval(read('center-link.js'));w.eval(read('app.js'))
   assert.match($('centerDetails').textContent,/연결되어/);
   $('logoutDriver').click();await tick();
   assert.equal(w.localStorage.getItem('ddsm:center:driver:v1'),null);
-  assert.ok(!$('loginLinkForm').classList.contains('hidden'));
+  assert.ok(!$('centerCodeForm').classList.contains('hidden'));
   assert.equal($('roundScanCount').textContent,'0건 등록');
   assert.equal(currentDay.rounds[0].stops.length,3,'logout does not delete server work');
-  assert.ok(!$('qrLoginPanel').classList.contains('hidden'));
-  const invite='a'.repeat(64), valid='https://llsshh.com/ddsm/connect/#center=chungju&invite='+invite;
-  assert.equal(w.DDSM_CenterLink.parse(valid,w.location.origin),'/ddsm/connect/#center=chungju&invite='+invite);
-  assert.equal(w.DDSM_CenterLink.parse(valid.replace('/connect/','/'),w.location.origin),'/ddsm/connect/#center=chungju&invite='+invite);
-  for(const invalid of [valid.replace('llsshh.com','evil.example'),valid+'&admin=x',valid+'&center=other',valid.replace('/ddsm/connect/','/ddsm/admin/'),valid.replace('https:','http:'),valid.replace(invite,'short')])assert.throws(()=>w.DDSM_CenterLink.parse(invalid,w.location.origin));
-  Object.defineProperty($('qrLoginVideo'),'readyState',{value:4});
-  qrResult='https://evil.example/';
-  $('startQrLogin').click();await qrTick();
-  assert.ok(!$('qrLoginStage').classList.contains('hidden'));
-  assert.match($('qrLoginStatus').textContent,/기사 연결용 QR/);
-  const stopsBefore=cameraStops;
-  $('closeCenterSettings').click();await tick();
-  assert.ok($('qrLoginStage').classList.contains('hidden'));assert.ok(cameraStops>stopsBefore);
-  $('settingsButton').click();$('openCenterSettings').click();
-  qrResult=valid;$('startQrLogin').click();await qrTick();
-  assert.match($('qrLoginStatus').textContent,/HTTP 403/);
+  const camerasBefore=autofocus;
+  $('centerCode').value='0123a4567';
+  $('centerCode').dispatchEvent(new w.Event('input',{bubbles:true}));
+  assert.equal($('centerCode').value,'01234567');
+  $('centerCode').value='99999999';
+  $('centerCodeForm').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+  await tick();await tick();
+  assert.match($('centerCodeStatus').textContent,/틀렸거나 만료/);
   assert.ok($('centerSettingsDialog').open);
-  assert.ok(!$('startQrLogin').disabled);
+  assert.equal(autofocus,camerasBefore,'login never opens the camera');
   assert.equal(w.localStorage.getItem('ddsm:center:driver:v1'),null);
-  // The final attempt uses actual software decoding while native detection hangs.
-  w.eval(read('vendor/qrcode.js'));
-  const qr=new w.QRCode(d.createElement('div'),{text:valid,useSVG:true,correctLevel:w.QRCode.CorrectLevel.M});
-  const m=qr._oQRCode,n=m.getModuleCount();
-  Object.defineProperty($('qrLoginVideo'),'videoWidth',{value:640});
-  Object.defineProperty($('qrLoginVideo'),'videoHeight',{value:480});
-  w.jsQR=require('./vendor/jsQR.js');
-  w.HTMLCanvasElement.prototype.getContext=function(){return {drawImage(){},getImageData(x,y,width,height){
-    const data=new Uint8ClampedArray(width*height*4);data.fill(255);
-    const scale=4,ox=Math.floor((width-n*scale)/2),oy=Math.floor((height-n*scale)/2);
-    for(let row=0;row<n;row++)for(let col=0;col<n;col++)if(m.isDark(row,col))
-      for(let dy=0;dy<scale;dy++)for(let dx=0;dx<scale;dx++){
-        const i=((oy+row*scale+dy)*width+ox+col*scale+dx)*4;data[i]=data[i+1]=data[i+2]=0;
-      }
-    return {data,width,height};
-  }}};
-  nativeHang=true;qrResult='';qrLoginReject=false;$('startQrLogin').click();await qrTick();
-  assert.equal(qrRequests,2);
-  assert.match(w.localStorage.getItem('ddsm:center:driver:v1'),/^d_chungju_[a-f0-9]{64}$/);
+  $('centerCode').value='01234567';
+  $('centerCodeForm').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+  await tick();await tick();
+  assert.equal(codeRequests,3);
+  assert.equal(w.localStorage.getItem('ddsm:center:driver:v1'),'d_a_'+'d'.repeat(64));
+  assert.equal(w.localStorage.getItem('ddsm:center:name:v1:a'),'충주센터');
   assert.ok(!$('centerSettingsDialog').open);
-  assert.ok($('qrLoginStage').classList.contains('hidden'));
   assert.equal($('roundScanCount').textContent,'3건 등록');
   console.log('DDSM UI smoke OK');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>dom.window.close());

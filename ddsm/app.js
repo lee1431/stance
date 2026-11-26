@@ -12,7 +12,7 @@
     driverToken = '';syncFault=false;
     ++syncEpoch; syncedDate = ''; syncPending = false; syncBlocked = false;
     data = freshData(); closeMapPopup(); render();
-    if (notify) toast('연결이 끊겼습니다. 센터에서 받은 연결 링크를 확인하세요.');
+    if (notify) toast('연결이 끊겼습니다. 센터 관리자에게 새 접속 코드를 요청하세요.');
   }
   async function restoreConnection() {
     if (connecting) return connecting;
@@ -24,7 +24,7 @@
         }
         const token = localStorage.getItem(TOKEN_KEY) || '';
         if (!/^d_[A-Za-z0-9-]{1,40}_[A-Za-z0-9_-]{43,128}$/.test(token)) {
-          toast('센터에서 받은 기사 연결 링크로 처음 한 번 접속하세요.'); return false;
+          toast('센터 코드를 입력하여 로그인하세요.'); return false;
         }
         driverToken = token;
         data = readData(); render();
@@ -155,7 +155,7 @@
   let mapSelected = null, pinDraft = null, wheelValue = 1, wheelDrag = null, wheelFrame = 0;
   const recentScanTimes = new Map();
   let statsRequest=0;
-  let qrGeneration=0,qrStream=null,qrControls=null,qrTimer=null,qrActive=false,qrRedirecting=false;
+  let codeLoginBusy=false;
   const pref=(key)=>{try{return localStorage.getItem('ddsm:pref:'+key)!=='off';}catch(_){return true;}};
   let scanSound=pref('sound'),scanVibration=pref('vibration');
   let editingId = '';
@@ -1034,16 +1034,15 @@
     toast('작업 사본을 저장했습니다.');
   }
   function centerId(){return /^d_([A-Za-z0-9-]{1,40})_/.exec(driverToken)?.[1]||'';}
-  function centerDisplay(){const id=centerId();return id==='chungju'?'충주센터':id||'연결 대기';}
+  function centerDisplay(){const id=centerId();return id?(localStorage.getItem('ddsm:center:name:v1:'+id)||(id==='chungju'?'충주센터':id)):'연결 대기';}
   function renderSettings(){
     const state=syncBlocked?'저장 충돌 · 센터 문의':!driverToken?'센터 연결 필요':syncedDate!==date?'동기화 필요':syncFault?'서버 연결 확인 필요':syncPending||syncBusy?'서버 저장 중':'서버 저장 완료';
     $('syncLabel').textContent=state;$('dailyPhoneLabel').textContent=state;
     $('settingsDateLabel').textContent=dateText(date);
     $('centerLabel').textContent=driverToken?centerDisplay()+' · 연결됨':'로그인 필요';
-    $('centerDetails').textContent=driverToken?centerDisplay()+'에 연결되어 있습니다.':'센터 QR을 스캔하거나 연결 링크를 붙여넣어 로그인하세요.';
+    $('centerDetails').textContent=driverToken?centerDisplay()+'에 연결되어 있습니다.':'센터 코드를 입력하여 로그인하세요.';
     $('logoutDriver').classList.toggle('hidden',!driverToken);
-    $('loginLinkForm').classList.toggle('hidden',Boolean(driverToken));
-    $('qrLoginPanel').classList.toggle('hidden',Boolean(driverToken));
+    $('centerCodeForm').classList.toggle('hidden',Boolean(driverToken));
     $('recoveryTools').classList.toggle('hidden',!syncBlocked);
     $('soundToggle').checked=scanSound;$('vibrationToggle').checked=scanVibration;
   }
@@ -1126,149 +1125,30 @@
     if(syncPending||syncBusy||syncBlocked||scanWorkerActive||pendingScans.length||connecting){toast('서버 저장 및 스캔 처리 완료 후 로그아웃하세요.');return;}
     if(!driverToken)return;
     if(syncedDate!==date){toast('서버 동기화 후 로그아웃하세요.');return;}
-    if(!confirm('센터 연결을 종료할까요? 다시 로그인하려면 센터 연결 링크가 필요합니다.'))return;
+    if(!confirm('센터 연결을 종료할까요? 다시 로그인하려면 센터 코드가 필요합니다.'))return;
     stopCamera();
     try{localStorage.removeItem(TOKEN_KEY);}catch(_){toast('로그아웃 실패');return;}
     invalidateDriverAuth();++statsRequest;recentScanTimes.clear();$('statsContent').replaceChildren();$('scanResult').textContent='센터에 로그인하세요.';
     renderSettings();toast('로그아웃 완료');
   }
-  async function acceptCenterLink(raw){
-    if(driverToken||qrRedirecting)return false;
-    window.DDSM_CenterLink.parse(raw,location.origin);
-    qrRedirecting=true;stopQrLogin();
-    $('loginLink').value='';
-    $('startQrLogin').disabled=true;$('loginLink').disabled=true;$('loginSubmit').disabled=true;
-    $('qrLoginStatus').textContent='QR 확인 완료 · 센터 인증 중…';
+  async function loginWithCode(event){
+    event.preventDefault();
+    if(driverToken||codeLoginBusy)return;
+    const input=$('centerCode'),status=$('centerCodeStatus'),code=input.value;
+    if(!/^[0-9]{8}$/.test(code)){status.textContent='숫자 8자리 센터 코드를 입력하세요.';return;}
+    codeLoginBusy=true;input.disabled=true;$('loginSubmit').disabled=true;$('closeCenterSettings').disabled=true;
+    status.textContent='센터 연결 중…';
     try{
-      await window.DDSM_CenterLink.connect(raw,location.origin);
+      await window.DDSM_CenterLink.connectCode(code);
       const synced=await restoreConnection();
       if(!driverToken)throw Error('인증 후 로그인 정보를 확인하지 못했습니다.');
+      input.value='';status.textContent='센터 연결 완료';
       if($('centerSettingsDialog').open)$('centerSettingsDialog').close();
       $('scanResult').textContent=synced?'센터 연결 완료 · 운송장을 스캔하세요.':'센터 연결 완료 · 서버 동기화가 필요합니다.';
       toast(synced?'센터 로그인 완료':'센터 연결 완료 · 동기화 필요');
       if(synced)resumeScan();
-      return true;
-    }catch(e){
-      $('qrLoginStatus').textContent=e.message||'센터 로그인 실패';
-      toast(e.message||'센터 로그인 실패');
-      return false;
-    }finally{
-      qrRedirecting=false;$('startQrLogin').disabled=false;$('loginLink').disabled=false;$('loginSubmit').disabled=false;
-    }
-  }
-  function loginWithLink(event){
-    event.preventDefault();
-    void acceptCenterLink($('loginLink').value).catch(e=>{$('qrLoginStatus').textContent=e.message||'센터 연결 링크를 확인하세요.';});
-  }
-  function stopQrLogin(){
-    ++qrGeneration;qrActive=false;
-    clearTimeout(qrTimer);qrTimer=null;
-    if(qrControls){try{qrControls.stop();}catch(_){}qrControls=null;}
-    if(qrStream){qrStream.getTracks().forEach(track=>track.stop());qrStream=null;}
-    const video=$('qrLoginVideo');
-    if(video.srcObject?.getTracks)video.srcObject.getTracks().forEach(track=>track.stop());
-    video.pause();video.srcObject=null;
-    $('qrLoginStage').classList.add('hidden');
-    $('qrDiagnostics').textContent='';
-    $('startQrLogin').textContent='▣ 센터 QR 스캔';
-    $('startQrLogin').disabled=qrRedirecting;
-  }
-  async function readQrResult(raw){
-    try{return await acceptCenterLink(raw);}
-    catch(e){$('qrLoginStatus').textContent=e.message||'기사 연결용 QR을 확인하세요.';return false;}
-  }
-  let qrCanvas=null,qrContext=null;
-  function decodeQrImage(source,width,height,live=false){
-    if(typeof window.jsQR!=='function'||!width||!height)return null;
-    if(!qrCanvas){qrCanvas=document.createElement('canvas');qrContext=qrCanvas.getContext('2d',{willReadFrequently:true});}
-    if(!qrContext)throw Error('카메라 영상 처리 기능을 사용할 수 없습니다.');
-    const short=Math.min(width,height);
-    // Preserve detail in the middle of the frame instead of shrinking the whole
-    // 1080p image. Try a wide crop, a tighter crop, then the complete image.
-    const regions=live?[.95,.65,1]:[1,.95,.65];
-    for(const ratio of regions){
-      const full=ratio===1,side=Math.floor(short*ratio);
-      const sw=full?width:side,sh=full?height:side;
-      const sx=Math.floor((width-sw)/2),sy=Math.floor((height-sh)/2);
-      const limit=live?(full?1280:1200):1800;
-      const scale=Math.min(1,limit/Math.max(sw,sh));
-      const dw=Math.max(1,Math.round(sw*scale)),dh=Math.max(1,Math.round(sh*scale));
-      if(qrCanvas.width!==dw)qrCanvas.width=dw;if(qrCanvas.height!==dh)qrCanvas.height=dh;
-      qrContext.drawImage(source,sx,sy,sw,sh,0,0,dw,dh);
-      const frame=qrContext.getImageData(0,0,dw,dh);
-      const found=window.jsQR(frame.data,dw,dh,{inversionAttempts:'attemptBoth'});
-      if(found?.data)return found.data;
-    }
-    return null;
-  }
-  async function scanQrPhoto(file){
-    if(!file||driverToken||qrRedirecting)return;
-    stopQrLogin();const generation=qrGeneration;$('qrLoginStatus').textContent='QR 이미지 확인 중…';
-    const url=URL.createObjectURL(file);
-    try{
-      const image=new Image();image.src=url;await image.decode();
-      if(generation!==qrGeneration||!$('centerSettingsDialog').open)return;
-      const raw=decodeQrImage(image,image.naturalWidth,image.naturalHeight);
-      if(!raw)throw Error('사진에서 QR을 찾지 못했습니다. 코드 전체가 선명한 사진을 선택하세요.');
-      await readQrResult(raw);
-    }catch(e){$('qrLoginStatus').textContent=e.message||'QR 사진 확인 실패';}
-    finally{URL.revokeObjectURL(url);$('qrPhoto').value='';$('qrCapture').value='';}
-  }
-  async function startQrLogin(){
-    if(qrActive||driverToken||!$('centerSettingsDialog').open||qrRedirecting)return;
-    if(!navigator.mediaDevices?.getUserMedia){$('qrLoginStatus').textContent='카메라를 사용할 수 없습니다. QR 사진 또는 연결 링크를 이용하세요.';return;}
-    stopCamera();qrActive=true;const generation=++qrGeneration;
-    const video=$('qrLoginVideo');
-    const current=()=>generation===qrGeneration&&qrActive&&$('centerSettingsDialog').open&&!driverToken;
-    $('startQrLogin').textContent='QR 스캔 중지';
-    $('qrLoginStage').classList.remove('hidden');
-    $('qrLoginStatus').textContent='카메라 준비 중…';
-    try{
-      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
-      if(!current()){stream.getTracks().forEach(track=>track.stop());return;}
-      qrStream=stream;video.srcObject=stream;
-      video.setAttribute('playsinline','');video.muted=true;
-      await video.play();if(!current())return;
-      // Do not delay recognition while the camera negotiates focus settings.
-      void enableContinuousFocus(video);
-      let detector=null;
-      if(typeof window.BarcodeDetector==='function'){
-        try{
-          detector=new window.BarcodeDetector({formats:['qr_code']});
-        }catch(_){}
-      }
-      if(!current())return;
-      if(!detector&&typeof window.jsQR!=='function')throw Error('QR 인식 모듈을 불러오지 못했습니다.');
-      $('qrLoginStatus').textContent='QR 전체를 가운데 사각형에 맞춰주세요.';
-      let attempts=0,nativeBusy=false,nativeResult=null;
-      $('qrDiagnostics').textContent='영상 대기 중…';
-      const detect=async()=>{
-        if(!current())return;
-        if(video.readyState>=2){
-          // A stalled native detector must never block the software decoder.
-          let raw=nativeResult;nativeResult=null;
-          if(detector&&!nativeBusy){
-            nativeBusy=true;
-            Promise.resolve().then(()=>detector.detect(video)).then(found=>{
-              if(current())nativeResult=found?.[0]?.rawValue||null;
-            }).catch(()=>{detector=null;}).finally(()=>{nativeBusy=false;});
-          }
-          if(!raw){
-            try{raw=decodeQrImage(video,video.videoWidth,video.videoHeight,true);}
-            catch(e){$('qrDiagnostics').textContent='영상 처리 오류: '+(e.message||'카메라 확인');}
-          }
-          if(!current())return;
-          if(raw){await readQrResult(raw);}
-          else {
-            attempts++;
-            if(video.videoWidth&&video.videoHeight)$('qrDiagnostics').textContent=video.videoWidth+' × '+video.videoHeight+' · 인식 시도 '+attempts+'회';
-            if(attempts===15)$('qrLoginStatus').textContent='QR을 더 크게 맞추거나 아래 QR 촬영으로 시도하세요.';
-          }
-        }else if(++attempts===15){$('qrLoginStatus').textContent='카메라 영상이 아직 전달되지 않습니다. QR 촬영 또는 연결 링크를 이용하세요.';}
-        if(current())qrTimer=setTimeout(detect,220);
-      };
-      void detect();
-    }catch(e){if(current()){stopQrLogin();$('qrLoginStatus').textContent='QR 카메라 실행 실패 · '+(e.message||'카메라 권한 확인')+' · QR 사진 또는 연결 링크 이용';}}
+    }catch(e){status.textContent=e.message||'센터 로그인 실패';}
+    finally{codeLoginBusy=false;input.disabled=false;$('loginSubmit').disabled=false;$('closeCenterSettings').disabled=false;}
   }
 
   function bind() {
@@ -1323,12 +1203,10 @@
     $('syncNow').addEventListener('click',manualSync);
     $('openCenterSettings').addEventListener('click',()=>openDriverDialog('centerSettingsDialog'));
     $('closeCenterSettings').addEventListener('click',()=>$('centerSettingsDialog').close());
-    $('logoutDriver').addEventListener('click',logoutDriver);$('loginLinkForm').addEventListener('submit',loginWithLink);
-    $('startQrLogin').addEventListener('click',()=>{if(qrActive)stopQrLogin();else void startQrLogin();});
-    $('qrPhoto').addEventListener('change',e=>void scanQrPhoto(e.target.files?.[0]));
-    $('qrCapture').addEventListener('change',e=>void scanQrPhoto(e.target.files?.[0]));
-    $('qrCaptureButton').addEventListener('click',()=>{stopQrLogin();$('qrCapture').click();});
-    $('centerSettingsDialog').addEventListener('close',stopQrLogin);
+    $('logoutDriver').addEventListener('click',logoutDriver);
+    $('centerCodeForm').addEventListener('submit',loginWithCode);
+    $('centerCode').addEventListener('input',e=>{e.target.value=e.target.value.replace(/[^0-9]/g,'').slice(0,8);});
+    $('centerSettingsDialog').addEventListener('cancel',e=>{if(codeLoginBusy)e.preventDefault();});
     $('soundToggle').addEventListener('change',e=>{scanSound=e.target.checked;try{localStorage.setItem('ddsm:pref:sound',scanSound?'on':'off');}catch(_){}});
     $('vibrationToggle').addEventListener('change',e=>{scanVibration=e.target.checked;try{localStorage.setItem('ddsm:pref:vibration',scanVibration?'on':'off');}catch(_){}});
     $('exportButton').addEventListener('click',exportData);
@@ -1336,7 +1214,7 @@
       $(id).addEventListener('close',()=>{if(id==='statsDialog')++statsRequest;resumeScan();});
     }
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {stopCamera();stopQrLogin();} else if(view==='home')openScan();
+      if (document.hidden) stopCamera(); else if(view==='home')openScan();
     });
     window.addEventListener('storage', e => {
       if (e.key === activeStorageKey() && driverToken) {

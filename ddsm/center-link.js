@@ -39,5 +39,39 @@
     catch(_){throw Error('로그인 정보를 저장하지 못했습니다. 브라우저 저장소를 확인하세요.');}
     return data.token;
   }
-  root.DDSM_CenterLink=Object.freeze({parse,connect});
+  async function connectCode(raw,storage=root.localStorage,fetcher=root.fetch.bind(root)){
+    const code=String(raw||'').replace(/[\s-]/g,'');
+    if(!/^[0-9]{8}$/.test(code))throw Error('숫자 8자리 센터 코드를 입력하세요.');
+    async function request(value){
+      let res;
+      try{res=await fetcher('https://mrdindoin.ddns.net/ddsm/api/connection/code-login',{
+        method:'POST',credentials:'omit',cache:'no-store',
+        headers:{'Content-Type':'application/json'},body:JSON.stringify(value)
+      });}catch(_){throw Error('센터 서버에 연결할 수 없습니다.');}
+      const data=await res.json().catch(()=>null);
+      if(res.status===404)throw Error('센터 서버 업데이트가 필요합니다.');
+      if(!res.ok||data?.ok!==true)throw Error(data?.error||'센터 인증 실패 (HTTP '+res.status+')');
+      return data;
+    }
+    const resolved=await request({code});
+    const center=resolved.center;
+    if(!/^[A-Za-z0-9-]{1,40}$/.test(center||''))throw Error('센터 정보가 올바르지 않습니다.');
+    const key='ddsm:device:v1:'+center;
+    let device;
+    try{
+      device=storage.getItem(key);
+      if(!/^[a-f0-9]{64}$/.test(device||'')){
+        device=Array.from(root.crypto.getRandomValues(new Uint8Array(32)),x=>x.toString(16).padStart(2,'0')).join('');
+        storage.setItem(key,device);
+      }
+    }catch(_){throw Error('브라우저 저장소에 접근할 수 없습니다.');}
+    const data=await request({code,center,device});
+    if(data.token!=='d_'+center+'_'+device)throw Error('센터 인증 응답이 올바르지 않습니다.');
+    try{
+      storage.setItem('ddsm:center:name:v1:'+center,String(data.name||resolved.name||center));
+      storage.setItem('ddsm:center:driver:v1',data.token);
+    }catch(_){throw Error('로그인 정보를 저장하지 못했습니다.');}
+    return data.token;
+  }
+  root.DDSM_CenterLink=Object.freeze({parse,connect,connectCode});
 })(typeof window==='undefined'?globalThis:window);
