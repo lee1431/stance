@@ -1,108 +1,57 @@
-/* DDSM daily / scan / delivery. Scans require authenticated G10 manifest lookup; local delivery lists remain intact. */
+/* DDSM daily / scan / delivery. Center-scoped device delivery workflow. */
 (function () {
   'use strict';
 
-  const AUTH_API_BASE = 'https://mrdindoin.ddns.net/ddsm/api/auth/';
   const DRIVER_API_BASE = 'https://mrdindoin.ddns.net/ddsm/api/driver/';
-  const LEGACY_STORAGE_KEY = 'ddsm:data:v1';
-  const IDENTITY_KEY = 'ddsm:identity:phone:v1';
-  const AUTH_SESSION_KEY = 'ddsm:driver:auth-session:v1';
-  const MIGRATION_KEY = 'ddsm:identity:migrated-legacy:v1';
-  const phoneStorageKey = number => 'ddsm:data:v1:phone:' + number;
-  const normalizePhone = raw => String(raw || '').replace(/\D/g, '');
-  const isPhone = number => /^01[016789]\d{7,8}$/.test(number);
-  const displayPhone = raw => {
-    const value = normalizePhone(raw);
-    if (value.length === 11) return value.slice(0,3) + '-' + value.slice(3,7) + '-' + value.slice(7);
-    if (value.length === 10) return value.slice(0,3) + '-' + value.slice(3,6) + '-' + value.slice(6);
-    return value;
-  };
-  function storedPhone() {
-    try {
-      const value = normalizePhone(localStorage.getItem(IDENTITY_KEY));
-      return isPhone(value) ? value : '';
-    } catch (_) { return ''; }
-  }
-  let identityPhone = storedPhone();
-  let remoteAccount = false;
-  let driverToken = ''; // Scoped to this tab; restored after server validation.
-  let resumeScanAfterLogin = false;
-  // Central server owns day state; localStorage remains a recovery backup.
+  const TOKEN_KEY = 'ddsm:center:driver:v1';
+  let driverToken = '';
+  let connecting = null;
   let syncedDate = '', serverRevision = 0, syncBusy = false, syncPending = false, syncBlocked = false, syncEpoch = 0;
   const WORK_API = DRIVER_API_BASE + 'work-day';
-  function clearAuthSession() {
-    try { sessionStorage.removeItem(AUTH_SESSION_KEY); } catch (_) {}
-  }
-  function readAuthSession() {
-    try {
-      const raw = sessionStorage.getItem(AUTH_SESSION_KEY);
-      if (!raw) return null;
-      const saved = JSON.parse(raw);
-      if (!saved || !isPhone(saved.phone) || typeof saved.token !== 'string' ||
-          !/^[A-Za-z0-9_-]{40,200}$/.test(saved.token) ||
-          !Number.isFinite(saved.expires_at) || saved.expires_at * 1000 <= Date.now()) {
-        clearAuthSession();
-        return null;
-      }
-      return saved;
-    } catch (_) {
-      clearAuthSession();
-      return null;
-    }
-  }
-  function saveAuthSession(phone, token, expiresAt) {
-    if (!Number.isFinite(expiresAt) || expiresAt * 1000 <= Date.now()) return false;
-    try {
-      sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({phone, token, expires_at: expiresAt}));
-      return true;
-    } catch (_) { return false; }
-  }
   function invalidateDriverAuth(notify = false) {
-    clearAuthSession();
     driverToken = '';
-    remoteAccount = false;
-    ++syncEpoch;
-    syncedDate = '';
-    syncPending = false;
-    syncBlocked = false;
-    render();
-    if (notify) toast('로그인이 만료되었습니다. 휴대폰 번호에서 다시 로그인하세요.');
+    ++syncEpoch; syncedDate = ''; syncPending = false; syncBlocked = false;
+    data = freshData(); render();
+    if (notify) toast('연결이 끊겼습니다. 센터에서 받은 연결 링크를 확인하세요.');
   }
-  async function restoreAuthSession() {
-    const saved = readAuthSession();
-    if (!saved) return;
-    if (saved.phone !== identityPhone) { clearAuthSession(); return; }
-    // An in-flight validation must not override a newer manual login or phone change.
-    const stillCurrent = () => {
-      const active = readAuthSession();
-      return !driverToken && active?.token === saved.token && identityPhone === saved.phone;
-    };
-    try {
-      const response = await fetch(AUTH_API_BASE + 'me', {
-        headers: {Authorization: 'Bearer ' + saved.token},
-        credentials: 'omit', cache: 'no-store'
-      });
-      const result = await response.json().catch(() => null);
-      if (!stillCurrent()) return;
-      if (response.status === 401 || response.status === 403 ||
-          (response.ok && (result?.ok !== true || result.authenticated !== true || result.phone !== saved.phone))) {
-        clearAuthSession();
-        return;
-      }
-      if (!response.ok) return; // Keep the saved session during a transient server error.
-      driverToken = saved.token;
-      remoteAccount = true;
-      render();
-      await activateDay(date);
-    } catch (_) {
-      // Offline or CORS failure: do not mistake a connection issue for a logout.
-    }
+  async function restoreConnection() {
+    if (connecting) return connecting;
+    connecting = (async () => {
+      try {
+        const params = new URLSearchParams(location.hash.slice(1));
+        if (params.has('center') && params.has('invite')) {
+          const center = params.get('center'), invite = params.get('invite');
+          const key = 'ddsm:device:v1:' + center;
+          let device = localStorage.getItem(key);
+          if (!/^[a-f0-9]{64}$/.test(device || '')) {
+            device = Array.from(crypto.getRandomValues(new Uint8Array(32)), x=>x.toString(16).padStart(2,'0')).join('');
+            localStorage.setItem(key,device);
+          }
+          const response = await fetch(DRIVER_API_BASE.replace(/driver\/$/,'connection/driver'), {
+            method:'POST', credentials:'omit', cache:'no-store',
+            headers:{'Content-Type':'application/json'}, body:JSON.stringify({center,invite,device})
+          });
+          const result = await response.json().catch(()=>null);
+          if (!response.ok || !result?.token) throw Error(result?.error || '센터 연결 실패 (HTTP '+response.status+')');
+          localStorage.setItem(TOKEN_KEY,result.token);
+          history.replaceState(null,'',location.pathname+location.search);
+        }
+        const token = localStorage.getItem(TOKEN_KEY) || '';
+        if (!/^d_[A-Za-z0-9-]{1,40}_[A-Za-z0-9_-]{43,128}$/.test(token)) {
+          toast('센터에서 받은 기사 연결 링크로 처음 한 번 접속하세요.'); return false;
+        }
+        driverToken = token;
+        data = readData(); render();
+        return await activateDay(date);
+      } catch(e) { toast(e.message || '센터 연결 실패'); return false; }
+    })();
+    try { return await connecting; } finally { connecting=null; }
   }
   function archiveLocal(dayKey) {
     try {
       const item = data.days[dayKey];
       if (!item || !item.rounds?.some(r => r.stops?.length)) return;
-      const key = 'ddsm:legacy-archive:' + identityPhone + ':' + dayKey;
+      const key = activeStorageKey() + ':archive:' + dayKey;
       if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(item));
     } catch (_) {}
   }
@@ -192,7 +141,7 @@
     } catch(_) {}
   }
 
-  const activeStorageKey = () => identityPhone ? phoneStorageKey(identityPhone) : LEGACY_STORAGE_KEY;
+  const activeStorageKey = () => driverToken ? 'ddsm:center:data:v1:' + driverToken : 'ddsm:center:offline:v1';
   const $ = id => document.getElementById(id);
   const today = () => {
     const d = new Date();
@@ -241,7 +190,7 @@
   }
 
   function persist() {
-    if (!identityPhone) return false;
+    if (!driverToken || syncedDate !== date || syncBlocked) { toast('센터 연결 및 동기화가 필요합니다.'); return false; }
     try {
       localStorage.setItem(activeStorageKey(),JSON.stringify(data));
       if(driverToken && syncedDate===date && !syncBlocked) {
@@ -299,10 +248,8 @@
   }
 
   function renderHome() {
-    $('myPhoneLabel').textContent = identityPhone
-      ? (driverToken ? '서버 로그인 · ' : '서버 로그인 필요 · ') + displayPhone(identityPhone)
-      : '휴대폰 번호 등록';
-    $('dailyPhoneLabel').textContent = identityPhone ? displayPhone(identityPhone) : '번호 미등록';
+    $('myPhoneLabel').textContent = driverToken ? '센터 연결됨' : '연결 확인';
+    $('dailyPhoneLabel').textContent = driverToken ? '배송 준비' : '연결 대기';
     document.documentElement.dataset.ddsmConnected = driverToken ? 'true' : 'false';
     const d = day();
     const active = round();
@@ -321,7 +268,7 @@
     $('pendingCount').textContent = String(c.pending);
     $('doneCount').textContent = String(c.done);
     $('scanHint').textContent = '현재 회차 배송지 ' + c.total + '건'
-      + (driverToken ? ' · 서버 조회 가능' : ' · 스캔하려면 서버 로그인');
+      + (driverToken ? ' · 서버 조회 가능' : ' · 연결 대기');
     $('deliveryButton').disabled = false;
     $('deliveryButtonLabel').textContent = '지도';
     $('deliveryHint').textContent = c.pending
@@ -696,13 +643,9 @@
     dialog.style.setProperty('--scan-viewport-top', (viewport ? viewport.offsetTop : 0) + 'px');
   }
   function openScan() {
-    if (driverToken && (syncedDate !== date || syncBlocked)) { toast('서버 배송 목록 동기화 후 스캔하세요.');return; }
-    if (!driverToken) {
-      // No silent local registration. A scanned barcode must resolve on G10.
-      resumeScanAfterLogin = true;
-      openIdentityDialog();
-      $('identityError').textContent = '운송장 조회를 위해 배송기사 로그인이 필요합니다. 로그인 후 스캔이 열립니다.';
-      $('identityError').classList.remove('hidden');
+    if (!driverToken || syncedDate !== date || syncBlocked) {
+      toast('센터 연결 및 동기화가 필요합니다.');
+      if (!driverToken) void restoreConnection();
       return;
     }
     const dialog = $('scanDialog');
@@ -726,7 +669,7 @@
   async function lookupWaybill(raw, dateKey) {
     const parsed = window.DDSM_Waybill?.parse(raw);
     if (!parsed?.valid) throw Error('운송장번호는 기본 13자리 또는 물품 16자리여야 합니다.');
-    if (!driverToken) throw Error('서버 조회를 위해 휴대폰 번호로 로그인하세요.');
+    if (!driverToken) throw Error('센터 연결이 필요합니다.');
     const response = await fetch(
       DRIVER_API_BASE+'waybill?date='+encodeURIComponent(dateKey)
         +'&barcode='+encodeURIComponent(parsed.scanned),
@@ -771,7 +714,7 @@
     if (!String(raw||'').trim()) return false;
     if (syncedDate !== date || syncBlocked) { toast('서버 동기화가 필요합니다.'); return false; }
     if (!driverToken) {
-      const message='서버 로그인이 필요합니다. 휴대폰 번호 버튼에서 로그인 후 다시 스캔하세요.';
+      const message='센터 연결 후 다시 스캔하세요.';
       $('scanResult').textContent=message;
       toast(message);
       return false;
@@ -1087,154 +1030,8 @@
     finally { $('importInput').value = ''; }
   }
 
-  function identityDialogMode(first = false) {
-    const dialog = $('identityDialog');
-    $('identityTitle').textContent = first ? '처음 시작하기' : '내 휴대폰 번호';
-    $('saveIdentityButton').textContent = '기존 기기 자료만 보기 (스캔은 서버 로그인 필요)';
-    $('identityError').textContent = '';
-    $('identityError').classList.add('hidden');
-    $('identityPhoneInput').value = identityPhone ? displayPhone(identityPhone) : '';
-    $('identityPasswordInput').value = '';
-    if (!dialog.open) dialog.showModal();
-  }
-  function openIdentityDialog(force = false) {
-    identityDialogMode(force || !identityPhone);
-  }
-  function saveIdentity(event) {
-    event.preventDefault();
-    syncEpoch++;syncedDate='';syncPending=false;syncBlocked=false;
-    const number = normalizePhone($('identityPhoneInput').value);
-    const error = $('identityError');
-    if (!isPhone(number)) {
-      error.textContent = '올바른 휴대폰 번호를 입력해 주세요. 예: 010-1234-5678';
-      error.classList.remove('hidden');
-      return;
-    }
-    if (identityPhone && identityPhone !== number &&
-        !confirm('다른 번호로 전환하면 이 기기에 저장된 해당 번호의 배송 목록이 열립니다. 기존 번호의 자료는 보존됩니다. 계속할까요?')) return;
-    try {
-      const previous = identityPhone;
-      clearAuthSession();
-      remoteAccount = false;
-      driverToken = '';
-      const destination = phoneStorageKey(number);
-      // Preserve legacy data on first adoption without moving or deleting its key.
-      // Never copy another user's records when switching to a different number.
-      if (!localStorage.getItem(MIGRATION_KEY)) {
-        if (!localStorage.getItem(destination)) {
-          const original = localStorage.getItem(LEGACY_STORAGE_KEY);
-          if (original) {
-            const parsed = JSON.parse(original);
-            if (isData(parsed)) localStorage.setItem(destination, original);
-          }
-        }
-        localStorage.setItem(MIGRATION_KEY, '1');
-      }
-      localStorage.setItem(IDENTITY_KEY, number);
-      identityPhone = number;
-      data = readData();
-      date = today();
-      if (previous && previous !== number) showView('home');
-      $('identityDialog').close();
-      render();
-      toast('기존 기기 자료 · ' + displayPhone(number) + ' · 스캔은 서버 로그인 후 가능합니다.');
-      $('identityPasswordInput').value = '';
-    } catch (_) {
-      error.textContent = '번호를 저장하지 못했습니다. 브라우저 저장 공간을 확인하세요.';
-      error.classList.remove('hidden');
-    }
-  }
-
-  async function apiAuthenticate(action) {
-    const phone = normalizePhone($('identityPhoneInput').value);
-    const password = $('identityPasswordInput').value;
-    const error = $('identityError');
-    error.classList.add('hidden');
-    if (!isPhone(phone)) {
-      error.textContent = '휴대폰 번호를 확인하세요.';
-      error.classList.remove('hidden');
-      return;
-    }
-    if (!password || password.length < 1 || password.length > 16) {
-      error.textContent = '비밀번호는 1~16자로 입력하세요.';
-      error.classList.remove('hidden');
-      return;
-    }
-    const login = $('identityLoginButton');
-    const register = $('identityRegisterButton');
-    login.disabled = register.disabled = true;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-    try {
-      const response = await fetch(
-        action === 'login' ? AUTH_API_BASE + 'login' : AUTH_API_BASE + 'register', {
-        method: 'POST', credentials: 'omit',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, password }),
-        signal: controller.signal
-      });
-      const result = await response.json().catch(() => null);
-      if (response.status === 404) {
-        throw new Error(action === 'login'
-          ? 'G10 로그인 API가 없습니다(404). 서버 admin.py를 업데이트하고 Waitress를 재시작하세요.'
-          : '가입 API가 없습니다(404). G10 인증 라우트를 확인하세요.');
-      }
-      if (!response.ok || !result || result.ok !== true || result.phone !== phone) {
-        throw new Error(result?.error || '인증 API 연결 또는 응답을 확인하세요.');
-      }
-      // Persist a short-lived tab session, not a long-lived localStorage token.
-      // Validate it with /auth/me before reuse after a refresh.
-      if (action === 'login' && typeof result.access_token !== 'string')
-        throw new Error('배송기사 인증 토큰이 없습니다. G10의 API를 업데이트하세요.');
-      const previous = identityPhone;
-      if (previous && previous !== phone &&
-          !confirm('다른 번호의 로컬 작업으로 전환합니다. 계속할까요?')) return;
-      localStorage.setItem(IDENTITY_KEY, phone);
-      identityPhone = phone;
-      remoteAccount = action === 'login';
-      driverToken = action === 'login' ? result.access_token : '';
-      const sessionSaved = action !== 'login' || saveAuthSession(phone, driverToken, result.expires_at);
-      if (action !== 'login') clearAuthSession();
-      syncEpoch++;syncedDate='';syncPending=false;syncBlocked=false;
-      data = readData();
-      date = today();
-      $('identityDialog').close();
-      $('identityPasswordInput').value = '';
-      if (previous !== phone) showView('home');
-      render();
-      if(action==='login') {
-        const loaded=await activateDay(date);
-        if(loaded && resumeScanAfterLogin) {
-          resumeScanAfterLogin=false;requestAnimationFrame(openScan);
-        }
-      }
-      toast(action === 'register'
-        ? '가입 완료 · 로그인 후 운송장 스캔 가능'
-        : sessionSaved ? '배송기사 로그인 완료 · 이제 스캔 시 G10 원본 조회'
-        : '로그인은 성공했지만 브라우저가 세션 저장을 차단해 새로고침 후 재로그인이 필요합니다.');
-    } catch (e) {
-      error.textContent = e.name === 'AbortError'
-        ? '서버 응답 시간이 초과되었습니다. API 상태를 확인하세요.'
-        : e instanceof TypeError ? 'G10 API 연결 또는 CORS 오류입니다. API 주소와 Origin 허용 설정을 확인하세요.'
-        : e.message || 'API 연결에 실패했습니다.';
-      error.classList.remove('hidden');
-    } finally {
-      clearTimeout(timeout);
-      login.disabled = register.disabled = false;
-    }
-  }
-
   function bind() {
-    $('myPhoneButton').addEventListener('click', openIdentityDialog);
-    $('identityForm').addEventListener('submit', event => {
-      event.preventDefault();
-      apiAuthenticate('login');
-    });
-    $('saveIdentityButton').addEventListener('click', saveIdentity);
-    $('identityLoginButton').addEventListener('click', () => apiAuthenticate('login'));
-    $('identityRegisterButton').addEventListener('click', () => apiAuthenticate('register'));
-    $('closeIdentity').addEventListener('click', () => $('identityDialog').close());
-    $('identityDialog').addEventListener('close', () => { resumeScanAfterLogin = false; });
+    $('myPhoneButton').addEventListener('click',()=>void restoreConnection());
     $('dateButton').addEventListener('click', chooseDate);
     $('dateInput').addEventListener('change', async e => {
       const value = e.target.value;
@@ -1309,17 +1106,16 @@
       if (document.hidden && (cameraStream || zxingControls)) stopCamera();
     });
     window.addEventListener('storage', e => {
-      if (e.key === activeStorageKey() && identityPhone) {
+      if (e.key === activeStorageKey() && driverToken) {
         if (!driverToken) { data=readData();render(); }
         else void refreshDay();
-      } else if (e.key === IDENTITY_KEY && e.newValue !== identityPhone) {
-        toast('다른 탭에서 사용자 번호가 변경되었습니다. 새로고침해 주세요.');
+      } else if (e.key === TOKEN_KEY && e.newValue !== driverToken) {
+        invalidateDriverAuth(true);
       }
     });
   }
   bind();
   setInterval(()=>{if(syncPending) void flushDay();else void refreshDay();},3000);
   render();
-  if (!identityPhone) openIdentityDialog(true);
-  else void restoreAuthSession();
+  void restoreConnection();
 })();

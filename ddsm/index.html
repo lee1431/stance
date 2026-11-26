@@ -12,7 +12,7 @@
   <script src="address-utils.js?v=3-attached-units" defer></script>
   <script src="delivery-map.js?v=6-round-filter" defer></script>
   <script src="waybill.js?v=1-master-13" defer></script>
-  <script src="app.js?v=26-three-tabs" defer></script>
+  <script src="app.js?v=27-center" defer></script>
   <script src="theme.js?v=1" defer></script>
 </head>
 <body>
@@ -26,7 +26,7 @@
             </svg>
           </span>
           <span class="date-info">
-            <span class="eyebrow date-meta"><span class="header-status-dot" aria-hidden="true"></span><span>DAILY</span><span class="date-meta-sep">·</span><span id="dailyPhoneLabel">번호 미등록</span></span>
+            <span class="eyebrow date-meta"><span class="header-status-dot" aria-hidden="true"></span><span>DAILY</span><span class="date-meta-sep">·</span><span id="dailyPhoneLabel">연결 대기</span></span>
             <strong id="dateLabel">오늘</strong>
           </span>
           <span class="chevron" aria-hidden="true">⌄</span>
@@ -43,9 +43,9 @@
         <input id="dateInput" class="visually-hidden-date" type="date" aria-label="배송일">
       </header>
       <div class="context-row">
-        <button id="myPhoneButton" class="personal-chip phone-identity-button" type="button" aria-label="내 휴대폰 번호 확인 또는 변경">
+        <button id="myPhoneButton" class="personal-chip phone-identity-button" type="button" aria-label="센터 연결 확인">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/></svg>
-          <span id="myPhoneLabel">휴대폰 번호 등록</span>
+          <span id="myPhoneLabel">연결 확인</span>
           <span class="phone-identity-edit" aria-hidden="true">⌄</span>
         </button>
         <div class="round-control">
@@ -136,29 +136,6 @@
     </section>
   </div>
 
-  <dialog id="identityDialog" class="sheet-dialog identity-dialog" aria-labelledby="identityTitle">
-    <form id="identityForm">
-      <div class="dialog-head">
-        <h2 id="identityTitle">내 휴대폰 번호</h2>
-        <button id="closeIdentity" class="close-button" type="button" aria-label="로그인 창 닫기">✕</button>
-      </div>
-      <p class="dialog-description">휴대폰 번호로 로그인합니다. 휴대폰 번호와 비밀번호로 로그인하면 해당 운송장번호의 서버 원본을 조회합니다.</p>
-      <label class="input-label" for="identityPhoneInput">휴대폰 번호</label>
-      <input id="identityPhoneInput" type="tel" inputmode="numeric" autocomplete="tel"
-        placeholder="010-1234-5678" maxlength="13" required aria-describedby="identityInfo identityError">
-      <label class="input-label" for="identityPasswordInput">비밀번호</label>
-      <input id="identityPasswordInput" type="password" autocomplete="current-password"
-        minlength="1" maxlength="16" placeholder="1~16자 입력" aria-describedby="identityInfo identityError">
-      <p id="identityError" class="identity-error hidden" role="alert"></p>
-      <div class="identity-auth-actions">
-        <button id="identityLoginButton" class="primary-action" type="button">로그인</button>
-        <button id="identityRegisterButton" class="secondary-action" type="button">신규 가입</button>
-      </div>
-      <button class="identity-local-action" type="button" id="saveIdentityButton">기존 기기 자료만 보기</button>
-      <p id="identityInfo" class="dialog-footnote">서버 로그인 후에만 스캔·원본 조회가 가능합니다. 기존 기기 자료 보기는 저장된 배송 목록 열람용입니다.</p>
-    </form>
-  </dialog>
-
   <dialog id="scanDialog" class="sheet-dialog scan-dialog" aria-labelledby="scanTitle">
     <div class="dialog-head"><h2 id="scanTitle">운송장 스캔</h2><button id="closeScan" class="close-button" type="button" aria-label="닫기">✕</button></div>
     <p class="dialog-description">바코드를 스캔하거나 운송장번호를 입력하세요.</p>
@@ -169,7 +146,7 @@
       <button type="submit" class="primary-action">추가</button>
     </form>
     <button id="cameraButton" type="button" class="secondary-action">카메라 켜기</button>
-    <p id="scanResult" class="dialog-message" role="status" aria-live="polite">스캔 전에 서버 로그인이 필요합니다. S10 원본 조회에 성공한 송장만 등록합니다.</p>
+    <p id="scanResult" class="dialog-message" role="status" aria-live="polite">센터 원본에서 확인된 운송장만 등록합니다.</p>
     <nav class="work-tabs"><button id="scanToList" type="button">목록</button><button id="scanToMap" type="button">지도 · 순번 지정</button></nav>
   </dialog>
 
@@ -212,12 +189,12 @@
 
   <dialog id="settingsDialog" class="sheet-dialog" aria-labelledby="settingsTitle">
     <div class="dialog-head"><h2 id="settingsTitle">DDSM 설정</h2><button id="closeSettings" class="close-button" type="button" aria-label="닫기">✕</button></div>
-    <p class="dialog-description">서버 로그인 후 스캔할 수 있습니다. 이 기기의 기존 배송 자료도 확인할 수 있습니다.</p>
+    <p class="dialog-description">센터에서 받은 기사 연결 링크로 최초 한 번 접속하면 계속 사용할 수 있습니다.</p>
     <div class="settings-stack">
       <button id="exportButton" class="secondary-action" type="button">내 데이터 JSON 백업</button>
       <label for="importInput" class="secondary-action file-label">JSON 백업 불러오기</label>
       <input id="importInput" type="file" accept=".json,application/json" class="hidden">
-      <p class="dialog-footnote">원본 엑셀은 S10 서버에 저장됩니다. 기사 계정과 배송일을 기준으로 S10 서버에 저장하고 동기화합니다. 기존 브라우저 데이터는 이전 시 백업합니다. 서버 저장 대기·충돌 표시가 있으면 JSON 백업을 보관하세요. 수취인 정보가 포함된 백업 파일은 안전하게 보관하세요.</p>
+      <p class="dialog-footnote">원본 엑셀은 S10 서버에 저장됩니다. 센터·기기·배송일을 기준으로 서버에 저장합니다. 기존 계정 자료는 자동으로 이전되지 않습니다. 서버 저장 대기·충돌 표시가 있으면 JSON 백업을 보관하세요. 수취인 정보가 포함된 백업 파일은 안전하게 보관하세요.</p>
       <a class="old-version-link" href="admin/">센터 관리자 페이지 열기</a>
       
     </div>

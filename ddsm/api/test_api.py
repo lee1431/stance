@@ -17,6 +17,7 @@ class DDSMApiTest(unittest.TestCase):
         cls.temp = tempfile.TemporaryDirectory(prefix="ddsm-test-")
         os.environ["DDSM_DB_PATH"] = str(Path(cls.temp.name) / "test.sqlite")
         os.environ["DDSM_ORIGIN"] = "https://llsshh.com"
+        os.environ["DDSM_ENABLE_LEGACY_AUTH"] = "1"
         os.environ["DDSM_ADMIN_PHONES"] = "01011112222"
         os.environ["DDSM_ADMIN_PASSWORD_HASH"] = generate_password_hash("test-admin", method="scrypt")
         sys.path.insert(0, str(Path(__file__).parent))
@@ -39,6 +40,55 @@ class DDSMApiTest(unittest.TestCase):
         })
         self.assertEqual(response.status_code, 200, response.get_json())
         return {"Authorization": "Bearer " + response.get_json()["access_token"]}
+
+    def test_center_device_isolation(self):
+        import json
+        os.environ["DDSM_CENTERS_JSON"] = json.dumps({
+            "a": {"name": "A", "invite": "a"*64},
+            "b": {"name": "B", "invite": "b"*64},
+        })
+        os.environ["DDSM_ADMIN_ACCESS_KEY"] = "c"*64
+        os.environ["DDSM_ENABLE_LEGACY_AUTH"] = "0"
+        try:
+            from app import create_app
+            client = create_app().test_client()
+            base = "/ddsm/api/"
+            day = "2026-11-26"
+            def header(token):
+                return {"Authorization": "Bearer "+token}
+            self.assertEqual(client.get(base+"connection/centers").status_code, 403)
+            self.assertEqual(len(client.get(base+"connection/centers", headers=header("adm_"+"c"*64)).get_json()["centers"]), 2)
+            admin_a = header("a_a_"+"c"*64)
+            admin_b = header("a_b_"+"c"*64)
+            devices = {}
+            for cid in ("a","b"):
+                response = client.post(base+"connection/driver", json={"center":cid,"invite":cid*64,"device":"d"*64})
+                self.assertEqual(response.status_code, 200, response.get_json())
+                devices[cid] = header(response.get_json()["token"])
+            self.assertEqual(client.get(base+"admin/me", headers=devices["a"]).status_code, 403)
+            self.assertEqual(client.get(base+"driver/work-day", query_string={"date":day}).status_code,401)
+            body = "운송장번호,수취인,주소,연락처\n1234567890123,정기고객,,01012345678\n".encode("utf-8-sig")
+            def upload(date, content):
+                return client.post(base+"admin/import",headers=admin_a,data={"date":date,"file":(io.BytesIO(content),"manifest.csv")})
+            self.assertEqual(upload(day,body).status_code,200)
+            query = {"date":day}
+            row=client.get(base+"admin/deliveries",headers=admin_a,query_string=query).get_json()["rows"][0]
+            self.assertEqual(client.get(base+"admin/deliveries",headers=admin_b,query_string=query).get_json()["total"],0)
+            saved=client.post(base+"admin/deliveries/"+str(row["id"])+"/location",headers=admin_a,json={"address":"충주시 금봉로 21","lat":36.99,"lng":127.92,"remember_recipient":True})
+            self.assertEqual(saved.status_code,200,saved.get_json())
+            next_day="2026-11-27"
+            self.assertEqual(upload(next_day,body).status_code,200)
+            query={"date":next_day,"barcode":"1234567890123"}
+            found=client.get(base+"driver/waybill",headers=devices["a"],query_string=query)
+            self.assertEqual(found.status_code,200,found.get_json())
+            self.assertEqual(found.get_json()["address"],"충주시 금봉로 21")
+            self.assertEqual(client.get(base+"driver/waybill",headers=devices["b"],query_string=query).status_code,404)
+            self.assertEqual(client.get(base+"admin/recurring-recipients",headers=admin_a).get_json()["recipients"][0]["recipient_name"],"정기고객")
+            self.assertEqual(client.get(base+"admin/recurring-recipients",headers=admin_b).get_json()["recipients"],[])
+        finally:
+            os.environ.pop("DDSM_CENTERS_JSON",None)
+            os.environ.pop("DDSM_ADMIN_ACCESS_KEY",None)
+            os.environ["DDSM_ENABLE_LEGACY_AUTH"]="1"
 
     def test_driver_sync_and_admin_lookup(self):
         self.register("01011112222")
@@ -116,7 +166,7 @@ class DDSMApiTest(unittest.TestCase):
         # Addressless recurring business: the shared master is created during import,
         # then the driver supplies a location used by the next day's export.
         recurring_day = "2026-11-19"
-        name_only = "운송장번호,상호명,물품명\\n2139602023215,정기배송상점,부품\\n".encode("utf-8-sig")
+        name_only = "운송장번호,상호명,물품명\n2139602023215,정기배송상점,부품\n".encode("utf-8-sig")
         uploaded = self.client.post(
             "/ddsm/api/admin/import",
             data={"date": recurring_day, "file": (io.BytesIO(name_only), "recurring.csv")},
@@ -146,7 +196,7 @@ class DDSMApiTest(unittest.TestCase):
         self.assertTrue(updated[0]["located"])
 
         next_day = "2026-11-20"
-        later = "운송장번호,상호명,물품명\\n2139602023216,정기배송상점,자재\\n".encode("utf-8-sig")
+        later = "운송장번호,상호명,물품명\n2139602023216,정기배송상점,자재\n".encode("utf-8-sig")
         self.client.post(
             "/ddsm/api/admin/import",
             data={"date": next_day, "file": (io.BytesIO(later), "later.csv")},
