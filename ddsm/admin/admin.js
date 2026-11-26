@@ -41,6 +41,7 @@
     try {
       const params = new URLSearchParams(location.hash.slice(1));
       const provided = params.get('admin');
+      if(provided){location.replace('../connect/'+location.hash);return;}
       adminKey = provided || localStorage.getItem(ADMIN_KEY) || '';
       if (!/^[A-Za-z0-9_-]{43,128}$/.test(adminKey)) throw Error('센터 운영자에게 받은 관리자 연결 링크로 접속하세요.');
       authToken = 'adm_'+adminKey;
@@ -76,7 +77,7 @@
   }
   async function copyDriverLink() {
     if(!currentCenter)return;
-    const url=new URL('../',location.href);
+    const url=new URL('../connect/',location.href);
     url.hash=new URLSearchParams({center:currentCenter.id,invite:currentCenter.invite}).toString();
     try {
       await navigator.clipboard.writeText(url.href);
