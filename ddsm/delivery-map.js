@@ -12,6 +12,8 @@
   let onLongPress=null,onDismiss=null,onViewport=null,draftMarker=null,lastMarkerClick=0,lastLongPress=0;
   let pointer=null;
   let locationSignature='';
+  let locationMarker=null,locationWatch=null,locationEpoch=0,locationPoint=null,locationCenterPending=false;
+  let renderedSignature='';
   let requestQueue = [], working = 0;
   const inFlight = new Set();
 
@@ -50,23 +52,75 @@
     return { content, size: new maps.Size(94, 64), anchor: new maps.Point(47, 61) };
   }
   function boundsAll() {
-    if (!map || !maps) return;
+    if (!map || !maps) return false;
     const validMarkers = [...markers.values()];
-    if (!validMarkers.length) return;
+    if (!validMarkers.length) return false;
     if (validMarkers.length === 1) {
       map.setCenter(validMarkers[0].getPosition());
       map.setZoom(16);
-      return;
+      return true;
     }
     const bounds = new maps.LatLngBounds();
     validMarkers.forEach(marker => bounds.extend(marker.getPosition()));
-    map.fitBounds(bounds, { top: 74, bottom: 65, left: 65, right: 65 });
+    map.fitBounds(bounds, { top: 80, bottom: 65, left: 65, right: 112 });
+    return true;
   }
   function fit() {
-    if (!active) return;
-    if (!map) return;
-    maps.Event.trigger(map, 'resize');
-    boundsAll();
+    if(!active||!map||renderedSignature!==selectedSignature)return false;
+    maps.Event.trigger(map,'resize');
+    return boundsAll();
+  }
+  function fitAll(){
+    if(!active||!map)return false;
+    userInteracted=true;locationCenterPending=false;
+    return fit();
+  }
+  function locationState(state){
+    const button=$('mapLocate');
+    button.setAttribute('aria-pressed',String(state==='active'));
+    button.setAttribute('aria-busy',String(state==='pending'));
+    button.classList.toggle('location-pending',state==='pending');
+  }
+  function stopLocation(){
+    ++locationEpoch;
+    if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(_){}}
+    locationWatch=null;locationCenterPending=false;locationPoint=null;
+    if(locationMarker){locationMarker.setMap(null);locationMarker=null;}
+    locationState('idle');
+  }
+  function centerLocation(){
+    if(!map||!locationPoint)return;
+    map.setCenter(locationPoint);map.setZoom(16);
+  }
+  function locate(notify){
+    if(!active||!map){notify('지도를 준비 중입니다. 잠시 후 다시 눌러주세요.');return;}
+    if(!navigator.geolocation){notify('이 브라우저는 위치 확인을 지원하지 않습니다.');return;}
+    userInteracted=true;
+    if(locationWatch!==null){
+      if(locationPoint){locationCenterPending=false;centerLocation();}
+      else{locationCenterPending=true;notify('현재 위치를 확인 중입니다.');}
+      return;
+    }
+    const epoch=++locationEpoch;
+    locationCenterPending=true;locationState('pending');
+    try{
+      locationWatch=navigator.geolocation.watchPosition(position=>{
+        if(!active||epoch!==locationEpoch)return;
+        const p={lat:position.coords.latitude,lng:position.coords.longitude};
+        if(!valid(p))return;
+        locationPoint=new maps.LatLng(p.lat,p.lng);
+        if(!locationMarker){
+          locationMarker=new maps.Marker({map,position:locationPoint,clickable:false,zIndex:1000,
+            icon:{content:'<div class="ddsm-current-location" aria-label="내 위치"></div>',size:new maps.Size(28,28),anchor:new maps.Point(14,14)}});
+        }else locationMarker.setPosition(locationPoint);
+        locationState('active');
+        if(locationCenterPending){locationCenterPending=false;centerLocation();}
+      },error=>{
+        if(epoch!==locationEpoch||!active)return;
+        stopLocation();
+        notify(error.code===1?'브라우저의 위치 접근 권한을 허용하세요.':'현재 위치를 확인하지 못했습니다. 다시 시도하세요.');
+      },{enableHighAccuracy:true,maximumAge:5000,timeout:12000});
+    }catch(_){stopLocation();notify('위치 서비스를 사용할 수 없습니다.');}
   }
   function draw(stops, roundNo) {
     if (!map) return;
@@ -106,9 +160,9 @@
     }
     const locations=stops.filter(valid).map(s=>key(s)+':'+s.lat+':'+s.lng).sort().join('|');
     if (markers.size && !userInteracted && (!initialFitDone||locations!==locationSignature)) {
-      initialFitDone=true;requestAnimationFrame(fit);
+      initialFitDone=true;const signature=selectedSignature;requestAnimationFrame(()=>{if(!userInteracted&&signature===selectedSignature)fit();});
     }
-    locationSignature=locations;onViewport?.();
+    renderedSignature=selectedSignature;locationSignature=locations;onViewport?.();
   }
   function createMap() {
     if (map) return;
@@ -120,13 +174,13 @@
       zoomControlOptions: { position: n.Position.TOP_RIGHT },
       mapDataControl: false, scaleControl: false, logoControl: true
     });
-    n.Event.addListener(map,'dragstart',()=>{userInteracted=true;pointer=null;});
+    n.Event.addListener(map,'dragstart',()=>{userInteracted=true;locationCenterPending=false;pointer=null;});
     n.Event.addListener(map,'bounds_changed',()=>onViewport?.());
     n.Event.addListener(map,'idle',()=>onViewport?.());
     n.Event.addListener(map,'click',()=>{if(Date.now()-lastMarkerClick>300&&Date.now()-lastLongPress>500)onDismiss?.();});
     const canvas=$('deliveryMapCanvas');
     canvas.addEventListener('pointerdown',e=>{
-      userInteracted=true;
+      userInteracted=true;locationCenterPending=false;
       if(!e.isPrimary||e.button!==0||pointer){pointer=null;return;}
       pointer={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now()};
     },true);
@@ -212,6 +266,8 @@
       // Pending geocoding from another round must not delay this round.
       ++geocodeGeneration;
       requestQueue = [];
+      for(const marker of markers.values())marker.setMap(null);
+      markers.clear();renderedSignature='';
     }
     $('deliveryMapCount').textContent = roundNo + '회차 · ' + stops.length + '건';
     // Lazy load: no additional SDK request until the delivery page opens.
@@ -244,8 +300,8 @@
     active = false;
     ++geocodeGeneration;
     requestQueue = [];
-    clearDraft();pointer=null;
-    selectedSignature = '';
+    clearDraft();stopLocation();pointer=null;
+    selectedSignature = '';renderedSignature='';
   }
   function project(point) {
     if(!active||!map||!valid(point))return null;
@@ -257,5 +313,5 @@
     draftMarker=new maps.Marker({map,position:new maps.LatLng(point.lat,point.lng),clickable:false,zIndex:10000,
       icon:{content:'<div class="draft-map-pin"></div>',size:new maps.Size(26,34),anchor:new maps.Point(13,30)}});
   }
-  root.DDSM_DeliveryMap = Object.freeze({ render, pause, fit, project,showDraft,clearDraft });
+  root.DDSM_DeliveryMap = Object.freeze({ render, pause, fit, fitAll, locate, project,showDraft,clearDraft });
 })(window);

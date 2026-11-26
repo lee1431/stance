@@ -11,7 +11,7 @@ let showBarcode=false,lookupRequests=[];
 let currentDay = {selected:1,rounds:[{no:1,stops:[
   {id:'a',waybill:'1234567890123',recipient:'첫 배송지',address:'충주시 금봉로 21',phone:'',memo:'',status:'pending',createdAt:'2026-11-26T01:00:00Z',lat:36.99,lng:127.92,scannedItems:[]},
   {id:'b',waybill:'1234567890124',recipient:'둘째 배송지',address:'충주시 금봉로 22',phone:'',memo:'',status:'pending',createdAt:'2026-11-26T01:01:00Z',lat:36.98,lng:127.91,scannedItems:[]}
-]}]}, revision=1, mapState, autofocus=0, cameraStops=0, destinationWrites=0;
+]},{no:2,stops:[]}]}, revision=1, mapState, autofocus=0, cameraStops=0, destinationWrites=0, fitCalls=0, locateCalls=0;
 const clone = x => JSON.parse(JSON.stringify(x));
 const response = data => Promise.resolve({ok:true,status:200,json:async()=>clone(data)});
 w.localStorage.setItem('ddsm:center:driver:v1','d_a_'+'d'.repeat(64));
@@ -70,7 +70,7 @@ else{
 }
 w.localStorage.setItem('ddsm:device:v1:a','d'.repeat(64));
 w.DDSM_NaverMap={loadSdk:async()=>({}),open:()=>{},close:()=>{}};
-w.DDSM_DeliveryMap={render:async(date,stops,callbacks,round)=>{mapState={stops,callbacks,round};},pause:()=>{},project:()=>({x:120,y:200}),showDraft:()=>{},clearDraft:()=>{}};
+w.DDSM_DeliveryMap={render:async(date,stops,callbacks,round)=>{mapState={stops,callbacks,round};},pause:()=>{},fitAll:()=>{fitCalls++;return mapState.stops.length>0;},locate:()=>{locateCalls++;},project:()=>({x:120,y:200}),showDraft:()=>{},clearDraft:()=>{}};
 Object.defineProperties($('deliveryMapStage'),{clientWidth:{value:390},clientHeight:{value:680}});
 Object.defineProperties($('mapPopup'),{offsetWidth:{value:144},offsetHeight:{value:220}});
 Object.defineProperties($('pinPopup'),{offsetWidth:{value:235},offsetHeight:{value:120}});
@@ -116,6 +116,14 @@ w.eval(read('waybill.js'));w.eval(read('center-link.js'));w.eval(read('app.js'))
   $('mapTab').click();await tick();
   assert.equal(d.body.dataset.page,'map');assert.ok(cameraStops>0);
   assert.equal(mapState.stops.length,3);
+  assert.equal($('mapRoundLabel').textContent,'1회차');
+  $('mapLocate').click();assert.equal(locateCalls,1);
+  $('mapFitAll').click();assert.equal(fitCalls,1);
+  $('mapRound').click();await tick();assert.equal(mapState.round,2);
+  assert.equal(mapState.stops.length,0);assert.equal($('mapRoundLabel').textContent,'2회차');
+  $('mapFitAll').click();assert.match($('toast').textContent,/현재 회차/);
+  $('mapRound').click();await tick();assert.equal(mapState.round,1);
+  assert.equal(mapState.stops.length,3);assert.equal($('mapRoundLabel').textContent,'1회차');
   mapState.callbacks.onSelect(mapState.stops[2].id,1);
   assert.ok(!$('mapPopup').classList.contains('hidden'));
   assert.equal($('orderWheel').getAttribute('aria-valuenow'),'3');

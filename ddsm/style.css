@@ -696,3 +696,15 @@ body[data-page="list"] #backButton,body[data-page="list"] #workScanButton{displa
 .center-code-input{display:block;width:100%;box-sizing:border-box;text-align:center;font-size:28px!important;font-variant-numeric:tabular-nums;letter-spacing:.15em;min-height:64px;margin:12px 0}.center-code-input::placeholder{font-size:16px;letter-spacing:0}#centerCodeStatus{margin-top:10px;min-height:20px}
 
 .scan-details{font-size:12px;line-height:1.5;color:var(--text-muted);overflow-wrap:anywhere;margin:2px 0 10px;font-variant-numeric:tabular-nums}
+
+/* Map controls sit above the map tiles, but below the selected-stop popup. */
+#deliveryMapCanvas{z-index:0}
+.map-controls{position:absolute;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));z-index:25;display:flex;flex-direction:column;align-items:stretch;gap:7px;touch-action:manipulation}
+.map-controls button{display:flex;align-items:center;justify-content:center;gap:5px;min-width:88px;min-height:44px;padding:6px 9px;border:1px solid var(--border-card,#ddd);border-radius:10px;background:var(--surface-card,#fff);color:var(--text-primary,#243341);font-size:12px;font-weight:800;box-shadow:0 2px 8px #18263026;white-space:nowrap}
+.map-controls svg{width:17px;height:17px;flex:none}
+.map-controls button[aria-pressed=true]{color:#087cf0;border-color:#087cf0}
+.map-controls button.location-pending{color:var(--text-muted,#777)}
+.map-controls .map-round-button{background:var(--accent-primary,#087f8c);color:var(--accent-primary-text,#fff);border-color:transparent}
+.map-controls .map-round-button:disabled{opacity:.85}
+.ddsm-current-location{position:relative;width:28px;height:28px;border-radius:50%;background:#2589f438;box-sizing:border-box;display:grid;place-items:center;pointer-events:none}
+.ddsm-current-location::after{content:"";width:13px;height:13px;border:2px solid #fff;border-radius:50%;background:#087cf0;box-shadow:0 1px 5px #123d7050}
