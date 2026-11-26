@@ -394,6 +394,8 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
 
     def auth():
         user = authenticated_user()
+        if user and "center_admin" in user:
+            return user["id"] if user["center_admin"] else None
         digest = token_digest()
         if not user or not digest or user["phone"] not in admin_phones:
             return None
