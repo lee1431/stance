@@ -483,12 +483,44 @@
     button.disabled = cancel.disabled = input.readOnly = true;
     say('addressError', '');
     try {
-      // Finish any existing automatic write before applying the manual correction.
+      // Save the address first. Existing manually verified coordinates take priority.
+      const targetDate=$('deliveryDate').value;
+      const remember=$('rememberAddress').checked;
       await beforeManualLocation();
-      await post('admin/deliveries/' + row.id + '/location', { address, remember_recipient:$('rememberAddress').checked });
+      say('addressError','주소 저장 및 지도 위치 확인 중…');
+      const saved=await post('admin/deliveries/' + row.id + '/location', {address,remember_recipient:remember});
       closeEditor();
+      let message='주소 저장 완료 · 위치 미확인: 위치 지정을 눌러 확인하세요.';
+      let current=null;
+      try{
+        // Query the original day even if the operator changes the date while saving.
+        const response=await get('admin/deliveries?date='+encodeURIComponent(targetDate));
+        current=response.rows.find(item=>item.id===row.id);
+        if(current?.located&&valid(current)){
+          message='주소 저장 완료 · 기존 지도 위치 연결 완료';
+        }else if(current&&current.destination_id===saved.destination_id){
+          const canonical=current.registry_address||address;
+          await ensureMap();
+          const point=await lookupCoordinates([canonical]);
+          if(point?.verified&&valid(point)){
+            // Recheck the master after the network lookup; never replace a pin
+            // saved by another operator in the meantime.
+            const latest=await get('admin/deliveries?date='+encodeURIComponent(targetDate));
+            const check=latest.rows.find(item=>item.id===row.id);
+            if(check?.located&&valid(check)){
+              message='주소 저장 완료 · 기존 지도 위치 연결 완료';
+            }else if(check&&check.destination_id===saved.destination_id&&
+                     (check.registry_address||address)===canonical){
+              await post('admin/deliveries/'+row.id+'/location',{
+                destination_id:saved.destination_id,lat:point.lat,lng:point.lng
+              });
+              message='주소 및 지도 위치 저장 완료';
+            }
+          }
+        }
+      }catch(_){message='주소 저장 완료 · 좌표 조회 실패: 위치 지정을 눌러 확인하세요.';}
       dialog.close();
-      await refreshSaved('배송 주소 저장 완료');
+      await refreshSaved(message);
     } catch (error) {
       say('addressError', '주소 저장 실패: ' + error.message);
     } finally {
