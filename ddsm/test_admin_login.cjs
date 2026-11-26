@@ -77,6 +77,15 @@ w.fetch=async(url,opts)=>{
  const fields=$('recurringBody').querySelectorAll('input');
  assert.equal(fields.length,3);
  fields[0].value='고객A 변경';fields[0].dispatchEvent(new w.Event('input'));
+ assert.equal($('recurringContent').hidden,false);
+ $('toggleRecurring').click();
+ assert.equal($('recurringContent').hidden,true);
+ assert.equal($('toggleRecurring').getAttribute('aria-expanded'),'false');
+ assert.equal(w.sessionStorage.getItem('ddsm:admin:recurring-collapsed:v1'),'1');
+ $('toggleRecurring').click();
+ assert.equal($('recurringContent').hidden,false);
+ assert.equal($('toggleRecurring').getAttribute('aria-expanded'),'true');
+ assert.equal(fields[0].value,'고객A 변경');
  fields[1].value='01012345678';fields[1].dispatchEvent(new w.Event('input'));
  fields[2].value='충주시 금봉로 21';fields[2].dispatchEvent(new w.Event('input'));
  const before=requests.filter(x=>x.endpoint.startsWith('admin/deliveries?')).length;
