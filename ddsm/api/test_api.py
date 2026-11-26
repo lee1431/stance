@@ -41,6 +41,54 @@ class DDSMApiTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.get_json())
         return {"Authorization": "Bearer " + response.get_json()["access_token"]}
 
+    def test_short_center_code(self):
+        import json
+        import time
+        from unittest.mock import patch
+        from app import create_app
+        config = {
+            "DDSM_CENTERS_JSON": json.dumps({
+                "code-a": {"name": "충주센터", "invite": "a"*64},
+                "code-b": {"name": "다른센터", "invite": "b"*64},
+            }),
+            "DDSM_ADMIN_ACCESS_KEY": "c"*64,
+            "DDSM_ENABLE_LEGACY_AUTH": "0",
+        }
+        with patch.dict(os.environ, config):
+            client = create_app().test_client()
+            base = "/ddsm/api/connection/"
+            admin = {"Authorization": "Bearer a_code-a_"+"c"*64}
+            other = {"Authorization": "Bearer a_code-b_"+"c"*64}
+            device = "d"*64
+            self.assertEqual(client.post(base+"code", json={}).status_code, 401)
+            issued = client.post(base+"code", headers=admin, json={})
+            self.assertEqual(issued.status_code, 200, issued.get_json())
+            data = issued.get_json()
+            code = data["code"]
+            self.assertRegex(code, r"^[0-9]{8}$")
+            self.assertGreater(data["expires_at"], int(time.time()))
+            self.assertEqual(client.post(base+"code", headers=admin, json={}).get_json()["code"], code)
+            self.assertNotEqual(client.post(base+"code", headers=other, json={}).get_json()["code"], code)
+            resolved = client.post(base+"code-login", json={"code":code}).get_json()
+            self.assertEqual(resolved, {"ok":True,"center":"code-a","name":"충주센터"})
+            self.assertEqual(client.post(base+"code-login", json={"code":code,"device":device,"center":"code-b"}).status_code,403)
+            legacy = client.post(base+"driver",json={"center":"code-a","invite":"a"*64,"device":device})
+            self.assertEqual(legacy.status_code,200)
+            login = client.post(base+"code-login",json={"code":code,"center":"code-a","device":device})
+            self.assertEqual(login.status_code,200,login.get_json())
+            self.assertEqual(login.get_json()["token"],legacy.get_json()["token"])
+            driver = {"Authorization":"Bearer "+login.get_json()["token"]}
+            self.assertEqual(client.post(base+"code",headers=driver,json={}).status_code,403)
+            renewed = client.post(base+"code",headers=admin,json={"renew":True}).get_json()
+            self.assertNotEqual(renewed["code"],code)
+            self.assertEqual(client.post(base+"code-login",json={"code":code}).status_code,403)
+            with patch("app.time.time", return_value=renewed["expires_at"]+1):
+                self.assertEqual(client.post(base+"code-login",json={"code":renewed["code"]}).status_code,403)
+            wrong = "00000000" if renewed["code"] != "00000000" else "99999999"
+            for _ in range(35):
+                result = client.post(base+"code-login",json={"code":wrong})
+            self.assertEqual(result.status_code,429)
+
     def test_center_device_isolation(self):
         import json
         os.environ["DDSM_CENTERS_JSON"] = json.dumps({
