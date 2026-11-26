@@ -6,10 +6,10 @@
 <meta name="theme-color" content="#F8F7F4">
 <title>DDSM | 센터 관리콘솔</title>
 <link rel="icon" href="../favicon.svg?v=vehicle-20261118" type="image/svg+xml">
-<link rel="stylesheet" href="admin.css?v=9-center-login">
+<link rel="stylesheet" href="admin.css?v=10-recurring-edit">
 <script src="../naver-map.js?v=3-shared-sdk" defer></script>
 <script src="../address-utils.js?v=3-attached-units" defer></script>
-<script src="admin.js?v=17-password-required" defer></script>
+<script src="admin.js?v=18-recurring-edit" defer></script>
 </head>
 <body>
 <div class="shell">
@@ -69,7 +69,7 @@
    <div class="section-head"><div><h2>정기배송 고객 주소록</h2><p>주소 없이 들어오는 수취인을 등록하면 다음 원본 업로드에서 자동 참조합니다.</p></div><button id="refreshRecurring" type="button">조회</button></div>
    <input id="recurringSearch" type="search" placeholder="등록 고객명 또는 주소 검색" aria-label="정기배송 고객 검색">
    <p id="recurringStatus" role="status"></p>
-   <div class="table-scroll"><table><thead><tr><th>수취인명</th><th>연락처</th><th>등록 주소</th><th>관리</th></tr></thead><tbody id="recurringBody"></tbody></table></div>
+   <div class="table-scroll"><table><thead><tr><th>수취인명</th><th>연락처</th><th>등록 주소</th><th>지도 위치</th><th>관리</th></tr></thead><tbody id="recurringBody"></tbody></table></div>
   </section>
   <section id="locationEditor" class="location-panel" hidden>
    <div><strong id="editName">배송 위치 수정</strong><p id="editInfo"></p></div>
@@ -104,6 +104,14 @@
     <p id="driverCodeExpiry" role="status">코드 발급 중…</p>
     <div class="driver-code-actions"><button id="copyDriverCode" type="button" disabled>코드 복사</button><button id="renewDriverCode" type="button">새 코드</button><button id="closeDriverCode" class="primary" type="button">닫기</button></div>
     <p>센터 기사에게만 전달하세요. 코드는 10분 동안 유효합니다.</p>
+  </dialog>
+  <dialog id="recurringMapDialog" class="address-dialog recurring-map-dialog" aria-labelledby="recurringMapTitle">
+   <h2 id="recurringMapTitle">정기배송 고객 위치 지정</h2>
+   <p id="recurringMapName"></p>
+   <div class="recurring-map-search"><input id="recurringMapAddress" aria-label="등록 주소" maxlength="250" placeholder="정확한 주소"><button id="recurringMapSearch" type="button">주소 검색</button></div>
+   <div class="recurring-map-stage"><div id="recurringMapCanvas"></div><div class="map-crosshair"><span class="pin">📍</span></div></div>
+   <p id="recurringMapStatus" role="status">지도를 움직여 중앙 핀을 배송지에 맞추세요.</p>
+   <div class="address-dialog-actions"><button id="recurringMapCancel" type="button">취소</button><button id="recurringMapSave" class="primary" type="button" disabled>이 위치 저장</button></div>
   </dialog>
   <dialog id="addressDialog" class="address-dialog" aria-labelledby="addressDialogTitle">
    <form id="addressForm">
