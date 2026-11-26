@@ -58,6 +58,12 @@ def create_app() -> Flask:
     legacy_enabled = os.environ.get("DDSM_ENABLE_LEGACY_AUTH", "0") == "1"
     app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
     app.json.ensure_ascii = False
+    # Short-lived codes for the single Waitress process; reset on restart.
+    code_lock = threading.Lock()
+    center_codes = {}  # center -> (code, expiry)
+    failed_codes = []
+    CODE_TTL = 600
+    CODE_FAILURE_LIMIT = 30
 
     def connect() -> sqlite3.Connection:
         path = getattr(g, "center_db", db_path) if has_request_context() else db_path
@@ -108,7 +114,7 @@ def create_app() -> Flask:
         path = request.path
         header = request.headers.get("Authorization", "")
         token = header[7:] if header.startswith("Bearer ") else ""
-        if path in ("/ddsm/api/health", "/ddsm/api/connection/centers", "/ddsm/api/connection/driver"):
+        if path in ("/ddsm/api/health", "/ddsm/api/connection/centers", "/ddsm/api/connection/driver", "/ddsm/api/connection/code-login"):
             return None
         match = re.fullmatch(r"(a|d)_([A-Za-z0-9-]{1,40})_([A-Za-z0-9_-]{43,128})", token)
         if match:
@@ -172,7 +178,7 @@ def create_app() -> Flask:
 
     @app.get("/ddsm/api/health")
     def health():
-        return jsonify(ok=True, service="ddsm", status="ready", center_connection=True)
+        return jsonify(ok=True, service="ddsm", status="ready", center_connection=True, center_code_login=True)
 
     @app.get("/ddsm/api/connection/centers")
     def list_centers():
@@ -189,6 +195,53 @@ def create_app() -> Flask:
             return jsonify(ok=False, error="기사 연결 정보가 올바르지 않습니다."), 400
         if not key_pattern.fullmatch(invite) or not hmac.compare_digest(invite, centers[cid]["invite"]):
             return jsonify(ok=False, error="유효하지 않은 기사 연결 링크입니다."), 403
+        return register_device(cid, device)
+
+    @app.post("/ddsm/api/connection/code")
+    def issue_center_code():
+        if getattr(g, "center_role", None) != "a":
+            return jsonify(ok=False, error="센터 관리자 권한이 필요합니다."), 403
+        cid = g.center_id
+        now = int(time.time())
+        with code_lock:
+            active = center_codes.get(cid)
+            if active and active[1] > now and body().get("renew") is not True:
+                code, expires = active
+            else:
+                used = {entry[0] for entry in center_codes.values() if entry[1] > now}
+                code = f"{secrets.randbelow(100000000):08d}"
+                while code in used:
+                    code = f"{secrets.randbelow(100000000):08d}"
+                expires = now + CODE_TTL
+                center_codes[cid] = (code, expires)
+        return jsonify(ok=True, center=cid, name=centers[cid]["name"], code=code, expires_at=expires)
+
+    @app.post("/ddsm/api/connection/code-login")
+    def login_center_code():
+        value = body()
+        code, device = value.get("code"), value.get("device")
+        if not isinstance(code, str) or not re.fullmatch(r"[0-9]{8}", code):
+            return jsonify(ok=False, error="숫자 8자리 센터 코드를 입력하세요."), 400
+        if device is not None and (not isinstance(device, str) or not re.fullmatch(r"[a-f0-9]{64}", device)):
+            return jsonify(ok=False, error="기기 연결 정보가 올바르지 않습니다."), 400
+        now = int(time.time())
+        with code_lock:
+            # Global failed-guess budget, independent of proxy IP headers.
+            failed_codes[:] = [t for t in failed_codes if t > now - CODE_TTL]
+            if len(failed_codes) >= CODE_FAILURE_LIMIT:
+                return jsonify(ok=False, error="인증 시도가 많습니다. 잠시 후 다시 시도하세요."), 429
+            cid = next((c for c, (k, expiry) in center_codes.items()
+                        if expiry > now and hmac.compare_digest(k, code)), None)
+            if cid is None:
+                failed_codes.append(now)
+                return jsonify(ok=False, error="센터 코드가 틀렸거나 만료되었습니다."), 403
+        # Resolve center first to reuse the existing per-center device identity.
+        # Never return the permanent invitation secret.
+        if device is None:
+            return jsonify(ok=True, center=cid, name=centers[cid]["name"])
+        return register_device(cid, device)
+
+    def register_device(cid, device):
         g.center_db = center_dir / (cid + ".sqlite")
         token = "d_" + cid + "_" + device
         digest = hashlib.sha256(token.encode("ascii")).hexdigest()
@@ -201,7 +254,7 @@ def create_app() -> Flask:
                 user_id = db.execute("INSERT INTO users(phone,password_hash) VALUES (?, '!')", ("device:" + digest,)).lastrowid
                 db.execute("INSERT INTO ddsm_device_tokens(token_hash,user_id) VALUES (?,?)", (digest,user_id))
             db.commit()
-        return jsonify(ok=True, token=token, center=cid)
+        return jsonify(ok=True, token=token, center=cid, name=centers[cid]["name"])
 
     @app.post("/ddsm/api/auth/register")
     def register():
