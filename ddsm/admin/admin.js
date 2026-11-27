@@ -358,7 +358,48 @@
     say('missingCount',String(rows.filter(x=>!x.located).length));
     if(!fitOnce&&markers.length){fitOnce=true;requestAnimationFrame(fit);}
   }
+  let deliveryStatusSeq=0,adminProofSeq=0,adminProofUrl='',adminProofFile='';
+  function clearAdminProof(){
+    ++adminProofSeq;if(adminProofUrl)URL.revokeObjectURL(adminProofUrl);adminProofUrl='';
+    $('adminProofImage').hidden=true;$('adminProofImage').removeAttribute('src');$('adminProofDownload').disabled=true;
+  }
+  async function viewAdminProof(row,dayKey){
+    const token=authToken;clearAdminProof();const seq=adminProofSeq;
+    say('adminProofInfo',(row.recipient||row.waybill)+' · 사진 조회 중…');$('adminProofDialog').showModal();
+    try{
+      const query=new URLSearchParams({date:dayKey,user_id:String(row.user_id),stop_id:row.stop_id});
+      const res=await fetch(API_BASE+'admin/delivery-proof?'+query,{credentials:'omit',cache:'no-store',headers:{Authorization:'Bearer '+token}});
+      if(!res.ok)throw Error((await res.json().catch(()=>null))?.error||'사진 조회 실패');
+      if(!/^image\/jpeg/i.test(res.headers.get('Content-Type')||''))throw Error('사진 응답 형식 오류');
+      const blob=await res.blob();if(seq!==adminProofSeq||token!==authToken)return;
+      adminProofUrl=URL.createObjectURL(blob);adminProofFile='DDSM-'+dayKey+'-'+String(row.stop_id).replace(/[^A-Za-z0-9_-]/g,'')+'.jpg';
+      $('adminProofImage').src=adminProofUrl;$('adminProofImage').hidden=false;$('adminProofDownload').disabled=false;
+      say('adminProofInfo',row.recipient||row.waybill);
+    }catch(e){if(seq===adminProofSeq)say('adminProofInfo',e.message);}
+  }
+  async function loadDeliveryStatus(){
+    const dayKey=$('deliveryDate').value,seq=++deliveryStatusSeq,token=authToken,root=$('deliveryStatusBody');
+    root.replaceChildren();say('deliveryStatusInfo','배송내역 조회 중…');
+    try{
+      const result=await get('admin/delivery-status?date='+encodeURIComponent(dayKey));
+      if(seq!==deliveryStatusSeq||token!==authToken||dayKey!==$('deliveryDate').value)return;
+      const done=result.rows.filter(r=>r.status==='done').length;
+      say('deliveryStatusInfo','등록 '+result.rows.length+'건 · 완료 '+done+'건 · 배송 예정 '+(result.rows.length-done)+'건');
+      const fragment=document.createDocumentFragment();
+      for(const row of result.rows){
+        const tr=document.createElement('tr');
+        for(const value of [row.waybill,row.recipient,row.driver,row.round+'회차',row.status==='done'?'완료':'배송 예정']){
+          const td=document.createElement('td');td.textContent=value;tr.append(td);
+        }
+        const td=document.createElement('td');
+        if(row.has_photo){const b=document.createElement('button');b.type='button';b.textContent='사진 보기';b.addEventListener('click',()=>void viewAdminProof(row,dayKey));td.append(b);}
+        else td.textContent='—';tr.append(td);fragment.append(tr);
+      }
+      root.append(fragment);
+    }catch(e){if(seq===deliveryStatusSeq)say('deliveryStatusInfo','배송현황 조회 실패: '+e.message);}
+  }
   async function loadDay() {
+    void loadDeliveryStatus();
     const date=$('deliveryDate').value;
     const token=++updateSeq;
     say('importStatus','당일 원본 데이터 조회 중…');
@@ -719,6 +760,10 @@
     $('driverCodeDialog').addEventListener('close',clearDriverCode);
     $('deliveryDate').addEventListener('change',loadDay);
     $('refreshBtn').addEventListener('click',loadDay);
+    $('refreshDeliveryStatus').addEventListener('click',loadDeliveryStatus);
+    $('adminProofClose').addEventListener('click',()=>$('adminProofDialog').close());
+    $('adminProofDialog').addEventListener('close',clearAdminProof);
+    $('adminProofDownload').addEventListener('click',()=>{if(adminProofUrl){const a=document.createElement('a');a.href=adminProofUrl;a.download=adminProofFile;document.body.append(a);a.click();a.remove();}});
     $('refreshRecurring').addEventListener('click',loadRecurring);
     $('recurringMapSearch').addEventListener('click',searchRecurringMap);
     $('recurringMapSave').addEventListener('click',saveRecurringMap);

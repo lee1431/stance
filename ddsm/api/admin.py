@@ -18,7 +18,7 @@ from datetime import date as date_type, datetime
 from contextlib import closing
 from itertools import islice
 
-from flask import jsonify, request
+from flask import jsonify, request, send_file
 from werkzeug.security import check_password_hash
 
 MAX_FILE_BYTES = 8 * 1024 * 1024
@@ -532,6 +532,48 @@ def install_admin(app, connect, authenticated_user, throttled, token_digest):
             )
             db.commit()
         return jsonify(ok=True, admin=True)
+
+    @app.get("/ddsm/api/admin/delivery-status")
+    def admin_delivery_status():
+        denied = protected()
+        if denied:
+            return denied
+        target = request.args.get("date", "")
+        if not valid_date(target):
+            return jsonify(ok=False, error="날짜가 올바르지 않습니다."), 400
+        with closing(connect()) as db:
+            days = db.execute("SELECT d.user_id,d.day_json,u.phone FROM ddsm_driver_days d JOIN users u ON u.id=d.user_id WHERE d.delivery_date=? ORDER BY d.user_id", (target,)).fetchall()
+            exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='ddsm_delivery_proofs'").fetchone()
+            proofs = {(p["user_id"],p["stop_id"]):p["completed_at"] for p in db.execute("SELECT user_id,stop_id,completed_at FROM ddsm_delivery_proofs WHERE delivery_date=?", (target,))} if exists else {}
+        output = []
+        for row in days:
+            for round_data in json.loads(row["day_json"]).get("rounds", []):
+                for stop in round_data.get("stops", []):
+                    done = stop.get("status") == "done"
+                    stamp = proofs.get((row["user_id"],stop["id"])) if done else None
+                    output.append(dict(user_id=row["user_id"],driver=row["phone"],round=round_data["no"],
+                        stop_id=stop["id"],waybill=stop["waybill"],recipient=stop.get("recipient",""),
+                        status="done" if done else "pending",has_photo=bool(stamp),completed_at=stamp))
+        return jsonify(ok=True,date=target,rows=output)
+
+    @app.get("/ddsm/api/admin/delivery-proof")
+    def admin_delivery_proof():
+        denied = protected()
+        if denied:
+            return denied
+        target = request.args.get("date","")
+        stop_id = request.args.get("stop_id","")
+        user_id = request.args.get("user_id","")
+        if not valid_date(target) or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}",stop_id) or not re.fullmatch(r"[0-9]{1,12}",user_id):
+            return jsonify(ok=False,error="배송 정보 형식 오류"),400
+        with closing(connect()) as db:
+            exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='ddsm_delivery_proofs'").fetchone()
+            row = db.execute("SELECT photo_jpeg FROM ddsm_delivery_proofs WHERE user_id=? AND delivery_date=? AND stop_id=?", (int(user_id),target,stop_id)).fetchone() if exists else None
+        if not row:
+            return jsonify(ok=False,error="저장된 배송 사진이 없습니다."),404
+        response = send_file(io.BytesIO(row["photo_jpeg"]), mimetype="image/jpeg",max_age=0)
+        response.headers["Cache-Control"]="private, no-store"
+        return response
 
     @app.get("/ddsm/api/admin/deliveries")
     def admin_deliveries():

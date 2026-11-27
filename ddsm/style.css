@@ -720,3 +720,5 @@ body[data-page="list"] #backButton,body[data-page="list"] #workScanButton{displa
 .map-controls #mapRefresh[aria-busy=true] svg{animation:ddsm-refresh-spin .9s linear infinite}
 @keyframes ddsm-refresh-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.map-controls #mapRefresh[aria-busy=true] svg{animation:none}}
+
+#mapPopup #mapViewProof{grid-column:1/-1;min-height:48px}#mapPopup #mapViewProof[hidden]{display:none!important}

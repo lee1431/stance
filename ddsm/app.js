@@ -367,12 +367,38 @@
       placePopup('mapPopup',dm?.project(stop));
     }
   }
+  let viewedProof=null,viewedProofUrl='',viewProofSeq=0;
+  function downloadProof(blob,filename){
+    const url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download=filename;document.body.append(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }
+  function proofFilename(dayKey,id){return 'DDSM-'+dayKey+'-'+String(id).replace(/[^A-Za-z0-9_-]/g,'').slice(0,60)+'.jpg';}
+  function clearViewedProof(){
+    ++viewProofSeq;viewedProof=null;
+    if(viewedProofUrl)URL.revokeObjectURL(viewedProofUrl);viewedProofUrl='';
+    $('proofViewImage').hidden=true;$('proofViewImage').removeAttribute('src');$('proofViewDownload').disabled=true;
+  }
+  async function openViewedProof(stop){
+    const token=driverToken,dayKey=date;closeMapPopup();clearViewedProof();const seq=viewProofSeq;
+    $('proofViewName').textContent=stop.recipient||stop.waybill;
+    $('proofViewStatus').textContent='사진 불러오는 중…';$('proofViewDialog').showModal();
+    try{
+      const query=new URLSearchParams({date:dayKey,stop_id:stop.id});
+      const res=await fetch(DRIVER_API_BASE+'delivery-proof?'+query,{credentials:'omit',cache:'no-store',headers:{Authorization:'Bearer '+token}});
+      if(!res.ok)throw Error(res.status===404?'등록된 배송 사진이 없습니다.':(await res.json().catch(()=>null))?.error||'사진 조회 실패');
+      if(!/^image\/jpeg/i.test(res.headers.get('Content-Type')||''))throw Error('사진 응답 형식 오류');
+      const blob=await res.blob();if(seq!==viewProofSeq||token!==driverToken)return;
+      viewedProof={blob,filename:proofFilename(dayKey,stop.id)};viewedProofUrl=URL.createObjectURL(blob);
+      $('proofViewImage').src=viewedProofUrl;$('proofViewImage').hidden=false;$('proofViewDownload').disabled=false;$('proofViewStatus').textContent='';
+    }catch(e){if(seq===viewProofSeq)$('proofViewStatus').textContent=e.message;}
+  }
   let proofTarget=null, proofBlob=null, proofUrl='', proofBusy=false, proofGeneration=0;
   function clearProof(){
     ++proofGeneration;proofTarget=null;proofBlob=null;
     if(proofUrl)URL.revokeObjectURL(proofUrl);proofUrl='';
     $('proofPreview').hidden=true;$('proofPreview').removeAttribute('src');
-    $('proofCamera').value='';$('proofFile').value='';$('proofSave').disabled=true;
+    $('proofCamera').value='';$('proofFile').value='';$('proofSave').disabled=true;$('proofDeviceCopy').checked=false;
   }
   function openProof(stop){
     if(!driverToken||syncedDate!==date||syncBlocked||scanWorkerActive||pendingScans.length){toast('센터 동기화 및 스캔 처리를 먼저 완료하세요.');return;}
@@ -419,6 +445,7 @@
     const target=proofTarget;
     if(target.date!==date||target.token!==driverToken||target.epoch!==syncEpoch||syncedDate!==date||syncBlocked){$('proofStatus').textContent='연결이 변경되었습니다. 다시 열어 주세요.';return;}
     if(syncBusy||syncPending){$('proofStatus').textContent='기존 작업 동기화 중입니다. 잠시 후 다시 누르세요.';void flushDay();return;}
+    if($('proofDeviceCopy').checked){try{downloadProof(proofBlob,proofFilename(target.date,target.id));}catch(_){toast('기기 다운로드 요청 실패 · 서버 저장은 계속합니다.');}}
     proofBusy=true;
     for(const id of ['proofSave','proofClose','proofTake','proofChoose'])$(id).disabled=true;
     $('proofStatus').textContent='사진 및 완료 상태 저장 중…';
@@ -435,6 +462,10 @@
     finally{proofBusy=false;for(const id of ['proofClose','proofTake','proofChoose'])$(id).disabled=false;$('proofSave').disabled=!proofBlob;}
   }
   function bindProof(){
+    $('proofViewClose').addEventListener('click',()=>$('proofViewDialog').close());
+    $('proofViewDialog').addEventListener('close',clearViewedProof);
+    $('proofViewDownload').addEventListener('click',()=>{if(viewedProof)downloadProof(viewedProof.blob,viewedProof.filename);});
+    $('mapViewProof').addEventListener('click',()=>{const stop=stops().find(s=>s.id===mapSelected);if(stop)void openViewedProof(stop);});
     $('proofTake').addEventListener('click',()=>$('proofCamera').click());
     $('proofChoose').addEventListener('click',()=>$('proofFile').click());
     for(const id of ['proofCamera','proofFile'])$(id).addEventListener('change',e=>{const file=e.target.files[0];e.target.value='';void selectProof(file);});
@@ -450,6 +481,7 @@
     closeMapPopup(); mapSelected=id; wheelValue=stops().indexOf(stop)+1; wheelPosition=wheelValue;
     $('mapPopupName').textContent=stop.recipient||stop.waybill;
     $('mapComplete').textContent=stop.status==='done'?'완료 취소':'완료';
+    $('mapViewProof').hidden=stop.status!=='done';
     const link=$('mapNav');configureNavigationLink(link,stop);link.textContent='내비';
     renderWheel();positionMapPopup();
   }
@@ -728,7 +760,8 @@
       head.append(node('span', 'status-tag', done ? '완료' : '배송 예정'));
       card.append(head);
       const actions = node('div', 'stop-actions');
-      actions.append(button(done ? '완료 취소' : '완료', done ? 'undo' : 'complete', () => setDone(stop.id, !done)));
+      actions.append(button(done ? '완료 취소' : '완료', done ? 'undo' : 'complete', () => done?setDone(stop.id,false):openProof(stop)));
+      if(done)actions.append(button('사진 보기','',()=>void openViewedProof(stop)));
       if (stop.address || validCoordinates(stop)) {
         const link = node('a', '');
         link.dataset.navigationStopId = String(stop.id);

@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="admin.css?v=10-recurring-edit">
 <script src="../naver-map.js?v=3-shared-sdk" defer></script>
 <script src="../address-utils.js?v=3-attached-units" defer></script>
-<script src="admin.js?v=20-recurring-collapse" defer></script>
+<script src="admin.js?v=21-delivery-status" defer></script>
 </head>
 <body>
 <div class="shell">
@@ -47,7 +47,12 @@
    <div><strong id="missingCount">0</strong><span>위치 미확인</span></div>
    <div><strong id="lastImport">—</strong><span>최근 업로드</span></div>
   </section>
-  <section class="map-panel">
+  <section class="data-panel">
+    <div class="section-head"><div><h2>배송현황</h2><p>기사별 등록 및 완료 내역 · 배송 사진 조회</p></div><button id="refreshDeliveryStatus" type="button">새로고침</button></div>
+    <p id="deliveryStatusInfo" role="status"></p>
+    <div class="table-scroll"><table><thead><tr><th>운송장</th><th>수취인</th><th>기사</th><th>회차</th><th>상태</th><th>사진</th></tr></thead><tbody id="deliveryStatusBody"></tbody></table></div>
+   </section>
+   <section class="map-panel">
    <div class="section-head">
     <div><h2>오늘의 전체 배송 지도</h2><p>회차·기사 구분 없이 원본 전체 물량 표시 · 마커를 누르면 행 선택</p></div>
     <div class="map-actions"><button id="fitBtn" type="button">◎ 전체 보기</button><button id="geocodeBtn" type="button">주소 좌표 찾기</button></div>
@@ -114,6 +119,11 @@
    <div class="recurring-map-stage"><div id="recurringMapCanvas"></div><div class="map-crosshair"><span class="pin">📍</span></div></div>
    <p id="recurringMapStatus" role="status">지도를 움직여 중앙 핀을 배송지에 맞추세요.</p>
    <div class="address-dialog-actions"><button id="recurringMapCancel" type="button">취소</button><button id="recurringMapSave" class="primary" type="button" disabled>이 위치 저장</button></div>
+  </dialog>
+  <dialog id="adminProofDialog" class="address-dialog" aria-labelledby="adminProofTitle">
+   <h2 id="adminProofTitle">배송 사진</h2><p id="adminProofInfo" role="status"></p>
+   <img id="adminProofImage" alt="배송완료 사진" hidden style="max-width:100%;max-height:65vh;object-fit:contain">
+   <div class="address-dialog-actions"><button id="adminProofClose" type="button">닫기</button><button id="adminProofDownload" type="button" disabled>다운로드</button></div>
   </dialog>
   <dialog id="addressDialog" class="address-dialog" aria-labelledby="addressDialogTitle">
    <form id="addressForm">
