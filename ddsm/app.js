@@ -292,6 +292,7 @@
     }));
   }
   function persistGeocoded(dateKey, roundNo, id, address, coordinates) {
+    if(proofBusy)return;
     const d = data.days[dateKey];
     const r = d && d.rounds.find(x => x.no === roundNo);
     const stop = r && r.stops.find(x => x.id === id);
@@ -343,11 +344,89 @@
       placePopup('mapPopup',dm?.project(stop));
     }
   }
+  let proofTarget=null, proofBlob=null, proofUrl='', proofBusy=false, proofGeneration=0;
+  function clearProof(){
+    ++proofGeneration;proofTarget=null;proofBlob=null;
+    if(proofUrl)URL.revokeObjectURL(proofUrl);proofUrl='';
+    $('proofPreview').hidden=true;$('proofPreview').removeAttribute('src');
+    $('proofCamera').value='';$('proofFile').value='';$('proofSave').disabled=true;
+  }
+  function openProof(stop){
+    if(!driverToken||syncedDate!==date||syncBlocked||scanWorkerActive||pendingScans.length){toast('센터 동기화 및 스캔 처리를 먼저 완료하세요.');return;}
+    closeMapPopup();clearProof();
+    proofTarget={id:stop.id,round:round().no,date,token:driverToken,epoch:syncEpoch};
+    $('proofRecipient').textContent=(stop.recipient||stop.waybill)+' · '+(stop.address||'주소 미입력');
+    $('proofStatus').textContent='배송 사진을 촬영하거나 선택하세요.';
+    $('proofDialog').showModal();
+  }
+  async function compressProof(file){
+    if(!file||file.size>25*1024*1024)throw Error('25MB 이하 사진을 선택하세요.');
+    const url=URL.createObjectURL(file);
+    try{
+      const img=new Image();
+      await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error('사진을 읽을 수 없습니다. JPEG 또는 PNG를 선택하세요.'));img.src=url;});
+      const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
+      if(!ctx||!img.naturalWidth||!img.naturalHeight)throw Error('사진 변환 실패');
+      for(const edge of [1280,960,640]){
+        const scale=Math.min(1,edge/Math.max(img.naturalWidth,img.naturalHeight));
+        canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+        ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        for(const quality of [.76,.62,.45]){
+          const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',quality));
+          if(blob&&blob.size<=300*1024)return blob;
+        }
+      }
+      throw Error('사진 압축에 실패했습니다.');
+    }finally{URL.revokeObjectURL(url);}
+  }
+  async function selectProof(file){
+    if(!file||proofBusy||!proofTarget)return;
+    const generation=++proofGeneration;proofBlob=null;$('proofSave').disabled=true;
+    if(proofUrl)URL.revokeObjectURL(proofUrl);proofUrl='';
+    $('proofPreview').hidden=true;$('proofStatus').textContent='사진 압축 중…';
+    try{
+      const blob=await compressProof(file);
+      if(generation!==proofGeneration)return;
+      proofBlob=blob;proofUrl=URL.createObjectURL(blob);$('proofPreview').src=proofUrl;$('proofPreview').hidden=false;
+      $('proofStatus').textContent='사진 준비 완료 · '+Math.ceil(blob.size/1024)+'KB';$('proofSave').disabled=false;
+    }catch(e){if(generation===proofGeneration)$('proofStatus').textContent=e.message;}
+  }
+  async function saveProof(){
+    if(proofBusy||!proofBlob||!proofTarget)return;
+    const target=proofTarget;
+    if(target.date!==date||target.token!==driverToken||target.epoch!==syncEpoch||syncedDate!==date||syncBlocked){$('proofStatus').textContent='연결이 변경되었습니다. 다시 열어 주세요.';return;}
+    if(syncBusy||syncPending){$('proofStatus').textContent='기존 작업 동기화 중입니다. 잠시 후 다시 누르세요.';void flushDay();return;}
+    proofBusy=true;
+    for(const id of ['proofSave','proofClose','proofTake','proofChoose'])$(id).disabled=true;
+    $('proofStatus').textContent='사진 및 완료 상태 저장 중…';
+    try{
+      const form=new FormData();form.append('date',target.date);form.append('round',String(target.round));form.append('stop_id',target.id);form.append('revision',String(serverRevision));form.append('photo',proofBlob,'delivery.jpg');
+      const res=await fetch(DRIVER_API_BASE+'delivery-proof',{method:'POST',credentials:'omit',cache:'no-store',headers:{Authorization:'Bearer '+target.token},body:form});
+      const body=await res.json().catch(()=>null);
+      if(!res.ok||!body?.ok||!body.day)throw Error(body?.error||'사진 저장 실패 (HTTP '+res.status+')');
+      if(target.epoch!==syncEpoch||target.token!==driverToken||date!==target.date)return;
+      serverRevision=body.revision;data.days[target.date]=body.day;
+      try{localStorage.setItem(activeStorageKey(),JSON.stringify(data));}catch(_){}
+      $('proofDialog').close();render();toast('사진 저장 및 배송완료');
+    }catch(e){$('proofStatus').textContent=e.message+' · 필요하면 작업을 동기화한 뒤 다시 시도하세요.';}
+    finally{proofBusy=false;for(const id of ['proofClose','proofTake','proofChoose'])$(id).disabled=false;$('proofSave').disabled=!proofBlob;}
+  }
+  function bindProof(){
+    $('proofTake').addEventListener('click',()=>$('proofCamera').click());
+    $('proofChoose').addEventListener('click',()=>$('proofFile').click());
+    for(const id of ['proofCamera','proofFile'])$(id).addEventListener('change',e=>{const file=e.target.files[0];e.target.value='';void selectProof(file);});
+    $('proofSave').addEventListener('click',()=>void saveProof());
+    $('proofClose').addEventListener('click',()=>{if(!proofBusy)$('proofDialog').close();});
+    $('proofDialog').addEventListener('cancel',e=>{if(proofBusy)e.preventDefault();});
+    $('proofDialog').addEventListener('close',clearProof);
+    $('mapComplete').addEventListener('click',()=>{const stop=stops().find(s=>s.id===mapSelected);if(stop){if(stop.status==='done'){closeMapPopup();setDone(stop.id,false);}else openProof(stop);}});
+  }
   function selectMapStop(id, roundNo) {
     if(round().no!==roundNo||view!=='delivery'||workTab!=='map')return;
     const stop=stops().find(s=>s.id===id);if(!stop)return;
     closeMapPopup(); mapSelected=id; wheelValue=stops().indexOf(stop)+1;
     $('mapPopupName').textContent=stop.recipient||stop.waybill;
+    $('mapComplete').textContent=stop.status==='done'?'완료 취소':'완료';
     const link=$('mapNav');configureNavigationLink(link,stop);link.textContent='내비';
     renderWheel();positionMapPopup();
   }
@@ -379,6 +458,7 @@
     }catch(e){toast('기사 핀 저장됨 · 공용 주소록 반영 실패: '+e.message);}
   }
   function bindMapWheel() {
+    bindProof();
     const wheel=$('orderWheel'),row=37;
     const finish=()=>{wheelFrame=0;renderWheel();};
     const cancel=()=>{cancelAnimationFrame(wheelFrame);wheelFrame=0;};

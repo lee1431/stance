@@ -13,7 +13,7 @@
   <script src="delivery-map.js?v=9-map-refresh" defer></script>
   <script src="waybill.js?v=2-normalized" defer></script>
   <script src="center-link.js?v=3-code" defer></script>
-  <script src="app.js?v=37-map-refresh" defer></script>
+  <script src="app.js?v=38-delivery-photo" defer></script>
   <script src="theme.js?v=1" defer></script>
 </head>
 <body>
@@ -104,7 +104,7 @@
                 <div class="wheel-selection"></div><div id="wheelNumbers" class="wheel-numbers"></div>
               </div>
               <button id="mapOrderSave" class="map-order-save" type="button">순번 변경</button>
-              <div class="map-popup-actions"><button id="mapEdit" type="button">수정</button><a id="mapNav" href="#">내비</a></div>
+              <div class="map-popup-actions"><button id="mapEdit" type="button">수정</button><a id="mapNav" href="#">내비</a><button id="mapComplete" type="button" style="grid-column:1/-1;background:#167044;color:#fff">완료</button></div>
             </div>
             <div id="pinPopup" class="map-mini-popup pin-popup hidden" role="group" aria-label="위치 지정">
               <strong>이 위치로 핀 지정</strong>
@@ -132,6 +132,17 @@
     </nav>
   </div>
 
+  <dialog id="proofDialog" class="sheet-dialog" aria-labelledby="proofTitle">
+    <div class="dialog-head"><h2 id="proofTitle">배송완료</h2><button id="proofClose" class="close-button" type="button" aria-label="닫기">✕</button></div>
+    <p id="proofRecipient" class="dialog-description"></p>
+    <button id="proofTake" class="primary-action full-width" type="button">📷 사진 찍기</button>
+    <input id="proofCamera" type="file" accept="image/*" capture="environment" hidden>
+    <button id="proofChoose" class="secondary-action" type="button" style="width:100%;margin-top:8px">사진 파일 업로드</button>
+    <input id="proofFile" type="file" accept="image/*" hidden>
+    <img id="proofPreview" alt="배송 사진 미리보기" hidden style="width:100%;max-height:40vh;object-fit:contain;margin:12px 0">
+    <p id="proofStatus" class="dialog-footnote" role="status">배송 사진을 촬영하거나 선택하세요.</p>
+    <button id="proofSave" class="primary-action full-width" type="button" disabled>사진 저장 및 배송완료</button>
+  </dialog>
   <dialog id="editDialog" class="sheet-dialog" aria-labelledby="editTitle">
     <form id="editForm">
       <div class="dialog-head"><h2 id="editTitle">배송 정보</h2><button id="closeEdit" class="close-button" type="button" aria-label="닫기">✕</button></div>
