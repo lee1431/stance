@@ -162,7 +162,7 @@
   }
   let view = 'home';
   let workTab = 'map';
-  let mapSelected = null, pinDraft = null, wheelValue = 1, wheelDrag = null, wheelFrame = 0;
+  let mapSelected = null, pinDraft = null, wheelValue = 1, wheelDrag = null, wheelFrame = 0, wheelPosition = 1, wheelSettleTimer = 0;
   const recentScanTimes = new Map();
   let statsRequest=0;
   let codeLoginBusy=false;
@@ -310,21 +310,33 @@
     }
   }
   function closeMapPopup() {
-    cancelAnimationFrame(wheelFrame); wheelFrame=0; wheelDrag=null;
+    cancelAnimationFrame(wheelFrame); clearTimeout(wheelSettleTimer); wheelFrame=0; wheelSettleTimer=0; wheelDrag=null;
     mapSelected=null; pinDraft=null;
     $('mapPopup').classList.add('hidden'); $('pinPopup').classList.add('hidden');
     window.DDSM_DeliveryMap?.clearDraft();
   }
   const wrapOrder = n => { const count=Math.max(1,stops().length);return ((n-1)%count+count)%count+1; };
+  const WHEEL_ROW = 37;
   function renderWheel(offset=0) {
-    const root=$('wheelNumbers'); root.replaceChildren();
-    const count=stops().length;
-    for(let i=-2;i<=2;i++){
-      const line=node('div','wheel-number'+(i===0?' current':''),count>1||i===0?String(wrapOrder(wheelValue+i)):'');
-      line.style.transform='translateY('+offset+'px)';root.append(line);
+    const root=$('wheelNumbers'),count=stops().length;
+    const key=count+':'+wheelValue;
+    if(root.dataset.wheelKey!==key||!root.children.length){
+      root.replaceChildren();
+      for(let i=-2;i<=2;i++){
+        root.append(node('div','wheel-number'+(i===0?' current':''),count>1||i===0?String(wrapOrder(wheelValue+i)):''));
+      }
+      root.dataset.wheelKey=key;
     }
+    root.style.transform='translate3d(0,'+offset+'px,0)';
     const wheel=$('orderWheel');wheel.setAttribute('aria-valuemax',String(Math.max(1,count)));wheel.setAttribute('aria-valuenow',String(wheelValue));
     $('mapOrderSave').textContent=wheelValue+'번으로 변경';
+  }
+  function positionWheel(position){
+    if(stops().length<=1)position=1;
+    wheelPosition=position;
+    const nearest=Math.round(position);
+    wheelValue=wrapOrder(nearest);
+    renderWheel((nearest-position)*WHEEL_ROW);
   }
   function placePopup(id, point) {
     const popup=$(id),stage=$('deliveryMapStage');
@@ -424,7 +436,7 @@
   function selectMapStop(id, roundNo) {
     if(round().no!==roundNo||view!=='delivery'||workTab!=='map')return;
     const stop=stops().find(s=>s.id===id);if(!stop)return;
-    closeMapPopup(); mapSelected=id; wheelValue=stops().indexOf(stop)+1;
+    closeMapPopup(); mapSelected=id; wheelValue=stops().indexOf(stop)+1; wheelPosition=wheelValue;
     $('mapPopupName').textContent=stop.recipient||stop.waybill;
     $('mapComplete').textContent=stop.status==='done'?'완료 취소':'완료';
     const link=$('mapNav');configureNavigationLink(link,stop);link.textContent='내비';
@@ -459,16 +471,67 @@
   }
   function bindMapWheel() {
     bindProof();
-    const wheel=$('orderWheel'),row=37;
-    const finish=()=>{wheelFrame=0;renderWheel();};
-    const cancel=()=>{cancelAnimationFrame(wheelFrame);wheelFrame=0;};
-    wheel.addEventListener('wheel',e=>{e.preventDefault();cancel();wheelValue=wrapOrder(wheelValue+Math.sign(e.deltaY)*Math.max(1,Math.round(Math.abs(e.deltaY)/50)));renderWheel();},{passive:false});
-    wheel.addEventListener('keydown',e=>{if(!['ArrowUp','ArrowDown','PageUp','PageDown','Home','End'].includes(e.key))return;e.preventDefault();cancel();wheelValue=e.key==='Home'?1:e.key==='End'?stops().length:wrapOrder(wheelValue+({ArrowUp:-1,ArrowDown:1,PageUp:-10,PageDown:10}[e.key]||0));renderWheel();});
-    wheel.addEventListener('pointerdown',e=>{e.preventDefault();cancel();wheelDrag={start:e.clientY,last:e.clientY,base:wheelValue,t:performance.now(),v:0};wheel.setPointerCapture(e.pointerId);});
-    wheel.addEventListener('pointermove',e=>{if(!wheelDrag)return;const now=performance.now(),delta=(wheelDrag.start-e.clientY)/row,step=Math.round(delta);wheelDrag.v=.5*wheelDrag.v+.5*(wheelDrag.last-e.clientY)/Math.max(8,now-wheelDrag.t);wheelDrag.last=e.clientY;wheelDrag.t=now;wheelValue=wrapOrder(wheelDrag.base+step);renderWheel((step-delta)*row);});
-    wheel.addEventListener('pointerup',()=>{if(!wheelDrag)return;let remaining=performance.now()-wheelDrag.t<100?Math.max(-40,Math.min(40,wheelDrag.v*9)):0;wheelDrag=null;
-      function glide(){if(Math.abs(remaining)<.7){finish();return;}const step=Math.sign(remaining)*Math.max(1,Math.round(Math.abs(remaining)*.24));wheelValue=wrapOrder(wheelValue+step);renderWheel();remaining*=.74;wheelFrame=requestAnimationFrame(glide);}glide();});
-    wheel.addEventListener('pointercancel',()=>{wheelDrag=null;cancel();finish();});
+    const wheel=$('orderWheel');
+    const cancel=()=>{cancelAnimationFrame(wheelFrame);clearTimeout(wheelSettleTimer);wheelFrame=0;wheelSettleTimer=0;};
+    function settle(){
+      cancel();
+      const from=wheelPosition,to=Math.round(from);
+      if(Math.abs(to-from)<.001){positionWheel(to);return;}
+      const start=performance.now(),duration=220;
+      function frame(now){
+        const t=Math.min(1,(now-start)/duration),ease=1-Math.pow(1-t,3);
+        positionWheel(from+(to-from)*ease);
+        if(t<1)wheelFrame=requestAnimationFrame(frame);
+        else{wheelFrame=0;positionWheel(to);}
+      }
+      wheelFrame=requestAnimationFrame(frame);
+    }
+    function coast(velocity){
+      cancel();
+      if(Math.abs(velocity)<.0025||stops().length<=1){settle();return;}
+      let v=Math.max(-.045,Math.min(.045,velocity)),last=performance.now(),elapsed=0;
+      function frame(now){
+        const dt=Math.min(40,Math.max(1,now-last));last=now;elapsed+=dt;
+        positionWheel(wheelPosition+v*dt);
+        v*=Math.exp(-dt/145);
+        if(Math.abs(v)<.0018||elapsed>650){settle();return;}
+        wheelFrame=requestAnimationFrame(frame);
+      }
+      wheelFrame=requestAnimationFrame(frame);
+    }
+    wheel.addEventListener('wheel',e=>{
+      e.preventDefault();if(wheelDrag)return;cancel();
+      const px=e.deltaY*(e.deltaMode===1?18:e.deltaMode===2?111:1);
+      positionWheel(wheelPosition+Math.max(-6,Math.min(6,px/55)));
+      wheelSettleTimer=setTimeout(settle,120);
+    },{passive:false});
+    wheel.addEventListener('keydown',e=>{
+      if(!['ArrowUp','ArrowDown','PageUp','PageDown','Home','End'].includes(e.key))return;
+      e.preventDefault();cancel();wheelDrag=null;
+      positionWheel(e.key==='Home'?1:e.key==='End'?Math.max(1,stops().length):Math.round(wheelPosition)+({ArrowUp:-1,ArrowDown:1,PageUp:-10,PageDown:10}[e.key]||0));
+    });
+    wheel.addEventListener('pointerdown',e=>{
+      if(wheelDrag||e.button!==0)return;e.preventDefault();cancel();
+      wheelDrag={id:e.pointerId,start:e.clientY,last:e.clientY,base:wheelPosition,t:performance.now(),v:0};
+      wheel.setPointerCapture(e.pointerId);
+    });
+    wheel.addEventListener('pointermove',e=>{
+      if(!wheelDrag||e.pointerId!==wheelDrag.id)return;
+      const now=performance.now(),dt=Math.max(1,now-wheelDrag.t);
+      const velocity=(wheelDrag.last-e.clientY)/WHEEL_ROW/dt;
+      if(e.clientY!==wheelDrag.last)wheelDrag.v=.65*velocity+.35*wheelDrag.v;
+      else if(dt>40)wheelDrag.v=0;
+      wheelDrag.last=e.clientY;wheelDrag.t=now;
+      positionWheel(wheelDrag.base+(wheelDrag.start-e.clientY)/WHEEL_ROW);
+    });
+    wheel.addEventListener('pointerup',e=>{
+      if(!wheelDrag||e.pointerId!==wheelDrag.id)return;
+      const age=performance.now()-wheelDrag.t,v=age<100?wheelDrag.v*Math.exp(-age/55):0;
+      wheelDrag=null;coast(v);
+    });
+    const endDrag=e=>{if(wheelDrag&&e.pointerId===wheelDrag.id){wheelDrag=null;settle();}};
+    wheel.addEventListener('pointercancel',endDrag);
+    wheel.addEventListener('lostpointercapture',endDrag);
     $('mapOrderSave').addEventListener('click',()=>{const id=mapSelected,target=wheelValue-1;closeMapPopup();if(id)moveStopOrder(id,target);});
     $('mapEdit').addEventListener('click',()=>{const id=mapSelected;closeMapPopup();if(id)openEdit(id);});
     $('mapNav').addEventListener('click',e=>{const stop=stops().find(s=>s.id===mapSelected);if(!stop){e.preventDefault();return;}if(!naverNavigationUrl(stop)&&/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){e.preventDefault();if(!stop.address){toast('주소 또는 위치를 먼저 지정하세요.');return;}void locateAndLaunchNavigation(e.currentTarget,stop);}});
