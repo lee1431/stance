@@ -316,18 +316,18 @@
     window.DDSM_DeliveryMap?.clearDraft();
   }
   const wrapOrder = n => { const count=Math.max(1,stops().length);return ((n-1)%count+count)%count+1; };
-  const WHEEL_ROW = 37;
+  const WHEEL_ITEM = 52;
   function renderWheel(offset=0) {
     const root=$('wheelNumbers'),count=stops().length;
     const key=count+':'+wheelValue;
     if(root.dataset.wheelKey!==key||!root.children.length){
       root.replaceChildren();
-      for(let i=-2;i<=2;i++){
+      for(let i=-3;i<=3;i++){
         root.append(node('div','wheel-number'+(i===0?' current':''),count>1||i===0?String(wrapOrder(wheelValue+i)):''));
       }
       root.dataset.wheelKey=key;
     }
-    root.style.transform='translate3d(0,'+offset+'px,0)';
+    root.style.transform='translate3d('+offset+'px,0,0)';
     const wheel=$('orderWheel');wheel.setAttribute('aria-valuemax',String(Math.max(1,count)));wheel.setAttribute('aria-valuenow',String(wheelValue));
     $('mapOrderSave').textContent=wheelValue+'번으로 변경';
   }
@@ -336,7 +336,7 @@
     wheelPosition=position;
     const nearest=Math.round(position);
     wheelValue=wrapOrder(nearest);
-    renderWheel((nearest-position)*WHEEL_ROW);
+    renderWheel((nearest-position)*WHEEL_ITEM);
   }
   function placePopup(id, point) {
     const popup=$(id),stage=$('deliveryMapStage');
@@ -344,8 +344,19 @@
     popup.classList.remove('hidden');
     const w=popup.offsetWidth,h=popup.offsetHeight;
     const right=point.x+22,left=point.x-w-22;
-    popup.style.left=Math.max(6,Math.min(stage.clientWidth-w-6,right+w<=stage.clientWidth-6?right:left))+'px';
-    popup.style.top=Math.max(6,Math.min(stage.clientHeight-h-6,point.y-h/2))+'px';
+    const clampX=x=>Math.max(6,Math.min(stage.clientWidth-w-6,x));
+    const clampY=y=>Math.max(6,Math.min(stage.clientHeight-h-6,y));
+    let x=right+w<=stage.clientWidth-6?right:left,y=point.y-h/2;
+    if(id==='mapPopup'){
+      // Prefer above/below the marker, so the wider touch-friendly popup does not cover it.
+      const above=point.y-h-22,below=point.y+22;
+      if(above>=6){x=point.x-w/2;y=above;}
+      else if(below+h<=stage.clientHeight-6){x=point.x-w/2;y=below;}
+      else if(right+w<=stage.clientWidth-6||left>=6){x=right+w<=stage.clientWidth-6?right:left;}
+      else{x=point.x-w/2;y=point.y>=stage.clientHeight/2?above:below;}
+    }
+    popup.style.left=clampX(x)+'px';
+    popup.style.top=clampY(y)+'px';
   }
   function positionMapPopup() {
     const dm=window.DDSM_DeliveryMap;
@@ -501,28 +512,29 @@
     }
     wheel.addEventListener('wheel',e=>{
       e.preventDefault();if(wheelDrag)return;cancel();
-      const px=e.deltaY*(e.deltaMode===1?18:e.deltaMode===2?111:1);
+      const delta=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;
+      const px=delta*(e.deltaMode===1?18:e.deltaMode===2?wheel.clientWidth:1);
       positionWheel(wheelPosition+Math.max(-6,Math.min(6,px/55)));
       wheelSettleTimer=setTimeout(settle,120);
     },{passive:false});
     wheel.addEventListener('keydown',e=>{
-      if(!['ArrowUp','ArrowDown','PageUp','PageDown','Home','End'].includes(e.key))return;
+      if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','PageUp','PageDown','Home','End'].includes(e.key))return;
       e.preventDefault();cancel();wheelDrag=null;
-      positionWheel(e.key==='Home'?1:e.key==='End'?Math.max(1,stops().length):Math.round(wheelPosition)+({ArrowUp:-1,ArrowDown:1,PageUp:-10,PageDown:10}[e.key]||0));
+      positionWheel(e.key==='Home'?1:e.key==='End'?Math.max(1,stops().length):Math.round(wheelPosition)+({ArrowLeft:-1,ArrowRight:1,ArrowUp:-1,ArrowDown:1,PageUp:-10,PageDown:10}[e.key]||0));
     });
     wheel.addEventListener('pointerdown',e=>{
       if(wheelDrag||e.button!==0)return;e.preventDefault();cancel();
-      wheelDrag={id:e.pointerId,start:e.clientY,last:e.clientY,base:wheelPosition,t:performance.now(),v:0};
+      wheelDrag={id:e.pointerId,start:e.clientX,last:e.clientX,base:wheelPosition,t:performance.now(),v:0};
       wheel.setPointerCapture(e.pointerId);
     });
     wheel.addEventListener('pointermove',e=>{
       if(!wheelDrag||e.pointerId!==wheelDrag.id)return;
       const now=performance.now(),dt=Math.max(1,now-wheelDrag.t);
-      const velocity=(wheelDrag.last-e.clientY)/WHEEL_ROW/dt;
-      if(e.clientY!==wheelDrag.last)wheelDrag.v=.65*velocity+.35*wheelDrag.v;
+      const velocity=(wheelDrag.last-e.clientX)/WHEEL_ITEM/dt;
+      if(e.clientX!==wheelDrag.last)wheelDrag.v=.65*velocity+.35*wheelDrag.v;
       else if(dt>40)wheelDrag.v=0;
-      wheelDrag.last=e.clientY;wheelDrag.t=now;
-      positionWheel(wheelDrag.base+(wheelDrag.start-e.clientY)/WHEEL_ROW);
+      wheelDrag.last=e.clientX;wheelDrag.t=now;
+      positionWheel(wheelDrag.base+(wheelDrag.start-e.clientX)/WHEEL_ITEM);
     });
     wheel.addEventListener('pointerup',e=>{
       if(!wheelDrag||e.pointerId!==wheelDrag.id)return;
