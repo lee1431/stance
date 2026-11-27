@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import re
 import sqlite3
@@ -9,7 +10,8 @@ import time
 from contextlib import closing
 from datetime import date as date_type
 
-from flask import jsonify, request
+from flask import jsonify, request, send_file
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 
 def valid_date(value):
@@ -206,6 +208,103 @@ def install_driver(app, connect, authenticated_user):
             # already equivalent; otherwise an unrelated site could be remapped.
             db.commit()
         return jsonify(ok=True, destination_id=target_id, address=address, lat=lat, lng=lng)
+
+    def ensure_proofs(db):
+        db.execute("""CREATE TABLE IF NOT EXISTS ddsm_delivery_proofs (
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            delivery_date TEXT NOT NULL,
+            stop_id TEXT NOT NULL,
+            round_no INTEGER NOT NULL,
+            waybill TEXT NOT NULL,
+            photo_jpeg BLOB NOT NULL,
+            completed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY(user_id, delivery_date, stop_id)
+        )""")
+
+    @app.post("/ddsm/api/driver/delivery-proof")
+    def driver_delivery_proof():
+        user = authenticated_user()
+        if not user:
+            return jsonify(ok=False, error="센터 기기 연결이 필요합니다."), 401
+        if request.content_length is not None and request.content_length > 1024 * 1024:
+            return jsonify(ok=False, error="사진 업로드는 1MB 이하입니다."), 413
+        target = request.form.get("date", "")
+        stop_id = request.form.get("stop_id", "")
+        round_raw = request.form.get("round", "")
+        rev_raw = request.form.get("revision", "")
+        if (not valid_date(target) or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", stop_id)
+                or not re.fullmatch(r"[0-9]{1,3}", round_raw)
+                or not re.fullmatch(r"[0-9]{1,12}", rev_raw)):
+            return jsonify(ok=False, error="배송 정보 형식 오류"), 400
+        round_no, revision = int(round_raw), int(rev_raw)
+        photo = request.files.get("photo")
+        if not photo:
+            return jsonify(ok=False, error="배송 사진이 필요합니다."), 400
+        raw = photo.stream.read(300 * 1024 + 1)
+        if not raw or len(raw) > 300 * 1024:
+            return jsonify(ok=False, error="사진은 300KB 이하로 압축하세요."), 413
+        try:
+            with Image.open(io.BytesIO(raw)) as source:
+                if source.format != "JPEG" or source.width * source.height > 4_000_000:
+                    raise ValueError("invalid JPEG")
+                image = ImageOps.exif_transpose(source).convert("RGB")
+                image.thumbnail((1280, 1280))
+                output = io.BytesIO()
+                image.save(output, format="JPEG", quality=75, optimize=True)
+                jpeg = output.getvalue()
+                if len(jpeg) > 300 * 1024:
+                    output = io.BytesIO()
+                    image.save(output, format="JPEG", quality=50, optimize=True)
+                    jpeg = output.getvalue()
+                if len(jpeg) > 300 * 1024:
+                    raise ValueError("oversize JPEG")
+        except (ValueError, OSError, UnidentifiedImageError, Image.DecompressionBombError):
+            return jsonify(ok=False, error="유효한 압축 JPEG 사진이 필요합니다."), 400
+        with closing(connect()) as db:
+            db.execute("BEGIN IMMEDIATE")
+            ensure_proofs(db)
+            row = db.execute(
+                "SELECT revision,day_json FROM ddsm_driver_days WHERE user_id=? AND delivery_date=?",
+                (user["id"], target),
+            ).fetchone()
+            if not row:
+                return jsonify(ok=False, error="등록된 배송 작업이 없습니다."), 404
+            if row["revision"] != revision:
+                return jsonify(ok=False, error="다른 작업이 먼저 저장되었습니다. 동기화 후 다시 시도하세요."), 409
+            day = json.loads(row["day_json"])
+            matches = [s for r in day["rounds"] if r["no"] == round_no for s in r["stops"] if s["id"] == stop_id]
+            if len(matches) != 1:
+                return jsonify(ok=False, error="해당 회차에서 배송지를 찾을 수 없습니다."), 404
+            stop = matches[0]
+            if stop["status"] == "done":
+                return jsonify(ok=False, error="이미 배송완료된 건입니다."), 409
+            stop["status"] = "done"
+            db.execute("""INSERT INTO ddsm_delivery_proofs(user_id, delivery_date, stop_id, round_no, waybill, photo_jpeg)
+                VALUES(?,?,?,?,?,?) ON CONFLICT(user_id,delivery_date,stop_id) DO UPDATE SET
+                round_no=excluded.round_no,waybill=excluded.waybill,photo_jpeg=excluded.photo_jpeg,
+                completed_at=CURRENT_TIMESTAMP""", (user["id"], target, stop_id, round_no, stop["waybill"], jpeg))
+            db.execute("UPDATE ddsm_driver_days SET revision=?,day_json=?,updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND delivery_date=?",
+                       (revision + 1, json.dumps(day, ensure_ascii=False, separators=(",", ":")), user["id"], target))
+            db.commit()
+        return jsonify(ok=True, date=target, revision=revision + 1, day=day)
+
+    @app.get("/ddsm/api/driver/delivery-proof")
+    def driver_get_delivery_proof():
+        user = authenticated_user()
+        if not user:
+            return jsonify(ok=False, error="센터 기기 연결이 필요합니다."), 401
+        target, stop_id = request.args.get("date", ""), request.args.get("stop_id", "")
+        if not valid_date(target) or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", stop_id):
+            return jsonify(ok=False, error="배송 정보 형식 오류"), 400
+        with closing(connect()) as db:
+            ensure_proofs(db)
+            row = db.execute("SELECT photo_jpeg FROM ddsm_delivery_proofs WHERE user_id=? AND delivery_date=? AND stop_id=?",
+                             (user["id"], target, stop_id)).fetchone()
+        if not row:
+            return jsonify(ok=False, error="저장된 배송 사진이 없습니다."), 404
+        response = send_file(io.BytesIO(row["photo_jpeg"]), mimetype="image/jpeg", max_age=0)
+        response.headers["Cache-Control"] = "private, no-store"
+        return response
 
     @app.route("/ddsm/api/driver/work-day", methods=["GET", "PUT"])
     def driver_work_day():
